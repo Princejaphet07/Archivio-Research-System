@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import DepartmentsProgramsTab from './DepartmentsPrograms';
 
 export default function Settings() {
-  // Updated initial state to 'system' so it loads first
   const [activeTab, setActiveTab] = useState('system');
   
   // System Settings State
@@ -354,10 +354,10 @@ export default function Settings() {
               Storage Management
             </button>
             <button 
-              onClick={() => setActiveTab('admin')}
-              className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'admin' ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-500 hover:text-stone-700'}`}
+              onClick={() => setActiveTab('departments')}
+              className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'departments' ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-500 hover:text-stone-700'}`}
             >
-              Admin Management
+              Departments & Programs
             </button>
           </div>
 
@@ -365,7 +365,7 @@ export default function Settings() {
           <div className="pb-12">
             {activeTab === 'system' && renderSystemSettings()}
             {activeTab === 'storage' && renderStorageManagement()}
-            {activeTab === 'admin' && renderAdminManagement()}
+            {activeTab === 'departments' && <DepartmentsProgramsTab />}
           </div>
           
         </div>

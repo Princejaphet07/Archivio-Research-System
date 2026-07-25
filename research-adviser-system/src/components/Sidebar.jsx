@@ -1,10 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import logoImg from '../assets/logo.png'; 
+import logoImg from '../assets/logo.png';
+import { useAdviser } from '../context/AdviserContext';
+import { db, auth } from '../firebase/config';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 function Sidebar() {
   const location = useLocation();
   const path = location.pathname;
+  const { adviserData } = useAdviser();
+
+  const [groupCount, setGroupCount] = useState(0);
+  const [pendingRegCount, setPendingRegCount] = useState(0);
+  const [pendingSubCount, setPendingSubCount] = useState(0);
+
+  useEffect(() => {
+    const email = auth.currentUser?.email;
+    if (!email) return;
+
+    // Approved groups count
+    const gq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
+    const unsub1 = onSnapshot(gq, (snap) => setGroupCount(snap.size));
+
+    // Pending registrations count
+    const pq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'pending'));
+    const unsub2 = onSnapshot(pq, (snap) => setPendingRegCount(snap.size));
+
+    // Submissions count (all from adviser's students)
+    const sq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
+    const unsub3 = onSnapshot(sq, (snap) => {
+      const leaderUids = snap.docs.map(d => d.data().leaderUid);
+      if (leaderUids.length > 0) {
+        const subQ = query(collection(db, 'submissions'));
+        onSnapshot(subQ, (subSnap) => {
+          const count = subSnap.docs.filter(d => leaderUids.includes(d.data().studentUid)).length;
+          setPendingSubCount(count);
+        });
+      }
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, []);
 
   const activeClass = "bg-[#6b253e]/80 text-white border border-[#d0a36e]/30";
   const inactiveClass = "text-gray-300 hover:bg-[#6b253e]/40 hover:text-white border border-transparent";
@@ -55,7 +91,7 @@ function Sidebar() {
               </svg>
               <span className="text-xs font-medium">My Groups</span>
             </div>
-            <span className="bg-[#d0a36e] text-[#541b2f] text-[10px] font-bold px-2 py-0.5 rounded-full">9</span>
+            <span className="bg-[#d0a36e] text-[#541b2f] text-[10px] font-bold px-2 py-0.5 rounded-full">{groupCount}</span>
           </Link>
 
           <Link to="/review-submissions" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/review-submissions' ? activeClass : inactiveClass}`}>
@@ -66,7 +102,7 @@ function Sidebar() {
               </svg>
               <span className="text-xs font-medium">Review Submissions</span>
             </div>
-            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
+            {pendingSubCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingSubCount}</span>}
           </Link>
 
           <Link to="/research-categories" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${path === '/research-categories' ? activeClass : inactiveClass}`}>
@@ -87,7 +123,7 @@ function Sidebar() {
               </svg>
               <span className="text-xs font-medium">Group Registrations</span>
             </div>
-            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">2</span>
+            {pendingRegCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingRegCount}</span>}
           </Link>
           <Link to="/send-invitations" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${path === '/send-invitations' ? activeClass : inactiveClass}`}>
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -120,11 +156,11 @@ function Sidebar() {
       <div className="p-4 border-t border-[#6b253e]">
         <div className="bg-[#6b253e]/50 flex items-center gap-3 p-3 rounded-xl border border-[#6b253e]">
           <div className="w-8 h-8 rounded-full bg-[#d0a36e] flex items-center justify-center text-[#541b2f] font-bold text-xs">
-            IP
+            {adviserData?.firstName?.charAt(0)}{adviserData?.lastName?.charAt(0)}
           </div>
           <div>
-            <p className="text-xs font-bold text-white">Prof. Ira Pongasi</p>
-            <p className="text-[10px] text-[#d0a36e]">💡 Research Adviser</p>
+            <p className="text-xs font-bold text-white">{adviserData?.displayName || 'Research Adviser'}</p>
+            <p className="text-[10px] text-[#d0a36e]">💡 Adviser</p>
           </div>
         </div>
       </div>

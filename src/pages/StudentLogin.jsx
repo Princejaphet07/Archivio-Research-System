@@ -1,14 +1,95 @@
 import React, { useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '../firebase/config';
+import { logActivity } from '../firebase/logActivity';
 import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
 
-export default function StudentLogin({ onSwitchPage, onLogin }) {
+export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) {
+  const [email, setEmail] = useState(prefilledEmail || '');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSignIn = () => {
-    // TODO: Replace with real auth — for now goes straight to dashboard
-    if (onLogin) onLogin('STUDENT', 'JZ');
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedPassword = password.trim();
+
+      // Validate @phinmaed.com domain — no personal emails allowed
+      if (!trimmedEmail.endsWith('@phinmaed.com')) {
+        setError('❌ Please use your institutional email (@phinmaed.com) to sign in.');
+        setLoading(false);
+        return;
+      }
+
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+      const user = userCredential.user;
+
+      // Fetch student document from Firestore to get full name
+      const studentsRef = collection(db, 'students');
+      const q = query(studentsRef, where('uid', '==', user.uid));
+      const snapshot = await getDocs(q);
+
+      let displayName = user.displayName || trimmedEmail.split('@')[0];
+      let groupName = 'Your Group';
+      let adviserName = 'Your Adviser';
+      
+      if (!snapshot.empty) {
+        const studentData = snapshot.docs[0].data();
+        displayName = studentData.displayName || studentData.firstName + ' ' + studentData.lastName;
+        groupName = studentData.groupName || 'Your Group';
+        adviserName = studentData.invitedByName || 'Your Adviser';
+      }
+
+      const initials = displayName.substring(0, 2).toUpperCase();
+
+      // Call onLogin with student info
+      if (onLogin) onLogin(displayName, initials, groupName, adviserName);
+
+      // ✅ Log student login
+      await logActivity({
+        user:    trimmedEmail,
+        role:    'Student',
+        action:  'Logged in to Student Portal',
+        status:  'Success',
+        details: `Group: ${groupName} | Adviser: ${adviserName}`,
+      });
+
+    } catch (err) {
+      console.error('Login error:', err);
+      
+      let errMsg = '❌ Login failed. Please try again.';
+      if (err.code === 'auth/user-not-found') {
+        errMsg = '❌ Email not found. Please check your email or create an account.';
+      } else if (err.code === 'auth/wrong-password') {
+        errMsg = '❌ Incorrect password. Please try again.';
+      } else if (err.code === 'auth/invalid-email') {
+        errMsg = '❌ Invalid email format.';
+      } else if (err.code === 'auth/invalid-credential') {
+        errMsg = '❌ Email or password is incorrect.';
+      }
+      setError(errMsg);
+
+      // ❌ Log failed student login
+      await logActivity({
+        user:    email.trim().toLowerCase() || 'unknown',
+        role:    'Student',
+        action:  'Failed login attempt',
+        status:  'Failed',
+        details: err.code || 'Invalid credentials',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -119,7 +200,14 @@ export default function StudentLogin({ onSwitchPage, onLogin }) {
 
             <hr className="border-gray-100 mb-5" />
 
-            <div className="flex flex-col gap-4">
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-red-500 text-sm">⚠️</span>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSignIn} className="flex flex-col gap-4">
 
               {/* Email Input Field */}
               <div>
@@ -135,8 +223,11 @@ export default function StudentLogin({ onSwitchPage, onLogin }) {
                   </span>
                   <input
                     type="email"
-                    placeholder="Enter your @swu.phinma.edu.ph email"
-                    className="w-full py-3 pl-11 pr-4 bg-[#FBF9F6] border border-gray-200 rounded-lg text-[13.5px] font-sans text-gray-700 outline-none box-border focus:border-[#6B0F1A] focus:bg-white transition-all"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your @phinmaed.com email"
+                    className="w-full py-3 pl-11 pr-4 bg-[#FBF9F6] border border-gray-200 rounded-lg text-[13.5px] font-sans text-gray-700 outline-none box-border focus:border-[#6B0F1A] focus:bg-white transition-all disabled:opacity-50"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -155,13 +246,17 @@ export default function StudentLogin({ onSwitchPage, onLogin }) {
                   </span>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full py-3 pl-11 pr-16 bg-[#FBF9F6] border border-gray-200 rounded-lg text-[13.5px] font-sans text-gray-700 outline-none box-border focus:border-[#6B0F1A] focus:bg-white transition-all"
+                    className="w-full py-3 pl-11 pr-16 bg-[#FBF9F6] border border-gray-200 rounded-lg text-[13.5px] font-sans text-gray-700 outline-none box-border focus:border-[#6B0F1A] focus:bg-white transition-all disabled:opacity-50"
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[#6B0F1A] text-xs font-semibold font-sans hover:underline p-0 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[#6B0F1A] text-xs font-semibold font-sans hover:underline p-0 transition-colors disabled:opacity-50"
+                    disabled={loading}
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
@@ -175,13 +270,15 @@ export default function StudentLogin({ onSwitchPage, onLogin }) {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={e => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 accent-[#6B0F1A] cursor-pointer rounded border-gray-300"
+                    disabled={loading}
+                    className="w-3.5 h-3.5 accent-[#6B0F1A] cursor-pointer rounded border-gray-300 disabled:opacity-50"
                   />
                   Remember me
                 </label>
                 <button 
                   type="button" 
-                  className="bg-transparent border-none text-[#6B0F1A] font-medium cursor-pointer p-0 hover:underline"
+                  className="bg-transparent border-none text-[#6B0F1A] font-medium cursor-pointer p-0 hover:underline disabled:opacity-50"
+                  disabled={loading}
                 >
                   Forgot password?
                 </button>
@@ -189,14 +286,14 @@ export default function StudentLogin({ onSwitchPage, onLogin }) {
 
               {/* Action Submit Button */}
               <button
-                type="button"
-                onClick={handleSignIn}
-                className="w-full py-3.5 bg-[#6B0F1A] text-white border-none rounded-lg text-[14px] font-sans font-bold tracking-wide cursor-pointer transition-all duration-200 hover:bg-[#540c14] active:scale-[0.99] shadow-sm"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-[#6B0F1A] text-white border-none rounded-lg text-[14px] font-sans font-bold tracking-wide cursor-pointer transition-all duration-200 hover:bg-[#540c14] active:scale-[0.99] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign In to ARCHIVIO
+                {loading ? 'Signing In...' : 'Sign In to ARCHIVIO'}
               </button>
 
-            </div>
+            </form>
           </div>
         </div>
       </div>

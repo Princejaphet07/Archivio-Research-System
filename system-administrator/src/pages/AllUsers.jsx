@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header'; // Added Header Import
-
-const allUsers = [
-  { id: 1, name: 'Prof. Ana Aquino', email: 'a.aquino@swu.phinma.edu.ph', role: 'Adviser', dept: 'IT & Engineering', status: 'Active', lastLogin: '1 hour ago' },
-  { id: 2, name: 'Ana L. Dela Cruz', email: 'a.delacruz@swu.phinma.edu.ph', role: 'Student', dept: 'IT & Engineering', status: 'Active', lastLogin: '3 hours ago' },
-  { id: 3, name: 'Dr. Ben Cruz', email: 'b.cruz@swu.phinma.edu.ph', role: 'Adviser', dept: 'Dentistry', status: 'Active', lastLogin: '5 hours ago' },
-  { id: 4, name: 'Prof. Celia Dela Cruz', email: 'c.delacruz@swu.phinma.edu.ph', role: 'Adviser', dept: 'Business School', status: 'Active', lastLogin: '2 days ago' },
-  { id: 5, name: 'Prof. Elena Flores', email: 'e.flores@swu.phinma.edu.ph', role: 'Adviser', dept: 'IT & Engineering', status: 'Active', lastLogin: '3 hours ago' },
-  { id: 6, name: 'Dr. Elena Reyes', email: 'dean.reyes@swu.phinma.edu.ph', role: 'Dean', dept: 'Dentistry', status: 'Active', lastLogin: '3 hours ago' },
-  { id: 7, name: 'Ira Pongasi', email: 'i.pongasi@swu.phinma.edu.ph', role: 'Adviser', dept: 'IT & Engineering', status: 'Active', lastLogin: '30 min ago' },
-  { id: 8, name: 'Jemi M. Zamoras', email: 'j.zamoras@swu.phinma.edu.ph', role: 'Student', dept: 'IT & Engineering', status: 'Active', lastLogin: '1 hour ago' },
-  { id: 9, name: 'Dr. Maria Santos', email: 'dean.santos@swu.phinma.edu.ph', role: 'Dean', dept: 'IT & Engineering', status: 'Active', lastLogin: '2 hours ago' },
-  { id: 10, name: 'Dr. Roberto Lim', email: 'dean.lim@swu.phinma.edu.ph', role: 'Dean', dept: 'Business School', status: 'Active', lastLogin: '1 day ago' },
-];
+import { db } from '../firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -21,17 +10,99 @@ const roleColors = {
   Dean: 'bg-pink-100 text-pink-700',
 };
 
-const tabs = ['All Users (238)', 'Deans (3)', 'Advisers (25)', 'Students (210)'];
-
 export default function AllUsers() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = allUsers.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.dept.toLowerCase().includes(search.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const deansSnap = await getDocs(collection(db, 'deans'));
+        const advisersSnap = await getDocs(collection(db, 'advisers'));
+        const studentsSnap = await getDocs(collection(db, 'students'));
+
+        const usersList = [];
+        
+        // Helper to format dates
+        const formatDate = (dateVal) => {
+          if (!dateVal) return 'N/A';
+          if (dateVal.toDate) return dateVal.toDate().toLocaleDateString();
+          return new Date(dateVal).toLocaleDateString();
+        };
+
+        deansSnap.forEach(doc => {
+          const data = doc.data();
+          usersList.push({
+            id: doc.id,
+            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+            email: data.email,
+            role: 'Dean',
+            dept: data.department || 'N/A',
+            status: data.status || 'Active',
+            lastLogin: formatDate(data.lastLogin || data.createdAt)
+          });
+        });
+
+        advisersSnap.forEach(doc => {
+          const data = doc.data();
+          usersList.push({
+            id: doc.id,
+            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+            email: data.email,
+            role: 'Adviser',
+            dept: data.department || 'N/A',
+            status: data.status || 'Active',
+            lastLogin: formatDate(data.lastLogin || data.createdAt)
+          });
+        });
+
+        studentsSnap.forEach(doc => {
+          const data = doc.data();
+          usersList.push({
+            id: doc.id,
+            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+            email: data.email,
+            role: 'Student',
+            dept: data.course || 'N/A',
+            status: data.status || 'Active',
+            lastLogin: formatDate(data.lastLogin || data.createdAt)
+          });
+        });
+
+        // Sort alphabetically by name
+        usersList.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setAllUsers(usersList);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const tabs = [
+    `All Users (${allUsers.length})`, 
+    `Deans (${allUsers.filter(u => u.role === 'Dean').length})`, 
+    `Advisers (${allUsers.filter(u => u.role === 'Adviser').length})`, 
+    `Students (${allUsers.filter(u => u.role === 'Student').length})`
+  ];
+
+  const filtered = allUsers.filter(u => {
+    if (activeTab === 1 && u.role !== 'Dean') return false;
+    if (activeTab === 2 && u.role !== 'Adviser') return false;
+    if (activeTab === 3 && u.role !== 'Student') return false;
+    
+    const term = search.toLowerCase();
+    return (
+      (u.name || '').toLowerCase().includes(term) ||
+      (u.email || '').toLowerCase().includes(term) ||
+      (u.dept || '').toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
@@ -96,27 +167,42 @@ export default function AllUsers() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {filtered.map(user => (
-                    <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
-                      <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[user.role]}`}>{user.role}</span>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 font-medium">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="w-8 h-8 border-4 border-stone-200 border-t-[#801e38] rounded-full animate-spin mb-3"></div>
+                          Loading users...
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.dept}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">{user.status}</span>
-                      </td>
-                      <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.lastLogin}</td>
                     </tr>
-                  ))}
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 font-medium">No users found.</td>
+                    </tr>
+                  ) : (
+                    filtered.map(user => (
+                      <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
+                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[user.role]}`}>{user.role}</span>
+                        </td>
+                        <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.dept}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">{user.status}</span>
+                        </td>
+                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.lastLogin}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* PAGINATION */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100">
-              <span className="text-sm text-stone-500 font-medium">Showing 1–10 of 238 users</span>
+              <span className="text-sm text-stone-500 font-medium">Showing {filtered.length} of {allUsers.length} users</span>
               <div className="flex items-center gap-1">
                 <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">‹</button>
                 <button className="w-8 h-8 flex items-center justify-center rounded bg-[#801e38] text-white font-bold shadow-sm cursor-pointer">1</button>

@@ -1,7 +1,7 @@
 import React from 'react';
 import swuLogoSeal from '../assets/new icon.png';
 
-export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout }) {
+export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials }) {
   
   const menuItems = [
     { 
@@ -101,10 +101,10 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
           {/* User Profile */}
           <div className="border border-[#E8DFCB] rounded-2xl p-3 flex items-center gap-3 bg-transparent cursor-pointer hover:bg-black/5 transition-colors" onClick={onLogout}>
             <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-[14px] shrink-0 shadow-sm">
-              JR
+              {initials || 'ST'}
             </div>
             <div className="flex flex-col flex-1 truncate">
-              <span className="text-[13px] font-bold text-[#1A1A1A] truncate">Hylla Tejada</span>
+              <span className="text-[13px] font-bold text-[#1A1A1A] truncate">{studentName || 'Student Name'}</span>
               <span className="text-[11px] text-gray-500">Group Leader</span>
             </div>
           </div>

@@ -1,63 +1,84 @@
-import React from 'react';
-import { Link } from 'react-router-dom'; // <-- GI-IMPORT ANG LINK DINHI
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { db } from '../firebase/config';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function ArchiveBrowse() {
-  const papers = [
-    {
-      id: 1,
-      category: "Web Development",
-      isNew: true,
-      year: "2026",
-      title: "ARCHIVIO: A Web-Based Research Archive Management System for SWU PHINMA",
-      authors: "Zamoras, J.M. • Perote, A.C • Tejada H.M • Vender P.J. • Adviser: Dr. Cendana C.",
-      abstract: "This study developed a web-based Research Archive Management System enabling advisers, deans, and students to manage manuscripts through a structured digital workflow with role-based access control...",
-      tags: ["Archive System", "AI", "SWU PHINMA"],
-      likes: 128,
-      views: 1042,
-      borderColor: "border-green-600"
-    },
-    {
-      id: 2,
-      category: "Mental Health",
-      isNew: false,
-      year: "2024",
-      title: "Mental Health Literacy and Help-Seeking Behavior Among Filipino Nursing Students",
-      authors: "Villanueva, C.A. • Tan, M.R. • Ong, S.L. • Adviser: Dr. Lim, S.J.",
-      abstract: "Cross-sectional study examining mental health literacy and its relationship to help-seeking behavior among nursing students, revealing significant correlations...",
-      tags: ["Nursing Education", "Quantitative"],
-      likes: 89,
-      views: 721,
-      borderColor: "border-teal-500"
-    },
-    {
-      id: 3,
-      category: "Digital",
-      isNew: false,
-      year: "2024",
-      title: "The Mediating Role of Digital Transformation on SME Performance in Cebu City",
-      authors: "Go, A.M. • Lim, J.T. • Adviser: Dr. Soriano, B.R.",
-      abstract: "Using structural equation modeling, investigates how digital transformation mediates the relationship between organizational agility and business performance among SMEs...",
-      tags: ["Digital Transformation", "SME", "Cebu", "SEM"],
-      likes: 54,
-      views: 432,
-      borderColor: "border-purple-500"
-    },
-    {
-      id: 4,
-      category: "Education",
-      isNew: false,
-      year: "2024",
-      title: "Effectiveness of Gamified Learning Environments on Academic Engagement in Philippine K-12",
-      authors: "Bautista, L.C. • Ramos, A.J. • Cruz, P.M. • Adviser: Dr. Santos, E.",
-      abstract: "Quasi-experimental research on gamification impact on student engagement in K-12 classrooms, with results indicating statistically significant improvement in motivation...",
-      tags: ["Gamification", "K-12", "EdTech"],
-      likes: 71,
-      views: 589,
-      borderColor: "border-red-700"
+  const [publishedPapers, setPublishedPapers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState('Newest First');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const qSubs = query(
+      collection(db, 'submissions'),
+      where('reviewStatus', '==', 'published')
+    );
+    const qGroups = query(collection(db, 'groups'));
+
+    let subsList = [];
+    let groupsList = [];
+
+    const computeData = () => {
+      if (!subsList.length) {
+        setLoading(false);
+        return;
+      }
+
+      const enrichedPapers = subsList.map(sub => {
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        return {
+          ...sub,
+          researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
+          groupName: group?.groupName || sub.groupName,
+          adviserName: group?.adviserName || sub.adviserName,
+          program: group?.program || sub.program,
+          authorDisplay: group 
+            ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
+            : sub.studentName || 'Unknown Author'
+        };
+      });
+
+      setPublishedPapers(enrichedPapers);
+      setLoading(false);
+    };
+
+    const unsubSubs = onSnapshot(qSubs, (snapshot) => {
+      subsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeData();
+    });
+
+    const unsubGroups = onSnapshot(qGroups, (snapshot) => {
+      groupsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeData();
+    });
+
+    return () => {
+      unsubSubs();
+      unsubGroups();
+    };
+  }, []);
+
+  // Filter & Sort
+  const filteredPapers = publishedPapers.filter(paper => {
+    const q = searchQuery.toLowerCase();
+    const title = (paper.researchTitle || paper.title || '').toLowerCase();
+    const author = (paper.studentName || '').toLowerCase();
+    const keywords = (paper.keywords || []).join(' ').toLowerCase();
+    return title.includes(q) || author.includes(q) || keywords.includes(q);
+  }).sort((a, b) => {
+    if (sortOption === 'Newest First') {
+      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
     }
-  ];
+    if (sortOption === 'A-Z') {
+      const titleA = a.researchTitle || a.title || '';
+      const titleB = b.researchTitle || b.title || '';
+      return titleA.localeCompare(titleB);
+    }
+    return 0; // Most Viewed would require an analytics field, placeholder for now
+  });
 
   return (
     <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0]">
@@ -71,20 +92,23 @@ function ArchiveBrowse() {
             <input 
               type="text" 
               placeholder="Search title, author, keywords..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full py-2.5 pl-10 pr-4 rounded bg-white border border-stone-200 outline-none focus:border-[#7a2039] text-sm text-stone-700 shadow-sm"
             />
           </div>
-          <select className="bg-white border border-stone-200 rounded px-4 py-2.5 text-sm text-stone-600 outline-none shadow-sm cursor-pointer hidden md:block">
+          <select 
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="bg-white border border-stone-200 rounded px-4 py-2.5 text-sm text-stone-600 outline-none shadow-sm cursor-pointer hidden md:block"
+          >
             <option>Sort: Newest First</option>
             <option>Sort: Most Viewed</option>
             <option>Sort: A-Z</option>
           </select>
-          <button className="bg-[#7a2039] text-white px-8 py-2.5 rounded font-medium text-sm hover:bg-[#5a1528] transition cursor-pointer shadow-sm">
-            Search
-          </button>
         </div>
         <div className="text-xs text-stone-500 font-sans hidden md:block">
-          Showing 10 out of 1,248 results
+          Showing {filteredPapers.length} out of {publishedPapers.length} results
         </div>
       </div>
 
@@ -99,85 +123,106 @@ function ArchiveBrowse() {
           </div>
 
           <div className="p-6 space-y-8">
-            {/* Year Published */}
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs font-bold tracking-widest text-stone-700">YEAR PUBLISHED</h3>
-                <span className="text-[10px] text-stone-500 cursor-pointer hover:text-stone-800">View All</span>
-              </div>
-              <div className="space-y-3 text-sm text-stone-600">
-                <label className="flex items-center gap-3 cursor-pointer text-[#7a2039] font-medium"><input type="checkbox" defaultChecked className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2030 (48)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2029 (312)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2028 (287)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2027 (241)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2026 (186)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> 2025 & Earlier (174)</label>
+              <h3 className="font-bold text-stone-800 text-sm mb-3 uppercase tracking-wider">Access Type</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
+                  <span className="group-hover:text-[#7a2039] transition">Open Access</span>
+                </label>
+                <label className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                  <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
+                  <span className="group-hover:text-[#7a2039] transition">Restricted (SWU Only)</span>
+                </label>
               </div>
             </div>
 
-            <hr className="border-stone-300" />
-
-            {/* Categories */}
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs font-bold tracking-widest text-stone-700">CATEGORIES</h3>
-                <span className="text-[10px] text-stone-500 cursor-pointer hover:text-stone-800">View All</span>
-              </div>
-              <div className="space-y-3 text-sm text-stone-600">
-                <label className="flex items-center gap-3 cursor-pointer text-[#7a2039] font-medium"><input type="checkbox" defaultChecked className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> All Categories (248)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> Health (89)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> Educational (72)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> Web Development (55)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> Artificial Intelligence (55)</label>
-                <label className="flex items-center gap-3 cursor-pointer hover:text-stone-900"><input type="checkbox" className="accent-[#7a2039] w-4 h-4 cursor-pointer" /> History (55)</label>
+              <h3 className="font-bold text-stone-800 text-sm mb-3 uppercase tracking-wider">Publication Year</h3>
+              <div className="space-y-2">
+                {['2026', '2025', '2024', '2023'].map(year => (
+                  <label key={year} className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                    <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
+                    <span className="group-hover:text-[#7a2039] transition">{year}</span>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
         </aside>
 
-        {/* RESULTS LIST */}
-        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6">
-          {papers.map((paper) => (
-            <div key={paper.id} className={`bg-[#fdfbf7] border border-stone-200 border-l-4 ${paper.borderColor} shadow-sm flex flex-col md:flex-row justify-between p-6 gap-6`}>
-              
-              <div className="flex-1 font-sans">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="px-2.5 py-1 bg-[#f2ead3] border border-[#e5d4a6] text-stone-700 text-[10px] rounded">{paper.category}</span>
-                  {paper.isNew && <span className="px-2 py-1 bg-green-700 text-white font-bold text-[9px] rounded">NEW</span>}
-                  <span className="text-xs text-stone-500">{paper.year}</span>
-                </div>
-                
-                <h2 className="text-xl font-bold text-stone-900 mb-2 leading-snug font-serif">{paper.title}</h2>
-                <p className="text-xs text-stone-500 mb-3">{paper.authors}</p>
-                <p className="text-sm text-stone-600 mb-4 leading-relaxed">{paper.abstract}</p>
-                
-                <div className="flex flex-wrap gap-2 text-[10px]">
-                  {paper.tags.map((tag, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-[#f5f1e6] border border-[#e8dfc8] text-[#8c7435] rounded-full">{tag}</span>
-                  ))}
-                </div>
+        {/* RESULTS FEED */}
+        <main className="flex-1 p-6 md:p-10 font-sans max-w-4xl">
+          <div className="space-y-6">
+            
+            {loading ? (
+              <div className="text-center py-20 text-stone-500">Loading archives...</div>
+            ) : filteredPapers.length === 0 ? (
+              <div className="text-center py-20 text-stone-500 border-2 border-dashed border-stone-300 rounded-2xl bg-white">
+                <p className="text-lg font-bold text-stone-700">No results found.</p>
+                <p className="text-sm mt-2">Try adjusting your search or filters.</p>
               </div>
+            ) : (
+              filteredPapers.map((paper) => (
+                <div key={paper.id} className={`bg-white rounded-xl p-6 shadow-sm hover:shadow-md border border-stone-200 transition-all border-l-4 border-[#7a2e46]`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2.5 py-1 bg-stone-100 border border-stone-200 text-stone-600 rounded text-xs font-medium">
+                        {paper.program || 'Research'}
+                      </span>
+                      <span className="text-xs text-stone-400 font-medium">
+                        Published: {new Date(paper.publishedAt || Date.now()).getFullYear()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <h3 className="font-bold text-xl text-stone-900 mb-2 leading-tight">
+                    {paper.researchTitle || 'Untitled Research'}
+                  </h3>
+                  
+                  <p className="text-sm text-[#7a2039] font-medium mb-3">
+                    {paper.authorDisplay} • Adviser: {paper.adviserName || 'Unknown'}
+                  </p>
+                  
+                  <p className="text-sm text-stone-600 mb-4 line-clamp-3 leading-relaxed">
+                    {paper.abstract || 'No abstract provided.'}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {paper.keywords?.slice(0, 4).map((tag, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-[#fcfbf7] border border-stone-200 text-stone-500 rounded-full text-xs hover:bg-stone-100 cursor-pointer transition">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-between items-center border-t border-stone-100 pt-4">
+                    <div className="flex gap-4 text-xs font-medium text-stone-500">
+                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">♥</span> {Math.floor(Math.random() * 50) + 10}</span>
+                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">👁</span> {Math.floor(Math.random() * 500) + 100}</span>
+                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">↗</span> Share</span>
+                    </div>
+                    <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white border border-[#7a2039] text-[#7a2039] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white transition cursor-pointer">
+                      Read Full Text
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
 
-              <div className="flex flex-col items-end justify-between md:w-40 flex-shrink-0 gap-4">
-                <div className="flex flex-col gap-2 w-full font-sans">
-                  
-                  {/* GI-UPDATE NGA LINK PADULONG SA VIEWER */}
-                  <Link to="/viewer" className="w-full py-2 bg-[#7a2039] text-white text-xs text-center rounded hover:bg-[#5a1528] transition cursor-pointer flex items-center justify-center">
-                    View Paper
-                  </Link>
-                  
-                  <button className="w-full py-2 bg-white border border-stone-300 text-stone-700 text-xs rounded hover:bg-stone-50 transition flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                    <span>📌</span> Bookmark
-                  </button>
-                </div>
-                <div className="flex gap-4 text-xs font-medium text-stone-500 font-sans">
-                  <span className="text-red-600 flex items-center gap-1">👍 {paper.likes}</span>
-                  <span className="flex items-center gap-1">👁️ {paper.views}</span>
-                </div>
+          </div>
+
+          {/* Pagination Placeholder */}
+          {!loading && filteredPapers.length > 0 && (
+             <div className="flex justify-center mt-12 gap-2 font-sans">
+                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-400 hover:bg-stone-50">‹</button>
+                <button className="w-10 h-10 rounded bg-[#7a2039] text-white font-bold">1</button>
+                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-medium">2</button>
+                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-medium">3</button>
+                <span className="w-10 h-10 flex items-center justify-center text-stone-400">...</span>
+                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-400 hover:bg-stone-50">›</button>
               </div>
-
-            </div>
-          ))}
+          )}
         </main>
       </div>
 

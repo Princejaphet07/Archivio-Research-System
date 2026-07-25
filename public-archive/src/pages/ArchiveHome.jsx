@@ -1,19 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import heroBg from '../assets/Hero.png'; 
 import Header from '../components/Header';
 import Footer from '../components/Footer'; 
+import { db } from '../firebase/config';
+import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 
 function ArchiveHome() {
+  const [publishedPapers, setPublishedPapers] = useState([]);
+  const [stats, setStats] = useState({
+    papers: 0,
+    authors: 0,
+    departments: 0,
+    advisers: 0
+  });
+
+  useEffect(() => {
+    // Fetch published submissions
+    const qSubs = query(
+      collection(db, 'submissions'),
+      where('reviewStatus', '==', 'published')
+    );
+
+    // Fetch groups
+    const qGroups = query(collection(db, 'groups'));
+
+    let subsList = [];
+    let groupsList = [];
+
+    const computeData = () => {
+      if (!subsList.length) return;
+
+      const enrichedPapers = subsList.map(sub => {
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        return {
+          ...sub,
+          researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
+          groupName: group?.groupName || sub.groupName,
+          adviserName: group?.adviserName || sub.adviserName,
+          program: group?.program || sub.program,
+          authorDisplay: group 
+            ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
+            : sub.studentName || 'Unknown Author'
+        };
+      });
+
+      // Sort newest first client-side
+      const sortedPapers = enrichedPapers.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedPapers(sortedPapers);
+
+      // Compute stats
+      const uniqueAuthors = new Set();
+      const uniqueAdvisers = new Set();
+      const uniqueDepartments = new Set();
+
+      enrichedPapers.forEach(p => {
+        if (p.studentUid) uniqueAuthors.add(p.studentUid);
+        if (p.adviserName) uniqueAdvisers.add(p.adviserName);
+        if (p.program) uniqueDepartments.add(p.program);
+      });
+
+      setStats({
+        papers: enrichedPapers.length,
+        authors: uniqueAuthors.size,
+        departments: uniqueDepartments.size || 1, // Fallback to at least 1 if program missing
+        advisers: uniqueAdvisers.size
+      });
+    };
+
+    const unsubSubs = onSnapshot(qSubs, (snapshot) => {
+      subsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeData();
+    });
+
+    const unsubGroups = onSnapshot(qGroups, (snapshot) => {
+      groupsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeData();
+    });
+
+    return () => {
+      unsubSubs();
+      unsubGroups();
+    };
+  }, []);
+
   const categories = [
-    { name: "Web Development", papers: "218 papers" },
-    { name: "Health & Wellness", papers: "196 papers" },
-    { name: "Artificial Intelligence", papers: "187 papers" },
-    { name: "History", papers: "142 papers" },
-    { name: "Mental Health", papers: "134 papers" },
-    { name: "Statistics", papers: "98 papers" },
-    { name: "Education", papers: "87 papers" },
-    { name: "Psychology", papers: "76 papers" },
+    { name: "Web Development", papers: "12 papers" },
+    { name: "Health & Wellness", papers: "8 papers" },
+    { name: "Artificial Intelligence", papers: "5 papers" },
+    { name: "Information Technology", papers: "14 papers" },
+    { name: "Business", papers: "9 papers" },
   ];
 
   return (
@@ -48,10 +124,10 @@ function ArchiveHome() {
 
       {/* STATS RIBBON */}
       <div className="bg-[#6b142c] text-white py-10 px-12 grid grid-cols-4 text-center divide-x divide-white/10 shadow-inner">
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">1,248</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Papers Archived</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">342</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Student Authors</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">14</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Departments</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">89</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Faculty Advisers</p></div>
+        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.papers}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Papers Archived</p></div>
+        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.authors}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Student Authors</p></div>
+        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.departments}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Departments</p></div>
+        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.advisers}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Faculty Advisers</p></div>
       </div>
 
       {/* LATEST RESEARCH */}
@@ -67,53 +143,45 @@ function ArchiveHome() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-          {/* Card 1 */}
-          <div className="bg-[#f2ead3] rounded-xl p-6 shadow-md border border-[#e5d4a6] flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-4 text-xs text-stone-600"><span className="px-2 py-1 border border-stone-300 rounded bg-[#e8debe]">Machine Learning</span><span>2024</span></div>
-              <h3 className="font-bold text-lg text-stone-900 mb-2 leading-snug">Machine Learning-Based Prediction of Student Academic Performance in Philippine HEIs</h3>
-              <p className="text-xs text-stone-600 mb-1">Cruz, J.M. • Reyes, A.L. • Santos, K.B.</p>
-              <p className="text-[11px] text-stone-500 italic">Adviser: Dr. Fernandez, R.</p>
-              <div className="flex gap-2 mt-4 text-[10px]"><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">Machine Learning</span><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">HEI</span></div>
+          {publishedPapers.slice(0, 3).map((paper, idx) => (
+            <div key={paper.id} className="bg-[#f2ead3] rounded-xl p-6 shadow-md border border-[#e5d4a6] flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-4 text-xs text-stone-600">
+                  <span className="px-2 py-1 border border-stone-300 rounded bg-[#e8debe] truncate max-w-[150px]">
+                    {paper.program || 'Research'}
+                  </span>
+                  <span>{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
+                </div>
+                <h3 className="font-bold text-lg text-stone-900 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
+                  {paper.researchTitle || 'Untitled Research'}
+                </h3>
+                <p className="text-xs text-stone-600 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
+                <p className="text-[11px] text-stone-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
+                <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
+                  {paper.keywords?.slice(0, 3).map(kw => (
+                    <span key={kw} className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-8">
+                <div className="text-xs text-stone-500 flex gap-3 font-medium">
+                  <span className="text-red-700">❤️ {Math.floor(Math.random() * 50) + 10}</span> 
+                  <span>👁️ {Math.floor(Math.random() * 500) + 100}</span>
+                </div>
+                <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
+                  View Paper
+                </Link>
+              </div>
             </div>
-            <div className="flex justify-between items-center mt-8">
-              <div className="text-xs text-stone-500 flex gap-3 font-medium"><span className="text-red-700">❤️ 42</span> <span>👁️ 318</span></div>
-              {/* GI-UPDATE NGA LINK */}
-              <Link to="/viewer" className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">View Paper</Link>
-            </div>
-          </div>
+          ))}
 
-          {/* Card 2 */}
-          <div className="bg-[#f2ead3] rounded-xl p-6 shadow-md border border-[#e5d4a6] flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-4 text-xs text-stone-600"><span className="px-2 py-1 border border-stone-300 rounded bg-[#e8debe]">Mental Health</span><span>2024</span></div>
-              <h3 className="font-bold text-lg text-stone-900 mb-2 leading-snug">Mental Health Awareness Among College Students Post-Pandemic: A Qualitative Study</h3>
-              <p className="text-xs text-stone-600 mb-1">Dela Cruz, M.A. • Villanueva, C.</p>
-              <p className="text-[11px] text-stone-500 italic">Adviser: Dr. Lim, S.</p>
-              <div className="flex gap-2 mt-4 text-[10px]"><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">Mental Health</span><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">Post-Pandemic</span></div>
+          {publishedPapers.length === 0 && (
+            <div className="col-span-3 text-center py-12 text-stone-500">
+              No published research available yet.
             </div>
-            <div className="flex justify-between items-center mt-8">
-              <div className="text-xs text-stone-500 flex gap-3 font-medium"><span className="text-red-700">❤️ 67</span> <span>👁️ 521</span></div>
-              {/* GI-UPDATE NGA LINK */}
-              <Link to="/viewer" className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">View Paper</Link>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="bg-[#f2ead3] rounded-xl p-6 shadow-md border border-[#e5d4a6] flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-4 text-xs text-stone-600"><span className="px-2 py-1 border border-stone-300 rounded bg-[#e8debe]">Web Development</span><span>2026</span></div>
-              <h3 className="font-bold text-lg text-stone-900 mb-2 leading-snug">ARCHIVIO: A Web-Based Research Archive Management System for SWU PHINMA</h3>
-              <p className="text-xs text-stone-600 mb-1">Zamoras, J.M. • Perote, A.C • Tejada H.M • Vender P.J.</p>
-              <p className="text-[11px] text-stone-500 italic">Adviser: Dr. Cendana, C.</p>
-              <div className="flex gap-2 mt-4 text-[10px]"><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">Archive System</span><span className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">SWU PHINMA</span></div>
-            </div>
-            <div className="flex justify-between items-center mt-8">
-              <div className="text-xs text-stone-500 flex gap-3 font-medium"><span className="text-red-700">❤️ 38</span> <span>👁️ 204</span></div>
-              {/* GI-UPDATE NGA LINK */}
-              <Link to="/viewer" className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">View Paper</Link>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

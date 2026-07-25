@@ -1,21 +1,235 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, addDoc, getDocs, query, where, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
-export default function Invitations({ activePage, onNavigate }) {
-  const invites = [
-    { name: 'Prof. Jose Reyes', initial: 'JR', email: 'jose.reyes@swu.phinma.edu', time: '2 days ago', status: 'Pending' },
-    { name: 'Prof. Maria Cruz', initial: 'MC', email: 'maria.cruz@swu.phinma.edu', time: '5 days ago', status: 'Accepted' },
-    { name: 'Dr. Roberto Lim', initial: 'RL', email: 'roberto.lim@swu.phinma.edu', time: '1 week ago', status: 'Pending' },
-    { name: 'Prof. Andrea Diaz', initial: 'AD', email: 'andrea.diaz@swu.phinma.edu', time: '2 weeks ago', status: 'Accepted' },
-    { name: 'Prof. Carlos Tan', initial: 'CT', email: 'carlos.tan@swu.phinma.edu', time: '3 weeks ago', status: 'Pending' },
-  ];
+export default function Invitations() {
+  const { deanData } = useUser();
+  const [advisers, setAdvisers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    message: ''
+  });
+
+  // Default invitation message
+  const defaultMessage = `Dear [Adviser Name],
+
+You have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.
+
+As a Research Adviser, you will be able to:
+• Manage your assigned student research groups
+• Review and endorse student research submissions
+• Collaborate with your dean for approvals
+• Access comprehensive research analytics
+
+Please click the "Create Your Account" button below to set up your password and get started.
+
+This invitation will expire in 7 days. If you did not request this invitation, please disregard this email.
+
+Best regards,
+ARCHIVIO Research Management System`;
+
+  // Fetch advisers on mount and when deanData changes
+  useEffect(() => {
+    if (deanData?.email) {
+      fetchAdvisers();
+    }
+  }, [deanData?.email]);
+
+  const fetchAdvisers = async () => {
+    if (!deanData?.email) {
+      console.log('Waiting for deanData to load...');
+      return;
+    }
+
+    try {
+      console.log('Fetching advisers for dean:', deanData.email);
+      
+      // Fetch advisers invited by this dean
+      const advisersQuery = query(
+        collection(db, 'advisers'),
+        where('invitedBy', '==', deanData.email)
+      );
+      
+      const snapshot = await getDocs(advisersQuery);
+      const advisersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort by createdAt descending in JavaScript
+      advisersData.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+      
+      console.log('Fetched advisers:', advisersData);
+      setAdvisers(advisersData);
+      setError(''); // Clear any previous errors
+    } catch (error) {
+      console.error('Error fetching advisers:', error);
+      // Don't show error if it's just because orderBy is missing - still show results
+      if (!error.message.includes('orderBy')) {
+        setError('Error loading invitations');
+      }
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSendInvitation = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    if (!formData.email.toLowerCase().endsWith('@phinmaed.com')) {
+      setError('Email must use @phinmaed.com domain');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Generate a simple invitation token to track this specific invitation
+      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      // Clean link to the Sign Up page — no token exposed in the URL
+      const invitationLink = `http://localhost:5176/signup`;
+
+      // Create adviser invitation in Firestore
+      const adviserData = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+        email: formData.email.toLowerCase().trim(),
+        invitedBy: deanData?.email,
+        invitedByName: deanData?.displayName,
+        department: deanData?.department,
+        status: 'pending',
+        invitationToken: invitationToken,
+        invitationLink: invitationLink,
+        message: formData.message || defaultMessage,
+        invitationSentAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'advisers'), adviserData);
+
+      // Call Node.js backend to send email
+      try {
+        const emailResponse = await fetch('http://localhost:3001/api/send-invitation-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: formData.email,
+            adviserName: formData.firstName,
+            message: formData.message || defaultMessage,
+            invitationLink: invitationLink,
+            senderName: deanData?.displayName,
+            senderDepartment: deanData?.department
+          })
+        });
+
+        if (!emailResponse.ok) {
+          console.warn('Email send failed, but invitation saved to database');
+        }
+      } catch (emailError) {
+        console.warn('Email service error (invitation still saved):', emailError);
+      }
+
+      // Refresh advisers list
+      await fetchAdvisers();
+
+      setSuccess(`✅ Invitation sent to ${formData.email}!`);
+      
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        message: ''
+      });
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      setError('Failed to send invitation. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendInvitation = async (adviserId, adviserEmail) => {
+    setLoading(true);
+    try {
+      // Update invitation sent time
+      await updateDoc(doc(db, 'advisers', adviserId), {
+        invitationSentAt: new Date().toISOString()
+      });
+
+      // Get adviser data
+      const adviser = advisers.find(a => a.id === adviserId);
+
+      // Resend email
+      try {
+        await fetch('http://localhost:3001/api/send-invitation-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: adviserEmail,
+            adviserName: adviser.firstName,
+            message: adviser.message,
+            invitationLink: adviser.invitationLink,
+            senderName: deanData?.displayName,
+            senderDepartment: deanData?.department
+          })
+        });
+      } catch (emailError) {
+        console.warn('Email service error:', emailError);
+      }
+
+      await fetchAdvisers();
+      setSuccess(`✅ Invitation resent to ${adviserEmail}`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to resend invitation');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+      <Sidebar activePage="invitations" />
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <Header activePage={activePage} />
+        <Header activePage="invitations" />
         
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
@@ -34,26 +248,92 @@ export default function Invitations({ activePage, onNavigate }) {
               </div>
               
               <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Adviser Name</label>
-                  <input type="text" placeholder="e.g. Dr. Maria Reyes" className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024]" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Email Address</label>
-                  <input type="email" placeholder="adviser@swu.phinma.edu" className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024]" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1 flex justify-between tracking-wide">
-                    <span>Invitation Message</span>
-                    <span className="text-blue-600 lowercase font-normal cursor-pointer hover:underline text-[9px]">💡 Default message from Settings</span>
-                  </label>
-                  <textarea defaultValue={`Dear [Adviser Name],\n\nYou have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.\n\nAs a Research Adviser, you will be able to:\n• Manage your assigned student research groups...`} rows={5} className="w-full text-xs p-2.5 border border-stone-200 rounded-xl bg-stone-50/50 text-stone-600 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none" />
-                  <p className="text-[10px] text-stone-400 mt-1">You can edit this message before sending. Changes here won't affect the template in Settings.</p>
-                </div>
-                
-                <button className="w-full bg-[#4a1024] hover:bg-[#6b1834] text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
-                  <span>✉️</span> Send Invitation Link
-                </button>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                    <span className="text-red-500 text-sm">⚠️</span>
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                    <span className="text-green-500 text-sm">✅</span>
+                    <p className="text-sm text-green-700">{success}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSendInvitation} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Maria" 
+                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Reyes" 
+                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
+                    <input 
+                      type="email" 
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="adviser@phinmaed.com" 
+                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      disabled={loading}
+                    />
+                    <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1 flex justify-between tracking-wide">
+                      <span>Invitation Message</span>
+                      <button 
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, message: '' }))}
+                        className="text-blue-600 lowercase font-normal cursor-pointer hover:underline text-[9px]"
+                      >
+                        💡 Reset to default
+                      </button>
+                    </label>
+                    <textarea 
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder={defaultMessage}
+                      rows={5} 
+                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl bg-stone-50/50 text-stone-600 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
+                      disabled={loading}
+                    />
+                    <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
+                  </div>
+                  
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-[#4a1024] hover:bg-[#6b1834] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
+                  >
+                    <span>✉️</span> {loading ? 'Sending...' : 'Send Invitation Link'}
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -62,50 +342,61 @@ export default function Invitations({ activePage, onNavigate }) {
               <div className="flex justify-between items-center border-b border-stone-100 pb-4 mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-stone-800">Sent Invitations</h3>
-                  <p className="text-[11px] text-stone-400">Last 30 days · Track invitation status</p>
+                  <p className="text-[11px] text-stone-400">Track invitation status and resend if needed</p>
                 </div>
-                <select className="text-xs font-bold border border-stone-200 rounded-xl p-1.5 bg-stone-50 text-stone-600 outline-none">
-                  <option>All Statuses</option>
-                </select>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100">
-                      <th className="pb-3 w-1/3">Recipient</th>
-                      <th className="pb-3 w-1/4">Email</th>
-                      <th className="pb-3">Sent</th>
-                      <th className="pb-3">Status</th>
-                      <th className="pb-3 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-50 font-medium text-stone-700">
-                    {invites.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-stone-50/50">
-                        <td className="py-3.5 flex items-center gap-3">
-                          <div className="w-7 h-7 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100">{row.initial}</div>
-                          <span className="font-bold text-stone-800">{row.name}</span>
-                        </td>
-                        <td className="py-3.5 text-stone-500 font-normal">{row.email}</td>
-                        <td className="py-3.5 text-stone-500 font-normal">{row.time}</td>
-                        <td className="py-3.5">
-                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${row.status === 'Accepted' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-center">
-                          {row.status === 'Pending' && (
-                            <button className="px-2.5 py-1 border border-stone-200 rounded-lg text-[10px] font-bold text-stone-600 hover:bg-stone-50 flex items-center gap-1 mx-auto shadow-sm">
-                              🔄 Resend
-                            </button>
-                          )}
-                        </td>
+              {advisers.length === 0 ? (
+                <div className="text-center py-8 text-stone-400">
+                  <p className="text-sm">No invitations sent yet. Use the form to invite your first adviser!</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100">
+                        <th className="pb-3 w-1/3">Recipient</th>
+                        <th className="pb-3 w-1/4">Email</th>
+                        <th className="pb-3">Sent</th>
+                        <th className="pb-3">Status</th>
+                        <th className="pb-3 text-center">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-stone-50 font-medium text-stone-700">
+                      {advisers.map((adviser) => (
+                        <tr key={adviser.id} className="hover:bg-stone-50/50">
+                          <td className="py-3.5 flex items-center gap-3">
+                            <div className="w-7 h-7 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100">
+                              {adviser.firstName[0]}{adviser.lastName[0]}
+                            </div>
+                            <span className="font-bold text-stone-800">{adviser.displayName}</span>
+                          </td>
+                          <td className="py-3.5 text-stone-500 font-normal">{adviser.email}</td>
+                          <td className="py-3.5 text-stone-500 font-normal">
+                            {adviser.invitationSentAt ? new Date(adviser.invitationSentAt).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="py-3.5">
+                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${adviser.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                              {adviser.status === 'active' ? 'Accepted' : 'Pending'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-center">
+                            {adviser.status === 'pending' && (
+                              <button 
+                                onClick={() => handleResendInvitation(adviser.id, adviser.email)}
+                                disabled={loading}
+                                className="px-2.5 py-1 border border-stone-200 rounded-lg text-[10px] font-bold text-stone-600 hover:bg-stone-50 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
+                              >
+                                🔄 Resend
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
           </div>

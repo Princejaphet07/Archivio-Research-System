@@ -1,12 +1,23 @@
 import React from 'react';
+import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
 export default function Dashboard({ activePage, onNavigate }) {
+  const { deanData, loading } = useUser();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // Extract name from displayName
+  const deanName = deanData?.displayName || 'Dean';
+  const firstName = deanName.split(' ')[0]; // Get first name for greeting
+
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
       {/* Left Sidebar */}
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+      <Sidebar activePage="dashboard" />
 
       {/* Right Core Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -20,10 +31,10 @@ export default function Dashboard({ activePage, onNavigate }) {
           <div className="flex justify-between items-end mb-6">
             <div>
               <h1 className="text-3xl font-serif font-bold text-stone-900 tracking-tight flex items-center gap-2">
-                Good morning, Dr. Cendana 👋
+                Good morning, {firstName} 👋
               </h1>
               <p className="text-xs font-medium text-stone-500 mt-1 uppercase tracking-wider">
-                College of Information Technology • S.Y. 2026–2027, 2nd Semester
+                {deanData?.department || 'Department'} • S.Y. 2026–2027, 2nd Semester
               </p>
             </div>
             <div className="flex gap-2.5">

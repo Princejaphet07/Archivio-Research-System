@@ -1,24 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-
-// ================= SAMPLE DATA =================
-const ALL_RECORDS = [
-  { id: '001', title: 'ML-Based Health Monitor', group: 'Group HealthAI', adviser: 'Dr. Cendana (You)', adviserSelf: true, category: 'ML', year: '2026-27', status: 'Pending', action: 'View' },
-  { id: '002', title: 'Smart Irrigation System Using IoT', group: 'Group Innovatech', adviser: 'Ira Pongasi', adviserSelf: false, category: 'IoT', year: '2026-27', status: 'Published', action: 'View' },
-  { id: '003', title: 'Predictive Analytics for Student Dropout', group: 'Group DataMinds', adviser: 'Almie Ilustrisimo', adviserSelf: false, category: 'ML', year: '2026-27', status: 'Approved', action: 'Publish' },
-  { id: '004', title: 'Blockchain-Based Credential System', group: 'Group CTRL+TAB', adviser: 'Ira Pongasi', adviserSelf: false, category: 'Security', year: '2026-27', status: 'Published', action: 'View' },
-  { id: '005', title: 'AR-Enhanced Campus Navigation', group: 'Group ITGirls', adviser: 'Almie Ilustrisimo', adviserSelf: false, category: 'Mobile', year: '2026-27', status: 'Pending', action: 'Review' },
-  { id: '006', title: 'Sentiment Analysis Tool for Reviews', group: 'Group LangAI', adviser: 'Almie Ilustrisimo', adviserSelf: false, category: 'ML', year: '2026-27', status: 'Published', action: 'View' },
-  { id: '007', title: 'AI-Driven Crop Yield Prediction', group: 'Group CTRL+C', adviser: 'Dr. Cendana (You)', adviserSelf: true, category: 'ML', year: '2025-26', status: 'Published', action: 'View' },
-  { id: '008', title: 'Smart Parking System with IoT', group: 'Group ParkSmart', adviser: 'Ira Pongasi', adviserSelf: false, category: 'IoT', year: '2026-27', status: 'Approved', action: 'View' },
-  { id: '009', title: 'Online Grading System for SWU', group: 'Group EduTech', adviser: 'Almie Ilustrisimo', adviserSelf: false, category: 'Web', year: '2025-26', status: 'Published', action: 'View' },
-  { id: '010', title: 'Face Recognition Attendance System', group: 'Group VisionAI', adviser: 'Dr. Cendana (You)', adviserSelf: true, category: 'ML', year: '2026-27', status: 'Pending', action: 'Review' },
-  { id: '011', title: 'E-Commerce Platform for Local Vendors', group: 'Group LocalBiz', adviser: 'Ira Pongasi', adviserSelf: false, category: 'Web', year: '2025-26', status: 'Published', action: 'View' },
-  { id: '012', title: 'Mental Health Chatbot using NLP', group: 'Group MindCare', adviser: 'Almie Ilustrisimo', adviserSelf: false, category: 'ML', year: '2026-27', status: 'Approved', action: 'Publish' },
-  { id: '013', title: 'Waste Segregation via Computer Vision', group: 'Group GreenTech', adviser: 'Dr. Cendana (You)', adviserSelf: true, category: 'ML', year: '2026-27', status: 'Pending', action: 'Review' },
-  { id: '014', title: 'Digital Barangay Management System', group: 'Group CivicTech', adviser: 'Ira Pongasi', adviserSelf: false, category: 'Web', year: '2025-26', status: 'Published', action: 'View' },
-];
+import { db } from '../firebase/config';
+import { collection, query, onSnapshot, where } from 'firebase/firestore';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -30,10 +14,11 @@ const CATEGORY_COLORS = {
 };
 
 const STATUS_STYLES = {
-  Pending: 'bg-amber-50 text-amber-700 border border-amber-200',
-  Published: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  Approved: 'bg-blue-50 text-blue-700 border border-blue-200',
-  Review: 'bg-red-50 text-red-700 border border-red-200',
+  pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+  in_progress: 'bg-amber-50 text-amber-700 border border-amber-200',
+  reviewed: 'bg-blue-50 text-blue-700 border border-blue-200',
+  approved: 'bg-blue-50 text-blue-700 border border-blue-200',
+  published: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
 };
 
 const ACTION_STYLES = {
@@ -44,11 +29,6 @@ const ACTION_STYLES = {
 
 const RECORDS_PER_PAGE = 7;
 
-const ALL_YEARS = ['All Years', '2026-27', '2025-26', '2024-25'];
-const ALL_ADVISERS = ['All Advisers', 'Dr. Cendana (You)', 'Ira Pongasi', 'Almie Ilustrisimo'];
-const ALL_STATUSES = ['All Statuses', 'Pending', 'Published', 'Approved'];
-const ALL_CATEGORIES = ['All Categories', 'ML', 'IoT', 'Security', 'Mobile', 'Web'];
-
 export default function ResearchRecords({ activePage, onNavigate }) {
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('All Years');
@@ -56,9 +36,97 @@ export default function ResearchRecords({ activePage, onNavigate }) {
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [filterCategory, setFilterCategory] = useState('All Categories');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  
+  const [records, setRecords] = useState([]);
+  const [requirements, setRequirements] = useState([]);
+
+  // Modal state
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Unique filter options based on dynamic data
+  const [allYears, setAllYears] = useState(['All Years']);
+  const [allAdvisers, setAllAdvisers] = useState(['All Advisers']);
+  const [allStatuses, setAllStatuses] = useState(['All Statuses']);
+  const [allCategories, setAllCategories] = useState(['All Categories']);
+
+  useEffect(() => {
+    // Listen to groups
+    const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
+    const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
+      const groupsData = groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Listen to submissions
+      const unsubSubs = onSnapshot(collection(db, 'submissions'), (subsSnapshot) => {
+        const subsData = subsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Listen to requirements
+        const unsubReqs = onSnapshot(collection(db, 'requirements'), (reqsSnapshot) => {
+          const allReqs = reqsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          const activeReqs = allReqs.filter(r => r.status === 'approved');
+          setRequirements(activeReqs);
+
+          // Merge them
+          const mergedRecords = groupsData.map((g, index) => {
+            const sub = subsData.find(s => s.studentUid === g.leaderUid) || {};
+            const status = sub.reviewStatus || 'pending';
+            const submittedDate = sub.submittedDate || sub.createdAt || g.createdAt || '';
+            const year = submittedDate ? new Date(submittedDate).getFullYear().toString() : new Date().getFullYear().toString();
+            const category = g.category || sub.category || 'Uncategorized';
+            const action = status === 'reviewed' ? 'Publish' : 'View';
+
+            // Find requirements applicable to this group (global + their adviser's)
+            const applicableReqs = activeReqs.filter(r => 
+              r.scope === 'global' || 
+              (r.scope === 'adviser' && r.adviserUid === g.adviserUid)
+            );
+
+            return {
+              id: String(index + 1).padStart(3, '0'),
+              rawId: sub.id || g.id,
+              title: g.researchTitle || sub.title || 'Untitled',
+              group: g.groupName || 'Unknown Group',
+              adviser: g.adviserName || g.adviserUid || 'Unknown',
+              category,
+              year,
+              status,
+              action,
+              originalSub: sub,
+              originalGroup: g,
+              applicableReqs
+            };
+          });
+
+          setRecords(mergedRecords);
+          
+          // Update filter options
+          const years = [...new Set(mergedRecords.map(r => r.year))].filter(Boolean).sort().reverse();
+          setAllYears(['All Years', ...years]);
+          
+          const advisers = [...new Set(mergedRecords.map(r => r.adviser))].filter(Boolean).sort();
+          setAllAdvisers(['All Advisers', ...advisers]);
+          
+          const statuses = [...new Set(mergedRecords.map(r => r.status))].filter(Boolean).sort();
+          setAllStatuses(['All Statuses', ...statuses]);
+
+          const categories = [...new Set(mergedRecords.map(r => r.category))].filter(Boolean).sort();
+          setAllCategories(['All Categories', ...categories]);
+
+          setLoading(false);
+        });
+        
+        return () => unsubReqs();
+      });
+
+      return () => unsubSubs();
+    });
+
+    return () => unsubGroups();
+  }, []);
 
   // ---- Filter logic ----
-  const filtered = ALL_RECORDS.filter((r) => {
+  const filtered = records.filter((r) => {
     const matchSearch =
       search === '' ||
       r.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,14 +147,48 @@ export default function ResearchRecords({ activePage, onNavigate }) {
     setCurrentPage(1);
   };
 
+  const formatStatus = (status) => {
+    switch (status) {
+      case 'in_progress': return 'In Progress';
+      case 'pending': return 'Pending';
+      case 'reviewed': return 'Reviewed';
+      case 'approved': return 'Approved';
+      case 'published': return 'Published';
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  const handleView = (record) => {
+    if (record.originalSub && record.originalSub.id) {
+      const requiredCount = record.applicableReqs.length;
+      const uploadedCount = record.originalSub.uploadedDocs?.length || 0;
+      const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
+
+      setSelectedSubmission({
+        ...record.originalSub,
+        groupName: record.group,
+        researchTitle: record.title,
+        leaderName: record.originalGroup.leaderName,
+        members: record.originalGroup.members,
+        uploadedCount,
+        requiredCount,
+        completionPercent,
+        applicableReqs: record.applicableReqs
+      });
+      setShowReviewModal(true);
+    } else {
+      alert("This group has not started their submission yet.");
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
       {/* Sidebar */}
       <Sidebar activePage={activePage} onNavigate={onNavigate} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header activePage={activePage} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <Header activePage={activePage} onMenuClick={() => {}} />
 
         <main className="flex-1 overflow-y-auto p-8 bg-[#fbf9f6]">
 
@@ -95,7 +197,7 @@ export default function ResearchRecords({ activePage, onNavigate }) {
             <div>
               <h1 className="text-2xl font-serif font-bold text-stone-900 tracking-tight">Research Records</h1>
               <p className="text-xs text-stone-400 mt-1 font-medium">
-                All uploaded research within the College of IT &nbsp;·&nbsp; {ALL_RECORDS.length} total records
+                All uploaded research within the College of IT &nbsp;·&nbsp; {records.length} total records
               </p>
             </div>
             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors">
@@ -123,18 +225,18 @@ export default function ResearchRecords({ activePage, onNavigate }) {
 
                 {/* Filters */}
                 {[
-                  { value: filterCategory, setter: setFilterCategory, options: ALL_CATEGORIES },
-                  { value: filterYear, setter: setFilterYear, options: ALL_YEARS },
-                  { value: filterAdviser, setter: setFilterAdviser, options: ALL_ADVISERS },
-                  { value: filterStatus, setter: setFilterStatus, options: ALL_STATUSES },
-                ].map(({ value, setter, options }) => (
-                  <div key={options[0]} className="relative">
+                  { value: filterCategory, setter: setFilterCategory, options: allCategories },
+                  { value: filterYear, setter: setFilterYear, options: allYears },
+                  { value: filterAdviser, setter: setFilterAdviser, options: allAdvisers },
+                  { value: filterStatus, setter: setFilterStatus, options: allStatuses },
+                ].map(({ value, setter, options }, idx) => (
+                  <div key={idx} className="relative">
                     <select
                       value={value}
                       onChange={handleFilterChange(setter)}
                       className="appearance-none bg-white border border-stone-200 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
                     >
-                      {options.map((o) => <option key={o}>{o}</option>)}
+                      {options.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
                     </select>
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 text-[10px] pointer-events-none">▼</span>
                   </div>
@@ -158,7 +260,13 @@ export default function ResearchRecords({ activePage, onNavigate }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {paginated.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8} className="py-16 text-center text-stone-400 text-sm font-medium">
+                        Loading records...
+                      </td>
+                    </tr>
+                  ) : paginated.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-16 text-center text-stone-400 text-sm font-medium">
                         No records match your filters.
@@ -201,13 +309,22 @@ export default function ResearchRecords({ activePage, onNavigate }) {
                         {/* Status */}
                         <td className="py-3.5 px-4 text-center">
                           <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_STYLES[record.status] || 'bg-stone-100 text-stone-600'}`}>
-                            {record.status}
+                            {formatStatus(record.status)}
                           </span>
                         </td>
 
                         {/* Action */}
                         <td className="py-3.5 px-4 text-center">
-                          <button className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors shadow-sm ${ACTION_STYLES[record.action] || ACTION_STYLES.View}`}>
+                          <button 
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors shadow-sm ${ACTION_STYLES[record.action] || ACTION_STYLES.View}`}
+                            onClick={() => {
+                              if (record.action === 'Publish') {
+                                onNavigate('publishQueue');
+                              } else {
+                                handleView(record);
+                              }
+                            }}
+                          >
                             {record.action}
                           </button>
                         </td>
@@ -259,10 +376,99 @@ export default function ResearchRecords({ activePage, onNavigate }) {
                 </button>
               </div>
             </div>
-
           </div>
         </main>
       </div>
+
+      {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
+      {showReviewModal && selectedSubmission && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#4a1024] text-white p-6 rounded-t-2xl relative">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition text-lg"
+              >
+                ✕
+              </button>
+              <p className="text-white/70 text-xs tracking-widest uppercase font-bold mb-1">Dean Inspection</p>
+              <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
+              <p className="text-white/80 text-sm mt-1">
+                Group: {selectedSubmission.groupName} · Leader: {selectedSubmission.leaderName}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
+                  <p className="text-xs text-stone-500 mt-1">Documents</p>
+                </div>
+                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.completionPercent}%</p>
+                  <p className="text-xs text-stone-500 mt-1">Complete</p>
+                </div>
+                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.pageCount || '—'}</p>
+                  <p className="text-xs text-stone-500 mt-1">Pages</p>
+                </div>
+              </div>
+
+              {selectedSubmission.abstract && (
+                <div>
+                  <h4 className="font-bold text-stone-900 text-sm mb-2">Abstract</h4>
+                  <p className="text-stone-600 text-sm leading-relaxed bg-stone-50 rounded-lg p-4 border border-stone-100">
+                    {selectedSubmission.abstract}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <h4 className="font-bold text-stone-900 text-sm mb-3">Submitted Documents</h4>
+                <div className="space-y-3">
+                  {selectedSubmission.applicableReqs.map((req) => {
+                    const docMeta = selectedSubmission.documents?.[req.id];
+                    const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id);
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`flex items-center justify-between rounded-lg p-3 border transition ${
+                          isUploaded
+                            ? 'bg-emerald-50/50 border-emerald-200'
+                            : 'bg-red-50/50 border-red-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{req.icon}</span>
+                          <div>
+                            <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800' : 'text-stone-500'}`}>{req.title}</p>
+                            {isUploaded && docMeta ? (
+                              <p className="text-xs text-stone-500">{docMeta.name} · {docMeta.size}</p>
+                            ) : (
+                              <p className="text-xs text-red-500 font-medium">Missing Document</p>
+                            )}
+                          </div>
+                        </div>
+                        {isUploaded && docMeta?.url && docMeta.url !== '#' && (
+                          <a
+                            href={docMeta.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-bold text-[#4a1024] bg-white border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] hover:text-white transition"
+                          >
+                            View File
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

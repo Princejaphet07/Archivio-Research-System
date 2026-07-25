@@ -3,16 +3,17 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAnalytics } from 'firebase/analytics';
 
-// TODO: Replace with your Firebase config from Firebase Console
-// Go to Project Settings → Your apps → Public Archive → Config
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA",
+  authDomain: "archivio-research-system.firebaseapp.com",
+  projectId: "archivio-research-system",
+  storageBucket: "archivio-research-system.firebasestorage.app",
+  messagingSenderId: "798013707409",
+  appId: "1:798013707409:web:59f945fa69fe5321265b30",
+  measurementId: "G-8LNQMPEYC4"
 };
 
 // Initialize Firebase
@@ -22,5 +23,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const analytics = getAnalytics(app);
 
 export default app;

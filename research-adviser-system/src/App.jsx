@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // Auth Pages
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import ActivateAccount from './pages/ActivateAccount';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Main App Pages
 import Dashboard from './pages/Dashboard';
@@ -24,16 +26,17 @@ function App() {
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/adviser-activate" element={<ActivateAccount />} />
         
-        {/* App Pages */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/my-groups" element={<MyGroups />} />
-        <Route path="/review-submissions" element={<ReviewSubmissions />} />
-        <Route path="/research-categories" element={<ResearchCategories />} />
-        <Route path="/group-registrations" element={<GroupRegistrations />} />
-        <Route path="/send-invitations" element={<SendInvitations />} />
-        <Route path="/submission-requirements" element={<SubmissionRequirements />} />
-        <Route path="/my-profile" element={<MyProfile />} />
+        {/* Protected App Pages */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/my-groups" element={<ProtectedRoute><MyGroups /></ProtectedRoute>} />
+        <Route path="/review-submissions" element={<ProtectedRoute><ReviewSubmissions /></ProtectedRoute>} />
+        <Route path="/research-categories" element={<ProtectedRoute><ResearchCategories /></ProtectedRoute>} />
+        <Route path="/group-registrations" element={<ProtectedRoute><GroupRegistrations /></ProtectedRoute>} />
+        <Route path="/send-invitations" element={<ProtectedRoute><SendInvitations /></ProtectedRoute>} />
+        <Route path="/submission-requirements" element={<ProtectedRoute><SubmissionRequirements /></ProtectedRoute>} />
+        <Route path="/my-profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

@@ -1,5 +1,9 @@
 import React from 'react';
-import logo from '../assets/logo.png'; // Ensure this path is correct for your project
+import { useNavigate, useLocation } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/config';
+import { useUser } from '../context/UserContext';
+import logo from '../assets/logo.png';
 
 const NAV_ITEMS_MAIN = [
   {
@@ -86,7 +90,36 @@ const NAV_ITEMS_MANAGEMENT = [
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate }) {
+export default function Sidebar({ onNavigate }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activePage = location.pathname.slice(1) || 'dashboard';
+  const { deanData } = useUser();
+
+  // Extract initials from displayName
+  const deanName = deanData?.displayName || 'Dean';
+  const initials = deanName.split(' ').map(n => n[0]).join('').toUpperCase();
+
+  // Get role badges
+  const role = deanData?.role || 'dean';
+  const isDeanOnly = role === 'dean';
+  const isDeanAndAdviser = role === 'dean+adviser';
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Failed to logout. Please try again.');
+    }
+  };
+
+  // Handle navigation
+  const handleNavigate = (itemId) => {
+    navigate(`/${itemId}`);
+  };
   return (
     <aside className="w-[260px] bg-[#4a1024] flex flex-col h-screen text-stone-300 font-sans shrink-0">
 
@@ -120,18 +153,17 @@ export default function Sidebar({ activePage, onNavigate }) {
           <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Main</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MAIN.map((item) => {
-              const isActive = activePage === item.id;
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
-                      ${isActive
+                      ${activePage === item.id
                         ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
                         : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
-                    <span className={`flex items-center gap-3 ${isActive ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
+                    <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
                       {item.icon}
                       {item.label}
                     </span>
@@ -152,18 +184,17 @@ export default function Sidebar({ activePage, onNavigate }) {
           <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Management</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MANAGEMENT.map((item) => {
-              const isActive = activePage === item.id;
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
-                      ${isActive
+                      ${activePage === item.id
                         ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
                         : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
-                    <span className={`flex items-center gap-3 ${isActive ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
+                    <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
                       {item.icon}
                       {item.label}
                     </span>
@@ -183,19 +214,36 @@ export default function Sidebar({ activePage, onNavigate }) {
       {/* USER PROFILE */}
       <div className="p-3 bg-black/20 m-4 rounded-xl flex items-center gap-3 border border-white/5 shadow-inner">
         <div className="w-10 h-10 rounded-full bg-[#f8d070] flex items-center justify-center text-[#4a1024] font-bold shadow-sm shrink-0">
-          DC
+          {initials}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-white truncate">Dr. Desiree Cendana</p>
+          <p className="text-sm font-bold text-white truncate">{deanName}</p>
           <div className="flex gap-1.5 mt-1">
-            <span className="text-[8px] bg-[#6b2a3d] border border-[#8c3b53] text-[#f8d070] px-1.5 py-0.5 rounded font-bold tracking-wide">
-              DEAN
-            </span>
-            <span className="text-[8px] bg-[#1a4a38] border border-[#236b51] text-emerald-400 px-1.5 py-0.5 rounded font-bold tracking-wide">
-              ADVISER
-            </span>
+            {(isDeanOnly || isDeanAndAdviser) && (
+              <span className="text-[8px] bg-[#6b2a3d] border border-[#8c3b53] text-[#f8d070] px-1.5 py-0.5 rounded font-bold tracking-wide">
+                DEAN
+              </span>
+            )}
+            {isDeanAndAdviser && (
+              <span className="text-[8px] bg-[#1a4a38] border border-[#236b51] text-emerald-400 px-1.5 py-0.5 rounded font-bold tracking-wide">
+                ADVISER
+              </span>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* LOGOUT BUTTON */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 hover:border-red-600/60 rounded-lg text-red-300 hover:text-red-100 text-sm font-bold transition-all duration-200 shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Logout
+        </button>
       </div>
 
     </aside>

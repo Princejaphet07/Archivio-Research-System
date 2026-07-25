@@ -1,4 +1,5 @@
 import React from 'react';
+import { useUser } from '../context/UserContext';
 
 const PAGE_TITLES = {
   'dashboard': { title: 'Dashboard', breadcrumb: '' },
@@ -12,7 +13,14 @@ const PAGE_TITLES = {
 };
 
 export default function Header({ activePage, onMenuClick }) {
+  const { deanData } = useUser();
   const currentView = PAGE_TITLES[activePage] || { title: 'Dashboard', breadcrumb: '' };
+
+  const handleSwitchToAdviser = () => {
+    // Navigate to Adviser portal (running on port 5175)
+    // Firebase auth session will carry over automatically since it's on localhost
+    window.location.href = 'http://localhost:5175';
+  };
 
   return (
     <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10">
@@ -34,7 +42,7 @@ export default function Header({ activePage, onMenuClick }) {
             <p className="text-[10px] text-stone-400 -mt-1 font-medium">{currentView.breadcrumb}</p>
           )}
         </div>
-        
+
         <div className="hidden lg:block h-6 w-px bg-stone-200 mx-2"></div>
 
         <div className="relative">
@@ -50,15 +58,21 @@ export default function Header({ activePage, onMenuClick }) {
       {/* Right side: Role tags, Year selector, Bell */}
       <div className="flex items-center gap-2 lg:gap-4">
 
-        {/* Role Multi-Select pills */}
-        <div className="hidden md:flex items-center gap-1.5 bg-stone-100 rounded-xl p-1 border border-stone-200/60 font-bold text-[11px]">
-          <span className="text-stone-700 bg-white px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span> Dean
-          </span>
-          <span className="text-stone-400 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-stone-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Adviser
-          </span>
-        </div>
+        {/* Role Multi-Select pills - Only show for Dual Role users */}
+        {deanData?.role === 'dean+adviser' && (
+          <div className="hidden md:flex items-center gap-1.5 bg-stone-100 rounded-xl p-1 border border-stone-200/60 font-bold text-[11px] transition-all">
+            <span className="text-stone-700 bg-white px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5 cursor-default">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span> Dean
+            </span>
+            <button
+              onClick={handleSwitchToAdviser}
+              className="text-stone-400 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-stone-700 hover:bg-white/50 rounded-lg transition-all"
+              title="Switch to Adviser Portal"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Adviser
+            </button>
+          </div>
+        )}
 
         {/* Year Context Selector */}
         <div className="text-xs font-bold text-[#7a1f3d] bg-red-50 border border-red-100/60 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-red-100/40 transition-colors whitespace-nowrap flex items-center gap-1">

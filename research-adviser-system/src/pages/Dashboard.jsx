@@ -1,7 +1,116 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import Layout from '../components/Layout';
+import { useAdviser } from '../context/AdviserContext';
+import Swal from 'sweetalert2';
 
 function Dashboard() {
+  const { adviserData } = useAdviser();
+  const [pendingGroupsCount, setPendingGroupsCount] = useState(0);
+  
+  // Real dynamic state
+  const [activeGroups, setActiveGroups] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const email = adviserData?.email;
+    if (!email) {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Listen to pending groups for the toast alert and count
+    const pendingQuery = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'pending'));
+    const unsubPending = onSnapshot(pendingQuery, (snapshot) => {
+      const count = snapshot.size;
+      // Only show alert if count increased from 0, or on initial load if > 0 (handled by avoiding repeated toasts)
+      if (count > 0 && pendingGroupsCount === 0) {
+        Swal.fire({
+          title: 'Pending Registrations',
+          text: `You have ${count} new student group registration(s) waiting for your approval!`,
+          icon: 'info',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true
+        });
+      }
+      setPendingGroupsCount(count);
+    });
+
+    // 2. Listen to approved groups
+    const activeQuery = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
+    const unsubActive = onSnapshot(activeQuery, (snapshot) => {
+      const groupList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setActiveGroups(groupList);
+    });
+
+    // 3. Listen to all submissions
+    const submissionsQuery = query(collection(db, 'submissions'));
+    const unsubSubs = onSnapshot(submissionsQuery, (snapshot) => {
+      const allSubs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setSubmissions(allSubs);
+    });
+
+    // 4. Listen to requirements
+    const reqQuery = query(collection(db, 'requirements'));
+    const unsubReqs = onSnapshot(reqQuery, (snapshot) => {
+      const allReqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const activeReqs = allReqs.filter(r => 
+        (r.scope === 'global' && r.status === 'approved') || 
+        (r.scope === 'adviser' && r.adviserUid === email && r.status === 'approved')
+      );
+      setRequirements(activeReqs);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubPending();
+      unsubActive();
+      unsubSubs();
+      unsubReqs();
+    };
+  }, [adviserData?.email, pendingGroupsCount]);
+
+  // --- Derive stats ---
+  const activeGroupCount = activeGroups.length;
+  
+  const adviserStudentUids = activeGroups.map(g => g.leaderUid);
+  const mySubmissions = submissions.filter(s => adviserStudentUids.includes(s.studentUid));
+
+  const enrichedSubmissions = mySubmissions.map(sub => {
+    const group = activeGroups.find(g => g.leaderUid === sub.studentUid);
+    const uploadedCount = sub.uploadedDocs?.length || 0;
+    const requiredCount = requirements.length || 6; // default to 6 if requirements empty
+    const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
+    
+    // figure out missing docs
+    const missingDocs = requirements.filter(req => !(sub.uploadedDocs || []).includes(req.title));
+
+    return {
+      ...sub,
+      groupName: group?.groupName || sub.groupName || 'Unknown Group',
+      researchTitle: group?.researchTitle || sub.title || 'Untitled',
+      completionPercent,
+      uploadedCount,
+      requiredCount,
+      missingDocs,
+      reviewStatus: sub.reviewStatus || (completionPercent === 100 ? 'pending' : 'in_progress'),
+    };
+  }).sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+
+  const pendingReviewSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress');
+  const pendingReviewCount = pendingReviewSubs.length;
+  const approvedSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published');
+  const approvedPapersCount = approvedSubs.length;
+
+  const totalCompletion = enrichedSubmissions.reduce((sum, sub) => sum + sub.completionPercent, 0);
+  const avgCompletion = enrichedSubmissions.length > 0 ? Math.round(totalCompletion / enrichedSubmissions.length) : 0;
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -11,8 +120,8 @@ function Dashboard() {
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-2">Research Adviser Portal</p>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">Good morning, Prof. Pongasi 👋</h1>
-            <p className="text-sm text-gray-200">3 active groups under your advisory · 5 submissions pending your review</p>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">Good morning, {adviserData?.displayName || 'Research Adviser'} 👋</h1>
+            <p className="text-sm text-gray-200">{activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending your review</p>
           </div>
         </div>
 
@@ -20,25 +129,25 @@ function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-gray-300">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
-            <h3 className="text-3xl font-serif font-bold text-gray-800">9</h3>
+            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{activeGroupCount}</h3>}
             <p className="text-xs text-gray-500 mt-1">Active this semester</p>
           </div>
           
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-yellow-400">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
-            <h3 className="text-3xl font-serif font-bold text-gray-800">5</h3>
-            <p className="text-xs text-yellow-600 font-medium bg-yellow-50 inline-block px-2 py-0.5 rounded mt-1">+2 today</p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{pendingReviewCount}</h3>}
+            <p className="text-xs text-yellow-600 font-medium bg-yellow-50 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-blue-500">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
-            <h3 className="text-3xl font-serif font-bold text-gray-800">12</h3>
-            <p className="text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-0.5 rounded mt-1">↑ 3 this month</p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{approvedPapersCount}</h3>}
+            <p className="text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-gray-200">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
-            <h3 className="text-3xl font-serif font-bold text-gray-800">81%</h3>
+            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{avgCompletion}%</h3>}
             <p className="text-xs text-gray-500 mt-1">Across all groups</p>
           </div>
         </div>
@@ -59,63 +168,72 @@ function Dashboard() {
             </div>
 
             <div className="space-y-6">
-              {/* Submission Item 1 */}
-              <div className="flex items-center gap-4 border-b border-gray-100 pb-5">
-                <div className="w-14 h-14 rounded-full border-4 border-yellow-400 flex items-center justify-center font-bold text-gray-700 text-sm">84%</div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">Group Innovatech <span className="bg-yellow-100 text-yellow-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">• Pending Review</span></h4>
-                      <p className="text-xs text-gray-500 mt-0.5">AI-Driven Health Monitor · 4 members</p>
-                    </div>
-                    <button className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50">Details</button>
-                  </div>
-                  <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
-                    <span>Missing: Video Pitch</span>
-                    <span className="font-bold text-yellow-600">5 of 6</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-1.5 rounded-full"><div className="bg-yellow-400 h-1.5 rounded-full w-[84%]"></div></div>
+              {loading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-20 bg-gray-100 rounded-xl"></div>
+                  <div className="h-20 bg-gray-100 rounded-xl"></div>
                 </div>
-              </div>
+              ) : enrichedSubmissions.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4">No submissions yet.</p>
+              ) : (
+                enrichedSubmissions.slice(0, 5).map((sub, idx) => {
+                  const isApproved = sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
+                  const isPending = sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
+                  const pct = sub.completionPercent;
+                  
+                  // Color scheme based on status and completion
+                  let borderColor = 'border-yellow-400';
+                  let textColor = 'text-yellow-700';
+                  let bgColor = 'bg-yellow-100';
+                  let barColor = 'bg-yellow-400';
+                  let badgeText = '• Pending Review';
+                  
+                  if (isApproved) {
+                    borderColor = 'border-[#5a1831]';
+                    textColor = 'text-[#5a1831]';
+                    bgColor = 'bg-green-100';
+                    barColor = 'bg-[#5a1831]';
+                    badgeText = '• Complete ✓';
+                    textColor = 'text-green-700';
+                  } else if (sub.missingDocs.length > 0) {
+                    borderColor = 'border-blue-400';
+                    textColor = 'text-red-700';
+                    bgColor = 'bg-red-100';
+                    barColor = 'bg-blue-500';
+                    badgeText = `• ${sub.missingDocs.length} Missing`;
+                  }
 
-              {/* Submission Item 2 */}
-              <div className="flex items-center gap-4 border-b border-gray-100 pb-5">
-                <div className="w-14 h-14 rounded-full border-4 border-blue-400 flex items-center justify-center font-bold text-gray-700 text-sm">60%</div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">Group DataWave <span className="bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">• 3 Missing</span></h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Predictive Water Quality · 3 members</p>
+                  return (
+                    <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 pb-5">
+                      <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 text-sm`}>
+                        {pct}%
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                              {sub.groupName} <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold`}>{badgeText}</span>
+                            </h4>
+                            <p className="text-xs text-gray-500 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+                          </div>
+                          <button className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50">Details</button>
+                        </div>
+                        <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
+                          <span>
+                            {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
+                          </span>
+                          <span className={`font-bold ${isApproved ? 'text-[#5a1831]' : (sub.missingDocs.length > 0 ? 'text-blue-600' : 'text-yellow-600')}`}>
+                            {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-100 h-1.5 rounded-full">
+                          <div className={`${barColor} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
+                        </div>
+                      </div>
                     </div>
-                    <button className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50">Details</button>
-                  </div>
-                  <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
-                    <span>Missing: Dataset, Video, Manual</span>
-                    <span className="font-bold text-blue-600">3 of 5</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-1.5 rounded-full"><div className="bg-blue-500 h-1.5 rounded-full w-[60%]"></div></div>
-                </div>
-              </div>
-
-              {/* Submission Item 3 */}
-              <div className="flex items-center gap-4 pb-1">
-                <div className="w-14 h-14 rounded-full border-4 border-[#5a1831] flex items-center justify-center font-bold text-[#5a1831] text-sm">100%</div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">Group SmartSys <span className="bg-green-100 text-green-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">• Complete ✓</span></h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Smart Building Automation · 3 members</p>
-                    </div>
-                    <button className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50">Details</button>
-                  </div>
-                  <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
-                    <span>✓ All requirements complete</span>
-                    <span className="font-bold text-[#5a1831]">Published</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-1.5 rounded-full"><div className="bg-[#5a1831] h-1.5 rounded-full w-full"></div></div>
-                </div>
-              </div>
-
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -126,28 +244,24 @@ function Dashboard() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex justify-between items-center mb-5">
                 <h3 className="font-bold text-sm text-gray-900">Pending Actions</h3>
-                <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded-full">• 5 reviews</span>
+                <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded-full">• {pendingReviewCount} reviews</span>
               </div>
               
               <div className="space-y-3">
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-800">AI-Driven Health Monitor</h4>
-                    <p className="text-[10px] text-gray-500">Group AgroTech · Feb 12</p>
+                {pendingReviewSubs.slice(0, 3).map((sub, idx) => (
+                  <div key={sub.id || idx} className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-800">{sub.researchTitle}</h4>
+                      <p className="text-[10px] text-gray-500">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
+                    </div>
+                    <span className="bg-yellow-50 text-yellow-600 text-[9px] font-bold border border-yellow-200 px-2 py-1 rounded">• Review</span>
                   </div>
-                  <span className="bg-yellow-50 text-yellow-600 text-[9px] font-bold border border-yellow-200 px-2 py-1 rounded">• Review</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-800">Predictive Water Quality</h4>
-                    <p className="text-[10px] text-gray-500">Group HealthAI · Feb 13</p>
-                  </div>
-                  <span className="bg-yellow-50 text-yellow-600 text-[9px] font-bold border border-yellow-200 px-2 py-1 rounded">• Review</span>
-                </div>
+                ))}
+                
                 <div className="flex justify-between items-center pb-2">
                   <div>
-                    <h4 className="text-xs font-bold text-gray-800">2 group registrations</h4>
-                    <p className="text-[10px] text-gray-500">SmartFarm, AquaNet</p>
+                    <h4 className="text-xs font-bold text-gray-800">{pendingGroupsCount} group registrations</h4>
+                    <p className="text-[10px] text-gray-500">Waiting for approval</p>
                   </div>
                   <span className="bg-purple-50 text-purple-600 text-[9px] font-bold border border-purple-200 px-2 py-1 rounded">• Pending</span>
                 </div>

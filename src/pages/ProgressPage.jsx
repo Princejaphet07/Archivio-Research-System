@@ -1,32 +1,307 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import { db, auth } from '../firebase/config';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
 
-export default function ProgressPage({ onLogout, activeTab, setActiveTab }) {
+const BACKEND_URL = 'http://localhost:3001';
+
+export default function ProgressPage({ onLogout, activeTab, setActiveTab, initials }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Message modal state ────────────────────────────────────────────────────
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [msgSubject,   setMsgSubject]   = useState('');
+  const [msgBody,      setMsgBody]      = useState('');
+  const [msgSending,   setMsgSending]   = useState(false);
+  const [msgStatus,    setMsgStatus]    = useState(null); // 'success' | 'error' | null
+
+  // ── New Research modal state ───────────────────────────────────────────────
+  const [showNewResearchModal, setShowNewResearchModal] = useState(false);
+  const [newResearchTitle, setNewResearchTitle] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isSubmittingNewResearch, setIsSubmittingNewResearch] = useState(false);
+
+  // ── Real data state ────────────────────────────────────────────────────────
+  const [studentData,  setStudentData]  = useState(null);
+  const [submission,   setSubmission]   = useState(null);
+  const [requirements, setRequirements] = useState([]);
+  const [adviserData,  setAdviserData]  = useState(null);
+  const [loading,      setLoading]      = useState(true);
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) { setLoading(false); return; }
+
+    // 1. Student doc
+    const studentQ = query(collection(db, 'students'), where('uid', '==', uid));
+    const unsubStudent = onSnapshot(studentQ, (snap) => {
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        setStudentData(data);
+
+        // Fetch adviser email using invitedBy (which stores the adviser's email as UID)
+        if (data.invitedBy) {
+          // invitedBy stores the adviser's sentBy value which is their email
+          // Try looking up in advisers collection by email field
+          const adviserQ = query(collection(db, 'advisers'), where('email', '==', data.invitedBy));
+          import('firebase/firestore').then(({ getDocs }) => {
+            getDocs(adviserQ).then(aSnap => {
+              if (!aSnap.empty) setAdviserData(aSnap.docs[0].data());
+              else {
+                // Fallback: invitedBy might directly be the email
+                setAdviserData({ email: data.invitedBy });
+              }
+            });
+          });
+        }
+      }
+    });
+
+    // 2. Submission doc
+    const subQ = query(collection(db, 'submissions'), where('studentUid', '==', uid));
+    const unsubSub = onSnapshot(subQ, (snap) => {
+      if (!snap.empty) {
+        const subs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sort by createdAt desc (latest first)
+        subs.sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        setSubmission(subs[0]);
+      } else {
+        setSubmission(null);
+      }
+      setLoading(false);
+    }, () => setLoading(false));
+
+    // 3. Requirements
+    const reqQ = query(collection(db, 'requirements'));
+    const unsubReq = onSnapshot(reqQ, (snap) => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const active = all.filter(r => r.scope === 'global' && r.status === 'approved');
+      setRequirements(active);
+    });
+
+    return () => { unsubStudent(); unsubSub(); unsubReq(); };
+  }, []);
+
+  // ── Derived values ──────────────────────────────────────────────────────────
+  const adviserName    = studentData?.invitedByName || adviserData?.displayName || 'Your Adviser';
+  // invitedBy stores the adviser's email (used as their UID in the advisers collection)
+  const adviserEmail   = adviserData?.email || studentData?.invitedBy || '';
+  const adviserInitials = adviserName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const researchTitle  = studentData?.researchTitle || submission?.title || 'Your Research';
+  const groupName      = studentData?.groupName || 'Your Group';
+
+  const uploadedDocs   = submission?.uploadedDocs || [];
+  const requiredCount  = requirements.length || 6;
+  const uploadedCount  = uploadedDocs.length;
+  const missingDocs    = requirements.filter(r => !uploadedDocs.includes(r.title)).map(r => r.title);
+
+  const hasManuscript     = !!submission?.manuscriptUrl;
+  const allDocsSubmitted  = uploadedCount >= requiredCount && uploadedCount > 0;
+  const reviewStatus      = submission?.reviewStatus || '';
+  const isApproved        = reviewStatus === 'approved' || reviewStatus === 'published';
+  const isPublished       = reviewStatus === 'published';
+
+  // Step: 1=account, 2=manuscript, 3=docs, 4=adviser approved, 5=published
+  let currentStep = 1;
+  if (hasManuscript) currentStep = 2;
+  if (allDocsSubmitted) currentStep = 3;
+  if (isApproved) currentStep = 4;
+  if (isPublished) currentStep = 5;
+
+  const progressPercent = Math.min(100, Math.round((currentStep / 5) * 100));
+
+  const bannerTitle =
+    currentStep === 1 ? 'Getting Started — Step 1 of 5' :
+    currentStep === 2 ? 'In Progress — Step 2 of 5' :
+    currentStep === 3 ? 'Documents Complete — Step 3 of 5' :
+    currentStep === 4 ? 'Adviser Approved — Step 4 of 5' :
+    'Published — Step 5 of 5 ✓';
+
+  const bannerSub =
+    currentStep === 1 ? 'Upload your manuscript to begin the process.' :
+    currentStep === 2 ? `Submit your required documents. ${missingDocs.length} still missing.` :
+    currentStep === 3 ? 'All documents submitted. Waiting for adviser review.' :
+    currentStep === 4 ? 'Your adviser approved your work. Waiting for Dean to publish.' :
+    'Your research is now live in the public archive!';
+
+  // Stroke calculation for circular progress (circumference of r=42 is ~264)
+  const circumference = 264;
+  const strokeOffset  = circumference - (progressPercent / 100) * circumference;
+
+  // ── Timeline step config ────────────────────────────────────────────────────
+  const manuscriptDate = submission?.createdAt
+    ? new Date(submission.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const publishedDate = submission?.publishedAt
+    ? new Date(submission.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  // ── Send Message handler ─────────────────────────────────────────────────────
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!msgBody.trim()) return;
+    setMsgSending(true);
+    setMsgStatus(null);
+    try {
+      const user = auth.currentUser;
+      const studentEmail = user?.email || '';
+      const studentNameVal = studentData?.displayName || user?.displayName || 'Student';
+      const res = await fetch(`${BACKEND_URL}/api/send-student-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName:  studentNameVal,
+          studentEmail: studentEmail,
+          adviserName:  adviserName,
+          adviserEmail: adviserEmail,
+          subject:      msgSubject || `Message from ${studentNameVal}`,
+          message:      msgBody,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMsgStatus('success');
+        setMsgBody('');
+        setMsgSubject('');
+      } else {
+        setMsgStatus('error');
+      }
+    } catch {
+      setMsgStatus('error');
+    } finally {
+      setMsgSending(false);
+    }
+  };
+
+  // ── Start New Research handler ───────────────────────────────────────────────
+  const handleStartNewResearch = async (e) => {
+    e.preventDefault();
+    if (!newResearchTitle.trim() || !newGroupName.trim()) return;
+    setIsSubmittingNewResearch(true);
+
+    try {
+      const user = auth.currentUser;
+      const studentUid = user.uid;
+      
+      // 1. Create a new group document
+      const groupData = {
+        groupName: newGroupName.trim(),
+        researchTitle: newResearchTitle.trim(),
+        leaderUid: studentUid,
+        leaderName: studentData.displayName,
+        leaderEmail: studentData.email,
+        program: studentData.course,
+        members: studentData.groupMembers || [], // Could let them edit this later
+        adviserUid: studentData.invitedBy, // keep same adviser email reference
+        adviserName: studentData.invitedByName,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await addDoc(collection(db, 'groups'), groupData);
+      
+      // 2. Update student profile
+      await updateDoc(doc(db, 'students', studentUid), {
+        researchTitle: newResearchTitle.trim(),
+        groupName: newGroupName.trim(),
+        groupStatus: 'pending'
+      });
+      
+      // 3. Create a blank submission document for the new research
+      const blankSubmission = {
+        studentUid: studentUid,
+        title: newResearchTitle.trim(),
+        groupName: newGroupName.trim(),
+        adviserName: studentData.invitedByName || '',
+        adviserUid: studentData.invitedBy || '',
+        reviewStatus: 'pending',
+        uploadedDocs: [],
+        documents: {},
+        createdAt: new Date().toISOString()
+      };
+      await addDoc(collection(db, 'submissions'), blankSubmission);
+      
+      setShowNewResearchModal(false);
+      setNewResearchTitle('');
+      setNewGroupName('');
+      
+    } catch (error) {
+      console.error('Error starting new research:', error);
+      alert('Failed to start new research. Please try again.');
+    } finally {
+      setIsSubmittingNewResearch(false);
+    }
+  };
+
+  // ── Helper components ───────────────────────────────────────────────────────
+  const DoneTag = () => (
+    <span className="flex items-center gap-1.5 bg-[#E6F4EA] text-[#1E8E3E] px-3 py-1 rounded-full text-[12px] font-bold border border-[#C6E5D0] shrink-0">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      Done
+    </span>
+  );
+  const PendingTag = () => (
+    <span className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[12px] font-bold border border-gray-200 shrink-0">
+      Pending
+    </span>
+  );
+  const ActiveTag = () => (
+    <span className="flex items-center gap-1.5 bg-[#7B1F35]/10 text-[#7B1F35] px-3 py-1 rounded-full text-[12px] font-bold border border-[#7B1F35]/20 shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#7B1F35]" /> In Progress
+    </span>
+  );
+
+  const DoneNode = () => (
+    <div className="w-8 h-8 rounded-full bg-[#7B1F35] text-white flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+  );
+  const ActiveNode = () => (
+    <div className="w-8 h-8 rounded-full bg-white border-2 border-[#7B1F35] flex items-center justify-center shrink-0 ring-[6px] ring-[#F3EADB] mt-4 z-10">
+      <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35]" />
+    </div>
+  );
+  const PendingNode = ({ num }) => (
+    <div className="w-8 h-8 rounded-full bg-[#E8DFCB] text-gray-400 flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
+      <span className="text-[10px] font-bold">{num}</span>
+    </div>
+  );
 
   return (
     <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
-      
+
       {/* SIDEBAR */}
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        setIsOpen={setSidebarOpen} 
-        activeTab={activeTab || 'Progress'} 
-        setActiveTab={setActiveTab} 
-        onLogout={onLogout} 
+      <Sidebar
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+        activeTab={activeTab || 'Progress'}
+        setActiveTab={setActiveTab}
+        onLogout={onLogout}
+        initials={initials}
       />
 
-      {/* MAIN CONTENT AREA */}
+      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        
+
         {/* HEADER */}
         <header className="h-[90px] flex items-center justify-between px-8 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               className="lg:hidden p-2 text-gray-500 hover:bg-black/5 rounded-lg transition-colors"
               onClick={() => setSidebarOpen(true)}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </button>
             <h1 className="text-[20px] font-bold text-[#1A1A1A]">Progress</h1>
           </div>
@@ -36,19 +311,18 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab }) {
               <svg className="w-5 h-5 text-[#8A7B61]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#CF3645] rounded-full ring-2 ring-[#FDF9ED]"></span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#CF3645] rounded-full ring-2 ring-[#FDF9ED]" />
             </button>
-            
             <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer">
-              JR
+              {initials || 'ST'}
             </div>
           </div>
         </header>
 
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-8 pb-10">
-          <div className="max-w-[1200px] mx-auto animate-fade-in flex flex-col gap-6 pt-2">
-            
+          <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pt-2">
+
             {/* PAGE TITLE */}
             <div>
               <h2 className="font-serif font-bold text-[28px] text-[#1A1A1A] mb-1">Submission Progress</h2>
@@ -56,184 +330,274 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab }) {
             </div>
 
             {/* STATUS BANNER */}
-            <div className="w-full bg-[#7B1F35] rounded-[20px] p-8 flex items-center justify-between shadow-md relative overflow-hidden text-white">
-              <div className="relative z-10">
-                <p className="text-[11px] font-bold tracking-widest text-white/70 uppercase mb-2">Overall Status</p>
-                <h3 className="text-[32px] font-serif font-bold mb-1">In Progress — Step 2 of 5</h3>
-                <p className="text-white/80 text-[14px]">Adviser is reviewing your manuscript. Next: forward to Dean.</p>
+            {loading ? (
+              <div className="w-full bg-[#7B1F35]/20 rounded-[20px] h-[120px] animate-pulse" />
+            ) : (
+              <div className="w-full bg-[#7B1F35] rounded-[20px] p-8 flex items-center justify-between shadow-md relative overflow-hidden text-white">
+                <div className="relative z-10">
+                  <p className="text-[11px] font-bold tracking-widest text-white/70 uppercase mb-2">Overall Status</p>
+                  <h3 className="text-[28px] font-serif font-bold mb-1">{bannerTitle}</h3>
+                  <p className="text-white/80 text-[14px]">{bannerSub}</p>
+                </div>
+
+                <div className="relative z-10 flex items-center justify-center shrink-0">
+                  <svg className="w-24 h-24 transform -rotate-90">
+                    <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/20" />
+                    <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="4" fill="transparent"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeOffset}
+                      className="text-white drop-shadow-md transition-all duration-700"
+                    />
+                  </svg>
+                  <span className="absolute text-[20px] font-serif font-bold">{progressPercent}%</span>
+                </div>
+
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent" />
               </div>
-              
-              <div className="relative z-10 flex items-center justify-center">
-                <svg className="w-24 h-24 transform -rotate-90">
-                  <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/20" />
-                  <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="2" fill="transparent" strokeDasharray="264" strokeDashoffset="87" className="text-white drop-shadow-md" />
-                </svg>
-                <span className="absolute text-[22px] font-serif font-bold">67%</span>
-              </div>
-              
-              {/* Decorative background overlay */}
-              <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent"></div>
-            </div>
+            )}
 
             {/* MAIN CONTENT GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* LEFT COLUMN: TIMELINE (Spans 2 columns) */}
+
+              {/* LEFT COLUMN: TIMELINE */}
               <div className="lg:col-span-2 bg-[#F3EADB] rounded-2xl p-8 shadow-sm">
                 <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] mb-8">Your Research Journey</h3>
-                
-                <div className="relative pl-2">
-                  {/* Vertical Connecting Line */}
-                  <div className="absolute left-[23px] top-6 bottom-12 w-[2px] bg-[#D8CEB9]"></div>
 
-                  {/* Step 1: Account Approved (Done) */}
-                  <div className="relative flex gap-5 mb-5 z-10 group">
-                    <div className="w-8 h-8 rounded-full bg-[#7B1F35] text-white flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <div className="flex-1 bg-[#FCF9F2] border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between shadow-sm transition-all hover:shadow-md">
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Account Approved</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">Prof. Ira Pongasi (Adviser) · Aug 15, 2026 · 10:24 AM</p>
-                        <p className="text-[13px] text-gray-600 italic">Welcome to ARCHIVIO! You can now upload your research.</p>
-                      </div>
-                      <span className="flex items-center gap-1.5 bg-[#E6F4EA] text-[#1E8E3E] px-3 py-1 rounded-full text-[12px] font-bold border border-[#C6E5D0]">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> Done
-                      </span>
-                    </div>
+                {loading ? (
+                  <div className="space-y-4 animate-pulse">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="h-20 bg-[#E8DFCB] rounded-xl" />
+                    ))}
                   </div>
+                ) : (
+                  <div className="relative pl-2">
+                    {/* Vertical line */}
+                    <div className="absolute left-[23px] top-6 bottom-12 w-[2px] bg-[#D8CEB9]" />
 
-                  {/* Step 2: Manuscript Uploaded (Done) */}
-                  <div className="relative flex gap-5 mb-5 z-10 group">
-                    <div className="w-8 h-8 rounded-full bg-[#7B1F35] text-white flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <div className="flex-1 bg-[#FCF9F2] border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between shadow-sm transition-all hover:shadow-md">
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Manuscript Uploaded</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">You · v2.0 · Feb 5, 2027 · 9:14 AM</p>
-                        <p className="text-[13px] text-gray-600 italic">ML-Based Health Monitor (38 pages, 2.4 MB) uploaded.</p>
+                    {/* Step 1: Account */}
+                    <div className="relative flex gap-5 mb-5 z-10">
+                      <DoneNode />
+                      <div className="flex-1 bg-[#FCF9F2] border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all">
+                        <div>
+                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">Account Approved</h4>
+                          <p className="text-[12px] text-gray-500 mt-1 mb-2">{adviserName} (Adviser)</p>
+                          <p className="text-[13px] text-gray-600 italic">Welcome to ARCHIVIO! You can now upload your research.</p>
+                        </div>
+                        <DoneTag />
                       </div>
-                      <span className="flex items-center gap-1.5 bg-[#E6F4EA] text-[#1E8E3E] px-3 py-1 rounded-full text-[12px] font-bold border border-[#C6E5D0]">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> Done
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Step 3: Supporting Documents (In Progress - ACTIVE) */}
-                  <div className="relative flex gap-5 mb-5 z-10 group">
-                    <div className="w-8 h-8 rounded-full bg-white border-2 border-[#7B1F35] text-[#7B1F35] flex items-center justify-center shrink-0 ring-[6px] ring-[#F3EADB] mt-4 z-10">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35]"></div>
-                    </div>
-                    <div className="flex-1 bg-[#FDF5F6] border border-[#E5B5BC] rounded-xl p-5 flex items-start justify-between shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]"></div>
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Supporting Documents</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">4 of 6 submitted · Last updated Feb 5, 2027</p>
-                        <p className="text-[13px] text-[#7B1F35] italic font-medium">Signature Page and Video Pitch are still pending.</p>
+                    {/* Step 2: Manuscript */}
+                    <div className="relative flex gap-5 mb-5 z-10">
+                      {currentStep >= 2 ? <DoneNode /> : <ActiveNode />}
+                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all ${
+                        currentStep >= 2
+                          ? 'bg-[#FCF9F2] border border-[#E8DFCB]'
+                          : 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
+                      }`}>
+                        {currentStep < 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
+                        <div>
+                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">Manuscript Uploaded</h4>
+                          <p className="text-[12px] text-gray-500 mt-1 mb-2">
+                            {hasManuscript && manuscriptDate ? `Uploaded · ${manuscriptDate}` : 'Not yet uploaded'}
+                          </p>
+                          <p className="text-[13px] text-gray-600 italic">
+                            {hasManuscript ? `"${researchTitle}" uploaded successfully.` : 'Upload your manuscript PDF to proceed.'}
+                          </p>
+                        </div>
+                        {currentStep >= 2 ? <DoneTag /> : <ActiveTag />}
                       </div>
-                      <span className="flex items-center gap-1.5 bg-[#7B1F35]/10 text-[#7B1F35] px-3 py-1 rounded-full text-[12px] font-bold border border-[#7B1F35]/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7B1F35]"></span> In Progress
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Step 4: Adviser Review (Pending) */}
-                  <div className="relative flex gap-5 mb-5 z-10 opacity-70">
-                    <div className="w-8 h-8 rounded-full bg-[#E8DFCB] text-gray-400 flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
-                      <span className="text-[10px] font-bold">4</span>
-                    </div>
-                    <div className="flex-1 bg-[#FCF9F2]/60 border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Adviser Review</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">Prof. Ira Pongasi · Awaiting documents</p>
-                        <p className="text-[13px] text-gray-500 italic">Your adviser will review once all documents are submitted.</p>
+                    {/* Step 3: Supporting Documents */}
+                    <div className="relative flex gap-5 mb-5 z-10">
+                      {currentStep >= 3 ? <DoneNode /> : currentStep === 2 ? <ActiveNode /> : <PendingNode num={3} />}
+                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                        currentStep >= 3
+                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                          : currentStep === 2
+                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
+                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB] opacity-70'
+                      }`}>
+                        {currentStep === 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
+                        <div>
+                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">Supporting Documents</h4>
+                          <p className="text-[12px] text-gray-500 mt-1 mb-2">
+                            {uploadedCount} of {requiredCount} submitted
+                          </p>
+                          <p className={`text-[13px] italic font-medium ${currentStep >= 3 ? 'text-gray-600' : 'text-[#7B1F35]'}`}>
+                            {currentStep >= 3
+                              ? '✓ All requirements submitted.'
+                              : missingDocs.length > 0
+                                ? `Missing: ${missingDocs.slice(0, 3).join(', ')}${missingDocs.length > 3 ? ` +${missingDocs.length - 3} more` : ''}.`
+                                : 'Awaiting requirements list.'}
+                          </p>
+                        </div>
+                        {currentStep >= 3 ? <DoneTag /> : currentStep === 2 ? <ActiveTag /> : <PendingTag />}
                       </div>
-                      <span className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[12px] font-bold border border-gray-200">
-                        Pending
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Step 5: Forwarded to Dean (Pending) */}
-                  <div className="relative flex gap-5 mb-5 z-10 opacity-60">
-                    <div className="w-8 h-8 rounded-full bg-[#E8DFCB] text-gray-400 flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
-                      <span className="text-[10px] font-bold">5</span>
-                    </div>
-                    <div className="flex-1 bg-[#FCF9F2]/60 border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Forwarded to Dean</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">Dr. Desiree Cendana · Pending</p>
-                        <p className="text-[13px] text-gray-500 italic">After adviser approval, Dean reviews for final publication.</p>
+                    {/* Step 4: Adviser Review */}
+                    <div className={`relative flex gap-5 mb-5 z-10 ${currentStep < 3 ? 'opacity-60' : ''}`}>
+                      {currentStep >= 4 ? <DoneNode /> : currentStep === 3 ? <ActiveNode /> : <PendingNode num={4} />}
+                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                        currentStep >= 4
+                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                          : currentStep === 3
+                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
+                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB]'
+                      }`}>
+                        {currentStep === 3 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
+                        <div>
+                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">Adviser Review</h4>
+                          <p className="text-[12px] text-gray-500 mt-1 mb-2">
+                            {adviserName} · {currentStep >= 4 ? 'Approved' : 'Awaiting documents'}
+                          </p>
+                          <p className="text-[13px] text-gray-600 italic">
+                            {currentStep >= 4
+                              ? 'Your adviser has approved your submission!'
+                              : 'Your adviser will review once all documents are submitted.'}
+                          </p>
+                        </div>
+                        {currentStep >= 4 ? <DoneTag /> : currentStep === 3 ? <ActiveTag /> : <PendingTag />}
                       </div>
-                      <span className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[12px] font-bold border border-gray-200">
-                        Pending
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Step 6: Published (Pending) */}
-                  <div className="relative flex gap-5 z-10 opacity-50">
-                    <div className="w-8 h-8 rounded-full bg-[#E8DFCB] text-gray-400 flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] mt-4 z-10">
-                      <span className="text-[10px] font-bold">6</span>
-                    </div>
-                    <div className="flex-1 bg-[#FCF9F2]/60 border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">Published in Archive</h4>
-                        <p className="text-[12px] text-gray-500 mt-1 mb-2">Public Access · Pending</p>
-                        <p className="text-[13px] text-gray-500 italic">Your research will be searchable by anyone with internet.</p>
+                    {/* Step 5: Published */}
+                    <div className={`relative flex gap-5 z-10 ${currentStep < 4 ? 'opacity-50' : ''}`}>
+                      {isPublished ? <DoneNode /> : currentStep === 4 ? <ActiveNode /> : <PendingNode num={5} />}
+                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                        isPublished
+                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                          : currentStep === 4
+                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
+                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB]'
+                      }`}>
+                        {currentStep === 4 && !isPublished && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
+                        <div>
+                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">Published in Archive</h4>
+                          <p className="text-[12px] text-gray-500 mt-1 mb-2">
+                            {isPublished && publishedDate ? `Published · ${publishedDate}` : 'Public Access · Pending Dean approval'}
+                          </p>
+                          <p className="text-[13px] text-gray-600 italic">
+                            {isPublished
+                              ? '🎉 Your research is now searchable by the public!'
+                              : 'After adviser approval, the Dean reviews for final publication.'}
+                          </p>
+                        </div>
+                        {isPublished ? <DoneTag /> : currentStep === 4 ? <ActiveTag /> : <PendingTag />}
                       </div>
-                      <span className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[12px] font-bold border border-gray-200">
-                        Pending
-                      </span>
                     </div>
-                  </div>
 
-                </div>
+                  </div>
+                )}
               </div>
 
-              {/* RIGHT COLUMN: ACTION & INFO CARDS */}
+              {/* RIGHT COLUMN */}
               <div className="lg:col-span-1 flex flex-col gap-6">
-                
-                {/* Action Needed Card */}
-                <div className="bg-[#FCF9F2] rounded-2xl p-6 shadow-sm border-t-4 border-[#CF3645] border-l border-r border-b border-[#E8DFCB]">
-                  <p className="text-[10px] font-bold text-[#CF3645] tracking-widest uppercase mb-1">Action Needed</p>
-                  <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-2">Complete your documents</h3>
-                  <p className="text-[13px] text-gray-600 mb-6">Upload Signature Page and Video Pitch to move to adviser review.</p>
-                  <button 
-                    onClick={() => setActiveTab('Requirements')}
-                    className="w-full bg-[#CF3645] hover:bg-[#B02A38] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    Upload Now
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </button>
-                </div>
+
+                {/* Action Card — only show if not published */}
+                {!isPublished && !loading && (
+                  <div className="bg-[#FCF9F2] rounded-2xl p-6 shadow-sm border-t-4 border-[#CF3645] border-l border-r border-b border-[#E8DFCB]">
+                    <p className="text-[10px] font-bold text-[#CF3645] tracking-widest uppercase mb-1">Action Needed</p>
+                    {currentStep <= 2 ? (
+                      <>
+                        <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-2">
+                          {hasManuscript ? 'Complete your documents' : 'Upload your manuscript'}
+                        </h3>
+                        <p className="text-[13px] text-gray-600 mb-6">
+                          {hasManuscript && missingDocs.length > 0
+                            ? `Upload ${missingDocs.slice(0, 2).join(' and ')} to move to adviser review.`
+                            : hasManuscript
+                              ? 'All documents submitted! Awaiting adviser review.'
+                              : 'Start by uploading your research manuscript.'}
+                        </p>
+                        <button
+                          onClick={() => setActiveTab && setActiveTab('Requirements')}
+                          className="w-full bg-[#CF3645] hover:bg-[#B02A38] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                        >
+                          Upload Now
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-2">Awaiting Review</h3>
+                        <p className="text-[13px] text-gray-600">Your submission is complete. You will be notified when your adviser or dean takes action.</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Congrats card if published */}
+                {isPublished && !loading && (
+                  <>
+                    <div className="bg-[#F3EADB] rounded-2xl p-6 shadow-sm border-t-4 border-[#7B1F35] border border-[#E8DFCB]">
+                      <p className="text-4xl mb-3 text-center">🎉</p>
+                      <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-2 text-center">Research Published!</h3>
+                      <p className="text-[13px] text-gray-600 text-center">Your research is now live in the public archive and searchable by anyone.</p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8DFCB]">
+                      <p className="text-[10px] font-bold text-[#7B1F35] tracking-widest uppercase mb-2">Next Steps</p>
+                      <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-2">Start Another Project</h3>
+                      <p className="text-[13px] text-gray-600 mb-5">You can now begin uploading documents for a new research project under the same adviser.</p>
+                      <button
+                        onClick={() => setShowNewResearchModal(true)}
+                        className="w-full bg-[#1E8E3E] hover:bg-[#156a2e] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Start New Research
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* Adviser Card */}
                 <div className="bg-[#F3EADB] rounded-2xl p-6 shadow-sm border border-[#E8DFCB]/50">
                   <p className="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-4">Your Adviser</p>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-14 h-14 bg-[#7B1F35] rounded-full text-white font-bold text-xl flex items-center justify-center shrink-0">
-                      IP
+                  {loading ? (
+                    <div className="animate-pulse flex gap-4 mb-5">
+                      <div className="w-14 h-14 bg-[#E8DFCB] rounded-full" />
+                      <div className="flex-1 space-y-2 pt-1">
+                        <div className="h-4 bg-[#E8DFCB] rounded w-3/4" />
+                        <div className="h-3 bg-[#E8DFCB] rounded w-1/2" />
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-[#1A1A1A] text-[15px]">Prof. Ira Pongasi</h4>
-                      <p className="text-[12px] text-gray-500 mb-0.5">Research Adviser</p>
-                      <p className="text-[12px] text-gray-500 hover:text-[#7B1F35] cursor-pointer transition-colors truncate">ira.pongasi@swu.phinma.edu</p>
+                  ) : (
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 bg-[#7B1F35] rounded-full text-white font-bold text-xl flex items-center justify-center shrink-0">
+                        {adviserInitials}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">{adviserName}</h4>
+                        <p className="text-[12px] text-gray-500 mb-0.5">Research Adviser</p>
+                        {adviserEmail && (
+                          <p className="text-[12px] text-gray-500 hover:text-[#7B1F35] cursor-pointer transition-colors truncate">{adviserEmail}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <button className="w-full bg-[#7B1F35] hover:bg-[#5D1627] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  )}
+                  <button
+                    onClick={() => { setMsgStatus(null); setMsgSubject(''); setMsgBody(''); setShowMsgModal(true); }}
+                    className="w-full bg-[#7B1F35] hover:bg-[#5D1627] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
                     Send Message
                   </button>
                 </div>
 
-                {/* Helpful Tips Card */}
+                {/* Helpful Tips */}
                 <div className="bg-[#FCF9F2] rounded-2xl p-6 shadow-sm border border-[#E8DFCB]/50">
                   <p className="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-1">Helpful Tips</p>
                   <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-5">Did you know?</h3>
-                  
                   <ul className="flex flex-col gap-4">
                     <li className="flex gap-3 items-start">
                       <span className="text-[14px] mt-0.5">⏱️</span>
@@ -252,10 +616,190 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab }) {
 
               </div>
             </div>
-
           </div>
         </div>
       </div>
+
+      {/* ── SEND MESSAGE MODAL ─────────────────────────────────────────────── */}
+      {showMsgModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Modal header */}
+            <div className="bg-[#7B1F35] px-6 py-5 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Send Message</p>
+                <h3 className="text-white font-serif font-bold text-[18px]">Message to {adviserName}</h3>
+              </div>
+              <button
+                onClick={() => setShowMsgModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Success / Error states */}
+            {msgStatus === 'success' && (
+              <div className="mx-6 mt-5 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                <span className="text-green-600 text-xl">✅</span>
+                <div>
+                  <p className="text-green-800 font-bold text-sm">Message Sent!</p>
+                  <p className="text-green-700 text-xs mt-0.5">Your adviser will receive it shortly at <strong>{adviserEmail}</strong>.</p>
+                </div>
+              </div>
+            )}
+            {msgStatus === 'error' && (
+              <div className="mx-6 mt-5 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                <span className="text-red-600 text-xl">❌</span>
+                <div>
+                  <p className="text-red-800 font-bold text-sm">Failed to send</p>
+                  <p className="text-red-700 text-xs mt-0.5">Make sure the email backend server is running and try again.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSendMessage} className="px-6 py-5 space-y-4">
+              {/* To (read-only) */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">To</label>
+                <div className="flex items-center gap-3 bg-[#FDF9ED] border border-[#E8DFCB] rounded-xl px-4 py-2.5">
+                  <div className="w-7 h-7 rounded-full bg-[#7B1F35] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    {adviserInitials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#1A1A1A] leading-none">{adviserName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{adviserEmail || 'Research Adviser'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
+                <input
+                  type="text"
+                  value={msgSubject}
+                  onChange={e => setMsgSubject(e.target.value)}
+                  placeholder="e.g. Question about my manuscript..."
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35] transition"
+                />
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Message <span className="text-red-500">*</span></label>
+                <textarea
+                  value={msgBody}
+                  onChange={e => setMsgBody(e.target.value)}
+                  required
+                  rows={5}
+                  placeholder="Type your message here..."
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35] transition resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowMsgModal(false)}
+                  className="flex-1 border border-[#E8DFCB] text-gray-600 font-bold text-[14px] py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={msgSending || !msgBody.trim()}
+                  className="flex-1 bg-[#7B1F35] hover:bg-[#5D1627] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {msgSending ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send Message
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ── NEW RESEARCH MODAL ─────────────────────────────────────────────── */}
+      {showNewResearchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-[#1E8E3E] px-6 py-5 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">New Project</p>
+                <h3 className="text-white font-serif font-bold text-[18px]">Start New Research</h3>
+              </div>
+              <button
+                onClick={() => setShowNewResearchModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleStartNewResearch} className="px-6 py-5 space-y-4">
+              <p className="text-[13px] text-gray-600 mb-2">
+                This will reset your dashboard to Step 1 so you can upload a new manuscript. 
+                Your published research will remain safely in the archive and your Dashboard's Past Publications.
+              </p>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">New Research Title <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={newResearchTitle}
+                  onChange={e => setNewResearchTitle(e.target.value)}
+                  required
+                  placeholder="e.g. AI in Education..."
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E8E3E]/30 focus:border-[#1E8E3E] transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">New Group Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  required
+                  placeholder="e.g. Group 4 - IT4A"
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E8E3E]/30 focus:border-[#1E8E3E] transition"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingNewResearch || !newResearchTitle.trim() || !newGroupName.trim()}
+                  className="w-full bg-[#1E8E3E] hover:bg-[#156a2e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmittingNewResearch ? 'Initializing...' : 'Confirm & Start New Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
