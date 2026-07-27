@@ -3,13 +3,32 @@ import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 
 function ArchiveBrowse() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('Newest First');
   const [loading, setLoading] = useState(true);
+
+  const { currentUser } = useAuth();
+
+  const handleLike = async (e, paper) => {
+    e.preventDefault();
+    if (!currentUser) {
+      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      return;
+    }
+    const paperRef = doc(db, 'submissions', paper.id);
+    const likes = paper.likes || [];
+    if (likes.includes(currentUser.uid)) {
+      await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+    } else {
+      await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+    }
+  };
 
   useEffect(() => {
     const qSubs = query(
@@ -28,7 +47,7 @@ function ArchiveBrowse() {
       }
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
         return {
           ...sub,
           researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
@@ -198,8 +217,13 @@ function ArchiveBrowse() {
                   
                   <div className="flex justify-between items-center border-t border-stone-100 pt-4">
                     <div className="flex gap-4 text-xs font-medium text-stone-500">
-                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">♥</span> {Math.floor(Math.random() * 50) + 10}</span>
-                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">👁</span> {Math.floor(Math.random() * 500) + 100}</span>
+                      <span 
+                        onClick={(e) => handleLike(e, paper)} 
+                        className="flex items-center gap-1.5 text-red-700 hover:scale-110 cursor-pointer transition-transform"
+                      >
+                        {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'} {paper.likes?.length || 0}
+                      </span>
+                      <span className="flex items-center gap-1.5 cursor-default"><span className="text-stone-400">👁</span> {paper.views || 0}</span>
                       <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">↗</span> Share</span>
                     </div>
                     <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white border border-[#7a2039] text-[#7a2039] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white transition cursor-pointer">

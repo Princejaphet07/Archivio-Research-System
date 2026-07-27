@@ -65,7 +65,7 @@ function ReviewSubmissions() {
 
   // Enrich submissions with group data
   const enrichedSubmissions = mySubmissions.map(sub => {
-    const group = groups.find(g => g.leaderUid === sub.studentUid);
+    const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
     const uploadedCount = sub.uploadedDocs?.length || 0;
     const requiredCount = requirements.length;
     const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;

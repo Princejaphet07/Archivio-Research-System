@@ -12,7 +12,7 @@ import MyGroupPage from './pages/MyGroupPage';
 import SettingsPage from './pages/SettingsPage'; // 1. Added SettingsPage import
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -50,21 +50,24 @@ function App() {
         try {
           const studentsRef = collection(db, 'students');
           const q = query(studentsRef, where('uid', '==', user.uid));
-          const snapshot = await getDocs(q);
-
-          let displayName = user.displayName || user.email.split('@')[0];
-          let groupName = 'Your Group';
-          let adviserName = 'Your Adviser';
           
-          if (!snapshot.empty) {
-            const studentData = snapshot.docs[0].data();
-            displayName = studentData.displayName || studentData.firstName + ' ' + studentData.lastName;
-            groupName = studentData.groupName || 'Your Group';
-            adviserName = studentData.invitedByName || 'Your Adviser';
-          }
-          const initials = displayName.substring(0, 2).toUpperCase();
-          
-          setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName });
+          onSnapshot(q, (snapshot) => {
+            let displayName = user.displayName || user.email?.split('@')[0] || 'Student';
+            let groupName = 'Your Group';
+            let adviserName = 'Your Adviser';
+            let profilePhotoUrl = null;
+            
+            if (!snapshot.empty) {
+              const studentData = snapshot.docs[0].data();
+              displayName = studentData.displayName || (studentData.firstName ? studentData.firstName + ' ' + studentData.lastName : null) || displayName;
+              groupName = studentData.groupName || 'Your Group';
+              adviserName = studentData.invitedByName || 'Your Adviser';
+              profilePhotoUrl = studentData.profilePhotoUrl || null;
+            }
+            
+            const initials = displayName.substring(0, 2).toUpperCase();
+            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl });
+          });
           
           // Only redirect to dashboard if they are on login or an invite route
           // (This prevents forcing them to dashboard if the listener fires for other reasons)
@@ -170,6 +173,7 @@ function App() {
           onLogout={handleLogout}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           groupName={studentInfo.groupName}
           adviserName={studentInfo.adviserName}
           onUploadClick={handleUploadClick}
@@ -180,6 +184,9 @@ function App() {
       {currentPage === 'manuscript' && (
         <ManuscriptPage
           onLogout={handleLogout}
+          studentName={studentInfo.name}
+          initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -189,6 +196,7 @@ function App() {
           onLogout={handleLogout}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           studentUid={studentInfo.uid}
           groupName={studentInfo.groupName}
           activeTab={activeTab}
@@ -198,6 +206,9 @@ function App() {
       {currentPage === 'progress' && (
         <ProgressPage
           onLogout={handleLogout}
+          studentName={studentInfo.name}
+          initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -207,6 +218,7 @@ function App() {
           onLogout={handleLogout}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           groupName={studentInfo.groupName}
           adviserName={studentInfo.adviserName}
           studentUid={studentInfo.uid}
@@ -220,6 +232,7 @@ function App() {
           onLogout={handleLogout}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -229,6 +242,7 @@ function App() {
           onLogout={handleLogout}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
           onUploadClick={handleUploadClick}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
@@ -239,6 +253,7 @@ function App() {
           onBackToResearch={handleBackToResearch}
           studentName={studentInfo.name}
           initials={studentInfo.initials}
+          profilePhotoUrl={studentInfo.profilePhotoUrl}
         />
       )}
     </div>

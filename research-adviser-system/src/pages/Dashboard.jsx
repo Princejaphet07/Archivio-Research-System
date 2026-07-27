@@ -83,7 +83,7 @@ function Dashboard() {
   const mySubmissions = submissions.filter(s => adviserStudentUids.includes(s.studentUid));
 
   const enrichedSubmissions = mySubmissions.map(sub => {
-    const group = activeGroups.find(g => g.leaderUid === sub.studentUid);
+    const group = activeGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
     const uploadedCount = sub.uploadedDocs?.length || 0;
     const requiredCount = requirements.length || 6; // default to 6 if requirements empty
     const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;

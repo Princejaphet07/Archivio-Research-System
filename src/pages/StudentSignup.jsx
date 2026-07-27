@@ -147,7 +147,15 @@ export default function StudentSignup({ onSwitchPage }) {
         return;
       }
 
-      const invitationDoc = snapshot.docs[0];
+      // A student might have multiple pending invitations if they were invited multiple times.
+      // Sort in memory to get the most recent invitation.
+      const sortedDocs = snapshot.docs.sort((a, b) => {
+        const dateA = new Date(a.data().createdAt || 0);
+        const dateB = new Date(b.data().createdAt || 0);
+        return dateB - dateA;
+      });
+
+      const invitationDoc = sortedDocs[0];
       const invitationData = invitationDoc.data();
 
       // Create Firebase Auth account

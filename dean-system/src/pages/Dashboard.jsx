@@ -1,18 +1,136 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { collection, onSnapshot, query, getDocs, where } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 export default function Dashboard({ activePage, onNavigate }) {
   const { deanData, loading } = useUser();
+  
+  const [stats, setStats] = useState({
+    totalGroups: 0,
+    approved: 0,
+    published: 0,
+    pending: 0,
+    totalAdvisers: 0
+  });
+  
+  const [adviserStats, setAdviserStats] = useState([]);
+  const [allPapers, setAllPapers] = useState([]);
+  const [allGroups, setAllGroups] = useState([]);
+  const [topPapersSort, setTopPapersSort] = useState('likes');
+  const [topCategories, setTopCategories] = useState([]);
+  const [yearlyStats, setYearlyStats] = useState([]);
+
+  useEffect(() => {
+    const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
+      let approvedCount = 0;
+      let publishedCount = 0;
+      let pendingCount = 0;
+      const advMap = {};
+      const papers = [];
+      const categoriesMap = {};
+      const yearMap = {};
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const status = data.reviewStatus || 'pending';
+        
+        if (status === 'approved') approvedCount++;
+        if (status === 'published') {
+          publishedCount++;
+          papers.push({ id: doc.id, ...data });
+          
+          const tags = data.tags || [];
+          if (tags.length > 0) {
+            tags.forEach(tag => { categoriesMap[tag] = (categoriesMap[tag] || 0) + 1; });
+          } else {
+             const prog = data.program || 'General IT';
+             categoriesMap[prog] = (categoriesMap[prog] || 0) + 1;
+          }
+        }
+        if (status === 'pending' || status === 'revision') pendingCount++;
+        
+        const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
+        if (!yearMap[year]) yearMap[year] = 0;
+        yearMap[year]++;
+        
+        if (data.adviserUid) {
+          const advName = data.adviserName || 'Unknown Adviser';
+          if (!advMap[data.adviserUid]) {
+            advMap[data.adviserUid] = { uid: data.adviserUid, name: advName, uploads: 0, approved: 0, published: 0, pending: 0 };
+          }
+          advMap[data.adviserUid].uploads++;
+          if (status === 'approved') advMap[data.adviserUid].approved++;
+          if (status === 'published') advMap[data.adviserUid].published++;
+          if (status === 'pending' || status === 'revision') advMap[data.adviserUid].pending++;
+        }
+      });
+      
+      setStats(prev => ({ ...prev, approved: approvedCount, published: publishedCount, pending: pendingCount }));
+      
+      const advArray = Object.values(advMap).map(adv => {
+         const rate = adv.uploads > 0 ? Math.round((adv.published / adv.uploads) * 100) : 0;
+         return { ...adv, rate };
+      });
+      advArray.sort((a, b) => b.uploads - a.uploads);
+      setAdviserStats(advArray);
+      
+      setAllPapers(papers);
+      
+      const catArray = Object.keys(categoriesMap).map(key => ({ name: key, count: categoriesMap[key] }));
+      catArray.sort((a, b) => b.count - a.count);
+      setTopCategories(catArray.slice(0, 7));
+      
+      const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y] }));
+      yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+      setYearlyStats(yearArray);
+    });
+    
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
+       setStats(prev => ({ ...prev, totalGroups: snapshot.size }));
+       const groups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+       setAllGroups(groups);
+    });
+    
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
+       setStats(prev => ({ ...prev, totalAdvisers: snapshot.size }));
+    });
+    
+    return () => { unsubSubmissions(); unsubGroups(); unsubAdvisers(); }
+  }, []);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  // Extract name from displayName
   const deanName = deanData?.displayName || 'Dean';
-  const firstName = deanName.split(' ')[0]; // Get first name for greeting
+  const firstName = deanName.split(' ')[0];
+  
+  const currentYear = new Date().getFullYear();
+  let chartData = [...yearlyStats].slice(-4);
+  if (chartData.length < 4) {
+    const padCount = 4 - chartData.length;
+    const startYear = chartData.length > 0 ? parseInt(chartData[0].year) - padCount : currentYear - 3;
+    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0 }));
+    chartData = [...padding, ...chartData];
+  }
+  const maxCount = Math.max(...chartData.map(d => d.count), 10);
+  const xCoords = [10, 137, 263, 390];
+  const chartPoints = chartData.map((d, i) => ({
+    x: xCoords[i],
+    y: 75 - (d.count / maxCount) * 55,
+    count: d.count,
+    year: d.year
+  }));
+  const pathData = `M ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+
+  const sortedTopPapers = [...allPapers].sort((a, b) => {
+    const aScore = topPapersSort === 'likes' ? (a.likes?.length || 0) : (a.views || 0);
+    const bScore = topPapersSort === 'likes' ? (b.likes?.length || 0) : (b.views || 0);
+    return bScore - aScore;
+  }).slice(0, 5); // Get first name for greeting
 
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
@@ -45,19 +163,19 @@ export default function Dashboard({ activePage, onNavigate }) {
                 onClick={() => onNavigate('publish-queue')}
                 className="px-4 py-2 bg-[#7a1f3d] text-white rounded-lg text-xs font-bold shadow-md hover:bg-[#5a162d] transition-all flex items-center gap-2"
               >
-                <span>📋</span> Publish Queue <span className="bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">8</span>
+                <span>📋</span> Publish Queue <span className="bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{stats.approved}</span>
               </button>
             </div>
           </div>
 
           {/* ================= KPI STATS HIGHLIGHT GRID ================= */}
           <div className="grid grid-cols-6 gap-4 mb-6">
-            <KpiCard title="TOTAL GROUP" value="16" trend="↑ 8%" trendSub="vs last year" icon="📁" />
-            <KpiCard title="APPROVED" value="28" trend="↑ 6%" trendSub="vs last year" icon="✅" highlight />
-            <KpiCard title="PUBLISHED" value="21" trend="↑ 11%" trendSub="this year" icon="🌐" />
-            <KpiCard title="PENDING REVIEW" value="8" trend="+2 new" trendSub="this week" icon="⏳" warning />
-            <KpiCard title="TOTAL ADVISERS" value="3" subtext="2 active + you" icon="👥" />
-            <KpiCard title="COMPLETION RATE" value="72.5%" trend="↑ 3.2%" trendSub="from last sem" icon="📈" />
+            <KpiCard title="TOTAL GROUP" value={stats.totalGroups} trend="Total registered" icon="📁" />
+            <KpiCard title="APPROVED" value={stats.approved} trend="Awaiting publish" icon="✅" highlight />
+            <KpiCard title="PUBLISHED" value={stats.published} trend="Live in archive" icon="🌐" />
+            <KpiCard title="PENDING REVIEW" value={stats.pending} trend="Needs attention" icon="⏳" warning />
+            <KpiCard title="TOTAL ADVISERS" value={stats.totalAdvisers} subtext="Registered advisers" icon="👥" />
+            <KpiCard title="COMPLETION RATE" value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} trend="Published / Total" icon="📈" />
           </div>
 
           {/* ================= CHARTS AND SUMMARIES GRID (ROW 2) ================= */}
@@ -81,30 +199,19 @@ export default function Dashboard({ activePage, onNavigate }) {
                   <line x1="0" y1="100" x2="400" y2="100" stroke="#e7e5e4" strokeWidth="1" />
                   <line x1="0" y1="66" x2="400" y2="66" stroke="#f5f5f4" strokeWidth="1" strokeDasharray="4" />
                   <line x1="0" y1="33" x2="400" y2="33" stroke="#f5f5f4" strokeWidth="1" strokeDasharray="4" />
-                  <path d="M 10 75 L 130 60 L 260 35 L 390 20" fill="none" stroke="#7a1f3d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <g className="cursor-pointer">
-                    <circle cx="10" cy="75" r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
-                    <text x="10" y="60" textAnchor="middle" className="text-[10px] font-bold fill-stone-700">37</text>
-                  </g>
-                  <g className="cursor-pointer">
-                    <circle cx="130" cy="60" r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
-                    <text x="130" y="45" textAnchor="middle" className="text-[10px] font-bold fill-stone-700">42</text>
-                  </g>
-                  <g className="cursor-pointer">
-                    <circle cx="260" cy="35" r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
-                    <text x="260" y="20" textAnchor="middle" className="text-[10px] font-bold fill-stone-700">55</text>
-                  </g>
-                  <g className="cursor-pointer">
-                    <circle cx="390" cy="20" r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
-                    <text x="390" y="5" textAnchor="middle" className="text-[10px] font-bold fill-stone-700">61</text>
-                  </g>
+                  <path d={pathData} fill="none" stroke="#7a1f3d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {chartPoints.map((p, i) => (
+                    <g key={i} className="cursor-pointer">
+                      <circle cx={p.x} cy={p.y} r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
+                      <text x={p.x} y={p.y - 12} textAnchor="middle" className="text-[10px] font-bold fill-stone-700">{p.count}</text>
+                    </g>
+                  ))}
                 </svg>
               </div>
               <div className="flex justify-between text-[11px] font-bold text-stone-400 px-2 mt-2">
-                <span>2023</span>
-                <span>2024</span>
-                <span>2025</span>
-                <span>2026</span>
+                {chartPoints.map((p, i) => (
+                  <span key={i}>{p.year}</span>
+                ))}
               </div>
             </div>
 
@@ -115,10 +222,22 @@ export default function Dashboard({ activePage, onNavigate }) {
                 <p className="text-xs text-stone-400 mt-0.5">Click a year to view its records</p>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 flex-1 justify-center content-center">
-                <YearMetricBox year="2023" count="8" badge="Baseline" />
-                <YearMetricBox year="2024" count="11" growth="↑ 38%" textGreen />
-                <YearMetricBox year="2025" count="14" growth="↑ 27%" textGreen active />
-                <YearMetricBox year="2026" count="15" growth="↑ 7%" textGreen />
+                {chartData.map((d, i) => {
+                  const prev = i > 0 ? chartData[i - 1].count : 0;
+                  const growth = prev > 0 ? Math.round(((d.count - prev) / prev) * 100) : 0;
+                  let badge = undefined;
+                  let growthText = undefined;
+                  let textGreen = false;
+                  
+                  if (i === 0) badge = "Baseline";
+                  else if (growth > 0) { growthText = `↑ ${growth}%`; textGreen = true; }
+                  else if (growth < 0) { growthText = `↓ ${Math.abs(growth)}%`; }
+                  else { growthText = "0%"; }
+                  
+                  return (
+                    <YearMetricBox key={d.year} year={d.year} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={d.year === currentYear.toString()} />
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -141,13 +260,24 @@ export default function Dashboard({ activePage, onNavigate }) {
                 </div>
               </div>
               <div className="space-y-3.5">
-                <CategoryProgressBar label="Machine Learning" count={42} max={45} barColor="bg-[#7a1f3d]" dotColor="bg-[#7a1f3d]" />
-                <CategoryProgressBar label="IoT & Embedded" count={31} max={45} barColor="bg-blue-600" dotColor="bg-blue-600" />
-                <CategoryProgressBar label="Web Systems" count={28} max={45} barColor="bg-emerald-600" dotColor="bg-emerald-600" />
-                <CategoryProgressBar label="Mobile Apps" count={22} max={45} barColor="bg-amber-500" dotColor="bg-amber-500" />
-                <CategoryProgressBar label="Data Analytics" count={11} max={45} barColor="bg-teal-600" dotColor="bg-teal-600" />
-                <CategoryProgressBar label="Cybersecurity" count={14} max={45} barColor="bg-red-600" dotColor="bg-red-600" />
-                <CategoryProgressBar label="Blockchain" count={5} max={45} barColor="bg-purple-600" dotColor="bg-purple-600" />
+                {topCategories.length > 0 ? topCategories.map((cat, i) => {
+                  const colors = [
+                    { bar: 'bg-[#7a1f3d]', dot: 'bg-[#7a1f3d]' },
+                    { bar: 'bg-blue-600', dot: 'bg-blue-600' },
+                    { bar: 'bg-emerald-600', dot: 'bg-emerald-600' },
+                    { bar: 'bg-amber-500', dot: 'bg-amber-500' },
+                    { bar: 'bg-teal-600', dot: 'bg-teal-600' },
+                    { bar: 'bg-red-600', dot: 'bg-red-600' },
+                    { bar: 'bg-purple-600', dot: 'bg-purple-600' }
+                  ];
+                  const color = colors[i % colors.length];
+                  const maxCount = topCategories[0]?.count || 1;
+                  return (
+                    <CategoryProgressBar key={cat.name} label={cat.name} count={cat.count} max={maxCount} barColor={color.bar} dotColor={color.dot} />
+                  );
+                }) : (
+                  <p className="text-xs text-stone-400 text-center py-4">No categories data available yet.</p>
+                )}
               </div>
             </div>
 
@@ -156,16 +286,33 @@ export default function Dashboard({ activePage, onNavigate }) {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-stone-900 tracking-tight">Top Research Papers</h3>
                 <div className="flex bg-stone-100 rounded-lg p-0.5 border border-stone-200 text-[10px] font-bold">
-                  <button className="bg-white text-stone-800 px-2.5 py-1 rounded-md shadow-sm">👍 Liked</button>
-                  <button className="text-stone-400 px-2.5 py-1 hover:text-stone-700">👁️ Viewed</button>
+                  <button 
+                    onClick={() => setTopPapersSort('likes')}
+                    className={`${topPapersSort === 'likes' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-700'} px-2.5 py-1 rounded-md transition-all`}
+                  >👍 Liked</button>
+                  <button 
+                    onClick={() => setTopPapersSort('views')}
+                    className={`${topPapersSort === 'views' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-700'} px-2.5 py-1 rounded-md transition-all`}
+                  >👁️ Viewed</button>
                 </div>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                <PaperRow rank={1} title="Smart Irrigation System Using IoT" author="Group Innovatech - Ira Pongasi" count={32} />
-                <PaperRow rank={2} title="Predictive Analytics for Student Dropout" author="Group DataMinds - A. Ilustrisimo" count={28} />
-                <PaperRow rank={3} title="ML-Based Health Monitor" author="Group HealthAI - Dr. Cendana (You)" count={24} highlight />
-                <PaperRow rank={4} title="Blockchain-Based Credential System" author="Group ChainSec - J. Reyes" count={19} />
-                <PaperRow rank={5} title="AI-Driven Crop Yield Prediction" author="Group AgroTech - D. Cendana" count={16} />
+                {sortedTopPapers.length > 0 ? sortedTopPapers.map((paper, i) => {
+                  const score = topPapersSort === 'likes' ? (paper.likes?.length || 0) : (paper.views || 0);
+                  const icon = topPapersSort === 'likes' ? '👍' : '👁️';
+                  const highlight = paper.adviserUid === deanData?.uid;
+                  
+                  const group = allGroups.find(g => g.leaderUid === paper.studentUid && (g.groupName === paper.groupName || g.researchTitle === (paper.researchTitle || paper.title)));
+                  const displayTitle = group?.researchTitle || paper.researchTitle || paper.title || 'Untitled';
+                  const displayAuthor = group?.groupName || paper.groupName || paper.studentName || 'Unknown Author';
+                  const displayAdviser = group?.adviserName || paper.adviserName || 'Unknown Adviser';
+                  
+                  return (
+                    <PaperRow key={paper.id} rank={i + 1} title={displayTitle} author={`${displayAuthor} - ${displayAdviser}`} count={score} icon={icon} highlight={highlight} />
+                  );
+                }) : (
+                  <p className="text-xs text-stone-400 text-center py-4">No published papers yet.</p>
+                )}
               </div>
             </div>
           </div>
@@ -189,71 +336,49 @@ export default function Dashboard({ activePage, onNavigate }) {
                 <thead>
                   <tr className="bg-stone-50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200">
                     <th className="py-3 px-5">Adviser</th>
-                    <th className="py-3 px-4 text-center">Uploads</th>
-                    <th className="py-3 px-4 text-center">Approved</th>
-                    <th className="py-3 px-4 text-center">Published</th>
-                    <th className="py-3 px-4 text-center">Pending</th>
+                    <th className="py-3 px-4 text-left">Uploads <span className="text-[9px] inline-block ml-1 opacity-60">↓</span></th>
+                    <th className="py-3 px-4 text-left">Approved</th>
+                    <th className="py-3 px-4 text-left">Published</th>
+                    <th className="py-3 px-4 text-left">Pending</th>
                     <th className="py-3 px-5 w-44">Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 font-medium text-stone-700">
-                  <tr className="bg-amber-50/40 hover:bg-amber-50/60 transition-colors">
-                    <td className="py-3.5 px-5 flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-800 font-bold flex items-center justify-center text-[11px]">DC</div>
-                      <div>
-                        <span className="font-bold text-stone-900">Dr. Desiree Cendana</span>
-                        <span className="ml-2 text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-extrabold uppercase">You</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold">6</td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">4</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded">3</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">1</span></td>
-                    <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                          <div className="bg-[#7a1f3d] h-full" style={{ width: '67%' }}></div>
-                        </div>
-                        <span className="text-[11px] font-bold text-stone-500 w-8 text-right">67%</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-stone-50/80 transition-colors">
-                    <td className="py-3.5 px-5 flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-[11px]">IP</div>
-                      <span className="font-bold text-stone-900">Ira Pongasi</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold">18</td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">14</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded">12</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">2</span></td>
-                    <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                          <div className="bg-[#7a1f3d] h-full" style={{ width: '78%' }}></div>
-                        </div>
-                        <span className="text-[11px] font-bold text-stone-500 w-8 text-right">78%</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-stone-50/80 transition-colors">
-                    <td className="py-3.5 px-5 flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px]">AI</div>
-                      <span className="font-bold text-stone-900">Almie Ilustrisimo</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold">12</td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">10</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded">9</span></td>
-                    <td className="py-3.5 px-4 text-center"><span className="bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">1</span></td>
-                    <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                          <div className="bg-[#7a1f3d] h-full" style={{ width: '83%' }}></div>
-                        </div>
-                        <span className="text-[11px] font-bold text-stone-500 w-8 text-right">83%</span>
-                      </div>
-                    </td>
-                  </tr>
+                  {adviserStats.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-6 text-center text-stone-400 text-sm">
+                        No adviser statistics available yet. Wait for students to create submissions.
+                      </td>
+                    </tr>
+                  ) : (
+                    adviserStats.map((adv) => {
+                      const isYou = adv.uid === deanData?.uid;
+                      const initials = adv.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+                      return (
+                        <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 hover:bg-amber-50/60' : 'hover:bg-stone-50/80'} transition-colors`}>
+                          <td className="py-3.5 px-5 flex items-center gap-3">
+                            <div className={`w-7 h-7 rounded-full ${isYou ? 'bg-amber-500/20 text-amber-800' : 'bg-purple-100 text-purple-700'} font-bold flex items-center justify-center text-[11px]`}>{initials}</div>
+                            <div>
+                              <span className="font-bold text-stone-900">{adv.name}</span>
+                              {isYou && <span className="ml-2 text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-extrabold uppercase">You</span>}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-left font-bold">{adv.uploads}</td>
+                          <td className="py-3.5 px-4 text-left"><span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">{adv.approved}</span></td>
+                          <td className="py-3.5 px-4 text-left"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded">{adv.published}</span></td>
+                          <td className="py-3.5 px-4 text-left"><span className="bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">{adv.pending}</span></td>
+                          <td className="py-3.5 px-5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
+                                <div className="bg-[#7a1f3d] h-full" style={{ width: `${adv.rate}%` }}></div>
+                              </div>
+                              <span className="text-[11px] font-bold text-stone-500 w-8 text-right">{adv.rate}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -317,7 +442,7 @@ function CategoryProgressBar({ label, count, max, barColor, dotColor }) {
   );
 }
 
-function PaperRow({ rank, title, author, count, highlight }) {
+function PaperRow({ rank, title, author, count, icon, highlight }) {
   return (
     <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d]/5' : 'border-stone-100 bg-stone-50/30 hover:bg-stone-50'}`}>
       <div className="flex items-center gap-3 min-w-0">
@@ -330,7 +455,7 @@ function PaperRow({ rank, title, author, count, highlight }) {
         </div>
       </div>
       <div className="flex items-center gap-1 font-bold text-stone-600 text-xs shrink-0 bg-white px-2 py-1 rounded-md border border-stone-100 shadow-sm">
-        <span>👍</span> {count}
+        <span>{icon || '👍'}</span> {count}
       </div>
     </div>
   );

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, onSnapshot, getDocs, query, where, arrayUnion } from 'firebase/firestore';
+import { logActivity } from '../firebase/logActivity';
+import Swal from 'sweetalert2';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 
 const BACKEND_URL = 'http://localhost:3001';
 
-export default function ProgressPage({ onLogout, activeTab, setActiveTab, initials }) {
+export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ── Message modal state ────────────────────────────────────────────────────
@@ -232,7 +236,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
       
     } catch (error) {
       console.error('Error starting new research:', error);
-      alert('Failed to start new research. Please try again.');
+      Swal.fire('Error', 'Failed to start new research. Please try again.', 'error');
     } finally {
       setIsSubmittingNewResearch(false);
     }
@@ -286,38 +290,21 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
         activeTab={activeTab || 'Progress'}
         setActiveTab={setActiveTab}
         onLogout={onLogout}
+        studentName={studentName}
         initials={initials}
+        profilePhotoUrl={profilePhotoUrl}
       />
 
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
 
         {/* HEADER */}
-        <header className="h-[90px] flex items-center justify-between px-8 z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              className="lg:hidden p-2 text-gray-500 hover:bg-black/5 rounded-lg transition-colors"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <h1 className="text-[20px] font-bold text-[#1A1A1A]">Progress</h1>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="relative w-10 h-10 rounded-full border border-[#E8DFCB] bg-transparent flex items-center justify-center hover:bg-black/5 transition-all">
-              <svg className="w-5 h-5 text-[#8A7B61]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#CF3645] rounded-full ring-2 ring-[#FDF9ED]" />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer">
-              {initials || 'ST'}
-            </div>
-          </div>
-        </header>
+        <PortalHeader 
+          title="Progress" 
+          initials={initials} 
+          setSidebarOpen={setSidebarOpen} 
+          profilePhotoUrl={profilePhotoUrl}
+        />
 
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-8 pb-10">
@@ -547,7 +534,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
                       <p className="text-[13px] text-gray-600 mb-5">You can now begin uploading documents for a new research project under the same adviser.</p>
                       <button
                         onClick={() => setShowNewResearchModal(true)}
-                        className="w-full bg-[#1E8E3E] hover:bg-[#156a2e] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                        className="w-full bg-[#7B1F35] hover:bg-[#5D1627] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -741,7 +728,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
       {showNewResearchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#1E8E3E] px-6 py-5 flex items-center justify-between">
+            <div className="bg-[#4a1024] px-6 py-5 flex items-center justify-between">
               <div>
                 <p className="text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">New Project</p>
                 <h3 className="text-white font-serif font-bold text-[18px]">Start New Research</h3>
@@ -770,7 +757,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
                   onChange={e => setNewResearchTitle(e.target.value)}
                   required
                   placeholder="e.g. AI in Education..."
-                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E8E3E]/30 focus:border-[#1E8E3E] transition"
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition"
                 />
               </div>
 
@@ -782,7 +769,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
                   onChange={e => setNewGroupName(e.target.value)}
                   required
                   placeholder="e.g. Group 4 - IT4A"
-                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E8E3E]/30 focus:border-[#1E8E3E] transition"
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition"
                 />
               </div>
 
@@ -790,7 +777,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, initia
                 <button
                   type="submit"
                   disabled={isSubmittingNewResearch || !newResearchTitle.trim() || !newGroupName.trim()}
-                  className="w-full bg-[#1E8E3E] hover:bg-[#156a2e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-[#7a1f3d] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {isSubmittingNewResearch ? 'Initializing...' : 'Confirm & Start New Project'}
                 </button>

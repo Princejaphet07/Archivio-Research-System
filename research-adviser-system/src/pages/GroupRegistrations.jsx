@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
+import { useAdviser } from '../context/AdviserContext';
+import Swal from 'sweetalert2';
 
 function GroupRegistrations() {
+  const { adviserData, user } = useAdviser();
   const [pendingGroups, setPendingGroups] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,11 +14,14 @@ function GroupRegistrations() {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-      const email = auth.currentUser?.email;
+      // Use user.email as the ultimate source of truth for the adviser's email
+      const email = user?.email || adviserData?.email;
+      console.log("Fetching groups for adviser:", email);
       if (!email) return;
 
       const q = query(collection(db, 'groups'), where('adviserUid', '==', email));
       const snap = await getDocs(q);
+      console.log("Groups found in DB for this adviser:", snap.size);
       
       const pending = [];
       const history = [];
@@ -40,11 +46,27 @@ function GroupRegistrations() {
   };
 
   useEffect(() => {
-    fetchGroups();
-  }, []);
+    if (user?.email || adviserData?.email) {
+      fetchGroups();
+    }
+  }, [user?.email, adviserData?.email]);
 
   const handleDecision = async (group, decision) => {
-    if (!window.confirm(`Are you sure you want to ${decision} ${group.groupName}?`)) return;
+    const actionText = decision === 'approve' ? 'approve' : 'decline';
+    const confirmColor = decision === 'approve' ? '#10b981' : '#d33';
+    
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to ${actionText} ${group.groupName}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: confirmColor,
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, ${actionText}`
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       // 1. Update groups collection
       await updateDoc(doc(db, 'groups', group.id), {
@@ -71,9 +93,17 @@ function GroupRegistrations() {
 
       // Refresh list
       fetchGroups();
+
+      Swal.fire({
+        title: 'Success!',
+        text: `${group.groupName} has been ${decision}d.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
       console.error(`Error ${decision} group:`, err);
-      alert(`Failed to ${decision}. Please try again.`);
+      Swal.fire('Error', `Failed to ${decision}. Please try again.`, 'error');
     }
   };
 

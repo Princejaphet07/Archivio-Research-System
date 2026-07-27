@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header'; // Added Header Import
 import { db } from '../firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -17,71 +17,82 @@ export default function AllUsers() {
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const deansSnap = await getDocs(collection(db, 'deans'));
-        const advisersSnap = await getDocs(collection(db, 'advisers'));
-        const studentsSnap = await getDocs(collection(db, 'students'));
+    let deansData = [];
+    let advisersData = [];
+    let studentsData = [];
 
-        const usersList = [];
-        
-        // Helper to format dates
-        const formatDate = (dateVal) => {
-          if (!dateVal) return 'N/A';
-          if (dateVal.toDate) return dateVal.toDate().toLocaleDateString();
-          return new Date(dateVal).toLocaleDateString();
-        };
-
-        deansSnap.forEach(doc => {
-          const data = doc.data();
-          usersList.push({
-            id: doc.id,
-            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
-            email: data.email,
-            role: 'Dean',
-            dept: data.department || 'N/A',
-            status: data.status || 'Active',
-            lastLogin: formatDate(data.lastLogin || data.createdAt)
-          });
-        });
-
-        advisersSnap.forEach(doc => {
-          const data = doc.data();
-          usersList.push({
-            id: doc.id,
-            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
-            email: data.email,
-            role: 'Adviser',
-            dept: data.department || 'N/A',
-            status: data.status || 'Active',
-            lastLogin: formatDate(data.lastLogin || data.createdAt)
-          });
-        });
-
-        studentsSnap.forEach(doc => {
-          const data = doc.data();
-          usersList.push({
-            id: doc.id,
-            name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
-            email: data.email,
-            role: 'Student',
-            dept: data.course || 'N/A',
-            status: data.status || 'Active',
-            lastLogin: formatDate(data.lastLogin || data.createdAt)
-          });
-        });
-
-        // Sort alphabetically by name
-        usersList.sort((a, b) => a.name.localeCompare(b.name));
-        
-        setAllUsers(usersList);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      } finally {
-        setLoading(false);
-      }
+    const formatDate = (dateVal) => {
+      if (!dateVal) return 'N/A';
+      if (dateVal.toDate) return dateVal.toDate().toLocaleDateString();
+      return new Date(dateVal).toLocaleDateString();
     };
-    fetchUsers();
+
+    const updateCombinedUsers = () => {
+      const combined = [...deansData, ...advisersData, ...studentsData];
+      combined.sort((a, b) => a.name.localeCompare(b.name));
+      setAllUsers(combined);
+      setLoading(false);
+    };
+
+    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+      deansData = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+          email: data.email,
+          role: 'Dean',
+          dept: data.department || 'N/A',
+          status: data.status || 'Active',
+          lastLogin: formatDate(data.lastLogin || data.createdAt)
+        };
+      });
+      updateCombinedUsers();
+    }, (error) => {
+      console.error("Error fetching deans:", error);
+    });
+
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+      advisersData = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+          email: data.email,
+          role: 'Adviser',
+          dept: data.department || 'N/A',
+          status: data.status || 'Active',
+          lastLogin: formatDate(data.lastLogin || data.createdAt)
+        };
+      });
+      updateCombinedUsers();
+    }, (error) => {
+      console.error("Error fetching advisers:", error);
+    });
+
+    const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+      studentsData = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
+          email: data.email,
+          role: 'Student',
+          dept: data.course || 'N/A',
+          status: data.status || 'Active',
+          lastLogin: formatDate(data.lastLogin || data.createdAt)
+        };
+      });
+      updateCombinedUsers();
+    }, (error) => {
+      console.error("Error fetching students:", error);
+    });
+
+    return () => {
+      unsubDeans();
+      unsubAdvisers();
+      unsubStudents();
+    };
   }, []);
 
   const tabs = [

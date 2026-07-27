@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 
 // Generate initials from a name string
 const getInitials = (name = '') => {
@@ -18,7 +20,7 @@ const AVATAR_COLORS = [
 ];
 const avatarColor = (name = '') => AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
-export default function MyGroupPage({ onLogout, studentName, initials, groupName: propGroupName, adviserName: propAdviserName, studentUid, activeTab, setActiveTab }) {
+export default function MyGroupPage({ onLogout, studentName, initials, groupName: propGroupName, adviserName: propAdviserName, studentUid, activeTab, setActiveTab, profilePhotoUrl }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [memberProfiles, setMemberProfiles] = useState([]);
@@ -139,37 +141,19 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         onLogout={onLogout}
         studentName={displayName}
         initials={initials || getInitials(displayName)}
+        profilePhotoUrl={profilePhotoUrl}
       />
 
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
 
         {/* HEADER */}
-        <header className="h-[90px] flex items-center justify-between px-6 lg:px-8 z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              className="lg:hidden p-2 text-gray-500 hover:bg-black/5 rounded-lg transition-colors"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <h1 className="text-[20px] font-bold text-[#1A1A1A] leading-tight">My Group</h1>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="relative w-10 h-10 rounded-full border border-[#E8DFCB] bg-transparent flex items-center justify-center hover:bg-black/5 transition-all">
-              <svg className="w-5 h-5 text-[#8A7B61]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#CF3645] rounded-full ring-2 ring-[#FDF9ED]" />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer">
-              {initials || getInitials(displayName)}
-            </div>
-          </div>
-        </header>
+        <PortalHeader 
+          title="My Group" 
+          initials={initials || getInitials(displayName)} 
+          setSidebarOpen={setSidebarOpen} 
+          profilePhotoUrl={profilePhotoUrl}
+        />
 
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-6 lg:px-8 pb-8">

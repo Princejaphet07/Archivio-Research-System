@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 export default function Requirements({ activePage, onNavigate }) {
   const [submissions, setSubmissions] = useState([]);
@@ -103,7 +104,7 @@ export default function Requirements({ activePage, onNavigate }) {
       });
       setShowReviewModal(true);
     } else {
-      alert("This group has not started their submission yet.");
+      Swal.fire('No Submission', 'This group has not started their submission yet.', 'info');
     }
   };
 

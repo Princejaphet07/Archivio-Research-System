@@ -4,7 +4,7 @@ import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
 import swuBuilding from '../assets/swu-building.png';
 
-export default function ResearchPage({ onLogout, studentName, initials, onUploadClick, activeTab, setActiveTab }) {
+export default function ResearchPage({ onLogout, studentName, initials, onUploadClick, activeTab, setActiveTab, profilePhotoUrl }) {
   const displayName = studentName || 'STUDENT';
   const displayInitials = initials || 'JZ';
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,6 +83,9 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
           activeTab={activeTab} 
           setActiveTab={handleSidebarNavigation}
           onLogout={onLogout}
+          studentName={studentName}
+          initials={initials}
+          profilePhotoUrl={profilePhotoUrl}
         />
 
         {/* Right Side Content */}
@@ -100,8 +103,12 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
               <span className="text-white text-[16px] tracking-wider">Research Archive</span>
             </div>
 
-            <div className="w-[34px] h-[34px] rounded-full border-2 border-white/60 bg-white/15 flex items-center justify-center text-white text-[13px] font-bold cursor-pointer tracking-wider">
-              {displayInitials}
+            <div className="w-[34px] h-[34px] rounded-full border-2 border-white/60 bg-white/15 flex items-center justify-center text-white text-[13px] font-bold cursor-pointer tracking-wider overflow-hidden">
+              {profilePhotoUrl ? (
+                <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                displayInitials
+              )}
             </div>
           </div>
 

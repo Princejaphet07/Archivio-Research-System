@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
 
 function ArchivePaperViewer() {
@@ -24,43 +25,60 @@ function ArchivePaperViewer() {
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    const fetchPaper = async () => {
-      try {
-        const docRef = doc(db, 'submissions', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const subData = { id: docSnap.id, ...docSnap.data() };
-          
-          // Fetch group for title and author
-          let groupData = null;
-          if (subData.studentUid) {
-            const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', subData.studentUid));
-            const groupSnap = await getDocs(qGroup);
+    let unsubGroup = () => {};
+    
+    const unsubSub = onSnapshot(doc(db, 'submissions', id), async (docSnap) => {
+      if (docSnap.exists()) {
+        const subData = { id: docSnap.id, ...docSnap.data() };
+        
+        // Increment views if not viewed yet
+        if (!localStorage.getItem(`viewed_${id}`)) {
+          localStorage.setItem(`viewed_${id}`, 'true');
+          const { updateDoc, increment } = await import('firebase/firestore');
+          updateDoc(docSnap.ref, { views: (subData.views || 0) + 1 }).catch(e => console.log('View update failed:', e));
+        }
+
+        if (subData.studentUid) {
+          const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', subData.studentUid));
+          unsubGroup = onSnapshot(qGroup, (groupSnap) => {
+            let groupData = null;
             if (!groupSnap.empty) {
               groupData = groupSnap.docs[0].data();
             }
-          }
-
-          setPaper({
-            ...subData,
-            researchTitle: groupData?.researchTitle || subData.researchTitle || subData.title,
-            authorDisplay: groupData 
-              ? `${groupData.leaderName}${groupData.members && groupData.members.length > 0 ? ` & ${groupData.members.length} other(s)` : ''}`
-              : subData.studentName || subData.groupName || 'Unknown Author',
-            program: groupData?.program || subData.program
+            setPaper({
+              ...subData,
+              researchTitle: groupData?.researchTitle || subData.researchTitle || subData.title,
+              authorDisplay: groupData 
+                ? `${groupData.leaderName}${groupData.members && groupData.members.length > 0 ? ` & ${groupData.members.length} other(s)` : ''}`
+                : subData.studentName || subData.groupName || 'Unknown Author',
+              program: groupData?.program || subData.program
+            });
+            setLoading(false);
           });
         } else {
-          console.error("Paper not found");
+          setPaper({
+            ...subData,
+            researchTitle: subData.researchTitle || subData.title,
+            authorDisplay: subData.studentName || subData.groupName || 'Unknown Author',
+            program: subData.program
+          });
+          setLoading(false);
         }
-      } catch (err) {
-        console.error('Error fetching paper:', err);
-        setError(err.message);
-      } finally {
+      } else {
+        console.error("Paper not found");
+        setError("Paper not found");
         setLoading(false);
       }
-    };
+    }, (err) => {
+      console.error('Error fetching paper:', err);
+      setError(err.message);
+      setLoading(false);
+    });
 
-    fetchPaper();
+    return () => {
+      unsubSub();
+      unsubGroup();
+    };
   }, [id]);
 
   // Initialize Chat when paper loads
@@ -144,6 +162,20 @@ function ArchivePaperViewer() {
     }
   };
 
+  const handleLike = async () => {
+    if (!currentUser) {
+      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      return;
+    }
+    const paperRef = doc(db, 'submissions', paper.id);
+    const likes = paper.likes || [];
+    if (likes.includes(currentUser.uid)) {
+      await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+    } else {
+      await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+    }
+  };
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
     if (!isFullscreen) setIsAiOpen(false);
@@ -221,7 +253,17 @@ function ArchivePaperViewer() {
           
           <button onClick={toggleFullscreen} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isFullscreen ? 'bg-[#f5ebed] text-[#7a2039]' : 'text-stone-500 hover:bg-stone-100'}`} title="Fullscreen">⛶</button>
           <button className="w-10 h-10 flex items-center justify-center rounded text-stone-500 hover:bg-stone-100 transition cursor-pointer" title="Bookmark">🔖</button>
-          <button className="w-10 h-10 flex items-center justify-center rounded text-stone-500 hover:bg-stone-100 transition cursor-pointer" title="Like">👍</button>
+          <div className="flex flex-col items-center gap-1 mt-2">
+            <button 
+              onClick={handleLike}
+              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600' : 'text-stone-500'}`} 
+              title={paper.likes?.includes(currentUser?.uid) ? "Unlike" : "Like"}
+            >
+              {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'}
+            </button>
+            <span className="text-[10px] font-bold text-stone-500">{paper.likes?.length || 0}</span>
+            <span className="text-[10px] font-bold text-stone-500 mt-2" title="Views">👁️ {paper.views || 0}</span>
+          </div>
           
           <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] text-[#7a2039]' : 'text-stone-500 hover:bg-stone-100'}`} title="Cite">❞</button>
         </div>

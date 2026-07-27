@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
+import Swal from 'sweetalert2';
 
 export default function ResearchUpload({ onBackToResearch, studentName, initials }) {
   const [formData, setFormData] = useState({
@@ -120,19 +121,34 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
       // Replace with your actual API endpoint
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      alert('Research uploaded successfully!');
+      Swal.fire({
+        title: 'Success!',
+        text: 'Research uploaded successfully!',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
       onBackToResearch();
       
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload research. Please try again.');
+      Swal.fire('Error', 'Failed to upload research. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+  const handleCancel = async () => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Any unsaved changes will be lost.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, cancel!'
+    });
+    if (result.isConfirmed) {
       onBackToResearch();
     }
   };

@@ -4,7 +4,9 @@ import heroBg from '../assets/Hero.png';
 import Header from '../components/Header';
 import Footer from '../components/Footer'; 
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
@@ -14,6 +16,23 @@ function ArchiveHome() {
     departments: 0,
     advisers: 0
   });
+
+  const { currentUser } = useAuth();
+
+  const handleLike = async (e, paper) => {
+    e.preventDefault();
+    if (!currentUser) {
+      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      return;
+    }
+    const paperRef = doc(db, 'submissions', paper.id);
+    const likes = paper.likes || [];
+    if (likes.includes(currentUser.uid)) {
+      await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+    } else {
+      await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+    }
+  };
 
   useEffect(() => {
     // Fetch published submissions
@@ -32,7 +51,7 @@ function ArchiveHome() {
       if (!subsList.length) return;
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
         return {
           ...sub,
           researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
@@ -167,8 +186,14 @@ function ArchiveHome() {
               </div>
               <div className="flex justify-between items-center mt-8">
                 <div className="text-xs text-stone-500 flex gap-3 font-medium">
-                  <span className="text-red-700">❤️ {Math.floor(Math.random() * 50) + 10}</span> 
-                  <span>👁️ {Math.floor(Math.random() * 500) + 100}</span>
+                  <span 
+                    onClick={(e) => handleLike(e, paper)} 
+                    className="text-red-700 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
+                    title="Like this paper"
+                  >
+                    {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'} {paper.likes?.length || 0}
+                  </span> 
+                  <span className="flex items-center gap-1" title="Views">👁️ {paper.views || 0}</span>
                 </div>
                 <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
                   View Paper

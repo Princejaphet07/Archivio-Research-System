@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { auth, db } from '../firebase/config';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import logo from '../assets/logo.png';
+import Swal from 'sweetalert2';
 
 const NAV_ITEMS_MAIN = [
   {
@@ -95,6 +97,27 @@ export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const activePage = location.pathname.slice(1) || 'dashboard';
   const { deanData } = useUser();
+  const [counts, setCounts] = useState({ researchRecords: 0, publishQueue: 0, userManagement: 0 });
+
+  useEffect(() => {
+    const unsubGroups = onSnapshot(query(collection(db, 'groups'), where('status', '==', 'approved')), (snap) => {
+      setCounts(prev => ({ ...prev, researchRecords: snap.size }));
+    });
+    const unsubSubs = onSnapshot(collection(db, 'submissions'), (snap) => {
+      const approvedCount = snap.docs.filter(doc => doc.data().reviewStatus === 'approved').length;
+      setCounts(prev => ({ ...prev, publishQueue: approvedCount }));
+    });
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+      const inactiveCount = snap.docs.filter(doc => doc.data().status === 'inactive').length;
+      setCounts(prev => ({ ...prev, userManagement: inactiveCount }));
+    });
+    
+    return () => {
+      unsubGroups();
+      unsubSubs();
+      unsubAdvisers();
+    };
+  }, []);
 
   // Extract initials from displayName
   const deanName = deanData?.displayName || 'Dean';
@@ -112,7 +135,7 @@ export default function Sidebar({ onNavigate }) {
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Failed to logout. Please try again.');
+      Swal.fire('Error', 'Failed to logout. Please try again.', 'error');
     }
   };
 
@@ -153,6 +176,10 @@ export default function Sidebar({ onNavigate }) {
           <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Main</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MAIN.map((item) => {
+              let currentBadge = item.badge;
+              if (item.id === 'research-records') currentBadge = counts.researchRecords > 0 ? counts.researchRecords.toString() : null;
+              if (item.id === 'publish-queue') currentBadge = counts.publishQueue > 0 ? counts.publishQueue.toString() : null;
+
               return (
                 <li key={item.id}>
                   <button
@@ -167,9 +194,9 @@ export default function Sidebar({ onNavigate }) {
                       {item.icon}
                       {item.label}
                     </span>
-                    {item.badge && (
+                    {currentBadge && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeStyle}`}>
-                        {item.badge}
+                        {currentBadge}
                       </span>
                     )}
                   </button>
@@ -184,6 +211,9 @@ export default function Sidebar({ onNavigate }) {
           <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Management</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MANAGEMENT.map((item) => {
+              let currentBadge = item.badge;
+              if (item.id === 'user-management') currentBadge = counts.userManagement > 0 ? counts.userManagement.toString() : null;
+
               return (
                 <li key={item.id}>
                   <button
@@ -198,9 +228,9 @@ export default function Sidebar({ onNavigate }) {
                       {item.icon}
                       {item.label}
                     </span>
-                    {item.badge && (
+                    {currentBadge && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeStyle}`}>
-                        {item.badge}
+                        {currentBadge}
                       </span>
                     )}
                   </button>

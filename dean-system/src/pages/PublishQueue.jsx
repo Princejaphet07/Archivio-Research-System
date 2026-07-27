@@ -38,7 +38,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
   // Compute Enriched Data
   const enrichedSubmissions = submissions.map(sub => {
-    const group = groups.find(g => g.leaderUid === sub.studentUid);
+    const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
     
     // Calculate requirements completion
     const activeReqs = requirements.filter(r => 

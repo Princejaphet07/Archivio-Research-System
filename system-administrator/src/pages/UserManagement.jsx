@@ -5,6 +5,7 @@ import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, where, del
 import { db, auth } from '../firebase/config';
 import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { logActivity } from '../firebase/logActivity';
+import Swal from 'sweetalert2';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -101,8 +102,16 @@ export default function UserManagement() {
       return;
     }
 
-    const confirmDelete = window.confirm(`Are you sure you want to delete ${selectedUsers.size} user(s)? This action cannot be undone.`);
-    if (!confirmDelete) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Are you sure you want to delete ${selectedUsers.size} user(s)? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete!'
+    });
+    if (!result.isConfirmed) return;
 
     setLoading(true);
     try {
@@ -492,11 +501,17 @@ Please login with these credentials and set up your account.`
         console.warn('Email service error:', emailError);
       }
       
-      alert(`✅ Invitation resent to ${deanEmail}`);
+      Swal.fire({
+        title: 'Success!',
+        text: `Invitation resent to ${deanEmail}`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
       fetchDeans();
     } catch (error) {
       console.error('Error resending invitation:', error);
-      alert('Failed to resend invitation');
+      Swal.fire('Error', 'Failed to resend invitation', 'error');
     }
   };
 
