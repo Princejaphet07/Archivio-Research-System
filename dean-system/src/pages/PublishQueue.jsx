@@ -192,7 +192,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
               {/* Items */}
               <div className="divide-y divide-stone-100 overflow-y-auto flex-1">
                 {loading ? (
-                  <div className="p-8 text-center text-stone-400 text-sm">Loading submissions...</div>
+                  <div className="py-12 flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                    <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Submissions...</p>
+                  </div>
                 ) : filteredQueue.length === 0 ? (
                   <div className="p-8 text-center text-stone-400 text-sm">No eligible submissions awaiting publication.</div>
                 ) : (

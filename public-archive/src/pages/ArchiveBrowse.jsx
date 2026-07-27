@@ -100,11 +100,11 @@ function ArchiveBrowse() {
   });
 
   return (
-    <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0]">
+    <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0] dark:bg-gray-900 transition-colors">
       <Header />
 
       {/* TOP SEARCH BAR SECTION */}
-      <div className="bg-[#f2ead3] px-8 py-4 border-b border-stone-300 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm z-10">
+      <div className="bg-[#f2ead3] dark:bg-gray-800 px-8 py-4 border-b border-stone-300 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm z-10 transition-colors">
         <div className="flex gap-4 w-full md:w-auto flex-1 font-sans">
           <div className="relative flex-1 max-w-2xl">
             <span className="absolute left-3 top-2.5 text-stone-400">🔍</span>
@@ -113,20 +113,20 @@ function ArchiveBrowse() {
               placeholder="Search title, author, keywords..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2.5 pl-10 pr-4 rounded bg-white border border-stone-200 outline-none focus:border-[#7a2039] text-sm text-stone-700 shadow-sm"
+              className="w-full py-2.5 pl-10 pr-4 rounded bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 outline-none focus:border-[#7a2039] text-sm text-stone-700 dark:text-gray-200 shadow-sm transition-colors"
             />
           </div>
           <select 
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="bg-white border border-stone-200 rounded px-4 py-2.5 text-sm text-stone-600 outline-none shadow-sm cursor-pointer hidden md:block"
+            className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded px-4 py-2.5 text-sm text-stone-600 dark:text-gray-300 outline-none shadow-sm cursor-pointer hidden md:block transition-colors"
           >
             <option>Sort: Newest First</option>
             <option>Sort: Most Viewed</option>
             <option>Sort: A-Z</option>
           </select>
         </div>
-        <div className="text-xs text-stone-500 font-sans hidden md:block">
+        <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
           Showing {filteredPapers.length} out of {publishedPapers.length} results
         </div>
       </div>
@@ -135,7 +135,7 @@ function ArchiveBrowse() {
       <div className="flex flex-1 max-w-7xl mx-auto w-full">
         
         {/* SIDEBAR FILTERS */}
-        <aside className="w-64 bg-[#efe9d9] border-r border-stone-300 hidden md:block font-sans flex-shrink-0">
+        <aside className="w-64 bg-[#efe9d9] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 hidden md:block font-sans flex-shrink-0 transition-colors">
           <div className="bg-[#7a2039] text-white px-6 py-4 flex justify-between items-center">
             <span className="font-bold text-sm">Refine Results</span>
             <button className="text-xs text-stone-300 hover:text-white cursor-pointer">Clear all</button>
@@ -143,9 +143,9 @@ function ArchiveBrowse() {
 
           <div className="p-6 space-y-8">
             <div>
-              <h3 className="font-bold text-stone-800 text-sm mb-3 uppercase tracking-wider">Access Type</h3>
+              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Access Type</h3>
               <div className="space-y-2">
-                <label className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                <label className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                   <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
                   <span className="group-hover:text-[#7a2039] transition">Open Access</span>
                 </label>
@@ -157,10 +157,10 @@ function ArchiveBrowse() {
             </div>
 
             <div>
-              <h3 className="font-bold text-stone-800 text-sm mb-3 uppercase tracking-wider">Publication Year</h3>
+              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Publication Year</h3>
               <div className="space-y-2">
                 {['2026', '2025', '2024', '2023'].map(year => (
-                  <label key={year} className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                  <label key={year} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                     <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
                     <span className="group-hover:text-[#7a2039] transition">{year}</span>
                   </label>
@@ -175,58 +175,61 @@ function ArchiveBrowse() {
           <div className="space-y-6">
             
             {loading ? (
-              <div className="text-center py-20 text-stone-500">Loading archives...</div>
+              <div className="py-20 flex flex-col items-center justify-center">
+                <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Archives...</p>
+              </div>
             ) : filteredPapers.length === 0 ? (
-              <div className="text-center py-20 text-stone-500 border-2 border-dashed border-stone-300 rounded-2xl bg-white">
-                <p className="text-lg font-bold text-stone-700">No results found.</p>
+              <div className="text-center py-20 text-stone-500 dark:text-gray-400 border-2 border-dashed border-stone-300 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 transition-colors">
+                <p className="text-lg font-bold text-stone-700 dark:text-gray-200">No results found.</p>
                 <p className="text-sm mt-2">Try adjusting your search or filters.</p>
               </div>
             ) : (
               filteredPapers.map((paper) => (
-                <div key={paper.id} className={`bg-white rounded-xl p-6 shadow-sm hover:shadow-md border border-stone-200 transition-all border-l-4 border-[#7a2e46]`}>
+                <div key={paper.id} className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 transition-all border-l-4 border-l-[#7a2e46]`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 bg-stone-100 border border-stone-200 text-stone-600 rounded text-xs font-medium">
+                      <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded text-xs font-medium">
                         {paper.program || 'Research'}
                       </span>
-                      <span className="text-xs text-stone-400 font-medium">
+                      <span className="text-xs text-stone-400 dark:text-gray-500 font-medium">
                         Published: {new Date(paper.publishedAt || Date.now()).getFullYear()}
                       </span>
                     </div>
                   </div>
                   
-                  <h3 className="font-bold text-xl text-stone-900 mb-2 leading-tight">
+                  <h3 className="font-bold text-xl text-stone-900 dark:text-gray-100 mb-2 leading-tight">
                     {paper.researchTitle || 'Untitled Research'}
                   </h3>
                   
-                  <p className="text-sm text-[#7a2039] font-medium mb-3">
+                  <p className="text-sm text-[#7a2039] dark:text-[#f3e5ab] font-medium mb-3">
                     {paper.authorDisplay} • Adviser: {paper.adviserName || 'Unknown'}
                   </p>
                   
-                  <p className="text-sm text-stone-600 mb-4 line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-stone-600 dark:text-gray-400 mb-4 line-clamp-3 leading-relaxed">
                     {paper.abstract || 'No abstract provided.'}
                   </p>
                   
                   <div className="flex flex-wrap gap-2 mb-6">
                     {paper.keywords?.slice(0, 4).map((tag, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-[#fcfbf7] border border-stone-200 text-stone-500 rounded-full text-xs hover:bg-stone-100 cursor-pointer transition">
+                      <span key={i} className="px-2.5 py-1 bg-[#fcfbf7] dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full text-xs hover:bg-stone-100 dark:hover:bg-gray-600 cursor-pointer transition">
                         {tag}
                       </span>
                     ))}
                   </div>
                   
-                  <div className="flex justify-between items-center border-t border-stone-100 pt-4">
-                    <div className="flex gap-4 text-xs font-medium text-stone-500">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center border-t border-stone-100 dark:border-gray-700 pt-4 gap-4 sm:gap-0">
+                    <div className="flex gap-4 text-xs font-medium text-stone-500 dark:text-gray-400">
                       <span 
                         onClick={(e) => handleLike(e, paper)} 
-                        className="flex items-center gap-1.5 text-red-700 hover:scale-110 cursor-pointer transition-transform"
+                        className="flex items-center gap-1.5 text-red-700 cursor-pointer transition-transform"
                       >
                         {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'} {paper.likes?.length || 0}
                       </span>
-                      <span className="flex items-center gap-1.5 cursor-default"><span className="text-stone-400">👁</span> {paper.views || 0}</span>
-                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] cursor-pointer transition"><span className="text-stone-400">↗</span> Share</span>
+                      <span className="flex items-center gap-1.5 cursor-default"><span className="text-stone-400 dark:text-gray-500">👁</span> {paper.views || 0}</span>
+                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
                     </div>
-                    <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white border border-[#7a2039] text-[#7a2039] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white transition cursor-pointer">
+                    <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
                       Read Full Text
                     </Link>
                   </div>
@@ -239,12 +242,12 @@ function ArchiveBrowse() {
           {/* Pagination Placeholder */}
           {!loading && filteredPapers.length > 0 && (
              <div className="flex justify-center mt-12 gap-2 font-sans">
-                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-400 hover:bg-stone-50">‹</button>
+                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-400 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors">‹</button>
                 <button className="w-10 h-10 rounded bg-[#7a2039] text-white font-bold">1</button>
-                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-medium">2</button>
-                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-medium">3</button>
-                <span className="w-10 h-10 flex items-center justify-center text-stone-400">...</span>
-                <button className="w-10 h-10 rounded border border-stone-200 bg-white text-stone-400 hover:bg-stone-50">›</button>
+                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 font-medium transition-colors">2</button>
+                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 font-medium transition-colors">3</button>
+                <span className="w-10 h-10 flex items-center justify-center text-stone-400 dark:text-gray-500">...</span>
+                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-400 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors">›</button>
               </div>
           )}
         </main>

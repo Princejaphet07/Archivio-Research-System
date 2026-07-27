@@ -4,11 +4,11 @@ import Footer from '../components/Footer';
 
 function ArchiveAbout() {
   return (
-    <div className="font-serif min-h-screen flex flex-col bg-white">
+    <div className="font-serif min-h-screen flex flex-col bg-white dark:bg-gray-900 transition-colors">
       <Header />
 
       {/* HERO SECTION */}
-      <div className="bg-[#300815] text-center py-24 px-4 border-y border-white/10 shadow-inner relative">
+      <div className="bg-[#300815] dark:bg-gray-950 text-center py-24 px-4 border-y border-white/10 shadow-inner relative transition-colors">
         <p className="text-[#d6ad60] text-xs font-bold tracking-[0.2em] uppercase font-sans mb-4">
           SWU PHINMA • Cebu City, Philippines
         </p>
@@ -24,23 +24,23 @@ function ArchiveAbout() {
       <div className="max-w-7xl mx-auto w-full px-8 md:px-16 py-16 flex flex-col md:flex-row gap-8">
         
         {/* Mission Card */}
-        <div className="flex-1 bg-[#fcfafaf5] border border-stone-200 border-t-4 border-t-[#8c1c38] rounded-b-lg p-8 shadow-sm hover:shadow-md transition">
+        <div className="flex-1 bg-[#fcfafaf5] dark:bg-gray-800 border border-stone-200 dark:border-gray-700 border-t-4 border-t-[#8c1c38] rounded-b-lg p-8 shadow-sm hover:shadow-md transition-colors">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-2xl">🎯</span>
-            <h2 className="text-2xl font-bold text-stone-900">Our Mission</h2>
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-gray-100">Our Mission</h2>
           </div>
-          <p className="text-stone-600 font-sans text-sm leading-relaxed">
+          <p className="text-stone-600 dark:text-gray-300 font-sans text-sm leading-relaxed">
             To provide an accessible, secure, and organized digital repository that preserves and promotes the academic research of SWU PHINMA students and faculty — making knowledge freely available to the broader academic community.
           </p>
         </div>
 
         {/* Vision Card */}
-        <div className="flex-1 bg-[#fcfafaf5] border border-stone-200 border-t-4 border-t-[#6b7c93] rounded-b-lg p-8 shadow-sm hover:shadow-md transition">
+        <div className="flex-1 bg-[#fcfafaf5] dark:bg-gray-800 border border-stone-200 dark:border-gray-700 border-t-4 border-t-[#6b7c93] rounded-b-lg p-8 shadow-sm hover:shadow-md transition-colors">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-2xl">🔭</span>
-            <h2 className="text-2xl font-bold text-stone-900">Our Vision</h2>
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-gray-100">Our Vision</h2>
           </div>
-          <p className="text-stone-600 font-sans text-sm leading-relaxed">
+          <p className="text-stone-600 dark:text-gray-300 font-sans text-sm leading-relaxed">
             To become the leading academic research archive in Cebu City, recognized for the quality, breadth, and accessibility of its research outputs — empowering evidence-based learning and innovation across all disciplines.
           </p>
         </div>
@@ -48,7 +48,7 @@ function ArchiveAbout() {
       </div>
 
       {/* INFO & STATS SECTION */}
-      <div className="bg-[#faf7f0] px-8 md:px-16 py-20 border-t border-[#e8e2d3]">
+      <div className="bg-[#faf7f0] dark:bg-gray-800 px-8 md:px-16 py-20 border-t border-[#e8e2d3] dark:border-gray-700 transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-12 items-center">
           
           {/* Left Side: Text Details */}
@@ -56,8 +56,8 @@ function ArchiveAbout() {
             <p className="text-[#d6ad60] text-xs font-bold tracking-[0.15em] uppercase font-sans mb-2">
               What is ARCHIVIO
             </p>
-            <h2 className="text-4xl font-bold text-stone-900 mb-6">The Research Archive</h2>
-            <div className="space-y-4 text-stone-600 font-sans text-sm leading-relaxed">
+            <h2 className="text-4xl font-bold text-stone-900 dark:text-gray-100 mb-6">The Research Archive</h2>
+            <div className="space-y-4 text-stone-600 dark:text-gray-400 font-sans text-sm leading-relaxed">
               <p>
                 ARCHIVIO is the official digital research archive of Southwestern University PHINMA (SWU PHINMA), Cebu City, Philippines. Built as a capstone project by BSIT students, it addresses the institution's need for a centralized, accessible, and secure repository of academic research.
               </p>

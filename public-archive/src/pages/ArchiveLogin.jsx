@@ -100,7 +100,7 @@ function ArchiveLogin() {
 
       {/* RIGHT SIDE: Welcome Panel */}
       <div 
-        className="w-full md:w-[55%] flex items-center justify-center p-8 relative z-10"
+        className="w-full md:w-[55%] flex items-center justify-center p-8 relative z-10 transition-colors"
         style={{
           backgroundImage: `url(${bg})`,
           backgroundSize: 'cover',
@@ -108,34 +108,34 @@ function ArchiveLogin() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="bg-white/95 backdrop-blur-sm p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 flex flex-col items-center">
-          <h3 className="text-2xl font-bold text-stone-800 tracking-wide mb-1">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors">
+          <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1">
             {isLogin ? 'Welcome Back' : 'Create an Account'}
           </h3>
-          <p className="text-xs text-stone-500 text-center mb-6">
+          <p className="text-xs text-stone-500 dark:text-gray-400 text-center mb-6">
             {isLogin ? 'Sign in to access restricted papers and your reading list.' : 'Sign up to read restricted full texts and bookmark your favorites.'}
           </p>
 
           <form onSubmit={handleEmailAuth} className="w-full space-y-4 mb-4 font-sans">
             <div>
-              <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">Email Address</label>
+              <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Email Address</label>
               <input 
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded outline-none focus:border-[#24050f] text-sm text-stone-700"
+                className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
                 placeholder="juan@swu.phinma.edu.ph"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">Password</label>
+              <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded outline-none focus:border-[#24050f] text-sm text-stone-700"
+                className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
                 placeholder="••••••••"
               />
             </div>

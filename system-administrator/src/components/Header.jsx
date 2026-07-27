@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Header({ title, breadcrumbs }) {
+export default function Header({ title, breadcrumbs, searchQuery, onSearchChange }) {
   return (
     <header className="h-20 bg-white border-b border-stone-200 px-6 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
       <div>
@@ -25,6 +25,8 @@ export default function Header({ title, breadcrumbs }) {
           <input 
             type="text" 
             placeholder="Search anything..." 
+            value={searchQuery !== undefined ? searchQuery : ''}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
             className="w-full sm:w-64 pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] transition-all"
           />
         </div>

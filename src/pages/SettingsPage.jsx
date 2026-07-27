@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, getDocs, updateDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 
@@ -24,6 +24,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   const [lastName, setLastName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
+
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    'email-1': true,
+    'email-2': true,
+    'email-3': false,
+    'inapp-1': true,
+    'inapp-2': false
+  });
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -66,6 +74,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             setLastName('');
           }
         }
+
+        if (data.notificationPrefs) {
+          setNotificationPrefs(data.notificationPrefs);
+        }
       }
     });
 
@@ -80,6 +92,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       await updateDoc(doc(db, 'students', docId), {
         displayName: newDisplayName,
         name: newDisplayName // Also update name just in case
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: auth.currentUser?.uid,
+        title: "Profile Updated",
+        message: "Your profile information was successfully updated.",
+        isRead: false,
+        createdAt: serverTimestamp()
       });
       Swal.fire({
         title: 'Success!',
@@ -182,6 +202,34 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       }
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleSaveNotificationPrefs = async () => {
+    if (!docId) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, 'students', docId), {
+        notificationPrefs
+      });
+      Swal.fire({
+        title: 'Success!',
+        text: 'Notification preferences saved.',
+        icon: 'success',
+        confirmButtonColor: '#7B1F35',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Error updating prefs: ", error);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Failed to update preferences.',
+        icon: 'error',
+        confirmButtonColor: '#7B1F35'
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -531,7 +579,12 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                           
                           {/* Custom Toggle Switch */}
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" defaultChecked={item.defaultChecked} />
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={notificationPrefs[item.id] ?? item.defaultChecked} 
+                              onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                            />
                             <div className="w-11 h-6 bg-[#D3C7B0]/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6B0F1A]"></div>
                           </label>
                         </div>
@@ -560,7 +613,12 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                           
                           {/* Custom Toggle Switch */}
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" defaultChecked={item.defaultChecked} />
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={notificationPrefs[item.id] ?? item.defaultChecked} 
+                              onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                            />
                             <div className="w-11 h-6 bg-[#D3C7B0]/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6B0F1A]"></div>
                           </label>
                         </div>
@@ -570,11 +628,15 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
                   {/* Action Buttons */}
                   <div className="flex justify-end items-center gap-4 mt-12 pt-4">
-                    <button className="px-7 py-2.5 bg-white border border-[#DFD5BE] text-gray-700 text-[14px] font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm">
+                    <button onClick={() => {
+                      if (studentData?.notificationPrefs) {
+                        setNotificationPrefs(studentData.notificationPrefs);
+                      }
+                    }} className="px-7 py-2.5 bg-white border border-[#DFD5BE] text-gray-700 text-[14px] font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm cursor-pointer">
                       Cancel
                     </button>
-                    <button className="px-7 py-2.5 bg-[#6B0F1A] text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] transition-colors shadow-md">
-                      Save Preferences
+                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#6B0F1A] text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
+                      {isSaving ? 'Saving...' : 'Save Preferences'}
                     </button>
                   </div>
 

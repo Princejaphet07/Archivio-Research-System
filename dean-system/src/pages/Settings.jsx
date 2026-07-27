@@ -157,7 +157,10 @@ export default function Settings({ activePage, onNavigate }) {
 
                     <div className="space-y-3">
                       {loading ? (
-                        <p className="text-sm text-stone-500">Loading requirements...</p>
+                        <div className="py-12 flex flex-col items-center justify-center">
+                          <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                          <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requirements...</p>
+                        </div>
                       ) : (
                         globalRequirements.map((item) => (
                           <div key={item.id} className="flex items-center justify-between p-4 border border-stone-200 rounded-xl bg-stone-50 opacity-90">

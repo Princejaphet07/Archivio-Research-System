@@ -169,7 +169,7 @@ export default function Sidebar({ onNavigate }) {
       </div>
 
       {/* NAVIGATION */}
-      <nav className="flex-1 overflow-y-auto px-3 space-y-6">
+      <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-6">
 
         {/* MAIN SECTION */}
         <div>

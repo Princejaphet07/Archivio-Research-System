@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header'; // Added Header Import
+import Header from '../components/Header';
+import { db } from '../firebase/config';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 const reportTypes = [
   {
@@ -23,32 +25,143 @@ const reportTypes = [
   },
 ];
 
-// --- MOCK DATA ---
-const publishedData = [
-  { id: '01', title: 'AI-Driven Health Monitoring System', dept: 'IT & Engineering', cat: 'AI & Machine Learning', sy: '2025-26', date: 'May 2026' },
-  { id: '02', title: 'Blockchain-Based Credential System', dept: 'IT & Engineering', cat: 'Cybersecurity', sy: '2025-26', date: 'Apr 2026' },
-  { id: '03', title: 'Patient Oral Health Records Application', dept: 'Dentistry', cat: 'Healthcare', sy: '2025-26', date: 'Mar 2026' },
-  { id: '04', title: 'Predictive Student Dropout Model', dept: 'Business School', cat: 'Data Science & Analytics', sy: '2025-26', date: 'Mar 2026' },
-  { id: '05', title: 'Smart Irrigation System Using IoT', dept: 'IT & Engineering', cat: 'Computer Science & IT', sy: '2024-25', date: 'Feb 2026' },
-];
-
-const usersData = [
-  { id: '01', name: 'Prof. Ana Aquino', role: 'Advisor', dept: 'IT & Engineering', prog: 'BSIT', date: 'Aug 12, 2025', login: '1 hr ago', status: 'Active' },
-  { id: '02', name: 'Ana L. Dela Cruz', role: 'Student', dept: 'IT & Engineering', prog: 'BSIT', date: 'Sep 3, 2025', login: '3 hrs ago', status: 'Active' },
-  { id: '03', name: 'Dr. Ben Cruz', role: 'Advisor', dept: 'Dentistry', prog: 'DDM', date: 'Aug 10, 2025', login: '5 hrs ago', status: 'Active' },
-  { id: '04', name: 'Prof. Celia Dela Cruz', role: 'Advisor', dept: 'Business School', prog: 'BSBA', date: 'Aug 10, 2025', login: '2 days ago', status: 'Active' },
-  { id: '05', name: 'Dr. Elena Reyes', role: 'Dean', dept: 'Dentistry', prog: '—', date: 'Aug 5, 2025', login: '3 hrs ago', status: 'Active' },
-];
-
-const deptData = [
-  { dept: 'College of IT & Engineering', sub: 38, pub: 35, end: 36, pend: 2, rate: '92.1%', status: 'On Track' },
-  { dept: 'College of Dentistry', sub: 48, pub: 45, end: 46, pend: 1, rate: '93.8%', status: 'On Track' },
-  { dept: 'Business School (B-School)', sub: 30, pub: 28, end: 29, pend: 2, rate: '93.3%', status: 'On Track' },
-  { dept: 'School of Health & Allied', sub: 0, pub: 0, end: 0, pend: 0, rate: '—', status: 'Pending Setup' },
-];
-
 export default function Reports() {
   const [selected, setSelected] = useState(null);
+
+  const [submissions, setSubmissions] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+
+  useEffect(() => {
+    const unsubSub = onSnapshot(collection(db, 'submissions'), (snap) => {
+      setSubmissions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubGroup = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    let deansData = [];
+    let advisersData = [];
+    let studentsData = [];
+
+    const updateUsers = () => {
+      setAllUsers([...deansData, ...advisersData, ...studentsData]);
+    };
+
+    const formatDate = (dateVal) => {
+      if (!dateVal) return 'N/A';
+      if (dateVal.toDate) return dateVal.toDate().toLocaleDateString();
+      return new Date(dateVal).toLocaleDateString();
+    };
+
+    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+      deansData = snap.docs.map(d => ({
+        id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
+        role: 'Dean', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+      }));
+      updateUsers();
+    });
+
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+      advisersData = snap.docs.map(d => ({
+        id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
+        role: 'Advisor', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+      }));
+      updateUsers();
+    });
+
+    const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+      studentsData = snap.docs.map(d => ({
+        id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
+        role: 'Student', dept: d.data().course || 'N/A', prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+      }));
+      updateUsers();
+    });
+
+    return () => {
+      unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents();
+    };
+  }, []);
+
+  const publishedData = useMemo(() => {
+    return submissions
+      .filter(s => s.reviewStatus === 'published')
+      .map((s, index) => {
+        const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
+        const dDate = new Date(s.createdAt);
+        return {
+          id: (index + 1).toString().padStart(2, '0'),
+          title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
+          dept: group?.program || s.program || group?.department || 'Unknown',
+          cat: s.category || 'Uncategorized',
+          sy: s.schoolYear || '2025-2026',
+          date: dDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        };
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [submissions, groups]);
+
+  const usersData = useMemo(() => {
+    const arr = [...allUsers];
+    return arr.sort((a, b) => a.name.localeCompare(b.name)).map((u, i) => ({ ...u, id: (i + 1).toString().padStart(2, '0') }));
+  }, [allUsers]);
+
+  const deptData = useMemo(() => {
+    const deptsMap = {};
+    submissions.forEach(s => {
+      const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
+      const deptName = group?.department || s.program || group?.program || 'Uncategorized';
+      if (!deptsMap[deptName]) deptsMap[deptName] = { sub: 0, pub: 0, end: 0, pend: 0 };
+      
+      deptsMap[deptName].sub += 1;
+      if (s.reviewStatus === 'published') deptsMap[deptName].pub += 1;
+      if (s.reviewStatus === 'endorsed' || s.adviserStatus === 'approved') deptsMap[deptName].end += 1;
+      if (s.reviewStatus === 'pending') deptsMap[deptName].pend += 1;
+    });
+
+    return Object.entries(deptsMap).map(([dept, stats]) => {
+      const rate = stats.sub > 0 ? ((stats.pub / stats.sub) * 100).toFixed(1) + '%' : '—';
+      return { dept, ...stats, rate, status: stats.sub > 0 ? 'On Track' : 'Pending Setup' };
+    });
+  }, [submissions, groups]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (!selected) return;
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    if (selected === 'published') {
+      csvContent += "ID,Research Title,Department,Category,School Year,Date Published\n";
+      publishedData.forEach(row => {
+        const cleanTitle = (row.title || '').replace(/,/g, '');
+        csvContent += `${row.id},${cleanTitle},${row.dept},${row.cat},${row.sy},${row.date}\n`;
+      });
+    } else if (selected === 'users') {
+      csvContent += "ID,Name,Role,Department,Program,Date Registered,Last Login,Status\n";
+      usersData.forEach(row => {
+        const cleanName = (row.name || '').replace(/,/g, '');
+        csvContent += `${row.id},${cleanName},${row.role},${row.dept},${row.prog},${row.date},${row.login},${row.status}\n`;
+      });
+    } else if (selected === 'dept') {
+      csvContent += "Department,Total Submissions,Published,Endorsed to Dean,Pending Approval,Publication Rate,Status\n";
+      deptData.forEach(row => {
+        const cleanDept = (row.dept || '').replace(/,/g, '');
+        csvContent += `${cleanDept},${row.sub},${row.pub},${row.end},${row.pend},${row.rate},${row.status}\n`;
+      });
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `archivio_report_${selected}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Reusable Pill Components
   const DeptPill = ({ text }) => (
@@ -124,14 +237,17 @@ export default function Reports() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-all shadow-sm">
-                    🖨️ Print Report
+                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-all shadow-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Print Report
                   </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
-                    📤 Export PDF
+                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Export PDF
                   </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#3b1220] hover:bg-[#2b0d16] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
-                    📥 Export CSV ▾
+                  <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#3b1220] hover:bg-[#2b0d16] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export CSV
                   </button>
                 </div>
               </div>
@@ -140,9 +256,9 @@ export default function Reports() {
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 {selected === 'published' && (
                   <>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY ▾</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments ▾</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Categories ▾</option></select>
+                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY</option></select>
+                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments</option></select>
+                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Categories</option></select>
                   </>
                 )}
                 {selected === 'users' && (
@@ -154,8 +270,8 @@ export default function Reports() {
                 )}
                 {selected === 'dept' && (
                   <>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY ▾</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments ▾</option></select>
+                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY</option></select>
+                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments</option></select>
                   </>
                 )}
                 <button className="px-4 py-2 text-sm font-semibold text-stone-600 bg-white border border-stone-200 rounded-lg hover:bg-stone-50">
@@ -168,17 +284,17 @@ export default function Reports() {
                 {selected === 'published' && (
                   <>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">108</p>
+                      <p className="text-4xl font-serif font-bold text-[#801e38]">{publishedData.length}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Total Published</p>
                       <p className="text-[11px] text-stone-400">All time • all departments</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">9</p>
+                      <p className="text-4xl font-serif font-bold text-blue-600">{publishedData.filter(p => p.sy.includes('2025')).length}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Published This SY</p>
                       <p className="text-[11px] text-stone-400">SY 2025-2026 in progress</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-amber-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-amber-600">10</p>
+                      <p className="text-4xl font-serif font-bold text-amber-600">{new Set(publishedData.map(p => p.cat)).size}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Research Categories</p>
                       <p className="text-[11px] text-stone-400">Across all published papers</p>
                     </div>
@@ -187,19 +303,19 @@ export default function Reports() {
                 {selected === 'users' && (
                   <>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">238</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Total Users This SY</p>
+                      <p className="text-4xl font-serif font-bold text-[#801e38]">{usersData.length}</p>
+                      <p className="text-xs font-bold text-stone-900 mt-1">Total Users</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-stone-300 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-stone-700">3</p>
+                      <p className="text-4xl font-serif font-bold text-stone-700">{usersData.filter(u => u.role === 'Dean').length}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Deans</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-amber-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-amber-600">25</p>
+                      <p className="text-4xl font-serif font-bold text-amber-600">{usersData.filter(u => u.role === 'Advisor').length}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Research Advisers</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">210</p>
+                      <p className="text-4xl font-serif font-bold text-blue-600">{usersData.filter(u => u.role === 'Student').length}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Students</p>
                     </div>
                   </>
@@ -207,19 +323,19 @@ export default function Reports() {
                 {selected === 'dept' && (
                   <>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">116</p>
+                      <p className="text-4xl font-serif font-bold text-[#801e38]">{deptData.reduce((acc, curr) => acc + curr.sub, 0)}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Total Submissions</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-emerald-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-emerald-600">108</p>
+                      <p className="text-4xl font-serif font-bold text-emerald-600">{deptData.reduce((acc, curr) => acc + curr.pub, 0)}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Published</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">111</p>
+                      <p className="text-4xl font-serif font-bold text-blue-600">{deptData.reduce((acc, curr) => acc + curr.end, 0)}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Endorsed to Dean</p>
                     </div>
                     <div className="bg-white border border-stone-200 border-t-4 border-t-red-900 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#3b1220]">5</p>
+                      <p className="text-4xl font-serif font-bold text-[#3b1220]">{deptData.reduce((acc, curr) => acc + curr.pend, 0)}</p>
                       <p className="text-xs font-bold text-stone-900 mt-1">Pending Approval</p>
                     </div>
                   </>
@@ -347,7 +463,7 @@ export default function Reports() {
                 {(selected === 'published' || selected === 'users') && (
                   <div className="flex items-center justify-between p-4 bg-white border-t border-stone-100">
                     <p className="text-xs text-stone-500">
-                      Showing 1–{selected === 'published' ? '10 of 108 published papers' : '10 of 238 registered users this SY'}
+                      Showing 1–{selected === 'published' ? `${Math.min(10, publishedData.length)} of ${publishedData.length} published papers` : `${Math.min(10, usersData.length)} of ${usersData.length} registered users this SY`}
                     </p>
                     <div className="flex gap-1">
                       <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-400 hover:bg-stone-50">‹</button>
@@ -386,36 +502,26 @@ export default function Reports() {
                     </div>
 
                     {/* Chart Rows */}
-                    <div className="space-y-6 relative z-10 pt-2">
-                      {/* Row 1 */}
-                      <div className="relative">
-                        <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 w-28 text-right">IT & Engineering</span>
-                        <div className="space-y-1">
-                          <div className="h-3 bg-[#16a34a] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '70%' }}>35</div>
-                          <div className="h-3 bg-[#2563eb] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '72%' }}>36</div>
-                          <div className="h-3 bg-[#801e38] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '4%' }}>2</div>
-                        </div>
-                      </div>
-                      
-                      {/* Row 2 */}
-                      <div className="relative">
-                        <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 w-28 text-right">Dentistry</span>
-                        <div className="space-y-1">
-                          <div className="h-3 bg-[#16a34a] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '90%' }}>45</div>
-                          <div className="h-3 bg-[#2563eb] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '92%' }}>46</div>
-                          <div className="h-3 bg-[#801e38] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '2%' }}>1</div>
-                        </div>
-                      </div>
-
-                      {/* Row 3 */}
-                      <div className="relative">
-                        <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 w-28 text-right">Business School</span>
-                        <div className="space-y-1">
-                          <div className="h-3 bg-[#16a34a] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '56%' }}>28</div>
-                          <div className="h-3 bg-[#2563eb] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '58%' }}>29</div>
-                          <div className="h-3 bg-[#801e38] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold" style={{ width: '4%' }}>2</div>
-                        </div>
-                      </div>
+                    <div className="space-y-6 relative z-10 pt-2 pb-6">
+                      {deptData.length === 0 ? (
+                         <div className="text-center text-sm text-stone-400 italic">No department data available</div>
+                      ) : (
+                        deptData.map((deptRow, i) => {
+                          const maxMetric = Math.max(...deptData.map(d => Math.max(d.pub, d.end, d.pend, 1))); // Find global max for scale
+                          const getWidth = (val) => `${(val / maxMetric) * 100}%`;
+                          
+                          return (
+                            <div key={i} className="relative">
+                              <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 w-28 text-right truncate" title={deptRow.dept}>{deptRow.dept}</span>
+                              <div className="space-y-1">
+                                <div className="h-3 bg-[#16a34a] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold min-w-[20px]" style={{ width: getWidth(deptRow.pub) }}>{deptRow.pub}</div>
+                                <div className="h-3 bg-[#2563eb] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold min-w-[20px]" style={{ width: getWidth(deptRow.end) }}>{deptRow.end}</div>
+                                <div className="h-3 bg-[#801e38] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold min-w-[20px]" style={{ width: getWidth(deptRow.pend) }}>{deptRow.pend}</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
 

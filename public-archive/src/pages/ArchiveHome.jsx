@@ -112,7 +112,7 @@ function ArchiveHome() {
   ];
 
   return (
-    <div className="font-serif min-h-screen bg-[#faf7f0]">
+    <div className="font-serif min-h-screen bg-[#faf7f0] dark:bg-gray-900 transition-colors">
       <Header />
 
       {/* HERO SECTION */}
@@ -122,17 +122,19 @@ function ArchiveHome() {
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 space-y-4">
           <p className="text-amber-200 tracking-[0.2em] text-xs font-sans uppercase">SWU PHINMA • Research Archive</p>
-          <h1 className="text-7xl font-bold tracking-widest text-[#f3e5ab] mt-2 mb-4 drop-shadow-lg">ARCHIVIO</h1>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-widest text-[#f3e5ab] mt-2 mb-4 drop-shadow-lg">ARCHIVIO</h1>
           <h2 className="text-xl text-amber-100 italic">Research Archive Management System</h2>
           <p className="text-sm text-stone-200 max-w-2xl mx-auto font-sans leading-relaxed mt-4 drop-shadow-md">
             Discover peer-reviewed research, theses, and academic manuscripts from SWU PHINMA students and faculty.
           </p>
-          <div className="flex bg-white rounded-md p-1 mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
-            <div className="flex items-center px-4 text-stone-400">🔍</div>
-            <input type="text" placeholder="Search by title, author, keywords, department..." className="w-full py-3 px-2 outline-none text-stone-700" />
-            <button className="bg-[#6b142c] text-white px-8 py-2 rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer">Search</button>
+          <div className="flex flex-col md:flex-row bg-white/10 md:bg-white dark:md:bg-gray-800 rounded-md md:p-1 mt-8 max-w-3xl mx-auto md:shadow-2xl font-sans w-full gap-2 md:gap-0">
+            <div className="flex bg-white dark:bg-gray-800 rounded-md p-1 w-full flex-1">
+              <div className="flex items-center px-4 text-stone-400 dark:text-gray-400">🔍</div>
+              <input type="text" placeholder="Search by title, author, keywords, department..." className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent" />
+            </div>
+            <button className="bg-[#6b142c] text-white px-8 py-3 md:py-2 rounded md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto">Search</button>
           </div>
-          <div className="flex justify-center items-center space-x-3 mt-6 text-xs font-sans">
+          <div className="flex flex-wrap justify-center items-center gap-3 mt-6 text-xs font-sans">
             <span className="text-stone-300">Popular:</span>
             {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
               <span key={tag} className="px-3 py-1 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm">{tag}</span>
@@ -142,11 +144,11 @@ function ArchiveHome() {
       </div>
 
       {/* STATS RIBBON */}
-      <div className="bg-[#6b142c] text-white py-10 px-12 grid grid-cols-4 text-center divide-x divide-white/10 shadow-inner">
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.papers}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Papers Archived</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.authors}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Student Authors</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.departments}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Departments</p></div>
-        <div><h3 className="text-4xl font-bold text-[#f3e5ab] mb-2">{stats.advisers}</h3><p className="text-xs font-sans text-stone-300 uppercase tracking-wider">Faculty Advisers</p></div>
+      <div className="bg-[#6b142c] text-white py-10 px-4 md:px-12 grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-0 text-center md:divide-x divide-white/10 shadow-inner">
+        <div className="border-r border-white/10 md:border-r-0"><h3 className="text-3xl md:text-4xl font-bold text-[#f3e5ab] mb-2">{stats.papers}</h3><p className="text-[10px] md:text-xs font-sans text-stone-300 uppercase tracking-wider">Papers Archived</p></div>
+        <div><h3 className="text-3xl md:text-4xl font-bold text-[#f3e5ab] mb-2">{stats.authors}</h3><p className="text-[10px] md:text-xs font-sans text-stone-300 uppercase tracking-wider">Student Authors</p></div>
+        <div className="border-r border-white/10 md:border-r-0"><h3 className="text-3xl md:text-4xl font-bold text-[#f3e5ab] mb-2">{stats.departments}</h3><p className="text-[10px] md:text-xs font-sans text-stone-300 uppercase tracking-wider">Departments</p></div>
+        <div><h3 className="text-3xl md:text-4xl font-bold text-[#f3e5ab] mb-2">{stats.advisers}</h3><p className="text-[10px] md:text-xs font-sans text-stone-300 uppercase tracking-wider">Faculty Advisers</p></div>
       </div>
 
       {/* LATEST RESEARCH */}
@@ -163,22 +165,22 @@ function ArchiveHome() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
           {publishedPapers.slice(0, 3).map((paper, idx) => (
-            <div key={paper.id} className="bg-[#f2ead3] rounded-xl p-6 shadow-md border border-[#e5d4a6] flex flex-col justify-between">
+            <div key={paper.id} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between transition-colors">
               <div>
-                <div className="flex justify-between items-center mb-4 text-xs text-stone-600">
-                  <span className="px-2 py-1 border border-stone-300 rounded bg-[#e8debe] truncate max-w-[150px]">
+                <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
+                  <span className="px-2 py-1 border border-stone-300 dark:border-gray-600 rounded bg-[#e8debe] dark:bg-gray-700 truncate max-w-[150px] text-stone-800 dark:text-gray-200">
                     {paper.program || 'Research'}
                   </span>
                   <span>{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
                 </div>
-                <h3 className="font-bold text-lg text-stone-900 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
+                <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
                   {paper.researchTitle || 'Untitled Research'}
                 </h3>
-                <p className="text-xs text-stone-600 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
-                <p className="text-[11px] text-stone-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
+                <p className="text-xs text-stone-600 dark:text-gray-400 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
+                <p className="text-[11px] text-stone-500 dark:text-gray-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
                 <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
                   {paper.keywords?.slice(0, 3).map(kw => (
-                    <span key={kw} className="px-2 py-1 bg-stone-200/50 rounded-full border border-stone-300">
+                    <span key={kw} className="px-2 py-1 bg-stone-200/50 dark:bg-gray-700 rounded-full border border-stone-300 dark:border-gray-600 dark:text-gray-300">
                       {kw}
                     </span>
                   ))}
@@ -211,7 +213,7 @@ function ArchiveHome() {
       </div>
 
       {/* BROWSE CATEGORIES SECTION */}
-      <div className="bg-[#f2ead3] px-8 md:px-16 py-16 border-t border-[#e5d4a6]">
+      <div className="bg-[#f2ead3] dark:bg-gray-900 px-8 md:px-16 py-16 border-t border-[#e5d4a6] dark:border-gray-800 transition-colors">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end gap-4 mb-8">
             <div>
@@ -225,9 +227,9 @@ function ArchiveHome() {
 
           <div className="flex gap-4 overflow-x-auto pb-6 pt-2 font-sans snap-x">
             {categories.map((cat, index) => (
-              <Link to="/browse" key={index} className="min-w-[200px] h-24 bg-[#fcfbf7] shadow-sm hover:shadow-md border border-stone-200 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block">
-                <h3 className="font-bold text-stone-800 text-sm">{cat.name}</h3>
-                <div className="flex justify-between items-center text-xs text-stone-500">
+              <Link to="/browse" key={index} className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block">
+                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm">{cat.name}</h3>
+                <div className="flex justify-between items-center text-xs text-stone-500 dark:text-gray-400">
                   <span>{cat.papers}</span>
                   <span className="text-[#8c7435]">→</span>
                 </div>

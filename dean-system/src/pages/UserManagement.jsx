@@ -221,7 +221,14 @@ export default function UserManagement({ activePage, onNavigate }) {
                   </thead>
                   <tbody className="divide-y divide-stone-50 text-stone-700">
                     {loading ? (
-                      <tr><td colSpan="6" className="py-8 text-center text-stone-500">Loading users...</td></tr>
+                      <tr>
+                        <td colSpan="6" className="py-12">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                            <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Users...</p>
+                          </div>
+                        </td>
+                      </tr>
                     ) : activeTab === 'advisers' ? (
                       enrichedAdvisers.length === 0 ? (
                          <tr><td colSpan="6" className="py-8 text-center text-stone-500">No advisers found.</td></tr>

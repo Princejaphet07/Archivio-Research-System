@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
+import Swal from 'sweetalert2';
 
 // Generate initials from a name string
 const getInitials = (name = '') => {
@@ -60,6 +61,86 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
     fetchGroupData();
   }, [studentUid]);
+
+  const handleAddMember = async () => {
+    if (!studentData) return;
+    
+    const { value: email } = await Swal.fire({
+      title: 'Add Team Member',
+      input: 'email',
+      inputLabel: 'Student Email Address',
+      inputPlaceholder: 'Enter their school email',
+      showCancelButton: true,
+      confirmButtonColor: '#7B1F35',
+      confirmButtonText: 'Add Member'
+    });
+
+    if (!email) return;
+    
+    const newEmail = email.trim().toLowerCase();
+    
+    // Check if already in group
+    const currentMembers = studentData.groupMembers || [];
+    const isAlreadyMember = currentMembers.some(m => (typeof m === 'object' ? m.email : m) === newEmail);
+    if (isAlreadyMember) {
+      Swal.fire('Error', 'This student is already in the group.', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Update the leader's student document
+      const newGroupMembers = [...currentMembers, { email: newEmail }];
+      await updateDoc(doc(db, 'students', studentData.uid), {
+        groupMembers: newGroupMembers
+      });
+
+      // Update the group's document
+      const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', studentData.uid)));
+      if (!groupSnap.empty) {
+        const groupId = groupSnap.docs[0].id;
+        const groupData = groupSnap.docs[0].data();
+        const existingGroupMembers = groupData.members || [];
+        await updateDoc(doc(db, 'groups', groupId), {
+          members: [...existingGroupMembers, { email: newEmail }],
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Generate a studentInvitation for the new member
+      const existingInvitesSnap = await getDocs(
+        query(collection(db, 'studentInvitations'), where('studentEmail', '==', newEmail))
+      );
+      
+      if (existingInvitesSnap.empty) {
+        await addDoc(collection(db, 'studentInvitations'), {
+          studentEmail: newEmail,
+          sentBy: studentData.invitedBy || '',
+          sentByName: studentData.invitedByName || 'Research Adviser',
+          department: studentData.department || 'Not specified',
+          status: 'pending',
+          invitationSentAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          invitedByLeader: studentData.email // Track who added them
+        });
+      }
+
+      // Refresh the page data locally
+      const memberSnap = await getDocs(
+        query(collection(db, 'students'), where('email', 'in', newGroupMembers.map(m => typeof m === 'object' ? m.email : m)))
+      );
+      setMemberProfiles(memberSnap.docs.map(d => d.data()));
+      setStudentData(prev => ({ ...prev, groupMembers: newGroupMembers }));
+      
+      Swal.fire('Added!', `${newEmail} has been added to the group and can now sign up.`, 'success');
+    } catch (err) {
+      console.error('Error adding member:', err);
+      Swal.fire('Error', 'Failed to add member. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const displayName   = studentData?.displayName || studentName || 'Student';
@@ -218,10 +299,26 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
             {/* ── TEAM MEMBERS SECTION ────────────────────────────────── */}
             <div className="mt-2 bg-[#F3EADB] p-8 rounded-2xl shadow-sm">
-              <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] mb-1">Team Members</h3>
-              <p className="text-[14px] text-gray-500 mb-6">
-                {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
-              </p>
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] mb-1">Team Members</h3>
+                  <p className="text-[14px] text-gray-500">
+                    {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
+                  </p>
+                </div>
+                
+                {leaderCard.isYou && (
+                  <button 
+                    onClick={handleAddMember}
+                    className="px-4 py-2 bg-[#7B1F35] text-white rounded-lg text-sm font-semibold hover:bg-[#5E1627] transition flex items-center gap-2 shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Member
+                  </button>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {loading ? (

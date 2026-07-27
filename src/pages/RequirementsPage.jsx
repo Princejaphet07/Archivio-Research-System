@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth, storage } from '../firebase/config';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { logActivity } from '../firebase/logActivity';
 import { PDFDocument } from 'pdf-lib';
@@ -95,6 +95,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUploadFile = async (item, file) => {
     if (!file) return;
+
+    // Enforce PDF format
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a PDF file.' });
+      return;
+    }
+
     setUploadingItem(item.id);
 
     try {
@@ -230,6 +237,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       setSubmissionDocId(addedDoc.id);
     }
 
+    const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
+    await addDoc(collection(db, 'notifications'), {
+      userId: uid,
+      title: "Document Uploaded",
+      message: `You successfully uploaded: ${itemTitle}`,
+      isRead: false,
+      createdAt: serverTimestamp()
+    });
+
     // Update local state
     if (!uploadedDocs.includes(itemId)) setUploadedDocs(prev => [...prev, itemId]);
     setDocumentsMeta(prev => ({ ...prev, [itemId]: meta }));
@@ -269,6 +285,14 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         uploadedDocs: arrayRemove(item.id),
         [`documents.${item.id}`]: deleteField(),
         updatedAt: new Date().toISOString()
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: auth.currentUser?.uid,
+        title: "Document Removed",
+        message: `You removed: ${item.title}`,
+        isRead: false,
+        createdAt: serverTimestamp()
       });
 
       // Update local state
@@ -435,6 +459,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       {/* Hidden File Input for Replace */}
                       <input 
                         type="file" 
+                        accept=".pdf"
                         ref={el => fileInputRefs.current[item.id] = el}
                         className="hidden"
                         onChange={(e) => handleUploadFile(item, e.target.files[0])}
@@ -482,7 +507,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
                           </p>
                           <p className="text-[#CF3645]/60 text-[11px] mt-1">
-                            {item.type === 'url' ? 'GitHub or Publisher Link' : 'Any format · max 50MB'}
+                            {item.type === 'url' ? 'GitHub or Publisher Link' : 'PDF format · max 50MB'}
                           </p>
                         </>
                       )}
@@ -491,6 +516,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                     {/* Hidden File Input */}
                     <input 
                       type="file" 
+                      accept=".pdf"
                       ref={el => fileInputRefs.current[item.id] = el}
                       className="hidden"
                       onChange={(e) => handleUploadFile(item, e.target.files[0])}

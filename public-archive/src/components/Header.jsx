@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import logo from '../assets/logo.png';
 
 function Header() {
   const location = useLocation();
   const path = location.pathname;
   const { currentUser, signOut } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -31,6 +34,13 @@ function Header() {
         <Link to="/about" className={`${path === '/about' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>About</Link>
       </div>
       <div className="flex space-x-4 font-sans text-sm items-center">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full hover:bg-white/10 transition text-amber-200"
+          aria-label="Toggle Dark Mode"
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
         {currentUser ? (
           <>
             <span className="hidden md:block text-stone-300">
@@ -54,6 +64,30 @@ function Header() {
           </>
         )}
       </div>
+
+      {/* MOBILE MENU TOGGLE */}
+      <button 
+        className="md:hidden text-white hover:text-amber-200 transition"
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {isMenuOpen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* MOBILE DROPDOWN */}
+      {isMenuOpen && (
+        <div className="absolute top-full left-0 w-full bg-[#3d0c1b] border-t border-white/10 md:hidden shadow-xl font-sans text-sm flex flex-col z-50">
+          <Link to="/" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/' ? 'text-[#d6ad60]' : 'text-white'}`}>Home</Link>
+          <Link to="/browse" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/browse' ? 'text-[#d6ad60]' : 'text-white'}`}>Browse</Link>
+          <Link to="/bookmarks" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/bookmarks' ? 'text-[#d6ad60]' : 'text-white'}`}>Bookmarks</Link>
+          <Link to="/about" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/about' ? 'text-[#d6ad60]' : 'text-white'}`}>About</Link>
+        </div>
+      )}
     </nav>
   );
 }

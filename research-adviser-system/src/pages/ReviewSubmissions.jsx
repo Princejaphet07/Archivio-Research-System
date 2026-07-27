@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
 function ReviewSubmissions() {
@@ -159,6 +159,16 @@ function ReviewSubmissions() {
           timestamp: new Date().toISOString()
         });
 
+        if (sub.studentUid) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: sub.studentUid,
+            title: "Research Approved!",
+            message: "Congratulations! Your Research Adviser has approved your manuscript. It is now awaiting the Dean's final review.",
+            isRead: false,
+            createdAt: serverTimestamp()
+          });
+        }
+
         Swal.fire({
           icon: 'success',
           title: 'Approved!',
@@ -205,7 +215,7 @@ function ReviewSubmissions() {
   // (Removed static REQUIREMENT_ITEMS in favor of dynamic requirements state)
 
   return (
-    <Layout title="Review Submissions & Tracking" breadcrumb="ARCHIVIO › Review Submissions & Tracking" showSearch={true}>
+    <Layout title="Review Submissions & Tracking" breadcrumb="ARCHIVIO › Review Submissions & Tracking" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Review Submissions & Tracking</h1>
@@ -214,16 +224,7 @@ function ReviewSubmissions() {
 
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">🔍</span>
-            <input
-              type="text"
-              placeholder="Search by title or group..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46]"
-            />
-          </div>
+          {/* Local Search Removed */}
           <select
             value={filterYear}
             onChange={(e) => setFilterYear(e.target.value)}
@@ -290,7 +291,12 @@ function ReviewSubmissions() {
               <tbody className="divide-y divide-gray-100 font-medium">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500">Loading submissions...</td>
+                    <td colSpan="8" className="py-12">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                        <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Submissions...</p>
+                      </div>
+                    </td>
                   </tr>
                 ) : finalFiltered.length === 0 ? (
                   <tr>

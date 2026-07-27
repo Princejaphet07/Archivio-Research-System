@@ -6,12 +6,15 @@ import ArchiveBookmarks from './pages/ArchiveBookmarks';
 import ArchiveAbout from './pages/ArchiveAbout';
 import ArchivePaperViewer from './pages/ArchivePaperViewer';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import HomepageChatbot from './components/HomepageChatbot';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/" element={<ArchiveHome />} />
           <Route path="/login" element={<ArchiveLogin />} />
@@ -31,8 +34,10 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
+        <HomepageChatbot />
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

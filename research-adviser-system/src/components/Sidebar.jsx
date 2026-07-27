@@ -26,20 +26,39 @@ function Sidebar() {
     const pq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'pending'));
     const unsub2 = onSnapshot(pq, (snap) => setPendingRegCount(snap.size));
 
-    // Submissions count (all from adviser's students)
+    // Submissions count (pending only)
     const sq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
+    let unsubSub = null;
     const unsub3 = onSnapshot(sq, (snap) => {
       const leaderUids = snap.docs.map(d => d.data().leaderUid);
+      
+      if (unsubSub) unsubSub(); // clear previous listener
+
       if (leaderUids.length > 0) {
         const subQ = query(collection(db, 'submissions'));
-        onSnapshot(subQ, (subSnap) => {
-          const count = subSnap.docs.filter(d => leaderUids.includes(d.data().studentUid)).length;
+        unsubSub = onSnapshot(subQ, (subSnap) => {
+          let count = 0;
+          subSnap.docs.forEach(d => {
+            const data = d.data();
+            if (leaderUids.includes(data.studentUid)) {
+              if (data.reviewStatus === 'pending' || data.reviewStatus === 'in_progress' || !data.reviewStatus) {
+                count++;
+              }
+            }
+          });
           setPendingSubCount(count);
         });
+      } else {
+        setPendingSubCount(0);
       }
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    return () => { 
+      unsub1(); 
+      unsub2(); 
+      unsub3(); 
+      if (unsubSub) unsubSub();
+    };
   }, []);
 
   const activeClass = "bg-[#6b253e]/80 text-white border border-[#d0a36e]/30";
@@ -84,14 +103,11 @@ function Sidebar() {
             <span className="text-xs font-semibold">Dashboard</span>
           </Link>
           
-          <Link to="/my-groups" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/my-groups' ? activeClass : inactiveClass}`}>
-            <div className="flex items-center gap-3">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-              </svg>
-              <span className="text-xs font-medium">My Groups</span>
-            </div>
-            <span className="bg-[#d0a36e] text-[#541b2f] text-[10px] font-bold px-2 py-0.5 rounded-full">{groupCount}</span>
+          <Link to="/my-groups" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition ${path === '/my-groups' ? activeClass : inactiveClass}`}>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+            </svg>
+            <span className="text-xs font-medium">My Groups</span>
           </Link>
 
           <Link to="/review-submissions" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/review-submissions' ? activeClass : inactiveClass}`}>

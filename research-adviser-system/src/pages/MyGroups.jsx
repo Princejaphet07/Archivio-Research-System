@@ -98,7 +98,7 @@ function MyGroups() {
   // (Removed static REQUIREMENT_ITEMS in favor of dynamic requirements state)
 
   return (
-    <Layout title="My Groups" breadcrumb="ARCHIVIO › My Groups" showSearch={false}>
+    <Layout title="My Groups" breadcrumb="ARCHIVIO › My Groups" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto">
         
         {/* Page Header Area */}
@@ -108,17 +108,7 @@ function MyGroups() {
             <p className="text-sm text-gray-500">Research groups assigned under your advisory this semester</p>
           </div>
           
-          {/* Search Bar */}
-          <div className="w-full md:w-80 relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Search groups, students, research titles..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#7a2e46] shadow-sm" 
-            />
-          </div>
+          {/* Search Bar Removed */}
         </div>
 
         {/* Data Table */}

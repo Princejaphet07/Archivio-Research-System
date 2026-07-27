@@ -150,7 +150,12 @@ export default function Requirements({ activePage, onNavigate }) {
                 <tbody className="divide-y divide-stone-100 font-medium">
                   {loading ? (
                     <tr>
-                      <td colSpan="8" className="py-8 text-center text-stone-500">Loading tracking data...</td>
+                      <td colSpan="8" className="py-12">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+                          <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Tracking Data...</p>
+                        </div>
+                      </td>
                     </tr>
                   ) : enrichedRows.length === 0 ? (
                     <tr>

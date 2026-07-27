@@ -102,11 +102,23 @@ export default function Dashboard({ activePage, onNavigate }) {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#fcfbfa]">
+        <div className="w-12 h-12 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-4"></div>
+        <p className="text-sm font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Dashboard</p>
+      </div>
+    );
   }
 
   const deanName = deanData?.displayName || 'Dean';
   const firstName = deanName.split(' ')[0];
+  
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
   
   const currentYear = new Date().getFullYear();
   let chartData = [...yearlyStats].slice(-4);
@@ -149,7 +161,7 @@ export default function Dashboard({ activePage, onNavigate }) {
           <div className="flex justify-between items-end mb-6">
             <div>
               <h1 className="text-3xl font-serif font-bold text-stone-900 tracking-tight flex items-center gap-2">
-                Good morning, {firstName} 👋
+                {getGreeting()}, {firstName} 👋
               </h1>
               <p className="text-xs font-medium text-stone-500 mt-1 uppercase tracking-wider">
                 {deanData?.department || 'Department'} • S.Y. 2026–2027, 2nd Semester

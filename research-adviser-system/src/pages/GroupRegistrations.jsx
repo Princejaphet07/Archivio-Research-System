@@ -10,6 +10,16 @@ function GroupRegistrations() {
   const [pendingGroups, setPendingGroups] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filterGroup = (group) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return group.groupName?.toLowerCase().includes(q) ||
+           group.researchTitle?.toLowerCase().includes(q) ||
+           group.leaderName?.toLowerCase().includes(q) ||
+           group.program?.toLowerCase().includes(q);
+  };
 
   const fetchGroups = async () => {
     setLoading(true);
@@ -108,29 +118,27 @@ function GroupRegistrations() {
   };
 
   return (
-    <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={true}>
+    <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Group Registrations</h1>
           <p className="text-sm text-gray-500">Approve or decline student group registration requests</p>
         </div>
 
-        {/* Warning Banner */}
-        <div className="bg-[#fff7ed] border border-[#fed7aa] p-4 rounded-lg flex gap-3 text-sm text-[#9a3412]">
-          <span className="text-blue-500 text-lg">ℹ️</span>
-          <p><strong>Important:</strong> Approve only the Group Leader's registration. Once approved, the system automatically sends a link to the leader's email so they can complete group setup and invite their members.</p>
-        </div>
 
         {/* Pending Requests */}
         <div className="space-y-4">
           {loading ? (
-             <div className="text-center p-8 text-gray-500">Loading pending requests...</div>
-          ) : pendingGroups.length === 0 ? (
+             <div className="py-12 flex flex-col items-center justify-center">
+               <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+               <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requests...</p>
+             </div>
+          ) : pendingGroups.filter(filterGroup).length === 0 ? (
              <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
                No pending group registrations found.
              </div>
           ) : (
-            pendingGroups.map((req) => (
+            pendingGroups.filter(filterGroup).map((req) => (
               <div key={req.id} className="bg-white border border-[#fed7aa] rounded-xl p-5 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                 <div className="flex gap-4">
                   <div className="w-12 h-12 bg-[#fff7ed] rounded-lg border border-[#fed7aa] flex items-center justify-center text-xl">📋</div>
@@ -185,12 +193,12 @@ function GroupRegistrations() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {historyGroups.length === 0 ? (
+                {historyGroups.filter(filterGroup).length === 0 ? (
                   <tr>
                     <td colSpan="6" className="py-6 text-center text-gray-500">No registration history yet.</td>
                   </tr>
                 ) : (
-                  historyGroups.map((item) => (
+                  historyGroups.filter(filterGroup).map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="py-3 px-5 font-bold text-gray-900">{item.groupName}</td>
                       <td className="py-3 px-5 text-gray-600">{item.leaderName}</td>

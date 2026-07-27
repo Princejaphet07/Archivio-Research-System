@@ -44,7 +44,7 @@ function ArchiveBookmarks() {
   ];
 
   return (
-    <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0]">
+    <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0] dark:bg-gray-900 transition-colors">
       <Header />
 
       {/* PAGE HEADER SECTION */}
@@ -60,7 +60,7 @@ function ArchiveBookmarks() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-8">
         
-        <div className="flex justify-between items-end border-b border-stone-300 mb-6 pb-2 font-sans relative">
+        <div className="flex justify-between items-end border-b border-stone-300 dark:border-gray-700 mb-6 pb-2 font-sans relative">
           <div className="flex gap-6">
             <button className="text-[#7a2039] border-b-2 border-[#7a2039] pb-2 px-1 font-bold text-sm translate-y-[9px]">
               All ({bookmarkedPapers.length})
@@ -70,7 +70,7 @@ function ArchiveBookmarks() {
           <div className="relative">
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 text-sm text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded shadow-sm hover:bg-stone-50 transition cursor-pointer"
+              className="flex items-center gap-2 text-sm text-stone-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 px-3 py-1.5 rounded shadow-sm hover:bg-stone-50 dark:hover:bg-gray-700 transition cursor-pointer"
             >
               <span>⏱️</span>
               <span>{selectedSort}</span>
@@ -78,7 +78,7 @@ function ArchiveBookmarks() {
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-52 bg-white border border-stone-200 rounded-md shadow-lg z-50 flex flex-col overflow-hidden text-xs font-sans">
+              <div className="absolute right-0 mt-1 w-52 bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-md shadow-lg z-50 flex flex-col overflow-hidden text-xs font-sans">
                 {sortOptions.map((option, index) => {
                   const isSelected = selectedSort === option;
                   return (
@@ -88,13 +88,13 @@ function ArchiveBookmarks() {
                         setSelectedSort(option);
                         setIsDropdownOpen(false);
                       }}
-                      className={`text-left px-4 py-3 border-b border-stone-100 last:border-b-0 flex items-center gap-2 transition-colors cursor-pointer ${
+                      className={`text-left px-4 py-3 border-b border-stone-100 dark:border-gray-700 last:border-b-0 flex items-center gap-2 transition-colors cursor-pointer ${
                         isSelected 
-                          ? 'bg-[#f5ebed] text-[#7a2039] font-medium'
-                          : 'text-stone-600 hover:bg-stone-50'
+                          ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab] font-medium'
+                          : 'text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
                       }`}
                     >
-                      <span className="w-3 text-[#7a2039] font-bold">
+                      <span className={`w-3 font-bold ${isSelected ? 'text-[#7a2039] dark:text-[#f3e5ab]' : ''}`}>
                         {isSelected ? '✓' : ''}
                       </span>
                       {option}
@@ -109,24 +109,24 @@ function ArchiveBookmarks() {
         {/* BOOKMARKS LIST */}
         <div className="flex flex-col gap-4">
           {bookmarkedPapers.map((paper) => (
-            <div key={paper.id} className="bg-[#fdfbf7] border border-stone-200 shadow-sm flex flex-col md:flex-row justify-between p-6 gap-6 rounded hover:shadow-md transition">
+            <div key={paper.id} className="bg-[#fdfbf7] dark:bg-gray-800 border border-stone-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row justify-between p-6 gap-6 rounded hover:shadow-md transition-colors">
               
               <div className="flex-1 font-sans">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="px-2 py-1 bg-[#f2ead3] border border-[#e5d4a6] text-[#7a2039] font-medium text-[10px] rounded">
+                  <span className="px-2 py-1 bg-[#f2ead3] dark:bg-gray-700 border border-[#e5d4a6] dark:border-gray-600 text-[#7a2039] dark:text-[#f3e5ab] font-medium text-[10px] rounded">
                     {paper.category}
                   </span>
-                  <span className="text-xs text-stone-400">{paper.dateSaved}</span>
+                  <span className="text-xs text-stone-400 dark:text-gray-500">{paper.dateSaved}</span>
                 </div>
                 
-                <h2 className="text-lg font-bold text-stone-900 mb-1 leading-snug font-serif">
+                <h2 className="text-lg font-bold text-stone-900 dark:text-gray-100 mb-1 leading-snug font-serif">
                   {paper.title}
                 </h2>
-                <p className="text-xs text-stone-500 mb-4">{paper.authors}</p>
+                <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{paper.authors}</p>
                 
                 <div className="flex flex-wrap gap-2 text-[10px]">
                   {paper.tags.map((tag, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-stone-100 border border-stone-200 text-stone-600 rounded-full">
+                    <span key={idx} className="px-3 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded-full">
                       {tag}
                     </span>
                   ))}
@@ -143,7 +143,7 @@ function ArchiveBookmarks() {
                   View Paper
                 </Link>
                 
-                <button className="w-full py-2 bg-white border border-stone-200 text-stone-500 text-xs rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center gap-1 cursor-pointer">
+                <button className="w-full py-2 bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-400 text-xs rounded hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition flex items-center justify-center gap-1 cursor-pointer">
                   Remove 📌
                 </button>
               </div>

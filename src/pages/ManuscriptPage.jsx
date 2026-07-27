@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import Swal from 'sweetalert2';
@@ -89,6 +89,15 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     if (formValues) {
       try {
         await updateDoc(doc(db, 'submissions', submissionId), formValues);
+        
+        await addDoc(collection(db, 'notifications'), {
+          userId: auth.currentUser?.uid,
+          title: "Manuscript Updated",
+          message: "You successfully updated your manuscript details.",
+          isRead: false,
+          createdAt: serverTimestamp()
+        });
+
         Swal.fire({ icon: 'success', title: 'Saved!', text: 'Manuscript details updated.', confirmButtonColor: '#7B1F35' });
       } catch (err) {
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update details.', confirmButtonColor: '#7B1F35' });

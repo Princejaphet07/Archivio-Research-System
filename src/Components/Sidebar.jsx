@@ -81,7 +81,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         />
       )}
 
-      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#FDF9ED] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-[#E8DFCB] ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#FDF9ED] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-[#E8DFCB] overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         
         <div>
           <div className="flex items-center gap-3 px-8 pt-8 pb-10">
@@ -128,7 +128,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         </div>
         
         {/* Bottom Section (Need Help & Profile) */}
-        <div className="px-6 pb-8 flex flex-col gap-4">
+        <div className="px-6 pb-8 flex flex-col gap-4 mt-8">
           
           {/* Need help box */}
           <div className="bg-[#F4DEE5] p-5 rounded-2xl flex flex-col gap-2">

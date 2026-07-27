@@ -122,7 +122,12 @@ export default function AllUsers() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top Header Component */}
-        <Header title="All Users Overview" breadcrumbs={['Users']} />
+        <Header 
+          title="All Users Overview" 
+          breadcrumbs={['Users']} 
+          searchQuery={search}
+          onSearchChange={setSearch}
+        />
 
         {/* PAGE CONTENT */}
         <div className="flex-1 overflow-auto p-8">
@@ -148,17 +153,7 @@ export default function AllUsers() {
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
 
             {/* Search + Export */}
-            <div className="p-4 flex items-center justify-between gap-4 border-b border-stone-100">
-              <div className="relative w-80">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔍</span>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by name..."
-                  className="w-full pl-9 pr-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
-                />
-              </div>
+            <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100">
               <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-all shadow-sm cursor-pointer">
                 <span>📤</span> Export CSV
               </button>

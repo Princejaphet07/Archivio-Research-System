@@ -7,6 +7,7 @@ function ResearchCategories() {
   const [categoryName, setCategoryName] = useState('');
   const [categoryIcon, setCategoryIcon] = useState('🔗');
   const [categoryDescription, setCategoryDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = [
     { name: 'Machine Learning', dept: '42 dept', mine: '3 mine', icon: '🤖', color: 'border-t-pink-800', bgColor: '#7a2e46' },
@@ -45,8 +46,13 @@ function ResearchCategories() {
     setCategoryDescription('');
   };
 
+  const filteredCategories = categories.filter(cat => {
+    if (!searchQuery) return true;
+    return cat.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   return (
-    <Layout title="Research Categories" breadcrumb="ARCHIVIO › Research Categories" showSearch={true}>
+    <Layout title="Research Categories" breadcrumb="ARCHIVIO › Research Categories" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-end">
           <div>
@@ -62,7 +68,7 @@ function ResearchCategories() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {categories.map((cat, i) => (
+          {filteredCategories.map((cat, i) => (
             <div key={i} className={`bg-white rounded-xl shadow-sm border border-gray-200 border-t-4 ${cat.color} p-5 flex flex-col justify-between h-40`}>
               <div>
                 <div className="text-2xl mb-1">{cat.icon}</div>

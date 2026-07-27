@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAdviser } from '../context/AdviserContext';
 
-function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", showSearch = true }) {
+function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", showSearch = true, searchQuery, onSearchChange }) {
   const { userRole } = useAdviser();
 
   const handleSwitchToDean = () => {
@@ -23,6 +23,8 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-sm">🔍</span>
             <input
               type="text"
+              value={searchQuery !== undefined ? searchQuery : ''}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               placeholder="Search groups, students, research titles..."
               className="w-full bg-gray-50 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition"
             />

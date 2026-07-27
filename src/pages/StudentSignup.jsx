@@ -201,6 +201,29 @@ export default function StudentSignup({ onSwitchPage }) {
         updatedAt: new Date().toISOString()
       });
 
+      // Automatically generate system invitations for the other group members
+      for (const member of groupInfo.members) {
+        const memberEmail = typeof member === 'object' ? member.email : member;
+        
+        // Check if an invitation already exists for this email
+        const existingInvitesSnap = await getDocs(
+          query(collection(db, 'studentInvitations'), where('studentEmail', '==', memberEmail))
+        );
+        
+        if (existingInvitesSnap.empty) {
+          await addDoc(collection(db, 'studentInvitations'), {
+            studentEmail: memberEmail,
+            sentBy: invitationData.sentBy,
+            sentByName: invitationData.sentByName,
+            department: invitationData.department || 'Not specified',
+            status: 'pending',
+            invitationSentAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            invitedByLeader: email // Track who actually added them
+          });
+        }
+      }
+
       // Update invitation status to active
       const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
       await updateDoc(firestoreDoc(db, 'studentInvitations', invitationDoc.id), {

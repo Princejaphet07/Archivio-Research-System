@@ -15,6 +15,13 @@ function Dashboard() {
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   useEffect(() => {
     const email = adviserData?.email;
     if (!email) {
@@ -120,7 +127,7 @@ function Dashboard() {
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-2">Research Adviser Portal</p>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">Good morning, {adviserData?.displayName || 'Research Adviser'} 👋</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">{getGreeting()}, {adviserData?.displayName || 'Research Adviser'} 👋</h1>
             <p className="text-sm text-gray-200">{activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending your review</p>
           </div>
         </div>
