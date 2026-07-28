@@ -1,6 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 export default function Header({ title, breadcrumbs, searchQuery, onSearchChange }) {
+  const [notifications, setNotifications] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const logsRef = collection(db, 'activityLogs');
+    const q = query(logsRef, orderBy('timestamp', 'desc'), limit(10));
+    
+    const unsub = onSnapshot(q, (snapshot) => {
+      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotifications(logs);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
+
   return (
     <header className="h-20 bg-white border-b border-stone-200 px-6 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
       <div>
@@ -42,10 +69,45 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
         </div>
 
         {/* Notifications Icon */}
-        <button className="relative p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors cursor-pointer text-stone-600">
-          🔔
-          <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full text-[8px] flex items-center justify-center text-white font-bold">3</span>
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="relative p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors cursor-pointer text-stone-600"
+          >
+            🔔
+            {notifications.length > 0 && (
+              <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-80 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden z-50">
+              <div className="p-3 border-b border-stone-100 bg-stone-50 flex justify-between items-center">
+                <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider">System Updates</h3>
+              </div>
+              <div className="max-h-72 overflow-y-auto">
+                {notifications.length > 0 ? notifications.map((log) => (
+                  <div key={log.id} className="p-3 border-b border-stone-50 hover:bg-stone-50 transition flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center shrink-0 text-[#801e38] font-bold text-[10px] border border-stone-200 mt-0.5">
+                      {log.user ? log.user.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-stone-800 leading-tight">
+                        <span className="font-bold">{log.user || 'System'}</span> {log.action}
+                      </p>
+                      <p className="text-[10px] text-stone-500 mt-0.5 leading-tight">{log.details}</p>
+                      <p className="text-[9px] text-stone-400 mt-1">{new Date(log.timestamp || Date.now()).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-6 text-center text-xs text-stone-500">No recent updates</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
