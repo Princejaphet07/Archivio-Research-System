@@ -111,7 +111,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setCurrentPage('login');
+      window.location.href = '/';
     } catch (error) {
       console.error("Error signing out:", error);
     }

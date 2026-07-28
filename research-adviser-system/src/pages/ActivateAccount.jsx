@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/Rectangle 9 (2).png';
@@ -168,6 +168,12 @@ export default function ActivateAccount() {
       );
 
       const userId = userCredential.user.uid;
+
+      // CLEANUP: Wipe orphaned groups tied to this adviser's email to ensure a 100% fresh start
+      const oldGroupsQuery = query(collection(db, 'groups'), where('adviserUid', '==', trimmedEmail));
+      const oldGroupsSnap = await getDocs(oldGroupsQuery);
+      const deleteGroupPromises = oldGroupsSnap.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
+      await Promise.all(deleteGroupPromises);
 
       // Update Firestore adviser record
       const adviserRef = doc(db, 'advisers', adviserData.id);

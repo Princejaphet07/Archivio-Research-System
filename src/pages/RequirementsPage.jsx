@@ -92,13 +92,18 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     fetchData();
   }, [studentUid]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // Helper to determine if a requirement should be strictly PDF
+  const isPdfOnly = (item) => {
+    const title = (item.title || '').toLowerCase();
+    return title.includes('manuscript') || title.includes('approval');
+  };
+
   const handleUploadFile = async (item, file) => {
     if (!file) return;
 
-    // Enforce PDF format
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a PDF file.' });
+    // Enforce PDF format conditionally
+    if (isPdfOnly(item) && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      Swal.fire({ icon: 'error', title: 'Invalid File', text: 'This specific requirement must be a PDF file.' });
       return;
     }
 
@@ -459,7 +464,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       {/* Hidden File Input for Replace */}
                       <input 
                         type="file" 
-                        accept=".pdf"
+                        accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
                         ref={el => fileInputRefs.current[item.id] = el}
                         className="hidden"
                         onChange={(e) => handleUploadFile(item, e.target.files[0])}
@@ -507,7 +512,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
                           </p>
                           <p className="text-[#CF3645]/60 text-[11px] mt-1">
-                            {item.type === 'url' ? 'GitHub or Publisher Link' : 'PDF format · max 50MB'}
+                            {item.type === 'url' ? 'GitHub or Publisher Link' : (isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB')}
                           </p>
                         </>
                       )}
@@ -516,7 +521,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                     {/* Hidden File Input */}
                     <input 
                       type="file" 
-                      accept=".pdf"
+                      accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
                       ref={el => fileInputRefs.current[item.id] = el}
                       className="hidden"
                       onChange={(e) => handleUploadFile(item, e.target.files[0])}

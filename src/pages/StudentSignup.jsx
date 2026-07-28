@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, setDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { logActivity } from '../firebase/logActivity';
 import swuLogoSeal from '../assets/new icon.png';
@@ -161,6 +161,19 @@ export default function StudentSignup({ onSwitchPage }) {
       // Create Firebase Auth account
       const userCredential = await createUserWithEmailAndPassword(auth, email, securityInfo.password);
       const uid = userCredential.user.uid;
+
+      // CLEANUP: Wipe orphaned data tied to this email to ensure a 100% fresh start
+      // 1. Delete old student profile(s) with this email
+      const oldStudentQuery = query(collection(db, 'students'), where('email', '==', email));
+      const oldStudentSnap = await getDocs(oldStudentQuery);
+      const deleteStudentPromises = oldStudentSnap.docs.map(d => deleteDoc(doc(db, 'students', d.id)));
+      await Promise.all(deleteStudentPromises);
+      
+      // 2. Delete old groups where they were the leader
+      const oldGroupQuery = query(collection(db, 'groups'), where('leaderEmail', '==', email));
+      const oldGroupSnap = await getDocs(oldGroupQuery);
+      const deleteGroupPromises = oldGroupSnap.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
+      await Promise.all(deleteGroupPromises);
 
       // Save student profile to Firestore
       await setDoc(doc(db, 'students', uid), {

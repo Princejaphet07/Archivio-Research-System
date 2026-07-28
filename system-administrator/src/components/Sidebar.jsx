@@ -22,10 +22,10 @@ function Sidebar() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/');
+      window.location.href = '/';
     } catch (err) {
       console.error('Logout error:', err);
-      navigate('/');
+      window.location.href = '/';
     }
   };
 

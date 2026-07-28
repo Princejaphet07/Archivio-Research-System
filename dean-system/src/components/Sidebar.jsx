@@ -128,11 +128,10 @@ export default function Sidebar({ onNavigate }) {
   const isDeanOnly = role === 'dean';
   const isDeanAndAdviser = role === 'dean+adviser';
 
-  // Handle logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/login');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       Swal.fire('Error', 'Failed to logout. Please try again.', 'error');

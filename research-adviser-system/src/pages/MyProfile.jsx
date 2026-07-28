@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -14,13 +16,14 @@ function MyProfile() {
     paperApproved: true,
   });
 
-  const handleLogout = () => {
-    // Clear any auth tokens or user data here if needed
-    // localStorage.removeItem('token');
-    // sessionStorage.clear();
-    
-    // Navigate to login page
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/login';
+    }
   };
 
   const toggleNotification = (key) => {
