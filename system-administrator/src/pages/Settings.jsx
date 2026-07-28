@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import DepartmentsProgramsTab from './DepartmentsPrograms';
+import { db } from '../firebase/config';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('system');
@@ -23,8 +25,27 @@ export default function Settings() {
     url: false,
   });
 
-  const handleToggle = (key) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
+      if (snap.exists()) {
+        setToggles(prev => ({ ...prev, ...snap.data() }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleToggle = async (key) => {
+    const newValue = !toggles[key];
+    setToggles(prev => ({ ...prev, [key]: newValue }));
+    
+    // Save to Firestore
+    try {
+      await setDoc(doc(db, 'settings', 'system_preferences'), {
+        [key]: newValue
+      }, { merge: true });
+    } catch (error) {
+      console.error("Failed to update setting:", error);
+    }
   };
 
   const handleStorageCheck = (key) => {

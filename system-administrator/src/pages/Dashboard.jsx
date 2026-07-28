@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
@@ -10,6 +10,7 @@ function Dashboard() {
   const [deans, setDeans] = useState([]);
   const [advisers, setAdvisers] = useState([]);
   const [students, setStudents] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
 
   useEffect(() => {
     const unsubSub = onSnapshot(collection(db, 'submissions'), snap => setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -17,7 +18,10 @@ function Dashboard() {
     const unsubDeans = onSnapshot(collection(db, 'deans'), snap => setDeans(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), snap => setAdvisers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubStudents = onSnapshot(collection(db, 'students'), snap => setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); };
+    const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), snap => {
+      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
+    });
+    return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); };
   }, []);
 
   const deptStats = useMemo(() => {
@@ -78,17 +82,40 @@ function Dashboard() {
     const totalDepartments = new Set([...deans.map(d=>d.department), ...advisers.map(a=>a.department)]).size;
     const totalPrograms = new Set(students.map(s=>s.course)).size;
     const totalUsers = deans.length + advisers.length + students.length;
+    
+    // Dynamically calculate pending invitations
+    const pendingDeans = deans.filter(d => d.status === 'pending' || d.accountStatus === 'pending_activation').length;
+    const pendingAdvisers = advisers.filter(a => a.status === 'pending' || a.accountStatus === 'pending_activation').length;
+    const totalPending = pendingDeans + pendingAdvisers;
+    
     const publishedCount = submissions.filter(s => s.reviewStatus === 'published').length;
-    return [totalDepartments, totalPrograms, totalUsers, 0, publishedCount];
+    return [totalDepartments, totalPrograms, totalUsers, totalPending, publishedCount];
   }, [submissions, deans, advisers, students]);
 
-  const yearlyTrend = useMemo(() => {
-    const counts = { '2021-2022': 0, '2022-2023': 0, '2023-2024': 0, '2024-2025': 0, '2025-2026': 0 };
+  const { yearlyTrendData, shortLabels } = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const baseYear = currentMonth < 7 ? currentYear - 1 : currentYear;
+    
+    const syLabels = [];
+    const short = [];
+    for (let i = 4; i >= 0; i--) {
+      syLabels.push(`${baseYear - i}-${baseYear - i + 1}`);
+      short.push(`SY ${String(baseYear - i).slice(2)}-${String(baseYear - i + 1).slice(2)}`);
+    }
+
+    const counts = {};
+    syLabels.forEach(sy => counts[sy] = 0);
+    
     submissions.forEach(s => {
-      const sy = s.schoolYear || '2025-2026';
+      const sy = s.schoolYear || syLabels[4];
       if(counts[sy] !== undefined) counts[sy]++;
     });
-    return [counts['2021-2022'], counts['2022-2023'], counts['2023-2024'], counts['2024-2025'], counts['2025-2026']];
+    
+    return {
+      yearlyTrendData: syLabels.map(sy => counts[sy]),
+      shortLabels: short
+    };
   }, [submissions]);
 
   return (
@@ -135,19 +162,19 @@ function Dashboard() {
                 <path d="M 100 140 L 325 110 L 550 75 L 775 40 L 910 115 L 910 170 L 100 170 Z" fill="url(#trendGrad)" opacity="0.05"/>
                 <defs><linearGradient id="trendGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#801e38" /><stop offset="100%" stopColor="#801e38" stopOpacity="0" /></linearGradient></defs>
                 <circle cx="100" cy="140" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="100" y="125" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrend[0]}</text>
+                <text x="100" y="125" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[0]}</text>
                 <circle cx="325" cy="110" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="325" y="95" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrend[1]}</text>
+                <text x="325" y="95" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[1]}</text>
                 <circle cx="550" cy="75" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="550" y="60" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrend[2]}</text>
+                <text x="550" y="60" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[2]}</text>
                 <circle cx="775" cy="40" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="775" y="25" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrend[3]}</text>
+                <text x="775" y="25" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[3]}</text>
                 <circle cx="910" cy="115" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="910" y="100" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrend[4]}</text>
+                <text x="910" y="100" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[4]}</text>
               </svg>
               <div className="absolute inset-x-0 bottom-0 flex justify-between text-[9px] text-stone-400 font-bold uppercase tracking-wider px-6">
-                <span>SY 21-22</span><span>SY 22-23</span><span>SY 23-24</span><span>SY 24-25</span>
-                <span className="relative">SY 25-26<span className="absolute -top-7 right-0 whitespace-nowrap bg-amber-100 text-amber-800 text-[8px] px-1.5 py-0.5 rounded font-bold shadow-sm">in progress</span></span>
+                <span>{shortLabels[0]}</span><span>{shortLabels[1]}</span><span>{shortLabels[2]}</span><span>{shortLabels[3]}</span>
+                <span className="relative">{shortLabels[4]}<span className="absolute -top-7 right-0 whitespace-nowrap bg-amber-100 text-amber-800 text-[8px] px-1.5 py-0.5 rounded font-bold shadow-sm">in progress</span></span>
               </div>
             </div>
           </div>
@@ -233,6 +260,33 @@ function Dashboard() {
             <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600"><span>Total Files Uploaded</span><span className="text-stone-900 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Published Papers</span><span className="text-stone-900 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Supporting Documents</span><span className="text-stone-900 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Other Assets</span><span className="text-stone-900 font-bold">136 files</span></div></div></div>
             <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center gap-2 text-xs font-bold text-[#801e38]"><span>⚠️</span><span>Storage above 60% — consider archiving old records.</span></div>
+          </div>
+
+          {/* Row 6: Recent System Activity */}
+          <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm mb-6">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
+              <div>
+                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recent System Activity</h3>
+                <p className="text-[10px] text-stone-400 mt-0.5">Live feed of the most recent actions in the system</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {activityLogs.length > 0 ? activityLogs.map((log, i) => (
+                <div key={log.id || i} className="flex gap-4 p-3 hover:bg-stone-50 rounded-xl transition">
+                  <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0 text-[#801e38] font-bold text-xs border border-stone-200">
+                    {log.user ? log.user.charAt(0).toUpperCase() : 'S'}
+                  </div>
+                  <div>
+                    <p className="text-xs text-stone-800"><span className="font-bold">{log.user || 'System'}</span> {log.action}</p>
+                    <p className="text-[10px] text-stone-500 mt-0.5">{log.details}</p>
+                    <p className="text-[9px] text-stone-400 mt-1">{new Date(log.timestamp || Date.now()).toLocaleString()}</p>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-xs text-stone-500 text-center py-4">No recent activity recorded.</p>
+              )}
+            </div>
           </div>
 
         </div>

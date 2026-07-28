@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './firebase/config';
 import { UserProvider } from './context/UserContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -17,6 +18,18 @@ import './App.css';
 function App() {
   const [user, setUser] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [isMaintenanceMode, setIsMaintenanceMode] = React.useState(false);
+
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
+      if (snap.exists() && snap.data().maintenance === true) {
+        setIsMaintenanceMode(true);
+      } else {
+        setIsMaintenanceMode(false);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     // Check if user is logged in
@@ -25,8 +38,21 @@ function App() {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
+
+  if (isMaintenanceMode) {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center p-6 text-center">
+        <span className="text-6xl mb-6">🛠️</span>
+        <h1 className="text-3xl font-serif font-bold text-[#801e38] mb-4">System Under Maintenance</h1>
+        <p className="text-stone-600 max-w-md mx-auto">
+          ARCHIVIO is currently undergoing scheduled maintenance and updates. 
+          Please check back later. We apologize for the inconvenience.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

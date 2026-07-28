@@ -12,7 +12,7 @@ import MyGroupPage from './pages/MyGroupPage';
 import SettingsPage from './pages/SettingsPage'; // 1. Added SettingsPage import
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -20,6 +20,18 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
+      if (snap.exists() && snap.data().maintenance === true) {
+        setIsMaintenanceMode(true);
+      } else {
+        setIsMaintenanceMode(false);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Check if URL has activation token or signup path
   React.useEffect(() => {
@@ -149,6 +161,19 @@ function App() {
       <div className="w-full h-screen flex flex-col items-center justify-center bg-[#FDF9ED]">
         <div className="w-12 h-12 border-4 border-[#7B1F35]/30 border-t-[#7B1F35] rounded-full animate-spin mb-4"></div>
         <p className="text-[#7B1F35] font-serif text-sm font-semibold tracking-wider">LOADING STUDENT PORTAL...</p>
+      </div>
+    );
+  }
+
+  if (isMaintenanceMode) {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center p-6 text-center">
+        <span className="text-6xl mb-6">🛠️</span>
+        <h1 className="text-3xl font-serif font-bold text-[#801e38] mb-4">System Under Maintenance</h1>
+        <p className="text-stone-600 max-w-md mx-auto">
+          ARCHIVIO is currently undergoing scheduled maintenance and updates. 
+          Please check back later. We apologize for the inconvenience.
+        </p>
       </div>
     );
   }
