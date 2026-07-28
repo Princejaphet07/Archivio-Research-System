@@ -185,6 +185,24 @@ export default function UserManagement() {
     setLoading(true);
 
     try {
+      // CLEANUP: If the admin is reusing an email (e.g., testing after manual Firebase Auth deletion),
+      // wipe orphaned data tied to this email to ensure a completely fresh start.
+      const targetEmail = formData.email.toLowerCase().trim();
+      
+      const collectionsToClean = ['users', 'deans', 'super_admins', 'advisers'];
+      for (const colName of collectionsToClean) {
+        const q = query(collection(db, colName), where('email', '==', targetEmail));
+        const snap = await getDocs(q);
+        const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
+        await Promise.all(deletes);
+      }
+      
+      // Clean up orphaned groups tied to this adviser/dean email
+      const qGroups = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
+      const snapGroups = await getDocs(qGroups);
+      const deleteGroups = snapGroups.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
+      await Promise.all(deleteGroups);
+
       // Generate invitation token and temporary password
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const temporaryPassword = generateRandomPassword();
