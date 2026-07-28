@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header'; // Added Header Import
 import { db } from '../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { useAcademicYear } from '../context/AcademicYearContext';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -15,6 +16,10 @@ export default function AllUsers() {
   const [search, setSearch] = useState('');
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
+  const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
   React.useEffect(() => {
     let deansData = [];
@@ -44,7 +49,8 @@ export default function AllUsers() {
           role: 'Dean',
           dept: data.department || 'N/A',
           status: data.status || 'Active',
-          lastLogin: formatDate(data.lastLogin || data.createdAt)
+          lastLogin: formatDate(data.lastLogin || data.createdAt),
+          createdAt: data.createdAt
         };
       });
       updateCombinedUsers();
@@ -62,7 +68,8 @@ export default function AllUsers() {
           role: 'Adviser',
           dept: data.department || 'N/A',
           status: data.status || 'Active',
-          lastLogin: formatDate(data.lastLogin || data.createdAt)
+          lastLogin: formatDate(data.lastLogin || data.createdAt),
+          createdAt: data.createdAt
         };
       });
       updateCombinedUsers();
@@ -80,7 +87,8 @@ export default function AllUsers() {
           role: 'Student',
           dept: data.course || 'N/A',
           status: data.status || 'Active',
-          lastLogin: formatDate(data.lastLogin || data.createdAt)
+          lastLogin: formatDate(data.lastLogin || data.createdAt),
+          createdAt: data.createdAt
         };
       });
       updateCombinedUsers();
@@ -102,18 +110,32 @@ export default function AllUsers() {
     `Students (${allUsers.filter(u => u.role === 'Student').length})`
   ];
 
-  const filtered = allUsers.filter(u => {
-    if (activeTab === 1 && u.role !== 'Dean') return false;
-    if (activeTab === 2 && u.role !== 'Adviser') return false;
-    if (activeTab === 3 && u.role !== 'Student') return false;
+  const filtered = React.useMemo(() => {
+    let users = allUsers;
     
-    const term = search.toLowerCase();
-    return (
-      (u.name || '').toLowerCase().includes(term) ||
-      (u.email || '').toLowerCase().includes(term) ||
-      (u.dept || '').toLowerCase().includes(term)
-    );
-  });
+    // 1. Filter by Academic Year
+    users = filterByAcademicYear(users, 'createdAt');
+
+    // 2. Filter by Active Tab
+    if (activeTab === 1) users = users.filter(u => u.role === 'Dean');
+    if (activeTab === 2) users = users.filter(u => u.role === 'Adviser');
+    if (activeTab === 3) users = users.filter(u => u.role === 'Student');
+
+    // 3. Search Filter
+    if (search) {
+      const term = search.toLowerCase();
+      users = users.filter(u => 
+        (u.name || '').toLowerCase().includes(term) ||
+        (u.email || '').toLowerCase().includes(term) ||
+        (u.dept || '').toLowerCase().includes(term)
+      );
+    }
+    
+    return users;
+  }, [allUsers, activeTab, search, selectedYear, filterByAcademicYear]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginatedUsers = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
@@ -187,7 +209,7 @@ export default function AllUsers() {
                       <td colSpan="6" className="px-6 py-12 text-center text-stone-500 font-medium">No users found.</td>
                     </tr>
                   ) : (
-                    filtered.map(user => (
+                    paginatedUsers.map(user => (
                       <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
                         <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
                         <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.email}</td>
@@ -207,16 +229,32 @@ export default function AllUsers() {
             </div>
 
             {/* PAGINATION */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100">
-              <span className="text-sm text-stone-500 font-medium">Showing {filtered.length} of {allUsers.length} users</span>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 bg-stone-50/30">
+              <span className="text-[11px] text-stone-500 font-medium">
+                Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} users
+              </span>
               <div className="flex items-center gap-1">
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">‹</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-[#801e38] text-white font-bold shadow-sm cursor-pointer">1</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">2</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">3</button>
-                <span className="w-8 h-8 flex items-center justify-center text-stone-400 text-sm">...</span>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">24</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer">›</button>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >‹</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                      currentPage === page 
+                        ? 'bg-[#801e38] text-white shadow-sm' 
+                        : 'border border-stone-200 text-stone-600 hover:bg-stone-100'
+                    }`}
+                  >{page}</button>
+                ))}
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >›</button>
               </div>
             </div>
           </div>

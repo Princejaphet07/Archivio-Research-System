@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useAcademicYear } from '../context/AcademicYearContext';
 
 function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
@@ -12,40 +13,49 @@ function Dashboard() {
   const [students, setStudents] = useState([]);
   const [activityLogs, setActivityLogs] = useState([]);
 
+  const { selectedYear, filterByAcademicYear } = useAcademicYear();
+
   useEffect(() => {
     const unsubSub = onSnapshot(collection(db, 'submissions'), snap => setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubGroup = onSnapshot(collection(db, 'groups'), snap => setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubDeans = onSnapshot(collection(db, 'deans'), snap => setDeans(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), snap => setAdvisers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubStudents = onSnapshot(collection(db, 'students'), snap => setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), snap => {
-      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
+    const unsubLogs = onSnapshot(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc')), snap => {
+      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); };
   }, []);
 
+  const filteredSubmissions = useMemo(() => filterByAcademicYear(submissions, 'createdAt'), [submissions, selectedYear]);
+  const filteredGroups = useMemo(() => filterByAcademicYear(groups, 'createdAt'), [groups, selectedYear]);
+  const filteredDeans = useMemo(() => filterByAcademicYear(deans, 'createdAt'), [deans, selectedYear]);
+  const filteredAdvisers = useMemo(() => filterByAcademicYear(advisers, 'createdAt'), [advisers, selectedYear]);
+  const filteredStudents = useMemo(() => filterByAcademicYear(students, 'createdAt'), [students, selectedYear]);
+  const filteredLogs = useMemo(() => filterByAcademicYear(activityLogs, 'timestamp').slice(0, 5), [activityLogs, selectedYear]);
+
   const deptStats = useMemo(() => {
     const deptsMap = {};
     
-    deans.forEach(dean => {
+    filteredDeans.forEach(dean => {
       const dName = dean.department || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
     });
 
-    advisers.forEach(adv => {
+    filteredAdvisers.forEach(adv => {
       const dName = adv.department || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       deptsMap[dName].advisers++;
     });
 
-    students.forEach(st => {
+    filteredStudents.forEach(st => {
       const dName = st.course || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       deptsMap[dName].students++;
     });
 
-    submissions.forEach(sub => {
-      const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+    filteredSubmissions.forEach(sub => {
+      const group = filteredGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
       const dName = group?.department || sub.program || group?.program || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       
@@ -55,12 +65,12 @@ function Dashboard() {
     });
 
     return Object.values(deptsMap).sort((a,b) => b.uploaded - a.uploaded);
-  }, [submissions, groups, deans, advisers, students]);
+  }, [filteredSubmissions, filteredGroups, filteredDeans, filteredAdvisers, filteredStudents]);
 
   const categories = useMemo(() => {
     const cats = {};
     let totalPub = 0;
-    submissions.forEach(sub => {
+    filteredSubmissions.forEach(sub => {
       if (sub.reviewStatus === 'published') {
         const cat = sub.category || 'Uncategorized';
         cats[cat] = (cats[cat] || 0) + 1;
@@ -69,28 +79,31 @@ function Dashboard() {
     });
 
     const colors = ['bg-[#801e38]', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-[#9c6e3b]', 'bg-indigo-500', 'bg-purple-500', 'bg-stone-400'];
+    const strokeColors = ['#801e38', '#3b82f6', '#f59e0b', '#10b981', '#9c6e3b', '#6366f1', '#a855f7', '#a8a29e'];
     return Object.entries(cats)
       .sort((a,b) => b[1] - a[1])
       .map(([name, count], index) => ({
         name, count,
+        percentageVal: totalPub > 0 ? (count / totalPub) : 0,
         percentage: totalPub > 0 ? ((count / totalPub) * 100).toFixed(1) + '%' : '0%',
-        color: colors[index % colors.length]
+        color: colors[index % colors.length],
+        strokeColor: strokeColors[index % strokeColors.length]
       }));
-  }, [submissions]);
+  }, [filteredSubmissions]);
 
   const quickStats = useMemo(() => {
-    const totalDepartments = new Set([...deans.map(d=>d.department), ...advisers.map(a=>a.department)]).size;
-    const totalPrograms = new Set(students.map(s=>s.course)).size;
-    const totalUsers = deans.length + advisers.length + students.length;
+    const totalDepartments = new Set([...filteredDeans.map(d=>d.department), ...filteredAdvisers.map(a=>a.department)]).size;
+    const totalPrograms = new Set(filteredStudents.map(s=>s.course)).size;
+    const totalUsers = filteredDeans.length + filteredAdvisers.length + filteredStudents.length;
     
     // Dynamically calculate pending invitations
-    const pendingDeans = deans.filter(d => d.status === 'pending' || d.accountStatus === 'pending_activation').length;
-    const pendingAdvisers = advisers.filter(a => a.status === 'pending' || a.accountStatus === 'pending_activation').length;
+    const pendingDeans = filteredDeans.filter(d => d.status === 'pending' || d.accountStatus === 'pending_activation').length;
+    const pendingAdvisers = filteredAdvisers.filter(a => a.status === 'pending' || a.accountStatus === 'pending_activation').length;
     const totalPending = pendingDeans + pendingAdvisers;
     
-    const publishedCount = submissions.filter(s => s.reviewStatus === 'published').length;
+    const publishedCount = filteredSubmissions.filter(s => s.reviewStatus === 'published').length;
     return [totalDepartments, totalPrograms, totalUsers, totalPending, publishedCount];
-  }, [submissions, deans, advisers, students]);
+  }, [filteredSubmissions, filteredDeans, filteredAdvisers, filteredStudents]);
 
   const { yearlyTrendData, shortLabels } = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -107,7 +120,7 @@ function Dashboard() {
     const counts = {};
     syLabels.forEach(sy => counts[sy] = 0);
     
-    submissions.forEach(s => {
+    filteredSubmissions.forEach(s => {
       const sy = s.schoolYear || syLabels[4];
       if(counts[sy] !== undefined) counts[sy]++;
     });
@@ -116,7 +129,7 @@ function Dashboard() {
       yearlyTrendData: syLabels.map(sy => counts[sy]),
       shortLabels: short
     };
-  }, [submissions]);
+  }, [filteredSubmissions]);
 
   return (
     <div className="min-h-screen w-full flex bg-[#faf9f6] font-sans overflow-hidden">
@@ -185,7 +198,7 @@ function Dashboard() {
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Research Status per Department</h3>
-                <p className="text-[10px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department ({selectedYear})</p>
               </div>
             </div>
             <div className="space-y-6">
@@ -248,7 +261,23 @@ function Dashboard() {
             </div>
             <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm">
               <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Top Papers by Research Category</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
-              <div className="flex justify-center mb-6"><div className="relative w-32 h-32 flex items-center justify-center"><svg className="w-full h-full transform -rotate-90"><circle cx="64" cy="64" r="50" fill="transparent" stroke="#f5f5f5" strokeWidth="12" /><circle cx="64" cy="64" r="50" fill="transparent" stroke="#801e38" strokeWidth="12" strokeDasharray="314.16" strokeDashoffset={categories.length > 0 ? "75" : "314.16"} /></svg><div className="absolute flex flex-col items-center"><span className="text-2xl font-serif font-bold text-[#801e38]">{quickStats[4]}</span><span className="text-[8px] font-bold text-stone-400 uppercase tracking-wider">Total</span></div></div></div>
+              <div className="flex justify-center mb-6"><div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="50" fill="transparent" stroke="#f5f5f5" strokeWidth="12" />
+                  {(() => {
+                    let cumulative = 0;
+                    const circ = 314.159;
+                    return categories.map((cat, i) => {
+                      const arc = cat.percentageVal * circ;
+                      const offset = -(cumulative * circ);
+                      cumulative += cat.percentageVal;
+                      return (
+                        <circle key={i} cx="64" cy="64" r="50" fill="transparent" stroke={cat.strokeColor} strokeWidth="12" strokeDasharray={`${arc} ${circ}`} strokeDashoffset={offset} className="transition-all duration-1000 ease-out" />
+                      );
+                    });
+                  })()}
+                </svg>
+                <div className="absolute flex flex-col items-center"><span className="text-2xl font-serif font-bold text-[#801e38]">{quickStats[4]}</span><span className="text-[8px] font-bold text-stone-400 uppercase tracking-wider">Total</span></div></div></div>
               <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                 {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600"><span className={`w-2 h-2 rounded-full ${cat.color}`}></span><span>{cat.name}</span></div><span className="text-stone-900">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
               </div>
@@ -268,11 +297,11 @@ function Dashboard() {
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recent System Activity</h3>
-                <p className="text-[10px] text-stone-400 mt-0.5">Live feed of the most recent actions in the system</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">Live feed of the most recent actions in the system ({selectedYear})</p>
               </div>
             </div>
             <div className="space-y-4">
-              {activityLogs.length > 0 ? activityLogs.map((log, i) => (
+              {filteredLogs.length > 0 ? filteredLogs.map((log, i) => (
                 <div key={log.id || i} className="flex gap-4 p-3 hover:bg-stone-50 rounded-xl transition">
                   <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0 text-[#801e38] font-bold text-xs border border-stone-200">
                     {log.user ? log.user.charAt(0).toUpperCase() : 'S'}

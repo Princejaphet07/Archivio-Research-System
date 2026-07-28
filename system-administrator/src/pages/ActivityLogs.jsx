@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useAcademicYear } from '../context/AcademicYearContext';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const ROWS_PER_PAGE = 10;
@@ -21,18 +22,28 @@ const statusColors = {
   Pending: 'bg-amber-100 text-amber-700 border border-amber-200',
 };
 
+const parseDate = (val) => {
+  if (!val) return null;
+  if (val.toDate) return val.toDate();
+  return new Date(val);
+};
+
 const formatTime = (iso) => {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const d = parseDate(iso);
+  if (!d || isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
 
 const formatDate = (iso) => {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = parseDate(iso);
+  if (!d || isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const matchesPeriod = (isoDate, period) => {
-  const d = new Date(isoDate);
+  const d = parseDate(isoDate);
+  if (!d || isNaN(d.getTime())) return false;
+  
   const now = new Date();
   if (period === 'today') return d.toDateString() === now.toDateString();
   if (period === 'week')  { const w = new Date(now); w.setDate(now.getDate() - 7); return d >= w; }
@@ -49,33 +60,37 @@ export default function ActivityLogs() {
   const [statusFilter, setStatus] = useState('all');
   const [roleFilter,   setRole]   = useState('all');
   const [page,         setPage]   = useState(1);
+  const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
   // ── Fetch from Firestore ────────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const q    = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
-        const snap = await getDocs(q);
-        setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.warn('Could not fetch activity logs:', err);
-        setLogs([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setLoading(true);
+    const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.warn('Could not fetch activity logs:', err);
+      setLogs([]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // ── Filtered list ───────────────────────────────────────────────────────────
-  const filtered = useMemo(() => logs.filter(l => {
-    const q = search.toLowerCase();
-    const matchSearch  = l.user?.toLowerCase().includes(q) || l.action?.toLowerCase().includes(q) || l.role?.toLowerCase().includes(q) || l.details?.toLowerCase().includes(q);
-    const matchPeriod  = matchesPeriod(l.timestamp, period);
-    const matchStatus  = statusFilter === 'all' || l.status === statusFilter;
-    const matchRole    = roleFilter   === 'all' || l.role   === roleFilter;
-    return matchSearch && matchPeriod && matchStatus && matchRole;
-  }), [logs, search, period, statusFilter, roleFilter]);
+  const filtered = useMemo(() => {
+    let list = filterByAcademicYear(logs, 'timestamp');
+    return list.filter(l => {
+      const q = search.toLowerCase();
+      const matchSearch  = l.user?.toLowerCase().includes(q) || l.action?.toLowerCase().includes(q) || l.role?.toLowerCase().includes(q) || l.details?.toLowerCase().includes(q);
+      const matchPeriod  = matchesPeriod(l.timestamp, period);
+      const matchStatus  = statusFilter === 'all' || l.status === statusFilter;
+      const matchRole    = roleFilter   === 'all' || l.role   === roleFilter;
+      return matchSearch && matchPeriod && matchStatus && matchRole;
+    });
+  }, [logs, search, period, statusFilter, roleFilter, selectedYear, filterByAcademicYear]);
 
   // reset page on filter change
   useEffect(() => setPage(1), [search, period, statusFilter, roleFilter]);

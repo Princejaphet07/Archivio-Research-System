@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { UserProvider } from './context/UserContext';
+import { AcademicYearProvider } from './context/AcademicYearContext';
 
 // Pages
 import Login from './pages/Login';
@@ -15,8 +16,9 @@ import SuperAdminSettings from './pages/SuperAdminSettings';
 function App() {
   return (
     <UserProvider>
-      <Router>
-        <Routes>
+      <AcademicYearProvider>
+        <Router>
+          <Routes>
           {/* Default Route: Login Page */}
           <Route path="/" element={<Login />} />
 
@@ -34,6 +36,7 @@ function App() {
           <Route path="/super-admin-settings" element={<SuperAdminSettings />} />
         </Routes>
       </Router>
+      </AcademicYearProvider>
     </UserProvider>
   );
 }

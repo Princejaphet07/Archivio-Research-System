@@ -6,6 +6,7 @@ import { db, auth } from '../firebase/config';
 import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { logActivity } from '../firebase/logActivity';
 import Swal from 'sweetalert2';
+import { useAcademicYear } from '../context/AcademicYearContext';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -15,6 +16,9 @@ export default function UserManagement() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  const { selectedYear, filterByAcademicYear } = useAcademicYear();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -539,6 +543,18 @@ Please login with these credentials and set up your account.`
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const filteredUsersList = React.useMemo(() => {
+    let list = filterByAcademicYear(allUsers, 'createdAt');
+    return list.filter(d => 
+      d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.department?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [allUsers, searchQuery, selectedYear, filterByAcademicYear]);
+  
+  const totalPages = Math.max(1, Math.ceil(filteredUsersList.length / ITEMS_PER_PAGE));
+  const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
       
@@ -597,23 +613,10 @@ Please login with these credentials and set up your account.`
                     <th className="px-4 py-4 w-10 text-center">
                       <input 
                         type="checkbox"
-                        checked={selectedUsers.size === allUsers.filter(d => 
-                          d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.department?.toLowerCase().includes(searchQuery.toLowerCase())
-                        ).length && allUsers.filter(d => 
-                          d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.department?.toLowerCase().includes(searchQuery.toLowerCase())
-                        ).length > 0}
+                        checked={selectedUsers.size === filteredUsersList.length && filteredUsersList.length > 0}
                         onChange={(e) => {
-                          const filtered = allUsers.filter(d => 
-                            d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            d.department?.toLowerCase().includes(searchQuery.toLowerCase())
-                          );
                           if (e.target.checked) {
-                            setSelectedUsers(new Set(filtered.map(d => d.id)));
+                            setSelectedUsers(new Set(filteredUsersList.map(d => d.id)));
                           } else {
                             setSelectedUsers(new Set());
                           }
@@ -638,14 +641,8 @@ Please login with these credentials and set up your account.`
                       </td>
                     </tr>
                   ) : (
-                    allUsers
-                      .filter(user => 
-                        user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        user.department?.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map((user) => (
-                        <tr key={user.id} className="hover:bg-stone-50/50 transition-colors group">
+                    paginatedUsers.map(user => (
+                        <tr key={user.id} className="hover:bg-stone-50 transition-colors group">
                           <td className="px-4 py-4 text-center">
                             <input 
                               type="checkbox"
@@ -724,12 +721,30 @@ Please login with these credentials and set up your account.`
           {/* PAGINATION */}
           <div className="flex items-center justify-between mt-6 px-1">
             <span className="text-sm text-stone-500 font-medium">
-              Showing {allUsers.length} {allUsers.length === 1 ? 'User' : 'Users'}
+              Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsersList.length)} of {filteredUsersList.length} users
             </span>
             <div className="flex items-center gap-1">
-              <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50">‹</button>
-              <button className="w-8 h-8 flex items-center justify-center rounded bg-[#801e38] text-white font-bold shadow-sm cursor-pointer">1</button>
-              <button className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer">›</button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+              >‹</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button 
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 flex items-center justify-center rounded font-bold shadow-sm transition-colors cursor-pointer ${
+                    currentPage === page 
+                      ? 'bg-[#801e38] text-white' 
+                      : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'
+                  }`}
+                >{page}</button>
+              ))}
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+              >›</button>
             </div>
           </div>
 

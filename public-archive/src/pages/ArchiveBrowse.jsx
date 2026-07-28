@@ -12,6 +12,8 @@ function ArchiveBrowse() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('Newest First');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const { currentUser } = useAuth();
 
@@ -99,6 +101,9 @@ function ArchiveBrowse() {
     return 0; // Most Viewed would require an analytics field, placeholder for now
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredPapers.length / ITEMS_PER_PAGE));
+  const paginatedPapers = filteredPapers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0] dark:bg-gray-900 transition-colors">
       <Header />
@@ -127,7 +132,7 @@ function ArchiveBrowse() {
           </select>
         </div>
         <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
-          Showing {filteredPapers.length} out of {publishedPapers.length} results
+          Showing {paginatedPapers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredPapers.length)} of {filteredPapers.length} results
         </div>
       </div>
 
@@ -180,13 +185,13 @@ function ArchiveBrowse() {
                 <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Archives...</p>
               </div>
             ) : filteredPapers.length === 0 ? (
-              <div className="text-center py-20 text-stone-500 dark:text-gray-400 border-2 border-dashed border-stone-300 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 transition-colors">
-                <p className="text-lg font-bold text-stone-700 dark:text-gray-200">No results found.</p>
-                <p className="text-sm mt-2">Try adjusting your search or filters.</p>
+              <div className="py-20 text-center text-stone-500 dark:text-gray-400">
+                <span className="text-4xl mb-4 block">📄</span>
+                <p>No research papers match your filters.</p>
               </div>
             ) : (
-              filteredPapers.map((paper) => (
-                <div key={paper.id} className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 transition-all border-l-4 border-l-[#7a2e46]`}>
+              paginatedPapers.map((paper) => (
+                <div key={paper.id} className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-6 sm:p-8 hover:shadow-lg hover:border-stone-300 dark:hover:border-gray-600 transition-all border-l-4 border-l-[#7a2e46]">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
                       <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded text-xs font-medium">
@@ -242,13 +247,28 @@ function ArchiveBrowse() {
           {/* Pagination Placeholder */}
           {!loading && filteredPapers.length > 0 && (
              <div className="flex justify-center mt-12 gap-2 font-sans">
-                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-400 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors">‹</button>
-                <button className="w-10 h-10 rounded bg-[#7a2039] text-white font-bold">1</button>
-                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 font-medium transition-colors">2</button>
-                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 font-medium transition-colors">3</button>
-                <span className="w-10 h-10 flex items-center justify-center text-stone-400 dark:text-gray-500">...</span>
-                <button className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-400 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors">›</button>
-              </div>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-500 dark:text-gray-400 hover:bg-stone-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >‹</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded font-medium transition-colors ${
+                      currentPage === page 
+                        ? 'bg-[#7a2039] text-white font-bold border-none' 
+                        : 'border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
+                    }`}
+                  >{page}</button>
+                ))}
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 rounded border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-500 dark:text-gray-400 hover:bg-stone-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >›</button>
+             </div>
           )}
         </main>
       </div>

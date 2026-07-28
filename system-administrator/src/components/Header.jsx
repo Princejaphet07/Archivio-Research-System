@@ -1,22 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useAcademicYear } from '../context/AcademicYearContext';
 
 export default function Header({ title, breadcrumbs, searchQuery, onSearchChange }) {
+  const { selectedYear, changeYear } = useAcademicYear();
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    const logsRef = collection(db, 'activityLogs');
+    const logsRef = collection(db, 'activity_logs');
     const q = query(logsRef, orderBy('timestamp', 'desc'), limit(10));
     
     const unsub = onSnapshot(q, (snapshot) => {
       const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setNotifications(logs);
+
+      const lastRead = localStorage.getItem('admin_notifications_last_read');
+      if (lastRead) {
+        const newUnread = logs.filter(log => new Date(log.timestamp || 0) > new Date(lastRead)).length;
+        setUnreadCount(newUnread);
+      } else {
+        setUnreadCount(logs.length);
+      }
     });
     return () => unsub();
   }, []);
+
+  const handleToggleDropdown = () => {
+    const newState = !showDropdown;
+    setShowDropdown(newState);
+    if (newState) {
+      setUnreadCount(0);
+      localStorage.setItem('admin_notifications_last_read', new Date().toISOString());
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,10 +80,16 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
 
         {/* Academic Year Dropdown */}
         <div className="relative">
-          <select className="px-4 py-2 bg-white border border-[#801e38]/30 rounded-lg text-sm text-[#801e38] font-semibold outline-none cursor-pointer hover:bg-stone-50 appearance-none pr-8">
-            <option>SY 2025-2026</option>
-            <option>SY 2024-2025</option>
-            <option>SY 2023-2024</option>
+          <select 
+            value={selectedYear}
+            onChange={(e) => changeYear(e.target.value)}
+            className="px-4 py-2 bg-white border border-[#801e38]/30 rounded-lg text-sm text-[#801e38] font-semibold outline-none cursor-pointer hover:bg-stone-50 appearance-none pr-8"
+          >
+            <option value="SY 2026-2027">SY 2026-2027</option>
+            <option value="SY 2025-2026">SY 2025-2026</option>
+            <option value="SY 2024-2025">SY 2024-2025</option>
+            <option value="SY 2023-2024">SY 2023-2024</option>
+            <option value="All">All Time</option>
           </select>
           <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[8px] text-[#801e38]">▼</span>
         </div>
@@ -71,13 +97,13 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
         {/* Notifications Icon */}
         <div className="relative" ref={dropdownRef}>
           <button 
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={handleToggleDropdown}
             className="relative p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors cursor-pointer text-stone-600"
           >
             🔔
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full text-[8px] flex items-center justify-center text-white font-bold">
-                {notifications.length}
+                {unreadCount}
               </span>
             )}
           </button>

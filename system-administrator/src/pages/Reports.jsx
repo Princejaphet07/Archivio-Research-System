@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { useAcademicYear } from '../context/AcademicYearContext';
 import { db } from '../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
 
@@ -31,6 +32,9 @@ export default function Reports() {
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [activeUsersTab, setActiveUsersTab] = useState(0);
+
+  const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
   useEffect(() => {
     const unsubSub = onSnapshot(collection(db, 'submissions'), (snap) => {
@@ -57,7 +61,8 @@ export default function Reports() {
     const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Dean', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+        role: 'Dean', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        createdAt: d.data().createdAt
       }));
       updateUsers();
     });
@@ -65,7 +70,8 @@ export default function Reports() {
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       advisersData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Advisor', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+        role: 'Advisor', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        createdAt: d.data().createdAt
       }));
       updateUsers();
     });
@@ -73,7 +79,8 @@ export default function Reports() {
     const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
       studentsData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Student', dept: d.data().course || 'N/A', prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active'
+        role: 'Student', dept: d.data().course || 'N/A', prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        createdAt: d.data().createdAt
       }));
       updateUsers();
     });
@@ -84,7 +91,8 @@ export default function Reports() {
   }, []);
 
   const publishedData = useMemo(() => {
-    return submissions
+    const filteredSubs = filterByAcademicYear(submissions, 'createdAt');
+    return filteredSubs
       .filter(s => s.reviewStatus === 'published')
       .map((s, index) => {
         const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
@@ -99,16 +107,21 @@ export default function Reports() {
         };
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [submissions, groups]);
+  }, [submissions, groups, selectedYear, filterByAcademicYear]);
 
   const usersData = useMemo(() => {
-    const arr = [...allUsers];
-    return arr.sort((a, b) => a.name.localeCompare(b.name)).map((u, i) => ({ ...u, id: (i + 1).toString().padStart(2, '0') }));
-  }, [allUsers]);
+    let u = filterByAcademicYear(allUsers, 'createdAt');
+    if (activeUsersTab === 1) u = u.filter(user => user.role === 'Dean');
+    else if (activeUsersTab === 2) u = u.filter(user => user.role === 'Advisor');
+    else if (activeUsersTab === 3) u = u.filter(user => user.role === 'Student');
+    
+    return u.sort((a, b) => a.name.localeCompare(b.name)).map((u, i) => ({ ...u, id: (i + 1).toString().padStart(2, '0') }));
+  }, [allUsers, activeUsersTab, selectedYear, filterByAcademicYear]);
 
   const deptData = useMemo(() => {
+    const filteredSubs = filterByAcademicYear(submissions, 'createdAt');
     const deptsMap = {};
-    submissions.forEach(s => {
+    filteredSubs.forEach(s => {
       const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
       const deptName = group?.department || s.program || group?.program || 'Uncategorized';
       if (!deptsMap[deptName]) deptsMap[deptName] = { sub: 0, pub: 0, end: 0, pend: 0 };
@@ -123,7 +136,7 @@ export default function Reports() {
       const rate = stats.sub > 0 ? ((stats.pub / stats.sub) * 100).toFixed(1) + '%' : '—';
       return { dept, ...stats, rate, status: stats.sub > 0 ? 'On Track' : 'Pending Setup' };
     });
-  }, [submissions, groups]);
+  }, [submissions, groups, selectedYear, filterByAcademicYear]);
 
   const handlePrint = () => {
     window.print();
@@ -231,9 +244,9 @@ export default function Reports() {
                     {selected === 'dept' && 'Department Performance Report'}
                   </h3>
                   <p className="text-sm text-stone-500">
-                    {selected === 'published' && 'All research papers published to the ARCHIVIO archive'}
-                    {selected === 'users' && 'Registered participants by role, department, and program - sorted alphabetically'}
-                    {selected === 'dept' && 'SY 2025-2026 • All Departments • Showing: Published, Endorsed, and Pending Approval'}
+                    {selected === 'published' && `All research papers published to the ARCHIVIO archive (${selectedYear})`}
+                    {selected === 'users' && `Registered participants by role, department, and program - sorted alphabetically (${selectedYear})`}
+                    {selected === 'dept' && `${selectedYear} • All Departments • Showing: Published, Endorsed, and Pending Approval`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

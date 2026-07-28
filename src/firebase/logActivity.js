@@ -13,7 +13,7 @@ import { db } from './config';
  * @param {'Success'|'Failed'|'Pending'} params.status
  * @param {string} [params.details] - Extra context (group name, course, etc.)
  */
-export const logActivity = async ({ user, role, action, status, details = '' }) => {
+export const logActivity = async ({ user, role, action, status, details = '', ip = 'N/A' }) => {
   try {
     await addDoc(collection(db, 'activity_logs'), {
       user:      user      || 'Unknown',
@@ -21,7 +21,7 @@ export const logActivity = async ({ user, role, action, status, details = '' }) 
       action:    action    || 'Unknown action',
       status:    status    || 'Success',
       details:   details,
-      ip:        'N/A',
+      ip:        ip,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {

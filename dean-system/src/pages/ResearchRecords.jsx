@@ -28,7 +28,7 @@ const ACTION_STYLES = {
   Review: 'bg-[#7a1f3d] text-white hover:bg-[#5a162d]',
 };
 
-const RECORDS_PER_PAGE = 7;
+const RECORDS_PER_PAGE = 10;
 
 export default function ResearchRecords({ activePage, onNavigate }) {
   const [search, setSearch] = useState('');
