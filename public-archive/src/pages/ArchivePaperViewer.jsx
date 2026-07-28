@@ -25,6 +25,43 @@ function ArchivePaperViewer() {
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
+    // Anti-Screenshot & Print Protections
+    const handleKeyDown = (e) => {
+      if (e.key === 'PrintScreen') {
+        navigator.clipboard.writeText('Screenshots disabled.');
+        Swal.fire('Warning', 'Screenshots are disabled for academic integrity.', 'warning');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        Swal.fire('Warning', 'Printing is disabled for academic integrity.', 'warning');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+      }
+    };
+
+    const handleBlur = () => {
+      document.body.style.filter = 'blur(15px)';
+      document.body.style.transition = 'filter 0.1s';
+    };
+
+    const handleFocus = () => {
+      document.body.style.filter = 'none';
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.body.style.filter = 'none';
+    };
+  }, []);
+
+  useEffect(() => {
     let unsubGroup = () => {};
     
     const unsubSub = onSnapshot(doc(db, 'submissions', id), async (docSnap) => {
@@ -365,8 +402,7 @@ function ArchivePaperViewer() {
             {/* EMBEDDED MANUSCRIPT VIEWER */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
               <div className="w-full h-full relative">
-                {/* Overlay to prevent interactions with the iframe like right-click or text selection */}
-                <div className="absolute inset-0 z-10 bg-transparent"></div>
+                {/* Removed absolute overlay so the user can scroll the PDF */}
                 <iframe 
                   key={currentPage}
                   src={`${paper.documents['Final Manuscript'].url}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0`}

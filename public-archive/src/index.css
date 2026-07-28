@@ -1,3 +1,10 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+
+/* Anti-Screenshot / Print Protections */
+@media print {
+  body {
+    display: none !important;
+  }
+}
