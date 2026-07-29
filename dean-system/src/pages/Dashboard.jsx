@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, YAxis } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { db } from '../firebase/config';
 
 export default function Dashboard({ activePage, onNavigate }) {
@@ -258,34 +258,36 @@ export default function Dashboard({ activePage, onNavigate }) {
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h3 className="text-sm font-bold text-stone-900 tracking-tight">Top Research Categories</h3>
-                  <p className="text-xs text-stone-400 mt-0.5">Uploads grouped by field of study</p>
-                </div>
-                <div className="flex gap-2 text-stone-500">
-                  <select className="text-xs bg-stone-50 border border-stone-200 rounded-md px-2.5 py-1 font-semibold outline-none focus:ring-1 focus:ring-[#7a1f3d]">
-                    <option>2026</option>
-                  </select>
-                  <button className="p-1 border border-stone-200 rounded-md hover:bg-stone-50 text-xs">📊</button>
+                  <p className="text-xs text-stone-400 mt-0.5">Distribution by field of study</p>
                 </div>
               </div>
-              <div className="h-64 mt-4">
+              <div className="h-64 mt-4 flex items-center justify-center">
                 {topCategories.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={topCategories} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#44403c', fontWeight: '500'}} width={120} />
-                      <Tooltip 
-                        cursor={{fill: '#f5f5f4'}}
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                      />
-                      <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                    <PieChart>
+                      <Pie
+                        data={topCategories}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="count"
+                        nameKey="name"
+                      >
                         {topCategories.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </Bar>
-                    </BarChart>
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                        itemStyle={{ fontWeight: 'bold' }}
+                      />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
+                    </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-xs text-stone-400 text-center py-4">No categories data available yet.</p>
+                  <p className="text-xs text-stone-400 text-center">No categories data available yet.</p>
                 )}
               </div>
             </div>
