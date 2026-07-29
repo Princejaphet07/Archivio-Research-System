@@ -149,6 +149,26 @@ export default function PublishQueue({ activePage, onNavigate }) {
           status: 'Success'
         });
 
+        // Send automated publication emails
+        for (const item of eligibleItems) {
+          if (item.leaderEmail) {
+            try {
+              await fetch('http://localhost:3000/api/send-status-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: item.leaderEmail,
+                  studentName: item.leaderName || 'Student',
+                  title: item.researchTitle,
+                  status: 'published'
+                })
+              });
+            } catch (e) {
+              console.error('Failed to send publish email', e);
+            }
+          }
+        }
+
         Swal.fire({ icon: 'success', title: 'Published!', text: `Successfully published ${eligibleCount} researches.`, confirmButtonColor: '#c9a227' });
       } catch (err) {
         console.error(err);

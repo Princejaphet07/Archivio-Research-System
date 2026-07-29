@@ -136,19 +136,25 @@ function ReviewSubmissions() {
     const res = await Swal.fire({
       title: 'Approve Submission?',
       text: "This will approve the research and forward it to the Dean's Publish Queue.",
+      input: 'textarea',
+      inputLabel: 'Optional Comments for the Student',
+      inputPlaceholder: 'Great job! Or any final thoughts...',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#7a2e46',
+      confirmButtonColor: '#059669',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, Approve'
     });
 
     if (res.isConfirmed) {
+      const comments = res.value || '';
+
       try {
         await updateDoc(doc(db, 'submissions', sub.id), {
           reviewStatus: 'approved',
           reviewedAt: new Date().toISOString(),
           reviewedBy: auth.currentUser?.email,
+          adviserComments: comments
         });
 
         await logActivity({
@@ -167,16 +173,113 @@ function ReviewSubmissions() {
             isRead: false,
             createdAt: serverTimestamp()
           });
+          
+          if (sub.leaderEmail) {
+            try {
+              await fetch('http://localhost:3000/api/send-status-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: sub.leaderEmail,
+                  studentName: sub.leaderName,
+                  title: sub.researchTitle,
+                  status: 'approved',
+                  comments: comments
+                })
+              });
+            } catch (e) {
+              console.error('Failed to send status email', e);
+            }
+          }
         }
 
         Swal.fire({
           icon: 'success',
           title: 'Approved!',
           text: `${sub.groupName}'s submission has been approved and sent to the Dean.`,
-          confirmButtonColor: '#7a2e46',
+          confirmButtonColor: '#059669',
         });
       } catch (err) {
         console.error('Error approving:', err);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#7a2e46' });
+      }
+    }
+  };
+
+  // Handle Reject/Revision action
+  const handleReject = async (sub) => {
+    const res = await Swal.fire({
+      title: 'Request Revision?',
+      text: "The student will be notified to revise their submission.",
+      input: 'textarea',
+      inputLabel: 'Revision Comments & Feedback',
+      inputPlaceholder: 'Please fix chapter 2 and update the bibliography...',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to write a comment for the revision request!'
+        }
+      },
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ca8a04',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Request Revision'
+    });
+
+    if (res.isConfirmed) {
+      const comments = res.value;
+      try {
+        await updateDoc(doc(db, 'submissions', sub.id), {
+          reviewStatus: 'revision',
+          reviewedAt: new Date().toISOString(),
+          reviewedBy: auth.currentUser?.email,
+          adviserComments: comments
+        });
+
+        await logActivity({
+          user: auth.currentUser?.email || 'Adviser',
+          role: 'Research Adviser',
+          action: 'Requested revision',
+          details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
+          status: 'Success'
+        });
+
+        if (sub.studentUid) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: sub.studentUid,
+            title: "Revision Required",
+            message: "Your Research Adviser has requested revisions on your manuscript. Please check the feedback.",
+            isRead: false,
+            createdAt: serverTimestamp()
+          });
+          
+          if (sub.leaderEmail) {
+            try {
+              await fetch('http://localhost:3000/api/send-status-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: sub.leaderEmail,
+                  studentName: sub.leaderName,
+                  title: sub.researchTitle,
+                  status: 'revision',
+                  comments: comments
+                })
+              });
+            } catch (e) {
+              console.error('Failed to send status email', e);
+            }
+          }
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Revision Requested!',
+          text: `The students have been notified of your feedback.`,
+          confirmButtonColor: '#ca8a04',
+        });
+      } catch (err) {
+        console.error('Error rejecting:', err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#7a2e46' });
       }
     }
@@ -352,7 +455,6 @@ function ReviewSubmissions() {
                           </td>
                         </>
                       )}
-                      
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-center gap-2">
                           <button 
@@ -362,12 +464,20 @@ function ReviewSubmissions() {
                             View
                           </button>
                           {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
-                            <button 
-                              onClick={() => handleApprove(item)}
-                              className="px-4 py-1.5 bg-[#7a2e46] text-white rounded-lg font-bold hover:bg-[#5f2135] transition-colors shadow-sm"
-                            >
-                              Approve
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => handleApprove(item)}
+                                className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                              >
+                                Approve
+                              </button>
+                              <button 
+                                onClick={() => handleReject(item)}
+                                className="px-4 py-1.5 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors shadow-sm"
+                              >
+                                Revise
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -530,15 +640,26 @@ function ReviewSubmissions() {
               </button>
               <div className="flex gap-3">
                 {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && selectedSubmission.completionPercent === 100 && (
-                  <button
-                    onClick={() => {
-                      setShowReviewModal(false);
-                      handleApprove(selectedSubmission);
-                    }}
-                    className="bg-[#7a2e46] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#5f2135] transition"
-                  >
-                    Approve
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowReviewModal(false);
+                        handleReject(selectedSubmission);
+                      }}
+                      className="bg-yellow-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600 transition"
+                    >
+                      Request Revision
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowReviewModal(false);
+                        handleApprove(selectedSubmission);
+                      }}
+                      className="bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+                    >
+                      Approve
+                    </button>
+                  </>
                 )}
               </div>
             </div>

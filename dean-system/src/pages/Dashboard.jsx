@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { collection, onSnapshot, query, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, YAxis } from 'recharts';
 import { db } from '../firebase/config';
 
 export default function Dashboard({ activePage, onNavigate }) {
@@ -129,14 +131,9 @@ export default function Dashboard({ activePage, onNavigate }) {
     chartData = [...padding, ...chartData];
   }
   const maxCount = Math.max(...chartData.map(d => d.count), 10);
-  const xCoords = [10, 137, 263, 390];
-  const chartPoints = chartData.map((d, i) => ({
-    x: xCoords[i],
-    y: 75 - (d.count / maxCount) * 55,
-    count: d.count,
-    year: d.year
-  }));
-  const pathData = `M ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+  
+  // Color palette for charts
+  const COLORS = ['#7a1f3d', '#2563eb', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
 
   const sortedTopPapers = [...allPapers].sort((a, b) => {
     const aScore = topPapersSort === 'likes' ? (a.likes?.length || 0) : (a.views || 0);
@@ -207,23 +204,22 @@ export default function Dashboard({ activePage, onNavigate }) {
               </div>
 
               <div className="relative h-44 w-full mt-2 flex items-end">
-                <svg className="w-full h-32 overflow-visible" viewBox="0 0 400 100" preserveAspectRatio="none">
-                  <line x1="0" y1="100" x2="400" y2="100" stroke="#e7e5e4" strokeWidth="1" />
-                  <line x1="0" y1="66" x2="400" y2="66" stroke="#f5f5f4" strokeWidth="1" strokeDasharray="4" />
-                  <line x1="0" y1="33" x2="400" y2="33" stroke="#f5f5f4" strokeWidth="1" strokeDasharray="4" />
-                  <path d={pathData} fill="none" stroke="#7a1f3d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  {chartPoints.map((p, i) => (
-                    <g key={i} className="cursor-pointer">
-                      <circle cx={p.x} cy={p.y} r="4" fill="white" stroke="#7a1f3d" strokeWidth="2" />
-                      <text x={p.x} y={p.y - 12} textAnchor="middle" className="text-[10px] font-bold fill-stone-700">{p.count}</text>
-                    </g>
-                  ))}
-                </svg>
-              </div>
-              <div className="flex justify-between text-[11px] font-bold text-stone-400 px-2 mt-2">
-                {chartPoints.map((p, i) => (
-                  <span key={i}>{p.year}</span>
-                ))}
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7a1f3d" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#7a1f3d" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                      labelStyle={{ fontWeight: 'bold', color: '#1c1917' }}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -271,23 +267,24 @@ export default function Dashboard({ activePage, onNavigate }) {
                   <button className="p-1 border border-stone-200 rounded-md hover:bg-stone-50 text-xs">📊</button>
                 </div>
               </div>
-              <div className="space-y-3.5">
-                {topCategories.length > 0 ? topCategories.map((cat, i) => {
-                  const colors = [
-                    { bar: 'bg-[#7a1f3d]', dot: 'bg-[#7a1f3d]' },
-                    { bar: 'bg-blue-600', dot: 'bg-blue-600' },
-                    { bar: 'bg-emerald-600', dot: 'bg-emerald-600' },
-                    { bar: 'bg-amber-500', dot: 'bg-amber-500' },
-                    { bar: 'bg-teal-600', dot: 'bg-teal-600' },
-                    { bar: 'bg-red-600', dot: 'bg-red-600' },
-                    { bar: 'bg-purple-600', dot: 'bg-purple-600' }
-                  ];
-                  const color = colors[i % colors.length];
-                  const maxCount = topCategories[0]?.count || 1;
-                  return (
-                    <CategoryProgressBar key={cat.name} label={cat.name} count={cat.count} max={maxCount} barColor={color.bar} dotColor={color.dot} />
-                  );
-                }) : (
+              <div className="h-64 mt-4">
+                {topCategories.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart layout="vertical" data={topCategories} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#44403c', fontWeight: '500'}} width={120} />
+                      <Tooltip 
+                        cursor={{fill: '#f5f5f4'}}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                      />
+                      <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                        {topCategories.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
                   <p className="text-xs text-stone-400 text-center py-4">No categories data available yet.</p>
                 )}
               </div>
@@ -436,23 +433,7 @@ function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   );
 }
 
-function CategoryProgressBar({ label, count, max, barColor, dotColor }) {
-  const percentage = (count / max) * 100;
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs font-bold text-stone-700">
-        <span className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
-          {label}
-        </span>
-        <span className="text-stone-900">{count}</span>
-      </div>
-      <div className="w-full bg-stone-100 h-2.5 rounded-full overflow-hidden border border-stone-200/20">
-        <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }}></div>
-      </div>
-    </div>
-  );
-}
+
 
 function PaperRow({ rank, title, author, count, icon, highlight }) {
   return (

@@ -351,6 +351,15 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] mb-8">Your Research Journey</h3>
 
+                {submission?.adviserComments && (
+                  <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg shadow-sm">
+                    <h4 className="text-sm font-bold text-yellow-800 mb-1 flex items-center gap-2">
+                      <span>💬</span> Adviser Feedback
+                    </h4>
+                    <p className="text-sm text-yellow-700 italic whitespace-pre-wrap">"{submission.adviserComments}"</p>
+                  </div>
+                )}
+
                 {loading ? (
                   <div className="space-y-4 animate-pulse">
                     {[...Array(4)].map((_, i) => (

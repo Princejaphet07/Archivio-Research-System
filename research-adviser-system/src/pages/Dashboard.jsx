@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { db } from '../firebase/config';
 import Layout from '../components/Layout';
 import { useAdviser } from '../context/AdviserContext';
@@ -277,6 +278,32 @@ function Dashboard() {
               <button className="w-full mt-4 bg-[#6b253e] hover:bg-[#541b2f] text-white text-xs font-semibold py-2.5 rounded-lg transition">
                 View All Pending →
               </button>
+            </div>
+
+            {/* Group Progress Chart */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="font-bold text-sm text-gray-900 mb-4">Group Progress</h3>
+              <div className="h-48">
+                {enrichedSubmissions.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={enrichedSubmissions} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                      <XAxis dataKey="groupName" hide />
+                      <YAxis tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+                      <Tooltip 
+                        cursor={{fill: '#f5f5f4'}}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                      />
+                      <Bar dataKey="completionPercent" radius={[4, 4, 0, 0]}>
+                        {enrichedSubmissions.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.completionPercent === 100 ? '#059669' : '#ca8a04'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-10">No progress data yet.</p>
+                )}
+              </div>
             </div>
 
             {/* Quick Actions */}

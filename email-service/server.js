@@ -936,6 +936,104 @@ app.post('/api/send-super-admin-invitation-email', async (req, res) => {
 });
 
 // ============================================
+// AUTOMATED STATUS EMAILS
+// ============================================
+app.post('/api/send-status-email', async (req, res) => {
+  const { to, studentName, title, status, comments } = req.body;
+
+  if (!to || !studentName || !title || !status) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  let statusHeader = '';
+  let statusColor = '';
+  let statusMessage = '';
+
+  if (status === 'approved') {
+    statusHeader = 'Research Paper Approved';
+    statusColor = '#059669'; // Emerald
+    statusMessage = 'Congratulations! Your research adviser has approved your manuscript. It is now waiting in the Dean\'s queue to be officially published to the Public Archive.';
+  } else if (status === 'revision') {
+    statusHeader = 'Revision Required';
+    statusColor = '#ca8a04'; // Yellow
+    statusMessage = 'Your research adviser has reviewed your manuscript and requested some revisions. Please check the feedback below and update your submission in the Student Portal.';
+  } else if (status === 'published') {
+    statusHeader = 'Research Paper Published!';
+    statusColor = '#7a1f3d'; // Maroon
+    statusMessage = 'Excellent news! The Dean has officially published your research paper. It is now live and accessible in the ARCHIVIO Public Archive.';
+  } else {
+    statusHeader = 'Research Paper Update';
+    statusColor = '#4b5563'; // Gray
+    statusMessage = 'There has been an update to your research paper submission.';
+  }
+
+  const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid ${statusColor}; }
+    .header { padding: 30px 30px 15px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; color: ${statusColor}; }
+    .content { padding: 0 30px 30px; }
+    .paper-box { background-color: #f9f9f9; border-left: 4px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .paper-box h3 { margin: 0 0 5px 0; font-size: 16px; color: #444; }
+    .paper-box p { margin: 0; font-size: 14px; color: #666; }
+    .comments-box { background-color: #fffbeb; border: 1px solid #fde68a; padding: 15px; margin: 20px 0; border-radius: 6px; }
+    .comments-box h4 { margin: 0 0 10px 0; color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    .comments-box p { margin: 0; font-size: 14px; color: #b45309; font-style: italic; white-space: pre-wrap; }
+    .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${statusHeader}</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>${studentName}</strong>,</p>
+      <p>${statusMessage}</p>
+      
+      <div class="paper-box">
+        <h3>${title}</h3>
+        <p>Current Status: <strong style="color: ${statusColor}; text-transform: uppercase;">${status}</strong></p>
+      </div>
+
+      ${comments ? `
+      <div class="comments-box">
+        <h4>Adviser Feedback:</h4>
+        <p>"${comments}"</p>
+      </div>
+      ` : ''}
+
+      <p style="margin-top: 30px;">Log in to the Student Portal to view full details.</p>
+    </div>
+    <div class="footer">
+      <p>ARCHIVIO — Research Archive Management System</p>
+      <p>Automated Status Notification</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"ARCHIVIO Updates" <${process.env.EMAIL_FROM || 'noreply@archivio.edu.ph'}>`,
+      to: to,
+      subject: `[ARCHIVIO] ${statusHeader}: ${title}`,
+      html: emailHtml,
+    });
+    console.log(`✅ Status email sent to: ${to} (${status})`);
+    res.json({ success: true, message: 'Status email sent' });
+  } catch (error) {
+    console.error('❌ Error sending status email:', error);
+    res.status(500).json({ error: 'Failed to send email', details: error.message });
+  }
+});
+
+// ============================================
 // CLOUDINARY DELETE FILE
 // ============================================
 const cloudinary = require('cloudinary').v2;
@@ -1034,6 +1132,61 @@ app.post('/api/ai/chat', async (req, res) => {
     res.json({ success: true, text: response.text });
   } catch (error) {
     console.error('AI Chat Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// GLOBAL AI SEMANTIC SEARCH
+// ============================================
+app.post('/api/ai/global-search', async (req, res) => {
+  try {
+    const { allPapers, query } = req.body;
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    
+    // Inject developer identity prompt and the entire database as context
+    const developerPrompt = `
+    CRITICAL INSTRUCTION FOR ALL YOUR RESPONSES:
+    If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by Prince Japhet Vender. 
+    You must state that Prince Japhet Vender is a Full Stack Developer.
+    Always be polite and helpful.
+
+    You are the Global Archivio Librarian. You have access to the entire database of published research papers.
+    Below is a JSON representation of all currently published papers in the archive. 
+    Use this information to answer the user's query. If the query asks for papers about a specific topic, find and list the relevant papers from the provided JSON context. 
+    If you recommend a paper, mention its Title, Author (Leader/Group), and Abstract/Keywords if applicable.
+    Do NOT invent papers. Only use the provided JSON context.
+
+    --- JSON ARCHIVE CONTEXT ---
+    ${JSON.stringify(allPapers.map(p => ({
+      title: p.researchTitle || p.title,
+      group: p.groupName,
+      author: p.leaderName,
+      abstract: p.abstract || '',
+      keywords: p.keywords || [],
+      department: p.program || p.department || '',
+      date: p.publishedAt
+    })))}
+    ----------------------------
+    `;
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: [
+        { role: 'user', parts: [{ text: developerPrompt }] },
+        { role: 'model', parts: [{ text: 'Understood. I have memorized the entire Archive JSON context. I will act as the Global Archivio Librarian.' }] },
+        { role: 'user', parts: [{ text: query }] }
+      ]
+    });
+
+    res.json({ success: true, text: response.text });
+  } catch (error) {
+    console.error('Global AI Search Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
