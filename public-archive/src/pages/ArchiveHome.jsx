@@ -12,10 +12,6 @@ function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
-  const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [aiQuery, setAiQuery] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -52,32 +48,7 @@ function ArchiveHome() {
     }
   };
 
-  const handleAskAI = async (e) => {
-    e.preventDefault();
-    if (!aiQuery.trim()) return;
-    setAiLoading(true);
-    setAiResponse('');
-    try {
-      const res = await fetch('http://localhost:3000/api/ai/global-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          allPapers: publishedPapers,
-          query: aiQuery
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAiResponse(data.text);
-      } else {
-        setAiResponse("I'm sorry, I'm having trouble searching the archive right now. Please try again later.");
-      }
-    } catch (err) {
-      setAiResponse("I'm sorry, there was a connection error. Please try again later.");
-    } finally {
-      setAiLoading(false);
-    }
-  };
+
 
   useEffect(() => {
     // Fetch published submissions
@@ -329,78 +300,6 @@ function ArchiveHome() {
         </div>
       </div>
 
-      {/* FLOATING AI BUTTON */}
-      <button
-        onClick={() => setAiModalOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 transition-transform z-40"
-      >
-        ✨
-      </button>
-
-      {/* AI ASSISTANT MODAL */}
-      {aiModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setAiModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-700 to-indigo-800 p-6 flex justify-between items-center text-white relative">
-              <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-10"></div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold font-serif flex items-center gap-2">✨ Global Archivio AI</h3>
-                <p className="text-sm text-purple-200 mt-1">Ask me anything about the {publishedPapers.length} papers in our archive!</p>
-              </div>
-              <button onClick={() => setAiModalOpen(false)} className="relative z-10 text-white/70 hover:text-white transition-colors w-8 h-8 flex items-center justify-center bg-white/10 rounded-full">✕</button>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-6 font-sans">
-              <div className="mb-6 flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">🤖</div>
-                <div className="bg-gray-100 dark:bg-gray-700 dark:text-gray-200 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-gray-800 max-w-[85%]">
-                  Hello! I'm the Global Archivio Librarian. I have read every single paper in this archive. What topic are you looking for?
-                </div>
-              </div>
-
-              {aiResponse && (
-                <div className="mb-6 flex gap-3 items-start">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">✨</div>
-                  <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-100 dark:border-purple-800/50 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-gray-800 dark:text-gray-200 max-w-[95%]">
-                    <div className="whitespace-pre-wrap">{aiResponse.replace(/\*\*/g, '').replace(/\*/g, '•')}</div>
-                  </div>
-                </div>
-              )}
-
-              {aiLoading && (
-                <div className="flex items-center gap-2 text-purple-600 text-sm font-bold ml-11">
-                  <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></span>
-                  <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></span>
-                  <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
-                  <span className="ml-2">Searching the archive...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <form onSubmit={handleAskAI} className="border-t border-gray-100 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900 flex gap-3 items-center">
-              <input
-                type="text"
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                placeholder="e.g. Find papers about machine learning..."
-                className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-400 dark:text-white"
-                disabled={aiLoading}
-              />
-              <button
-                type="submit"
-                disabled={aiLoading || !aiQuery.trim()}
-                className="bg-purple-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Ask
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-      
       <Footer />
     </div>
   );
