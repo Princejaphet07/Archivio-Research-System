@@ -985,7 +985,19 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const initialUserParts = [{ text: paperContext }];
+    
+    // Inject developer identity prompt
+    const developerPrompt = `
+    CRITICAL INSTRUCTION FOR ALL YOUR RESPONSES:
+    If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by Prince Japhet Vender. 
+    You must state that Prince Japhet Vender is a Full Stack Developer.
+    Always be polite and helpful.
+
+    Here is the context of the paper you are assisting with:
+    ${paperContext}
+    `;
+    
+    const initialUserParts = [{ text: developerPrompt }];
 
     // Fetch the PDF as a buffer and convert to base64
     if (pdfUrl) {
