@@ -133,24 +133,24 @@ function ArchiveHome() {
         style={{ backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
-        <div className="relative z-10 space-y-4">
-          <p className="text-amber-200 tracking-[0.2em] text-xs font-sans uppercase">SWU PHINMA • Research Archive</p>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-widest text-[#f3e5ab] mt-2 mb-4 drop-shadow-lg">ARCHIVIO</h1>
-          <h2 className="text-xl text-amber-100 italic">Research Archive Management System</h2>
-          <p className="text-sm text-stone-200 max-w-2xl mx-auto font-sans leading-relaxed mt-4 drop-shadow-md">
+        <div className="relative z-10 space-y-3 md:space-y-4 w-full">
+          <p className="text-amber-200 tracking-[0.2em] text-[10px] md:text-xs font-sans uppercase">SWU PHINMA • Research Archive</p>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-widest text-[#f3e5ab] mt-2 mb-2 md:mb-4 drop-shadow-lg">ARCHIVIO</h1>
+          <h2 className="text-lg md:text-xl text-amber-100 italic">Research Archive Management System</h2>
+          <p className="text-xs md:text-sm text-stone-200 max-w-2xl mx-auto font-sans leading-relaxed mt-4 drop-shadow-md px-4">
             Discover peer-reviewed research, theses, and academic manuscripts from SWU PHINMA students and faculty.
           </p>
-          <div className="flex flex-col md:flex-row bg-white/10 md:bg-white dark:md:bg-gray-800 rounded-md md:p-1 mt-8 max-w-3xl mx-auto md:shadow-2xl font-sans w-full gap-2 md:gap-0">
-            <div className="flex bg-white dark:bg-gray-800 rounded-md p-1 w-full flex-1">
-              <div className="flex items-center px-4 text-stone-400 dark:text-gray-400">🔍</div>
-              <input type="text" placeholder="Search by title, author, keywords, department..." className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent" />
+          <div className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
+            <div className="flex flex-1">
+              <div className="flex items-center pl-4 pr-2 text-stone-400 dark:text-gray-400">🔍</div>
+              <input type="text" placeholder="Search by title, author, keywords..." className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base" />
             </div>
-            <button className="bg-[#6b142c] text-white px-8 py-3 md:py-2 rounded md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto">Search</button>
+            <button className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-3 mt-6 text-xs font-sans">
-            <span className="text-stone-300">Popular:</span>
+          <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
+            <span className="text-stone-300 w-full md:w-auto text-center mb-1 md:mb-0">Popular:</span>
             {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
-              <span key={tag} className="px-3 py-1 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm">{tag}</span>
+              <span key={tag} className="px-3 py-1.5 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm whitespace-nowrap">{tag}</span>
             ))}
           </div>
         </div>
@@ -165,13 +165,13 @@ function ArchiveHome() {
       </div>
 
       {/* LATEST RESEARCH */}
-      <div className="px-16 py-16 max-w-7xl mx-auto">
-        <div className="flex justify-between items-end mb-8">
+      <div className="px-4 md:px-16 py-12 md:py-16 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4 md:gap-0">
           <div>
-            <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-1">Recently Approved</p>
-            <h2 className="text-3xl font-bold text-[#3d0c1b]">Latest Research</h2>
+            <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-1 text-center md:text-left">Recently Approved</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#3d0c1b] text-center md:text-left">Latest Research</h2>
           </div>
-          <Link to="/browse" className="px-5 py-2 border border-[#3d0c1b] text-[#3d0c1b] text-sm font-sans rounded hover:bg-[#3d0c1b] hover:text-white transition inline-block">
+          <Link to="/browse" className="px-5 py-2 border border-[#3d0c1b] text-[#3d0c1b] text-sm font-sans rounded hover:bg-[#3d0c1b] hover:text-white transition inline-block text-center mx-auto md:mx-0 w-full md:w-auto">
             View All →
           </Link>
         </div>
