@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
-import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
