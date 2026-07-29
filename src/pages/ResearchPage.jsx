@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../Components/Sidebar';
 import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
 import swuBuilding from '../assets/swu-building.png';

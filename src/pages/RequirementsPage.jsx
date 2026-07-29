@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../Components/Sidebar';
 import { db, auth, storage } from '../firebase/config';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { logActivity } from '../firebase/logActivity';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
-import NotificationBell from '../components/NotificationBell';
-import PortalHeader from '../components/PortalHeader';
+import NotificationBell from '../Components/NotificationBell';
+import PortalHeader from '../Components/PortalHeader';
 
 // Dynamic requirements fetched from DB instead of hardcoded array
 

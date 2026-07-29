@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../Components/Sidebar';
 import { db, auth } from '../firebase/config';
 import { doc, getDoc, updateDoc, collection, addDoc, onSnapshot, getDocs, query, where, arrayUnion } from 'firebase/firestore';
 import { logActivity } from '../firebase/logActivity';
 import Swal from 'sweetalert2';
-import NotificationBell from '../components/NotificationBell';
-import PortalHeader from '../components/PortalHeader';
+import NotificationBell from '../Components/NotificationBell';
+import PortalHeader from '../Components/PortalHeader';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 

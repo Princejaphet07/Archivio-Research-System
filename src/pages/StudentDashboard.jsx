@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../Components/Sidebar';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import NotificationBell from '../components/NotificationBell';
-import PortalHeader from '../components/PortalHeader';
+import NotificationBell from '../Components/NotificationBell';
+import PortalHeader from '../Components/PortalHeader';
 
 // ── Progress step config ─────────────────────────────────────────────────────
 const STEPS = ['Account', 'Manuscript', 'Documents', 'Review', 'Published'];

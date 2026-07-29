@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '../components/Sidebar';
-import NotificationBell from '../components/NotificationBell';
-import PortalHeader from '../components/PortalHeader';
+import Sidebar from '../Components/Sidebar';
+import NotificationBell from '../Components/NotificationBell';
+import PortalHeader from '../Components/PortalHeader';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
