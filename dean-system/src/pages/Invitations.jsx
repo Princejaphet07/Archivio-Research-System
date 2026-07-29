@@ -115,7 +115,8 @@ ARCHIVIO Research Management System`;
       // Generate a simple invitation token to track this specific invitation
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       // Clean link to the Sign Up page — no token exposed in the URL
-      const invitationLink = `http://localhost:5176/signup`;
+      const adviserPortalUrl = import.meta.env.VITE_ADVISER_PORTAL_URL || 'http://localhost:5176';
+      const invitationLink = `${adviserPortalUrl}/signup`;
 
       // Create adviser invitation in Firestore
       const adviserData = {
@@ -138,7 +139,8 @@ ARCHIVIO Research Management System`;
 
       // Call Node.js backend to send email
       try {
-        const emailResponse = await fetch('http://localhost:3001/api/send-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const emailResponse = await fetch(`${backendUrl}/api/send-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -197,7 +199,8 @@ ARCHIVIO Research Management System`;
 
       // Resend email
       try {
-        await fetch('http://localhost:3001/api/send-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        await fetch(`${backendUrl}/api/send-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

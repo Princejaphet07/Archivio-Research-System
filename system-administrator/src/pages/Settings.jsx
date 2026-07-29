@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import DepartmentsProgramsTab from './DepartmentsPrograms';
 import { db } from '../firebase/config';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, getDocs, collection } from 'firebase/firestore';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('system');
@@ -50,6 +50,30 @@ export default function Settings() {
 
   const handleStorageCheck = (key) => {
     setStorageFiles(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleBackupData = async () => {
+    try {
+      const collectionsToBackup = ['deans', 'advisers', 'students', 'groups', 'submissions', 'activity_logs', 'settings'];
+      const backupData = {};
+      
+      for (const colName of collectionsToBackup) {
+        const snap = await getDocs(collection(db, colName));
+        backupData[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `archivio_system_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error("Backup failed:", error);
+      alert("Failed to backup system data.");
+    }
   };
 
   // Content Renderers
@@ -125,6 +149,15 @@ export default function Settings() {
             ⚠️ Only the System Administrator can perform these operations. All actions are logged.
           </div>
           <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200">
+              <div>
+                <h5 className="text-sm font-bold text-stone-900">Back Up System Data</h5>
+                <p className="text-xs text-stone-500 mt-1 max-w-md">Downloads a complete JSON backup of all users, submissions, and configurations. Safe to perform anytime.</p>
+              </div>
+              <button onClick={handleBackupData} className="flex items-center gap-2 px-4 py-2 bg-[#801e38] text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:bg-[#601328] shrink-0">
+                💾 Download Full Backup
+              </button>
+            </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200">
               <div>
                 <h5 className="text-sm font-bold text-stone-900">Reset Data</h5>

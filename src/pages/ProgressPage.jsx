@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);

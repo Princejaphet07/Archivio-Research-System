@@ -138,7 +138,8 @@ export default function UserManagement() {
         // Delete Firebase Auth account via backend
         if (userDoc.uid) {
           try {
-            await fetch('http://localhost:3001/api/delete-auth-user', {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            await fetch(`${backendUrl}/api/delete-auth-user`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ uid: userDoc.uid, email: userDoc.email })
@@ -213,7 +214,7 @@ export default function UserManagement() {
       
       // === SUPER ADMIN FLOW ===
       if (formData.role === 'super-admin') {
-        const saPortalLink = `http://localhost:5173`;
+        const saPortalLink = import.meta.env.VITE_SA_PORTAL_URL || window.location.origin;
         
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, formData.email.toLowerCase().trim(), temporaryPassword);
@@ -252,7 +253,8 @@ export default function UserManagement() {
 
           // Send invitation email to SA portal
           try {
-            await fetch('http://localhost:3001/api/send-super-admin-invitation-email', {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            await fetch(`${backendUrl}/api/send-super-admin-invitation-email`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -294,7 +296,8 @@ export default function UserManagement() {
       }
       // === END SUPER ADMIN FLOW ===
 
-      const invitationLink = `http://localhost:5174/login`;
+      const deanPortalUrl = import.meta.env.VITE_DEAN_PORTAL_URL || 'http://localhost:5174';
+      const invitationLink = `${deanPortalUrl}/login`;
       
       // Create Firebase Auth account with temporary password FIRST
       try {
@@ -413,7 +416,8 @@ export default function UserManagement() {
 
       // Call email service to send dean invitation
       try {
-        const emailResponse = await fetch('http://localhost:3001/api/send-dean-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const emailResponse = await fetch(`${backendUrl}/api/send-dean-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -491,7 +495,8 @@ Please login with these credentials at the link below, and you'll be prompted to
       // Get the invitation link from the dean document
       const deanSnap = await getDocs(query(collection(db, 'deans'), where('email', '==', deanEmail)));
       const deanData = deanSnap.docs[0]?.data();
-      const invitationLink = deanData?.invitationLink || `http://localhost:5173/dean-activate?token=${Math.random().toString(36).substring(2, 15)}`;
+      const deanPortalUrl = import.meta.env.VITE_DEAN_PORTAL_URL || 'http://localhost:5174';
+      const invitationLink = deanData?.invitationLink || `${deanPortalUrl}/login`;
       
       await updateDoc(deanRef, {
         invitationDate: new Date().toISOString(),
@@ -500,7 +505,8 @@ Please login with these credentials at the link below, and you'll be prompted to
 
       // Call email service to resend email
       try {
-        await fetch('http://localhost:3001/api/send-dean-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        await fetch(`${backendUrl}/api/send-dean-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

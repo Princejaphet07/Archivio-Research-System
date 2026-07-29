@@ -5,7 +5,8 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
   const { userRole } = useAdviser();
 
   const handleSwitchToDean = () => {
-    window.location.href = 'http://localhost:5174';
+    const deanPortalUrl = import.meta.env.VITE_DEAN_PORTAL_URL || 'http://localhost:5174';
+    window.location.href = deanPortalUrl;
   };
   return (
     <header className="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10 w-full">

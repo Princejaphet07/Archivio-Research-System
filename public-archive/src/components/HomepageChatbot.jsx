@@ -153,8 +153,8 @@ export default function HomepageChatbot() {
         You can help them navigate the platform, but you must also be ready to answer ANY question they have—whether it's about academic research, brainstorming ideas, coding, general knowledge, or anything else they need.
         Be incredibly helpful, friendly, and professional. There are no strict limits to what you can answer.
       `;
-
-      const response = await fetch('http://localhost:3001/api/ai/chat', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

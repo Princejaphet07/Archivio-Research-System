@@ -276,7 +276,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       // Attempt to delete from Cloudinary backend
       if (fileUrl && fileUrl.includes('cloudinary.com')) {
         try {
-          await fetch('http://localhost:3001/api/delete-cloudinary', {
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+          await fetch(`${backendUrl}/api/delete-cloudinary`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileUrl })

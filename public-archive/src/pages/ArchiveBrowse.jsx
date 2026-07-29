@@ -44,12 +44,12 @@ function ArchiveBrowse() {
 
     const computeData = () => {
       if (!subsList.length) {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 800);
         return;
       }
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
         return {
           ...sub,
           researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
@@ -63,7 +63,7 @@ function ArchiveBrowse() {
       });
 
       setPublishedPapers(enrichedPapers);
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
     };
 
     const unsubSubs = onSnapshot(qSubs, (snapshot) => {
@@ -180,9 +180,28 @@ function ArchiveBrowse() {
           <div className="space-y-6">
             
             {loading ? (
-              <div className="py-20 flex flex-col items-center justify-center">
-                <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Archives...</p>
+              <div className="space-y-6">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-6 sm:p-8 border-l-4 border-l-gray-200 dark:border-l-gray-600 animate-pulse">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                    </div>
+                    <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-3"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
+                    <div className="space-y-2 mb-8">
+                      <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded w-full"></div>
+                      <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded w-5/6"></div>
+                    </div>
+                    <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-50 dark:border-gray-700">
+                      <div className="flex gap-4">
+                        <div className="h-5 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-5 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      </div>
+                      <div className="h-10 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredPapers.length === 0 ? (
               <div className="py-20 text-center text-stone-500 dark:text-gray-400">
@@ -227,11 +246,19 @@ function ArchiveBrowse() {
                     <div className="flex gap-4 text-xs font-medium text-stone-500 dark:text-gray-400">
                       <span 
                         onClick={(e) => handleLike(e, paper)} 
-                        className="flex items-center gap-1.5 text-red-700 cursor-pointer transition-transform"
+                        className="flex items-center gap-1.5 text-stone-500 hover:text-rose-500 cursor-pointer transition-transform"
                       >
-                        {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'} {paper.likes?.length || 0}
+                        {paper.likes?.includes(currentUser?.uid) ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+                        )}
+                        {paper.likes?.length || 0}
                       </span>
-                      <span className="flex items-center gap-1.5 cursor-default"><span className="text-stone-400 dark:text-gray-500">👁</span> {paper.views || 0}</span>
+                      <span className="flex items-center gap-1.5 cursor-default">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-stone-400 dark:text-gray-500"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                        {paper.views || 0}
+                      </span>
                       <span className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
                     </div>
                     <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">

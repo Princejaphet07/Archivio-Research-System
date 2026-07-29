@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { logActivity } from '../firebase/logActivity';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const [submissions, setSubmissions] = useState([]);
@@ -100,6 +101,15 @@ export default function PublishQueue({ activePage, onNavigate }) {
           reviewStatus: 'published',
           publishedAt: new Date().toISOString()
         });
+        
+        await logActivity({
+          user: auth.currentUser?.email || 'Dean',
+          role: 'Dean',
+          action: 'Published research to public archive',
+          details: `Title: ${title}`,
+          status: 'Success'
+        });
+
         Swal.fire({ icon: 'success', title: 'Published!', text: 'The research is now live.', confirmButtonColor: '#c9a227' });
       } catch (err) {
         console.error(err);
@@ -130,6 +140,15 @@ export default function PublishQueue({ activePage, onNavigate }) {
           })
         );
         await Promise.all(publishPromises);
+        
+        await logActivity({
+          user: auth.currentUser?.email || 'Dean',
+          role: 'Dean',
+          action: 'Bulk published research to public archive',
+          details: `Published ${eligibleCount} researches`,
+          status: 'Success'
+        });
+
         Swal.fire({ icon: 'success', title: 'Published!', text: `Successfully published ${eligibleCount} researches.`, confirmButtonColor: '#c9a227' });
       } catch (err) {
         console.error(err);

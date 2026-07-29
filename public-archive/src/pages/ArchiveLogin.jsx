@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { auth } from '../firebase/config';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth, db } from '../firebase/config';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
 import edge from '../assets/edge.png'; 
@@ -9,9 +10,18 @@ import bg from '../assets/parchment.png';
 
 function ArchiveLogin() {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,10 +29,58 @@ function ArchiveLogin() {
   // Where to redirect after login (e.g., if they tried to view a paper first)
   const from = location.state?.from?.pathname || '/';
 
+  useEffect(() => {
+    const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
+    const qGroups = query(collection(db, 'groups'));
+
+    let subsList = [];
+    let groupsList = [];
+
+    const computeStats = () => {
+      if (!subsList.length) return;
+
+      const uniqueAuthors = new Set();
+      const uniquePrograms = new Set();
+
+      subsList.forEach(sub => {
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        if (sub.studentUid) uniqueAuthors.add(sub.studentUid);
+        const program = group?.program || sub.program;
+        if (program) uniquePrograms.add(program);
+      });
+
+      setStats({
+        papers: subsList.length,
+        authors: uniqueAuthors.size,
+        programs: uniquePrograms.size || 0
+      });
+    };
+
+    const unsubSubs = onSnapshot(qSubs, (snapshot) => {
+      subsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeStats();
+    });
+
+    const unsubGroups = onSnapshot(qGroups, (snapshot) => {
+      groupsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      computeStats();
+    });
+
+    return () => {
+      unsubSubs();
+      unsubGroups();
+    };
+  }, []);
+
   const handleEmailAuth = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      Swal.fire({ icon: 'warning', title: 'Missing Fields', text: 'Please enter both email and password.' });
+    if (!email || !password || (!isLogin && (!name || !confirmPassword))) {
+      Swal.fire({ icon: 'warning', title: 'Missing Fields', text: 'Please fill in all required fields.' });
+      return;
+    }
+    
+    if (!isLogin && password !== confirmPassword) {
+      Swal.fire({ icon: 'warning', title: 'Passwords Mismatch', text: 'Your passwords do not match. Please try again.' });
       return;
     }
     
@@ -32,7 +90,8 @@ function ArchiveLogin() {
         await signInWithEmailAndPassword(auth, email, password);
         Swal.fire({ icon: 'success', title: 'Welcome Back!', timer: 1500, showConfirmButton: false });
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name });
         Swal.fire({ icon: 'success', title: 'Account Created!', text: 'Welcome to Archivio.', timer: 1500, showConfirmButton: false });
       }
       navigate(from, { replace: true });
@@ -44,6 +103,28 @@ function ArchiveLogin() {
       Swal.fire({ icon: 'error', title: 'Oops...', text: msg });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      Swal.fire({ icon: 'warning', title: 'Missing Email', text: 'Please enter your email address.' });
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, forgotEmail);
+      Swal.fire({ icon: 'success', title: 'Email Sent!', text: 'Check your inbox for the password reset link.' });
+      setShowForgotModal(false);
+      setForgotEmail('');
+    } catch (error) {
+      console.error(error);
+      let msg = 'Failed to send reset email.';
+      if (error.code === 'auth/user-not-found') msg = 'No account found with this email address.';
+      Swal.fire({ icon: 'error', title: 'Oops...', text: msg });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -84,15 +165,15 @@ function ArchiveLogin() {
 
         <div className="grid grid-cols-3 gap-4 bg-black/20 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center relative z-30">
           <div>
-            <p className="text-lg font-bold text-amber-200">1,248</p>
+            <p className="text-lg font-bold text-amber-200">{stats.papers}</p>
             <p className="text-[10px] uppercase tracking-wider text-stone-400 mt-1">Papers</p>
           </div>
           <div className="border-x border-white/10">
-            <p className="text-lg font-bold text-amber-200">342</p>
+            <p className="text-lg font-bold text-amber-200">{stats.authors}</p>
             <p className="text-[10px] uppercase tracking-wider text-stone-400 mt-1">Authors</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-amber-200">27</p>
+            <p className="text-lg font-bold text-amber-200">{stats.programs}</p>
             <p className="text-[10px] uppercase tracking-wider text-stone-400 mt-1">Program</p>
           </div>
         </div>
@@ -100,7 +181,7 @@ function ArchiveLogin() {
 
       {/* RIGHT SIDE: Welcome Panel */}
       <div 
-        className="w-full md:w-[55%] flex items-center justify-center p-8 relative z-10 transition-colors"
+        className="w-full md:w-[55%] flex items-center justify-center p-4 md:p-8 relative z-10 transition-colors h-screen overflow-y-auto"
         style={{
           backgroundImage: `url(${bg})`,
           backgroundSize: 'cover',
@@ -108,15 +189,28 @@ function ArchiveLogin() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors">
-          <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-8 md:p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors my-auto">
+          <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1 mt-6 md:mt-0">
             {isLogin ? 'Welcome Back' : 'Create an Account'}
           </h3>
           <p className="text-xs text-stone-500 dark:text-gray-400 text-center mb-6">
             {isLogin ? 'Sign in to access restricted papers and your reading list.' : 'Sign up to read restricted full texts and bookmark your favorites.'}
           </p>
 
-          <form onSubmit={handleEmailAuth} className="w-full space-y-4 mb-4 font-sans">
+          <form onSubmit={handleEmailAuth} className="w-full space-y-5 mb-4 font-sans mt-2">
+            {!isLogin && (
+              <div>
+                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Full Name</label>
+                <input 
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required={!isLogin}
+                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
+                  placeholder="Juan Dela Cruz"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Email Address</label>
               <input 
@@ -130,19 +224,71 @@ function ArchiveLogin() {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Password</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors pr-10"
+                  placeholder="••••••••"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  )}
+                </button>
+              </div>
+              {isLogin && (
+                <div className="flex justify-end mt-1">
+                  <button type="button" onClick={() => setShowForgotModal(true)} className="text-[10px] text-[#5a1528] hover:underline font-bold cursor-pointer">Forgot Password?</button>
+                </div>
+              )}
             </div>
+            {!isLogin && (
+              <div>
+                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Confirm Password</label>
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required={!isLogin}
+                    className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors pr-10"
+                    placeholder="••••••••"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!isLogin && (
+              <div className="flex items-start gap-3 mt-2 mb-2">
+                <input 
+                  type="checkbox" 
+                  id="terms"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 cursor-pointer w-4 h-4 accent-[#3d0c1b]"
+                />
+                <label htmlFor="terms" className="text-xs text-stone-500 dark:text-gray-400 leading-snug">
+                  I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-[#3d0c1b] dark:text-[#d6ad60] font-bold hover:underline cursor-pointer">Terms and Conditions</button> and acknowledge the Privacy Policy.
+                </label>
+              </div>
+            )}
+
             <button 
               type="submit" 
-              disabled={loading}
-              className={`w-full py-3 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#3f081b] cursor-pointer'}`}
+              disabled={loading || (!isLogin && !agreedToTerms)}
+              className={`w-full py-3 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors ${loading || (!isLogin && !agreedToTerms) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#3f081b] cursor-pointer'}`}
             >
               {loading ? 'Authenticating...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </button>
@@ -183,6 +329,73 @@ function ArchiveLogin() {
           </div>
         </div>
       </div>
+
+      {/* TERMS MODAL */}
+      {showTermsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#fdfbf7] dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-fadeIn">
+            <div className="flex justify-between items-center p-6 border-b border-stone-200 dark:border-gray-700">
+              <h2 className="text-2xl font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Terms and Conditions</h2>
+              <button onClick={() => setShowTermsModal(false)} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto font-sans text-sm text-stone-700 dark:text-gray-300 space-y-4">
+              <p>Welcome to <strong>ARCHIVIO</strong>, the Research Archive Management System for SWU PHINMA.</p>
+              
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">1. Acceptance of Terms</h3>
+              <p>By creating an account, you agree to abide by these Terms and Conditions. This system is strictly for academic and research purposes.</p>
+              
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">2. Intellectual Property & Plagiarism</h3>
+              <p>All research papers, theses, and capstone projects hosted on ARCHIVIO are the intellectual property of their respective student authors and SWU PHINMA. Users are strictly prohibited from copying, plagiarizing, distributing, or selling any materials found within this archive. The system disables copying and downloading to enforce academic integrity.</p>
+
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">3. User Conduct</h3>
+              <p>You agree to use the platform respectfully. Any unauthorized attempts to scrape data, bypass security measures, or misrepresent your identity will result in immediate account termination.</p>
+
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">4. Privacy Data</h3>
+              <p>Your email and name are collected solely for authentication and personalizing your experience (such as your personal reading list). We do not share this data with third-party advertisers.</p>
+            </div>
+            <div className="p-6 border-t border-stone-200 dark:border-gray-700 flex justify-end">
+              <button onClick={() => setShowTermsModal(false)} className="px-6 py-2 bg-[#3d0c1b] text-white rounded font-bold hover:bg-[#24050f] transition">
+                I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FORGOT PASSWORD MODAL */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#fdfbf7] dark:bg-gray-800 w-full max-w-sm rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-stone-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Reset Password</h2>
+              <button onClick={() => setShowForgotModal(false)} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+            </div>
+            <form onSubmit={handlePasswordReset} className="p-6 font-sans">
+              <p className="text-sm text-stone-600 dark:text-gray-400 mb-4">
+                Enter your email address and we will send you a link to reset your password.
+              </p>
+              <div className="mb-6">
+                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Email Address</label>
+                <input 
+                  type="email" 
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
+                  placeholder="juan@swu.phinma.edu.ph"
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={resetLoading}
+                className={`w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors ${resetLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#3f081b] cursor-pointer'}`}
+              >
+                {resetLoading ? 'Sending...' : 'Send Reset Link'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

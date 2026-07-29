@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
-import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
@@ -23,6 +23,22 @@ function ArchivePaperViewer() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // Bookmark State
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
+  useEffect(() => {
+    let unsubBookmark = () => {};
+    if (currentUser && paper) {
+      unsubBookmark = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsBookmarked(data.bookmarks?.includes(paper.id) || false);
+        }
+      });
+    }
+    return () => unsubBookmark();
+  }, [currentUser, paper]);
 
   useEffect(() => {
     // Anti-Screenshot & Print Protections
@@ -90,7 +106,7 @@ function ArchivePaperViewer() {
                 : subData.studentName || subData.groupName || 'Unknown Author',
               program: groupData?.program || subData.program
             });
-            setLoading(false);
+            setTimeout(() => setLoading(false), 800);
           });
         } else {
           setPaper({
@@ -99,23 +115,31 @@ function ArchivePaperViewer() {
             authorDisplay: subData.studentName || subData.groupName || 'Unknown Author',
             program: subData.program
           });
-          setLoading(false);
+          setTimeout(() => setLoading(false), 800);
         }
       } else {
         console.error("Paper not found");
         setError("Paper not found");
-        setLoading(false);
+        setTimeout(() => setLoading(false), 800);
       }
     }, (err) => {
       console.error('Error fetching paper:', err);
       setError(err.message);
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
     });
 
     return () => {
       unsubSub();
       unsubGroup();
     };
+  }, [id]);
+
+  // Increment view count when paper viewer opens
+  useEffect(() => {
+    if (id) {
+      const docRef = doc(db, 'submissions', id);
+      updateDoc(docRef, { views: increment(1) }).catch(err => console.error("Failed to increment views:", err));
+    }
   }, [id]);
 
   // Initialize Chat when paper loads
@@ -147,8 +171,8 @@ function ArchivePaperViewer() {
 
         Answer the user's questions based primarily on this paper's metadata and the attached full manuscript PDF. Be helpful, concise, and academic.
       `;
-
-      const response = await fetch('http://localhost:3001/api/ai/chat', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -213,6 +237,36 @@ function ArchivePaperViewer() {
     }
   };
 
+  const handleBookmarkToggle = async () => {
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'Please log in to save papers to your bookmarks.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#7a2039'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = '/login';
+        }
+      });
+      return;
+    }
+    
+    const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
+    try {
+      if (isBookmarked) {
+        await setDoc(bookmarkRef, { bookmarks: arrayRemove(paper.id) }, { merge: true });
+      } else {
+        await setDoc(bookmarkRef, { bookmarks: arrayUnion(paper.id) }, { merge: true });
+      }
+    } catch (err) {
+      console.error('Bookmark error:', err);
+      Swal.fire('Error', 'Failed to update bookmarks', 'error');
+    }
+  };
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
     if (!isFullscreen) setIsAiOpen(false);
@@ -220,9 +274,58 @@ function ArchivePaperViewer() {
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#e5e5e5] dark:bg-gray-900 transition-colors">
-        <div className="w-12 h-12 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-4"></div>
-        <p className="text-sm font-bold text-[#7a1f3d] dark:text-[#f3e5ab] tracking-widest uppercase">Loading Document...</p>
+      <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden animate-pulse">
+        {/* Header Skeleton */}
+        <header className="bg-[#5a1528] px-6 py-4 flex justify-between items-center z-20 h-[60px]">
+          <div className="h-6 w-32 bg-white/20 rounded"></div>
+          <div className="flex gap-4">
+            <div className="h-6 w-16 bg-white/20 rounded hidden sm:block"></div>
+            <div className="h-8 w-8 bg-white/20 rounded-full"></div>
+          </div>
+        </header>
+        
+        {/* Main Workspace Skeleton */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar Skeleton */}
+          <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10">
+            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+            <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
+            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+          </div>
+
+          {/* Table of Contents Panel Skeleton */}
+          <div className="w-64 lg:w-72 bg-[#fdfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 p-4 flex flex-col hidden md:flex z-10">
+            <div className="h-5 w-24 bg-stone-200 dark:bg-gray-700 rounded mb-6"></div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>)}
+            </div>
+          </div>
+
+          {/* Document Content Skeleton */}
+          <div className="flex-1 p-2 md:p-8 flex justify-center bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden">
+            <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-8 md:p-12 lg:p-20 flex flex-col h-full rounded-sm">
+              <div className="h-10 w-3/4 bg-stone-200 dark:bg-gray-700 rounded mb-6 mx-auto"></div>
+              <div className="h-4 w-1/2 bg-stone-100 dark:bg-gray-700 rounded mb-12 mx-auto"></div>
+              <div className="space-y-4 mb-8">
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-5/6 bg-stone-100 dark:bg-gray-700 rounded"></div>
+              </div>
+              <div className="space-y-4 mb-8">
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-4/5 bg-stone-100 dark:bg-gray-700 rounded"></div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-3/4 bg-stone-100 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -294,17 +397,30 @@ function ArchivePaperViewer() {
           <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
           
           <button onClick={toggleFullscreen} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Fullscreen">⛶</button>
-          <button className="w-10 h-10 flex items-center justify-center rounded text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700 transition cursor-pointer" title="Bookmark">🔖</button>
+          <button 
+            onClick={handleBookmarkToggle}
+            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`} 
+            title={isBookmarked ? "Remove Bookmark" : "Bookmark"}
+          >
+            {isBookmarked ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>}
+          </button>
           <div className="flex flex-col items-center gap-1 mt-2">
             <button 
               onClick={handleLike}
               className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600' : 'text-stone-500 dark:text-gray-400'}`} 
               title={paper.likes?.includes(currentUser?.uid) ? "Unlike" : "Like"}
             >
-              {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'}
+              {paper.likes?.includes(currentUser?.uid) ? (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              )}
             </button>
             <span className="text-[10px] font-bold text-stone-500 dark:text-gray-400">{paper.likes?.length || 0}</span>
-            <span className="text-[10px] font-bold text-stone-500 dark:text-gray-400 mt-2" title="Views">👁️ {paper.views || 0}</span>
+            <span className="flex items-center gap-1 text-[11px] font-bold text-stone-500 dark:text-gray-400 mt-2" title="Views">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+              {paper.views || 0}
+            </span>
           </div>
           
           <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Cite">❞</button>

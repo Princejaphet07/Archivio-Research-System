@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { logActivity } from '../firebase/logActivity';
 
 function ReviewSubmissions() {
   const [submissions, setSubmissions] = useState([]);
@@ -150,13 +151,12 @@ function ReviewSubmissions() {
           reviewedBy: auth.currentUser?.email,
         });
 
-        await addDoc(collection(db, 'systemLogs'), {
+        await logActivity({
           user: auth.currentUser?.email || 'Adviser',
           role: 'Research Adviser',
           action: 'Approved submission',
           details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
-          status: 'Success',
-          timestamp: new Date().toISOString()
+          status: 'Success'
         });
 
         if (sub.studentUid) {

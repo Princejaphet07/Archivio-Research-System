@@ -19,7 +19,8 @@ export default function Header({ activePage, onMenuClick }) {
   const handleSwitchToAdviser = () => {
     // Navigate to Adviser portal (running on port 5175)
     // Firebase auth session will carry over automatically since it's on localhost
-    window.location.href = 'http://localhost:5175';
+    const archiveUrl = import.meta.env.VITE_ARCHIVE_URL || 'http://localhost:5175';
+    window.location.href = archiveUrl;
   };
 
   return (

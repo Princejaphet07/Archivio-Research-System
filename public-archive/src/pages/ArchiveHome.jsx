@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     papers: 0,
     authors: 0,
@@ -51,7 +52,7 @@ function ArchiveHome() {
       if (!subsList.length) return;
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
         return {
           ...sub,
           researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
@@ -66,6 +67,8 @@ function ArchiveHome() {
 
       // Sort newest first client-side
       const sortedPapers = enrichedPapers.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedPapers(sortedPapers);
+
       setPublishedPapers(sortedPapers);
 
       // Compute stats
@@ -85,6 +88,7 @@ function ArchiveHome() {
         departments: uniqueDepartments.size || 1, // Fallback to at least 1 if program missing
         advisers: uniqueAdvisers.size
       });
+      setTimeout(() => setLoading(false), 800);
     };
 
     const unsubSubs = onSnapshot(qSubs, (snapshot) => {
@@ -103,13 +107,20 @@ function ArchiveHome() {
     };
   }, []);
 
-  const categories = [
-    { name: "Web Development", papers: "12 papers" },
-    { name: "Health & Wellness", papers: "8 papers" },
-    { name: "Artificial Intelligence", papers: "5 papers" },
-    { name: "Information Technology", papers: "14 papers" },
-    { name: "Business", papers: "9 papers" },
-  ];
+  const categories = React.useMemo(() => {
+    if (!publishedPapers.length) return [];
+    
+    const counts = {};
+    publishedPapers.forEach(p => {
+      const cat = p.category || p.program || 'Uncategorized';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      papers: `${count} paper${count === 1 ? '' : 's'}`
+    })).sort((a, b) => b.papers.split(' ')[0] - a.papers.split(' ')[0]);
+  }, [publishedPapers]);
 
   return (
     <div className="font-serif min-h-screen bg-[#faf7f0] dark:bg-gray-900 transition-colors">
@@ -164,7 +175,26 @@ function ArchiveHome() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-          {publishedPapers.slice(0, 3).map((paper, idx) => (
+          {loading ? (
+            [1, 2, 3].map(n => (
+              <div key={n} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between animate-pulse h-64">
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="h-5 w-24 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
+                    <div className="h-4 w-10 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
+                  </div>
+                  <div className="h-6 w-3/4 bg-stone-300 dark:bg-gray-600 rounded mb-2"></div>
+                  <div className="h-6 w-1/2 bg-stone-300 dark:bg-gray-600 rounded mb-4"></div>
+                  <div className="h-3 w-1/3 bg-[#e5d4a6] dark:bg-gray-700 rounded mb-4"></div>
+                </div>
+                <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#e5d4a6]/30 dark:border-gray-700">
+                  <div className="h-5 w-16 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
+                  <div className="h-8 w-24 bg-stone-300 dark:bg-gray-600 rounded"></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            publishedPapers.slice(0, 3).map((paper, idx) => (
             <div key={paper.id} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between transition-colors">
               <div>
                 <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
@@ -190,21 +220,29 @@ function ArchiveHome() {
                 <div className="text-xs text-stone-500 flex gap-3 font-medium">
                   <span 
                     onClick={(e) => handleLike(e, paper)} 
-                    className="text-red-700 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
+                    className="text-stone-500 hover:text-rose-500 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
                     title="Like this paper"
                   >
-                    {paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'} {paper.likes?.length || 0}
+                    {paper.likes?.includes(currentUser?.uid) ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+                    )}
+                    {paper.likes?.length || 0}
                   </span> 
-                  <span className="flex items-center gap-1" title="Views">👁️ {paper.views || 0}</span>
+                  <span className="flex items-center gap-1" title="Views">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                    {paper.views || 0}
+                  </span>
                 </div>
                 <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
                   View Paper
                 </Link>
               </div>
             </div>
-          ))}
-
-          {publishedPapers.length === 0 && (
+            ))
+          )}
+          {!loading && publishedPapers.length === 0 && (
             <div className="col-span-3 text-center py-12 text-stone-500">
               No published research available yet.
             </div>

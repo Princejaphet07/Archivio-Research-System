@@ -73,7 +73,8 @@ function SendInvitations() {
       // Generate invitation token (kept for Firestore tracking)
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       // Clean link to the Sign Up page — no token in the URL
-      const invitationLink = `http://localhost:5175/signup`;
+      const studentPortalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL || 'http://localhost:5175';
+      const invitationLink = `${studentPortalUrl}/signup`;
 
       // Create student invitation in Firestore
       const invitationData = {
@@ -92,7 +93,8 @@ function SendInvitations() {
 
       // Call email service to send invitation
       try {
-        const emailResponse = await fetch('http://localhost:3001/api/send-student-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const emailResponse = await fetch(`${backendUrl}/api/send-student-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,14 +145,16 @@ function SendInvitations() {
 
       // Resend email
       try {
-        await fetch('http://localhost:3001/api/send-student-invitation-email', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const studentPortalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL || 'http://localhost:5175';
+        await fetch(`${backendUrl}/api/send-student-invitation-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             to: studentEmail,
-            invitationLink: invitation.invitationLink || `http://localhost:5175/signup`,
+            invitationLink: invitation.invitationLink || `${studentPortalUrl}/signup`,
             senderName: adviserData.displayName,
             senderDepartment: adviserData.department,
             message: `You have been invited to join ARCHIVIO Research Management System as a student researcher.`
