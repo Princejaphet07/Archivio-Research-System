@@ -65,8 +65,7 @@ function Header() {
         )}
       </div>
 
-        </svg>
-      </button>
+
 
       {/* MOBILE ACTIONS HEADER (Dark mode + hamburger) */}
       <div className="flex md:hidden items-center space-x-2">

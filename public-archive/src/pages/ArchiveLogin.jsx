@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase/config';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -22,6 +23,7 @@ function ArchiveLogin() {
   const [resetLoading, setResetLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
+  const { isDarkMode, toggleTheme } = useTheme();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -143,27 +145,42 @@ function ArchiveLogin() {
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden font-serif">
       
+      {/* THEME TOGGLE (Absolute Top Right) */}
+      <button 
+        onClick={toggleTheme} 
+        className="absolute top-4 right-4 z-[60] p-2.5 bg-black/20 md:bg-white/10 dark:bg-black/40 text-amber-100 hover:bg-black/40 transition rounded-full backdrop-blur-sm border border-white/10 shadow-lg"
+        title="Toggle Dark Mode"
+      >
+        {isDarkMode ? '☀️' : '🌙'}
+      </button>
+
       {/* LEFT SIDE: Maroon Panel */}
-      <div className="w-full md:w-[45%] bg-[#24050f] text-white flex flex-col justify-between p-12 relative z-20">
+      <div className="w-full md:w-[45%] h-[25vh] md:h-full bg-[#24050f] text-white flex flex-col justify-center md:justify-between p-6 md:p-12 relative z-20 shadow-xl md:shadow-none">
         
         <img 
           src={edge} 
           alt="Torn Edge" 
-          className="absolute top-0 right-0 h-full w-10 md:w-14 translate-x-1/2 pointer-events-none z-50 object-cover"
+          className="hidden md:block absolute top-0 right-0 h-full w-14 translate-x-1/2 pointer-events-none z-50 object-cover"
         />
 
-        <div className="flex flex-col items-center text-center my-auto space-y-6 relative z-30">
-          <div className="bg-white/5 p-2 rounded-full mb-2">
-            <img src={logo} alt="Archivio Logo" className="w-28 h-28 object-contain drop-shadow-lg" />
+        <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-6 relative z-30">
+          <div className="bg-white/5 p-2 rounded-full mb-1 md:mb-2 hidden md:block">
+            <img src={logo} alt="Archivio Logo" className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-lg" />
           </div>
-          <h1 className="text-5xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
-          <h2 className="text-sm font-medium tracking-wide text-amber-200/80 italic">Research Archive Management System</h2>
-          <p className="text-xs text-stone-300 max-w-sm leading-relaxed">
+          {/* Mobile Logo row */}
+          <div className="md:hidden flex items-center gap-3">
+            <img src={logo} alt="Archivio Logo" className="w-10 h-10 object-contain drop-shadow-lg" />
+            <h1 className="text-4xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
+          </div>
+          
+          <h1 className="hidden md:block text-5xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
+          <h2 className="text-xs md:text-sm font-medium tracking-wide text-amber-200/80 italic">Research Archive Management System</h2>
+          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-4">
             Access thousands of approved academic papers, theses, and capstone projects from SWU PHINMA students and faculty.
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 bg-black/20 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center relative z-30">
+        <div className="hidden md:grid grid-cols-3 gap-4 bg-black/20 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center relative z-30">
           <div>
             <p className="text-lg font-bold text-amber-200">{stats.papers}</p>
             <p className="text-[10px] uppercase tracking-wider text-stone-400 mt-1">Papers</p>
@@ -181,7 +198,7 @@ function ArchiveLogin() {
 
       {/* RIGHT SIDE: Welcome Panel */}
       <div 
-        className="w-full md:w-[55%] flex items-center justify-center p-4 md:p-8 relative z-10 transition-colors h-screen overflow-y-auto"
+        className="w-full md:w-[55%] h-[75vh] md:h-full flex items-center justify-center p-4 md:p-8 relative z-10 transition-colors overflow-y-auto"
         style={{
           backgroundImage: `url(${bg})`,
           backgroundSize: 'cover',
@@ -189,7 +206,7 @@ function ArchiveLogin() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-8 md:p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors my-auto">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-6 md:p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors my-auto md:my-auto pb-8 md:pb-10">
           <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1 mt-6 md:mt-0">
             {isLogin ? 'Welcome Back' : 'Create an Account'}
           </h3>
