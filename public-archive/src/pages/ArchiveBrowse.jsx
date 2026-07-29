@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { db } from '../firebase/config';
@@ -9,7 +9,8 @@ import Swal from 'sweetalert2';
 
 function ArchiveBrowse() {
   const [publishedPapers, setPublishedPapers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
   const [sortOption, setSortOption] = useState('Newest First');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);

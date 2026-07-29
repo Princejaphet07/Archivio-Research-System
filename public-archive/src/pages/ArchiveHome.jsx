@@ -11,6 +11,19 @@ import Swal from 'sweetalert2';
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      navigate('/browse', { state: { q: searchInput.trim() } });
+    }
+  };
+
+  const handleTagClick = (tag) => {
+    navigate('/browse', { state: { q: tag } });
+  };
   const [stats, setStats] = useState({
     papers: 0,
     authors: 0,
@@ -140,17 +153,23 @@ function ArchiveHome() {
           <p className="text-xs md:text-sm text-stone-200 max-w-2xl mx-auto font-sans leading-relaxed mt-4 drop-shadow-md px-4">
             Discover peer-reviewed research, theses, and academic manuscripts from SWU PHINMA students and faculty.
           </p>
-          <div className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
             <div className="flex flex-1">
               <div className="flex items-center pl-4 pr-2 text-stone-400 dark:text-gray-400">🔍</div>
-              <input type="text" placeholder="Search by title, author, keywords..." className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base" />
+              <input 
+                type="text" 
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search by title, author, keywords..." 
+                className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base" 
+              />
             </div>
-            <button className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
-          </div>
+            <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
+          </form>
           <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
             <span className="text-stone-300 w-full md:w-auto text-center mb-1 md:mb-0">Popular:</span>
             {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
-              <span key={tag} className="px-3 py-1.5 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm whitespace-nowrap">{tag}</span>
+              <span key={tag} onClick={() => handleTagClick(tag)} className="px-3 py-1.5 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm whitespace-nowrap">{tag}</span>
             ))}
           </div>
         </div>
