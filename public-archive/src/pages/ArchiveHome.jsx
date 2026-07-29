@@ -53,9 +53,11 @@ function ArchiveHome() {
 
       const enrichedPapers = subsList.map(sub => {
         const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        const manuscriptName = sub.documents?.['Final Manuscript']?.name?.replace('.pdf', '');
+
         return {
           ...sub,
-          researchTitle: group?.researchTitle || sub.researchTitle || sub.title,
+          researchTitle: group?.researchTitle || sub.researchTitle || sub.title || manuscriptName,
           groupName: group?.groupName || sub.groupName,
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
