@@ -140,7 +140,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
           </div>
 
           {/* User Profile */}
-          <div className="border border-[#E8DFCB] rounded-2xl p-3 flex items-center gap-3 bg-transparent cursor-pointer hover:bg-black/5 transition-colors" onClick={onLogout}>
+          <div className="border border-[#E8DFCB] rounded-2xl p-3 flex items-center gap-3 bg-transparent">
             <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-[14px] shrink-0 shadow-sm overflow-hidden">
               {profilePhotoUrl ? (
                 <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
@@ -152,6 +152,13 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
               <span className="text-[13px] font-bold text-[#1A1A1A] truncate">{studentName || 'Student Name'}</span>
               <span className="text-[11px] text-gray-500">Group Leader</span>
             </div>
+            <button 
+              onClick={onLogout}
+              className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
+              title="Log out"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </button>
           </div>
 
         </div>

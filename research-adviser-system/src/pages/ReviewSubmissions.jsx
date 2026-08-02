@@ -90,7 +90,7 @@ function ReviewSubmissions() {
   // Filter by tab
   const filteredByTab = enrichedSubmissions.filter(sub => {
     if (activeTab === 'pending') return sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
-    if (activeTab === 'reviewed') return sub.reviewStatus === 'reviewed';
+    if (activeTab === 'reviewed') return sub.reviewStatus === 'reviewed' || sub.reviewStatus === 'revision';
     if (activeTab === 'approved') return sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
     return true;
   });
@@ -121,7 +121,7 @@ function ReviewSubmissions() {
 
   // Tab counts
   const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
-  const reviewedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'reviewed').length;
+  const reviewedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'reviewed' || s.reviewStatus === 'revision').length;
   const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published').length;
 
   // Available group names for filter
@@ -176,7 +176,7 @@ function ReviewSubmissions() {
           
           if (sub.leaderEmail) {
             try {
-              await fetch('http://localhost:3000/api/send-status-email', {
+              await fetch('http://localhost:3001/api/send-status-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -255,7 +255,7 @@ function ReviewSubmissions() {
           
           if (sub.leaderEmail) {
             try {
-              await fetch('http://localhost:3000/api/send-status-email', {
+              await fetch('http://localhost:3001/api/send-status-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -435,6 +435,17 @@ function ReviewSubmissions() {
                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Waiting for Dean Approval
                               </span>
                             )}
+                          </td>
+                        </>
+                      ) : activeTab === 'reviewed' ? (
+                        <>
+                          <td className="py-4 px-4 text-gray-600">
+                            {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold border border-purple-100">
+                              Revision Requested
+                            </span>
                           </td>
                         </>
                       ) : (

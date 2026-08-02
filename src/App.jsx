@@ -11,9 +11,10 @@ import RequirementsPage from './pages/RequirementsPage';
 import ProgressPage from './pages/ProgressPage';
 import MyGroupPage from './pages/MyGroupPage';
 import SettingsPage from './pages/SettingsPage'; // 1. Added SettingsPage import
+import ChatWidget from './Components/ChatWidget';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -32,6 +33,26 @@ function App() {
       }
     });
     return () => unsub();
+  }, []);
+
+  // Presence Tracking
+  React.useEffect(() => {
+    const updatePresence = async () => {
+      const user = auth.currentUser;
+      if (user && document.hasFocus()) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            lastActive: serverTimestamp()
+          });
+        } catch (e) {
+          console.error('Failed to update presence', e);
+        }
+      }
+    };
+    
+    updatePresence();
+    const interval = setInterval(updatePresence, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check if URL has activation token or signup path
@@ -284,6 +305,11 @@ function App() {
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
         />
+      )}
+
+      {/* Global Chat Widget - Rendered when logged in */}
+      {auth.currentUser && !['login', 'signup', 'forgot-password', 'activate'].includes(currentPage) && (
+        <ChatWidget />
       )}
     </div>
   );

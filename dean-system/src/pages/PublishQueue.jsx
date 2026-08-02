@@ -20,10 +20,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
     if (!deanData?.department) return;
     const deanDept = deanData.department;
 
-    // 1. Fetch Submissions — filter by department
+    // 1. Fetch Submissions
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setSubmissions(all.filter(s => (s.program || s.department) === deanDept));
+      setSubmissions(all);
     });
 
     // 2. Fetch Groups — filter by department
@@ -46,29 +46,33 @@ export default function PublishQueue({ activePage, onNavigate }) {
   }, [deanData]);
 
   // Compute Enriched Data
-  const enrichedSubmissions = submissions.map(sub => {
-    const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
-    
-    // Calculate requirements completion
-    const activeReqs = requirements.filter(r => 
-      (r.scope === 'global' && r.status === 'approved') || 
-      (r.scope === 'adviser' && r.adviserUid === group?.adviserUid && r.status === 'approved')
-    );
-    const uploadedCount = sub.uploadedDocs?.length || 0;
-    const requiredCount = activeReqs.length;
-    const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
+  const enrichedSubmissions = submissions
+    .map(sub => {
+      const group = groups.find(g => g.leaderUid === sub.studentUid);
+      
+      if (!group) return null; // Exclude submissions that don't belong to a group in this Dean's department
 
-    return {
-      ...sub,
-      groupName: group?.groupName || sub.groupName || 'Unknown Group',
-      researchTitle: group?.researchTitle || sub.title || 'Untitled',
-      adviserName: group?.adviserName || 'Unknown Adviser',
-      adviserUid: group?.adviserUid || '',
-      completionPercent,
-      reviewStatus: sub.reviewStatus || 'in_progress',
-      isSelf: group?.adviserUid === auth.currentUser?.email
-    };
-  });
+      // Calculate requirements completion
+      const activeReqs = requirements.filter(r => 
+        (r.scope === 'global' && r.status === 'approved') || 
+        (r.scope === 'adviser' && r.adviserUid === group?.adviserUid && r.status === 'approved')
+      );
+      const uploadedCount = sub.uploadedDocs?.length || 0;
+      const requiredCount = activeReqs.length;
+      const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
+
+      return {
+        ...sub,
+        groupName: group?.groupName || sub.groupName || 'Unknown Group',
+        researchTitle: group?.researchTitle || sub.title || 'Untitled',
+        adviserName: group?.adviserName || 'Unknown Adviser',
+        adviserUid: group?.adviserUid || '',
+        completionPercent,
+        reviewStatus: sub.reviewStatus || 'in_progress',
+        isSelf: group?.adviserUid === auth.currentUser?.email
+      };
+    })
+    .filter(Boolean);
 
   // Extract counts for Status Flow
   const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
@@ -161,7 +165,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
         for (const item of eligibleItems) {
           if (item.leaderEmail) {
             try {
-              await fetch('http://localhost:3000/api/send-status-email', {
+              await fetch('http://localhost:3001/api/send-status-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

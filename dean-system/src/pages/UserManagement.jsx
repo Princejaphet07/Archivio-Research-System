@@ -45,7 +45,7 @@ export default function UserManagement({ activePage, onNavigate }) {
     // Fetch Submissions — filter by this Dean's department
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setSubmissions(all.filter(s => (s.program || s.department) === deanDept));
+      setSubmissions(all);
       setLoading(false);
     });
 

@@ -145,40 +145,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     : null;
 
   // ── Send Message handler ─────────────────────────────────────────────────────
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!msgBody.trim()) return;
-    setMsgSending(true);
-    setMsgStatus(null);
-    try {
-      const user = auth.currentUser;
-      const studentEmail = user?.email || '';
-      const studentNameVal = studentData?.displayName || user?.displayName || 'Student';
-      const res = await fetch(`${BACKEND_URL}/api/send-student-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName:  studentNameVal,
-          studentEmail: studentEmail,
-          adviserName:  adviserName,
-          adviserEmail: adviserEmail,
-          subject:      msgSubject || `Message from ${studentNameVal}`,
-          message:      msgBody,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMsgStatus('success');
-        setMsgBody('');
-        setMsgSubject('');
-      } else {
-        setMsgStatus('error');
-      }
-    } catch {
-      setMsgStatus('error');
-    } finally {
-      setMsgSending(false);
-    }
+    window.dispatchEvent(new CustomEvent('open-chat'));
   };
 
   // ── Start New Research handler ───────────────────────────────────────────────
@@ -580,7 +549,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
                   )}
                   <button
-                    onClick={() => { setMsgStatus(null); setMsgSubject(''); setMsgBody(''); setShowMsgModal(true); }}
+                    onClick={handleSendMessage}
                     className="w-full bg-[#7B1F35] hover:bg-[#5D1627] text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -615,124 +584,6 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
           </div>
         </div>
       </div>
-
-      {/* ── SEND MESSAGE MODAL ─────────────────────────────────────────────── */}
-      {showMsgModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            {/* Modal header */}
-            <div className="bg-[#7B1F35] px-6 py-5 flex items-center justify-between">
-              <div>
-                <p className="text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Send Message</p>
-                <h3 className="text-white font-serif font-bold text-[18px]">Message to {adviserName}</h3>
-              </div>
-              <button
-                onClick={() => setShowMsgModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Success / Error states */}
-            {msgStatus === 'success' && (
-              <div className="mx-6 mt-5 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <span className="text-green-600 text-xl">✅</span>
-                <div>
-                  <p className="text-green-800 font-bold text-sm">Message Sent!</p>
-                  <p className="text-green-700 text-xs mt-0.5">Your adviser will receive it shortly at <strong>{adviserEmail}</strong>.</p>
-                </div>
-              </div>
-            )}
-            {msgStatus === 'error' && (
-              <div className="mx-6 mt-5 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-                <span className="text-red-600 text-xl">❌</span>
-                <div>
-                  <p className="text-red-800 font-bold text-sm">Failed to send</p>
-                  <p className="text-red-700 text-xs mt-0.5">Make sure the email backend server is running and try again.</p>
-                </div>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSendMessage} className="px-6 py-5 space-y-4">
-              {/* To (read-only) */}
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">To</label>
-                <div className="flex items-center gap-3 bg-[#FDF9ED] border border-[#E8DFCB] rounded-xl px-4 py-2.5">
-                  <div className="w-7 h-7 rounded-full bg-[#7B1F35] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                    {adviserInitials}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#1A1A1A] leading-none">{adviserName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{adviserEmail || 'Research Adviser'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subject */}
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
-                <input
-                  type="text"
-                  value={msgSubject}
-                  onChange={e => setMsgSubject(e.target.value)}
-                  placeholder="e.g. Question about my manuscript..."
-                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35] transition"
-                />
-              </div>
-
-              {/* Message */}
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Message <span className="text-red-500">*</span></label>
-                <textarea
-                  value={msgBody}
-                  onChange={e => setMsgBody(e.target.value)}
-                  required
-                  rows={5}
-                  placeholder="Type your message here..."
-                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35] transition resize-none"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowMsgModal(false)}
-                  className="flex-1 border border-[#E8DFCB] text-gray-600 font-bold text-[14px] py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={msgSending || !msgBody.trim()}
-                  className="flex-1 bg-[#7B1F35] hover:bg-[#5D1627] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  {msgSending ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      Send Message
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       {/* ── NEW RESEARCH MODAL ─────────────────────────────────────────────── */}
       {showNewResearchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">

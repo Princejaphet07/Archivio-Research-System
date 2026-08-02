@@ -20,6 +20,13 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   const [myGroups, setMyGroups] = useState([]);
   const [loadingData,   setLoadingData]    = useState(true);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   // Navigate to Requirements page
   const goToRequirements = () => {
     if (setActiveTab) setActiveTab('Requirements');
@@ -189,9 +196,9 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
 
               <div className="p-8 flex justify-between items-start relative z-10">
                 <div>
-                  <h2 className="text-white text-[32px] font-serif font-bold mb-1 flex items-center gap-3">
-                    Hi, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-2xl">👋</span>
-                  </h2>
+                  <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2">
+                    {getGreeting()}, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-2xl">👋</span>
+                  </h1>
                   <p className="text-white/80 text-[15px]">Welcome back to your research portal</p>
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -38,6 +38,19 @@ function Dashboard() {
   const deptStats = useMemo(() => {
     const deptsMap = {};
     
+    // Mapping of student courses to standard department names
+    const courseToDeptMap = {
+      'BS Information Technology': 'College of Information Technology',
+      'BS Computer Science': 'College of Information Technology',
+      'BS Computer Engineering': 'College of Information Technology',
+      'BS Nursing': 'College of Nursing',
+      'BS Accountancy': 'College of Business and Management',
+      'BS Business Administration': 'College of Business and Management',
+      'BS Civil Engineering': 'College of Engineering',
+      'BS Architecture': 'College of Architecture',
+      'Doctor of Medicine': 'School of Medicine'
+    };
+    
     filteredDeans.forEach(dean => {
       const dName = dean.department || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
@@ -50,14 +63,15 @@ function Dashboard() {
     });
 
     filteredStudents.forEach(st => {
-      const dName = st.course || 'Unknown';
+      const dName = courseToDeptMap[st.course] || st.course || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       deptsMap[dName].students++;
     });
 
     filteredSubmissions.forEach(sub => {
-      const group = filteredGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
-      const dName = group?.department || sub.program || group?.program || 'Unknown';
+      const group = filteredGroups.find(g => g.leaderUid === sub.studentUid);
+      const rawDName = group?.department || sub.program || group?.program || 'Unknown';
+      const dName = courseToDeptMap[rawDName] || rawDName;
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       
       deptsMap[dName].uploaded++;
@@ -73,8 +87,9 @@ function Dashboard() {
     let totalPub = 0;
     filteredSubmissions.forEach(sub => {
       if (sub.reviewStatus === 'published') {
-        const cat = sub.category || 'Uncategorized';
-        cats[cat] = (cats[cat] || 0) + 1;
+        const group = filteredGroups.find(g => g.leaderUid === sub.studentUid);
+        const title = group?.researchTitle || sub.researchTitle || sub.title || 'Untitled';
+        cats[title] = (cats[title] || 0) + 1;
         totalPub++;
       }
     });
@@ -90,7 +105,7 @@ function Dashboard() {
         color: colors[index % colors.length],
         strokeColor: strokeColors[index % strokeColors.length]
       }));
-  }, [filteredSubmissions]);
+  }, [filteredSubmissions, filteredGroups]);
 
   const quickStats = useMemo(() => {
     const totalDepartments = new Set([...filteredDeans.map(d=>d.department), ...filteredAdvisers.map(a=>a.department)]).size;
@@ -151,12 +166,14 @@ function Dashboard() {
           
           {/* Row 1: Quick Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {deptStats.map((_, i) => (
-              <div key={i} className={`bg-white rounded-2xl p-5 border border-stone-150 shadow-sm relative overflow-hidden ${i===3?'opacity-60':''}`}>
-                <div className={`absolute top-0 left-0 right-0 h-[3px] ${['bg-purple-500','bg-blue-500','bg-emerald-500','bg-[#801e38]','bg-amber-500'][i]}`}></div>
-                <h4 className={`text-3xl font-serif font-bold ${i===3?'text-[#801e38]':'text-stone-900'}`}>{quickStats[i]}</h4>
-                <p className="text-xs font-bold text-stone-800 mt-1">{['Total Departments','Total Programs','Registered Users','Pending Invitation','Published Research'][i]}</p>
-                <p className="text-[10px] text-stone-400 mt-0.5">{['Active','Across all departments','Advisers + Students','Nursing — Dean not yet activate','Across all departments'][i]}</p>
+            {quickStats.map((stat, i) => (
+              <div key={i} className="bg-white rounded-xl p-5 border border-stone-200 shadow-[0_2px_10px_rgba(0,0,0,0.02)] relative overflow-hidden flex flex-col justify-between min-h-[110px]">
+                <div className={`absolute top-0 left-0 right-0 h-[4px] ${['bg-[#801e38]','bg-blue-500','bg-emerald-500','bg-[#801e38]','bg-[#9c6e3b]'][i]}`}></div>
+                <h4 className={`text-4xl font-serif font-bold mb-1 ${['text-[#801e38]','text-blue-500','text-emerald-500','text-[#801e38]','text-[#9c6e3b]'][i]}`}>{stat}</h4>
+                <div>
+                  <p className="text-[11px] font-bold text-stone-800">{['Total Departments','Total Programs','Registered Users','Pending Invitations','Published Research'][i]}</p>
+                  <p className="text-[9px] text-stone-400 mt-0.5 leading-tight">{['Active','Across all departments','Advisers + Students','Nursing — Dean not yet activate','Across all departments'][i]}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -187,15 +204,22 @@ function Dashboard() {
                     name="Total Submissions"
                     stroke="#801e38" 
                     strokeWidth={3} 
-                    dot={{ r: 5, fill: '#3b1220', stroke: '#ffffff', strokeWidth: 2 }}
+                    dot={{ r: 5, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
                     activeDot={{ r: 7, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
                     animationDuration={1500}
-                  />
+                  >
+                    <LabelList 
+                      dataKey="uploads" 
+                      position="top" 
+                      offset={12} 
+                      style={{ fill: '#801e38', fontSize: 11, fontWeight: 'bold' }} 
+                    />
+                  </Line>
                 </LineChart>
               </ResponsiveContainer>
-              <div className="absolute bottom-6 right-8 pointer-events-none">
-                <span className="bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded font-bold shadow-sm border border-amber-200">
-                  IN PROGRESS
+              <div className="absolute right-0 top-1/2 -mt-4 pointer-events-none" style={{ right: '5%' }}>
+                <span className="bg-[#f5ebd9] text-[#801e38] text-[8px] px-2 py-0.5 rounded font-bold shadow-sm">
+                  in progress
                 </span>
               </div>
             </div>
@@ -210,31 +234,40 @@ function Dashboard() {
                 <p className="text-[10px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department ({selectedYear})</p>
               </div>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-6 pb-6 border-b border-stone-100">
               {deptStats.slice(0, 3).map((dept, i) => {
                 const maxVal = Math.max(dept.uploaded, dept.approved, dept.published, 1);
                 return (
-                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2"><div className="bg-[#e2d5de] h-3 rounded-full" style={{ width: `${(dept.uploaded/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-stone-400">{dept.uploaded}</span></div>
-                      <div className="flex items-center gap-2"><div className="bg-[#64b494] h-3 rounded-full" style={{ width: `${(dept.approved/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-stone-400">{dept.approved}</span></div>
-                      <div className="flex items-center gap-2"><div className="bg-[#9c6e3b] h-3 rounded-full" style={{ width: `${(dept.published/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-stone-400">{dept.published}</span></div>
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <span className="text-[11px] font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2"><div className="bg-[#e2d5de] h-4 rounded-r-md" style={{ width: `${(dept.uploaded/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#801e38]">{dept.uploaded}</span></div>
+                      <div className="flex items-center gap-2"><div className="bg-[#64b494] h-4 rounded-r-md" style={{ width: `${(dept.approved/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#64b494]">{dept.approved}</span></div>
+                      <div className="flex items-center gap-2"><div className="bg-[#9c6e3b] h-4 rounded-r-md" style={{ width: `${(dept.published/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#9c6e3b]">{dept.published}</span></div>
                     </div>
                   </div>
                 );
               })}
               {deptStats.filter(d => d.pending).map((dept, i) => (
-                <div key={`pend-${i}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
-                  <div className="flex-1 flex items-center h-16 bg-amber-50/40 border border-dashed border-amber-200 rounded-xl px-4"><span className="text-xs text-amber-800 font-bold">Pending — Setup not complete</span></div>
+                <div key={`pend-${i}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <span className="text-[11px] font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
+                  <div className="flex-1 flex items-center h-16 bg-[#f5ebd9]/30 border border-dashed border-[#801e38]/30 rounded-xl px-4"><span className="text-[10px] text-[#801e38] font-bold">Pending — Invitation has sent</span></div>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-6 mt-6 pt-4 border-t border-stone-100 justify-end text-[10px] font-bold uppercase tracking-wider text-stone-400">
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-[#e2d5de] rounded"></span><span>Uploaded</span></div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-[#64b494] rounded"></span><span>Approved</span></div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-[#9c6e3b] rounded"></span><span>Published</span></div>
+            
+            {/* X Axis */}
+            <div className="flex flex-col gap-2 mt-4">
+              <div className="flex justify-between text-[9px] font-semibold text-stone-400 pl-36 pr-4">
+                <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>
+              </div>
+              <div className="text-center text-[9px] text-stone-400 font-semibold pl-32">Number of Papers</div>
+            </div>
+
+            <div className="flex items-center gap-6 mt-6 justify-start text-[10px] font-bold uppercase tracking-wider text-stone-500">
+              <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#e2d5de] rounded-sm"></span><span>Uploaded</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#64b494] rounded-sm"></span><span>Approved</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#9c6e3b] rounded-sm"></span><span>Published</span></div>
             </div>
           </div>
 
@@ -244,11 +277,11 @@ function Dashboard() {
               <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
               <div className="overflow-x-auto min-w-[500px]">
                 <table className="w-full text-left text-xs">
-                  <thead><tr className="bg-[#3b1220] text-white uppercase text-[9px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
+                  <thead><tr className="bg-[#801e38] text-white uppercase text-[9px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
                   <tbody className="divide-y divide-stone-100">
                     {deptStats.map((row, i) => (
                       <tr key={i} className="hover:bg-stone-50 transition-colors">
-                        <td className="p-3.5 font-bold text-stone-800 flex items-center gap-2">{row.name}{row.pending && <span className="bg-amber-100 text-amber-800 text-[8px] px-1.5 py-0.5 rounded font-bold">Pending</span>}</td>
+                        <td className="p-3.5 font-bold text-stone-800 flex items-center gap-2">{row.name}{row.pending && <span className="bg-[#f4dee5] text-[#801e38] text-[8px] px-2 py-0.5 rounded-full font-bold">Pending</span>}</td>
                         <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.advisers || '—'}</td>
                         <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.students || '—'}</td>
                         <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.uploaded || '—'}</td>
@@ -269,7 +302,7 @@ function Dashboard() {
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm">
-              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Top Papers by Research Category</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
+              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
               <div className="flex justify-center mb-6"><div className="relative w-32 h-32 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
                   <circle cx="64" cy="64" r="50" fill="transparent" stroke="#f5f5f5" strokeWidth="12" />
@@ -288,7 +321,7 @@ function Dashboard() {
                 </svg>
                 <div className="absolute flex flex-col items-center"><span className="text-2xl font-serif font-bold text-[#801e38]">{quickStats[4]}</span><span className="text-[8px] font-bold text-stone-400 uppercase tracking-wider">Total</span></div></div></div>
               <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600"><span className={`w-2 h-2 rounded-full ${cat.color}`}></span><span>{cat.name}</span></div><span className="text-stone-900">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
+                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.name}</span></div><span className="text-stone-900 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
               </div>
             </div>
           </div>
@@ -298,33 +331,6 @@ function Dashboard() {
             <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600"><span>Total Files Uploaded</span><span className="text-stone-900 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Published Papers</span><span className="text-stone-900 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Supporting Documents</span><span className="text-stone-900 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Other Assets</span><span className="text-stone-900 font-bold">136 files</span></div></div></div>
             <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center gap-2 text-xs font-bold text-[#801e38]"><span>⚠️</span><span>Storage above 60% — consider archiving old records.</span></div>
-          </div>
-
-          {/* Row 6: Recent System Activity */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm mb-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
-              <div>
-                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recent System Activity</h3>
-                <p className="text-[10px] text-stone-400 mt-0.5">Live feed of the most recent actions in the system ({selectedYear})</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {filteredLogs.length > 0 ? filteredLogs.map((log, i) => (
-                <div key={log.id || i} className="flex gap-4 p-3 hover:bg-stone-50 rounded-xl transition">
-                  <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0 text-[#801e38] font-bold text-xs border border-stone-200">
-                    {log.user ? log.user.charAt(0).toUpperCase() : 'S'}
-                  </div>
-                  <div>
-                    <p className="text-xs text-stone-800"><span className="font-bold">{log.user || 'System'}</span> {log.action}</p>
-                    <p className="text-[10px] text-stone-500 mt-0.5">{log.details}</p>
-                    <p className="text-[9px] text-stone-400 mt-1">{new Date(log.timestamp || Date.now()).toLocaleString()}</p>
-                  </div>
-                </div>
-              )) : (
-                <p className="text-xs text-stone-500 text-center py-4">No recent activity recorded.</p>
-              )}
-            </div>
           </div>
 
         </div>

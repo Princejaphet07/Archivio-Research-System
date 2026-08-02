@@ -14,8 +14,6 @@ import maroonBg from '../assets/maroon-bg.png';
 function Login() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
-  const [showPassword, setShowPassword] = useState(false);
-  
   // Dynamic Stats
   const [stats, setStats] = useState({ total: 24, pending: 8, published: 156 });
   const [loadingStats, setLoadingStats] = useState(true);
@@ -288,6 +286,8 @@ function Login() {
                   </button>
                 </form>
               </div>
+            </>
+          )}
         </div>
       </div>
 

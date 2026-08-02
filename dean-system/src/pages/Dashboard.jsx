@@ -23,6 +23,7 @@ export default function Dashboard({ activePage, onNavigate }) {
   const [topPapersSort, setTopPapersSort] = useState('likes');
   const [topCategories, setTopCategories] = useState([]);
   const [yearlyStats, setYearlyStats] = useState([]);
+  const [allRawSubmissions, setAllRawSubmissions] = useState([]);
 
   useEffect(() => {
     // Wait for deanData to load so we know the Dean's department
@@ -30,72 +31,7 @@ export default function Dashboard({ activePage, onNavigate }) {
     const deanDept = deanData.department;
 
     const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
-      let approvedCount = 0;
-      let publishedCount = 0;
-      let pendingCount = 0;
-      const advMap = {};
-      const papers = [];
-      const categoriesMap = {};
-      const yearMap = {};
-      
-      snapshot.forEach(doc => {
-        const data = doc.data();
-
-        // DEPARTMENT FILTER: Only count submissions belonging to this Dean's department
-        const subDept = data.program || data.department || '';
-        if (subDept !== deanDept) return;
-
-        const status = data.reviewStatus || 'pending';
-        
-        if (status === 'approved') approvedCount++;
-        if (status === 'published') {
-          publishedCount++;
-          papers.push({ id: doc.id, ...data });
-          
-          const tags = data.tags || [];
-          if (tags.length > 0) {
-            tags.forEach(tag => { categoriesMap[tag] = (categoriesMap[tag] || 0) + 1; });
-          } else {
-             const prog = data.program || 'General IT';
-             categoriesMap[prog] = (categoriesMap[prog] || 0) + 1;
-          }
-        }
-        if (status === 'pending' || status === 'revision') pendingCount++;
-        
-        const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
-        if (!yearMap[year]) yearMap[year] = 0;
-        yearMap[year]++;
-        
-        if (data.adviserUid) {
-          const advName = data.adviserName || 'Unknown Adviser';
-          if (!advMap[data.adviserUid]) {
-            advMap[data.adviserUid] = { uid: data.adviserUid, name: advName, uploads: 0, approved: 0, published: 0, pending: 0 };
-          }
-          advMap[data.adviserUid].uploads++;
-          if (status === 'approved') advMap[data.adviserUid].approved++;
-          if (status === 'published') advMap[data.adviserUid].published++;
-          if (status === 'pending' || status === 'revision') advMap[data.adviserUid].pending++;
-        }
-      });
-      
-      setStats(prev => ({ ...prev, approved: approvedCount, published: publishedCount, pending: pendingCount }));
-      
-      const advArray = Object.values(advMap).map(adv => {
-         const rate = adv.uploads > 0 ? Math.round((adv.published / adv.uploads) * 100) : 0;
-         return { ...adv, rate };
-      });
-      advArray.sort((a, b) => b.uploads - a.uploads);
-      setAdviserStats(advArray);
-      
-      setAllPapers(papers);
-      
-      const catArray = Object.keys(categoriesMap).map(key => ({ name: key, count: categoriesMap[key] }));
-      catArray.sort((a, b) => b.count - a.count);
-      setTopCategories(catArray.slice(0, 7));
-      
-      const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y] }));
-      yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
-      setYearlyStats(yearArray);
+      setAllRawSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     
     let cleanupGroups = () => {};
@@ -132,6 +68,78 @@ export default function Dashboard({ activePage, onNavigate }) {
     
     return () => { unsubSubmissions(); cleanupGroups(); unsubAdvisers(); }
   }, [deanData]);
+
+  // Process stats safely once both groups and submissions are loaded
+  useEffect(() => {
+    if (allGroups.length === 0 && allRawSubmissions.length === 0) return;
+
+    let approvedCount = 0;
+    let publishedCount = 0;
+    let pendingCount = 0;
+    const advMap = {};
+    const papers = [];
+    const categoriesMap = {};
+    const yearMap = {};
+
+    allRawSubmissions.forEach(data => {
+      // Join submission to group to securely verify department
+      const group = allGroups.find(g => g.leaderUid === data.studentUid);
+      if (!group) return; // Skip if it doesn't belong to a group in this Dean's department
+
+      const status = data.reviewStatus || 'pending';
+      
+      if (status === 'approved') approvedCount++;
+      if (status === 'published') {
+        publishedCount++;
+        papers.push(data);
+        
+        const tags = data.tags || [];
+        if (tags.length > 0) {
+          tags.forEach(tag => { categoriesMap[tag] = (categoriesMap[tag] || 0) + 1; });
+        } else {
+           const prog = group.program || data.program || 'General IT';
+           categoriesMap[prog] = (categoriesMap[prog] || 0) + 1;
+        }
+      }
+      if (status === 'pending' || status === 'revision') pendingCount++;
+      
+      const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
+      if (!yearMap[year]) yearMap[year] = 0;
+      yearMap[year]++;
+      
+      const adviserUid = group.adviserUid || data.adviserUid;
+      if (adviserUid) {
+        const advName = group.adviserName || data.adviserName || 'Unknown Adviser';
+        if (!advMap[adviserUid]) {
+          advMap[adviserUid] = { uid: adviserUid, name: advName, uploads: 0, approved: 0, published: 0, pending: 0 };
+        }
+        advMap[adviserUid].uploads++;
+        if (status === 'approved') advMap[adviserUid].approved++;
+        if (status === 'published') advMap[adviserUid].published++;
+        if (status === 'pending' || status === 'revision') advMap[adviserUid].pending++;
+      }
+    });
+
+    setStats(prev => ({ ...prev, approved: approvedCount, published: publishedCount, pending: pendingCount }));
+    
+    const advArray = Object.values(advMap).map(adv => {
+       const rate = adv.uploads > 0 ? Math.round((adv.published / adv.uploads) * 100) : 0;
+       return { ...adv, rate };
+    });
+    advArray.sort((a, b) => b.uploads - a.uploads);
+    setAdviserStats(advArray);
+    
+    setAllPapers(papers);
+    
+    const catArray = Object.keys(categoriesMap).map(key => ({ name: key, count: categoriesMap[key] }));
+    catArray.sort((a, b) => b.count - a.count);
+    setTopCategories(catArray.slice(0, 7));
+    
+    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y] }));
+    yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+    setYearlyStats(yearArray);
+
+  }, [allRawSubmissions, allGroups]);
 
   if (loading) {
     return (

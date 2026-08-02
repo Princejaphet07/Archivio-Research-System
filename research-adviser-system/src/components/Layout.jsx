@@ -1,8 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ChatWidget from './ChatWidget';
+import { db, auth } from '../firebase/config';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, onSearchChange }) {
+  useEffect(() => {
+    // Update presence every minute
+    const updatePresence = async () => {
+      const user = auth.currentUser;
+      if (user && document.hasFocus()) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            lastActive: serverTimestamp()
+          });
+        } catch (e) {
+          console.error('Failed to update presence', e);
+        }
+      }
+    };
+    
+    updatePresence(); // initial call
+    const interval = setInterval(updatePresence, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="flex h-screen bg-[#f5f0e6] font-sans overflow-hidden">
       <Sidebar />
@@ -18,6 +41,7 @@ function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, o
           {children}
         </main>
       </div>
+      <ChatWidget />
     </div>
   );
 }

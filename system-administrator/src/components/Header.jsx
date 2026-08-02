@@ -75,7 +75,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
             </span>
             <input 
               type="text" 
-              placeholder="Search anything..." 
+              placeholder="Search anything.." 
               value={searchQuery !== undefined ? searchQuery : ''}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full sm:w-64 pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] transition-all"
@@ -88,7 +88,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
           <select 
             value={selectedYear}
             onChange={(e) => changeYear(e.target.value)}
-            className="px-4 py-2 bg-white border border-[#801e38]/30 rounded-lg text-sm text-[#801e38] font-semibold outline-none cursor-pointer hover:bg-stone-50 appearance-none pr-8"
+            className="px-4 py-2 bg-[#faf9f6] border border-[#801e38] rounded-lg text-sm text-[#801e38] font-bold outline-none cursor-pointer hover:bg-stone-50 appearance-none pr-8"
           >
             <option value="SY 2026-2027">SY 2026-2027</option>
             <option value="SY 2025-2026">SY 2025-2026</option>
@@ -103,11 +103,11 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={handleToggleDropdown}
-            className="relative p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors cursor-pointer text-stone-600"
+            className="relative p-2.5 bg-[#fdf8ef] hover:bg-[#f5ebd9] rounded-xl transition-colors cursor-pointer text-stone-600 border border-stone-200 shadow-sm"
           >
             🔔
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 border-2 border-white rounded-full text-[9px] flex items-center justify-center text-white font-bold">
                 {unreadCount}
               </span>
             )}
