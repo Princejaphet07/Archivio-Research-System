@@ -25,6 +25,10 @@ export default function Dashboard({ activePage, onNavigate }) {
   const [yearlyStats, setYearlyStats] = useState([]);
 
   useEffect(() => {
+    // Wait for deanData to load so we know the Dean's department
+    if (!deanData?.department) return;
+    const deanDept = deanData.department;
+
     const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       let approvedCount = 0;
       let publishedCount = 0;
@@ -36,6 +40,11 @@ export default function Dashboard({ activePage, onNavigate }) {
       
       snapshot.forEach(doc => {
         const data = doc.data();
+
+        // DEPARTMENT FILTER: Only count submissions belonging to this Dean's department
+        const subDept = data.program || data.department || '';
+        if (subDept !== deanDept) return;
+
         const status = data.reviewStatus || 'pending';
         
         if (status === 'approved') approvedCount++;
@@ -89,18 +98,40 @@ export default function Dashboard({ activePage, onNavigate }) {
       setYearlyStats(yearArray);
     });
     
-    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
-       setStats(prev => ({ ...prev, totalGroups: snapshot.size }));
-       const groups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-       setAllGroups(groups);
+    let cleanupGroups = () => {};
+    
+    // Fetch advisers first to get their UIDs, which is a robust way to link groups to the department
+    import('firebase/firestore').then(({ getDocs, where }) => {
+       const advQuery = query(collection(db, 'advisers'), where('department', '==', deanDept));
+       getDocs(advQuery).then(advSnap => {
+         const advUids = new Set(advSnap.docs.map(d => d.data().userId));
+         
+         const unsub = onSnapshot(collection(db, 'groups'), (snapshot) => {
+            // DEPARTMENT FILTER: Only count groups belonging to this Dean's department
+            const deptGroups = snapshot.docs
+              .map(doc => ({ id: doc.id, ...doc.data() }))
+              .filter(g => {
+                 if (g.department === deanDept) return true;
+                 if (advUids.has(g.adviserUid)) return true;
+                 // Fallbacks
+                 if (deanDept.includes('IT') && g.program && g.program.includes('Information Technology')) return true;
+                 return false;
+              });
+            setStats(prev => ({ ...prev, totalGroups: deptGroups.length }));
+            setAllGroups(deptGroups);
+         });
+         cleanupGroups = unsub;
+       });
     });
     
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
-       setStats(prev => ({ ...prev, totalAdvisers: snapshot.size }));
+       // DEPARTMENT FILTER: Only count advisers belonging to this Dean's department
+       const deptAdvisers = snapshot.docs.filter(d => d.data().department === deanDept);
+       setStats(prev => ({ ...prev, totalAdvisers: deptAdvisers.length }));
     });
     
-    return () => { unsubSubmissions(); unsubGroups(); unsubAdvisers(); }
-  }, []);
+    return () => { unsubSubmissions(); cleanupGroups(); unsubAdvisers(); }
+  }, [deanData]);
 
   if (loading) {
     return (

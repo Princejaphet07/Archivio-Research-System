@@ -100,15 +100,29 @@ export default function Sidebar({ onNavigate }) {
   const [counts, setCounts] = useState({ researchRecords: 0, publishQueue: 0, userManagement: 0 });
 
   useEffect(() => {
+    // Wait for deanData to load so badge counts match filtered data
+    if (!deanData?.department) return;
+    const deanDept = deanData.department;
+
     const unsubGroups = onSnapshot(query(collection(db, 'groups'), where('status', '==', 'approved')), (snap) => {
-      setCounts(prev => ({ ...prev, researchRecords: snap.size }));
+      // DEPARTMENT FILTER
+      const deptGroups = snap.docs.filter(doc => doc.data().department === deanDept);
+      setCounts(prev => ({ ...prev, researchRecords: deptGroups.length }));
     });
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snap) => {
-      const approvedCount = snap.docs.filter(doc => doc.data().reviewStatus === 'approved').length;
+      // DEPARTMENT FILTER
+      const approvedCount = snap.docs.filter(doc => {
+        const data = doc.data();
+        return data.reviewStatus === 'approved' && (data.program || data.department) === deanDept;
+      }).length;
       setCounts(prev => ({ ...prev, publishQueue: approvedCount }));
     });
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
-      const inactiveCount = snap.docs.filter(doc => doc.data().status === 'inactive').length;
+      // DEPARTMENT FILTER
+      const inactiveCount = snap.docs.filter(doc => {
+        const data = doc.data();
+        return data.status === 'inactive' && data.department === deanDept;
+      }).length;
       setCounts(prev => ({ ...prev, userManagement: inactiveCount }));
     });
     
@@ -117,7 +131,7 @@ export default function Sidebar({ onNavigate }) {
       unsubSubs();
       unsubAdvisers();
     };
-  }, []);
+  }, [deanData]);
 
   // Extract initials from displayName
   const deanName = deanData?.displayName || 'Dean';

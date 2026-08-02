@@ -103,18 +103,19 @@ export default function AllUsers() {
     };
   }, []);
 
+  const yearFilteredUsers = React.useMemo(() => {
+    return filterByAcademicYear(allUsers, 'createdAt');
+  }, [allUsers, selectedYear, filterByAcademicYear]);
+
   const tabs = [
-    `All Users (${allUsers.length})`, 
-    `Deans (${allUsers.filter(u => u.role === 'Dean').length})`, 
-    `Advisers (${allUsers.filter(u => u.role === 'Adviser').length})`, 
-    `Students (${allUsers.filter(u => u.role === 'Student').length})`
+    `All Users (${yearFilteredUsers.length})`, 
+    `Deans (${yearFilteredUsers.filter(u => u.role === 'Dean').length})`, 
+    `Advisers (${yearFilteredUsers.filter(u => u.role === 'Adviser').length})`, 
+    `Students (${yearFilteredUsers.filter(u => u.role === 'Student').length})`
   ];
 
   const filtered = React.useMemo(() => {
-    let users = allUsers;
-    
-    // 1. Filter by Academic Year
-    users = filterByAcademicYear(users, 'createdAt');
+    let users = yearFilteredUsers;
 
     // 2. Filter by Active Tab
     if (activeTab === 1) users = users.filter(u => u.role === 'Dean');
@@ -132,7 +133,7 @@ export default function AllUsers() {
     }
     
     return users;
-  }, [allUsers, activeTab, search, selectedYear, filterByAcademicYear]);
+  }, [yearFilteredUsers, activeTab, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedUsers = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);

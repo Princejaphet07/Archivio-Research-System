@@ -1,13 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
 
 function MyProfile() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
-  
+  const [userData, setUserData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    department: 'College of Information Technology',
+    title: 'Prof.',
+    docId: null
+  });
+  const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUserData(prev => ({ ...prev, email: user.email }));
+        try {
+          const q = query(collection(db, 'advisers'), where('userId', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const document = querySnapshot.docs[0];
+            const data = document.data();
+            setUserData(prev => ({
+              ...prev,
+              firstName: data.firstName || '',
+              lastName: data.lastName || '',
+              department: data.department || 'College of Information Technology',
+              title: data.title || 'Prof.',
+              docId: document.id
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching adviser profile:", error);
+        }
+      } else {
+        navigate('/login');
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const handleSaveChanges = async () => {
+    if (!userData.docId) return;
+    setSaveStatus('Saving...');
+    try {
+      const adviserRef = doc(db, 'advisers', userData.docId);
+      await updateDoc(adviserRef, {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        department: userData.department,
+        title: userData.title,
+        displayName: `${userData.title} ${userData.firstName} ${userData.lastName}`
+      });
+      setSaveStatus('Profile updated successfully!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      setSaveStatus('Failed to update profile.');
+    }
+  };
+
   // Notification preferences state
   const [notifications, setNotifications] = useState({
     newSubmissions: true,
@@ -98,34 +159,39 @@ function MyProfile() {
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <>
+                  {saveStatus && (
+                    <div className={`p-3 rounded-lg text-sm mb-4 ${saveStatus.includes('success') ? 'bg-green-50 text-green-700' : saveStatus === 'Saving...' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
+                      {saveStatus}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">First Name</label>
-                      <input type="text" defaultValue="Ira" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" />
+                      <input type="text" value={userData.firstName} onChange={(e) => setUserData({...userData, firstName: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" disabled={loading} />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Last Name</label>
-                      <input type="text" defaultValue="Pongasi" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" />
+                      <input type="text" value={userData.lastName} onChange={(e) => setUserData({...userData, lastName: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" disabled={loading} />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Institutional Email</label>
-                    <input type="email" defaultValue="i.pongasi@phinmaed.com" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" />
+                    <input type="email" value={userData.email} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none text-gray-400" readOnly />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Department</label>
-                    <input type="text" defaultValue="College of Information Technology" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none text-gray-400" readOnly />
+                    <input type="text" value={userData.department} onChange={(e) => setUserData({...userData, department: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900" disabled={loading} />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Title / Honorific</label>
-                    <select className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] w-full md:w-48 text-gray-900">
-                      <option>Prof.</option>
-                      <option>Dr.</option>
-                      <option>Mr.</option>
-                      <option>Ms.</option>
+                    <select value={userData.title} onChange={(e) => setUserData({...userData, title: e.target.value})} className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] w-full md:w-48 text-gray-900" disabled={loading}>
+                      <option value="Prof.">Prof.</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Ms.">Ms.</option>
                     </select>
                   </div>
 
@@ -147,8 +213,8 @@ function MyProfile() {
                   </div>
                   
                   <div className="pt-4 flex justify-end">
-                    <button className="bg-[#7a2e46] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] transition">
-                      Save Changes
+                    <button onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} className="bg-[#7a2e46] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] disabled:opacity-50 transition">
+                      {saveStatus === 'Saving...' ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </>

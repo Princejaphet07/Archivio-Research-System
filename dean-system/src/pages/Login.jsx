@@ -394,7 +394,7 @@ export default function Login() {
                     disabled={loading}
                     className="mt-4 w-full rounded-lg bg-[#7a1f3d] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Signing In...' : 'Sign In to ARCHIVIO'}
+                    {loading ? 'Signing In...' : 'Activate Account'}
                   </button>
                 </form>
               </div>

@@ -7,6 +7,7 @@ import { db } from './firebase/config';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import ActivateAccount from './pages/ActivateAccount';
+import ForgotPassword from './pages/ForgotPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Main App Pages
@@ -54,6 +55,7 @@ function App() {
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/adviser-activate" element={<ActivateAccount />} />
         
         {/* Protected App Pages */}

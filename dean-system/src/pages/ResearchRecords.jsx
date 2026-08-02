@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { useUser } from '../context/UserContext';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -31,6 +32,7 @@ const ACTION_STYLES = {
 const RECORDS_PER_PAGE = 10;
 
 export default function ResearchRecords({ activePage, onNavigate }) {
+  const { deanData } = useUser();
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('All Years');
   const [filterAdviser, setFilterAdviser] = useState('All Advisers');
@@ -53,10 +55,16 @@ export default function ResearchRecords({ activePage, onNavigate }) {
   const [allCategories, setAllCategories] = useState(['All Categories']);
 
   useEffect(() => {
-    // Listen to groups
+    // Wait for deanData to load so we know the Dean's department
+    if (!deanData?.department) return;
+    const deanDept = deanData.department;
+
+    // Listen to groups — filter by department
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
-      const groupsData = groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allGroupsData = groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // DEPARTMENT FILTER
+      const groupsData = allGroupsData.filter(g => g.department === deanDept);
       
       // Listen to submissions
       const unsubSubs = onSnapshot(collection(db, 'submissions'), (subsSnapshot) => {
@@ -124,7 +132,7 @@ export default function ResearchRecords({ activePage, onNavigate }) {
     });
 
     return () => unsubGroups();
-  }, []);
+  }, [deanData]);
 
   // ---- Filter logic ----
   const filtered = records.filter((r) => {

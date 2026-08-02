@@ -3,7 +3,9 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { db } from '../firebase/config';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { Building2, Trash2 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const reportTypes = [
   {
@@ -20,7 +22,7 @@ const reportTypes = [
   },
   {
     id: 'dept',
-    icon: '🏛️',
+    icon: <Building2 className="w-5 h-5" />,
     title: 'Department Performance',
     desc: 'Number of papers published, endorsed, and pending approval per department.',
   },
@@ -98,6 +100,7 @@ export default function Reports() {
         const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
         const dDate = new Date(s.createdAt);
         return {
+          docId: s.id,
           id: (index + 1).toString().padStart(2, '0'),
           title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
           dept: group?.program || s.program || group?.department || 'Unknown',
@@ -140,6 +143,27 @@ export default function Reports() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDeleteResearch = async (docId, title) => {
+    const result = await Swal.fire({
+      title: 'Delete Research Permanently?',
+      text: `You are about to permanently delete "${title}". This action CANNOT be undone!`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'DELETE PERMANENTLY'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'submissions', docId));
+        Swal.fire('Deleted!', 'The research has been permanently deleted.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'Failed to delete research.', 'error');
+      }
+    }
   };
 
   const handleExportCSV = () => {
@@ -202,7 +226,6 @@ export default function Reports() {
         {/* PAGE CONTENT */}
         <div className="flex-1 overflow-auto p-8">
           <div className="mb-6">
-            <h3 className="text-3xl font-serif font-bold text-stone-900 mb-1">Reports</h3>
             <p className="text-sm text-stone-500">Generate, view, and export reports across the ARCHIVIO system.</p>
           </div>
 
@@ -390,6 +413,7 @@ export default function Reports() {
                             <th className="py-3 px-5">Category</th>
                             <th className="py-3 px-5">School Year</th>
                             <th className="py-3 px-5">Date Published</th>
+                            <th className="py-3 px-5 text-center">Actions</th>
                           </>
                         )}
                         {selected === 'users' && (
@@ -427,6 +451,15 @@ export default function Reports() {
                           <td className="py-4 px-5">{row.cat}</td>
                           <td className="py-4 px-5">{row.sy}</td>
                           <td className="py-4 px-5 font-bold text-[#801e38] text-xs">{row.date}</td>
+                          <td className="py-4 px-5 text-center">
+                            <button 
+                              onClick={() => handleDeleteResearch(row.docId, row.title)} 
+                              title="Delete Permanently" 
+                              className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 inline-flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
 

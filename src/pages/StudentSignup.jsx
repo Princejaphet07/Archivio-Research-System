@@ -206,6 +206,7 @@ export default function StudentSignup({ onSwitchPage }) {
         leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
         leaderEmail: email,
         program: personalInfo.course,
+        department: invitationData.department || 'Not specified',
         members: groupInfo.members,
         adviserUid: invitationData.sentBy,
         adviserName: invitationData.sentByName,

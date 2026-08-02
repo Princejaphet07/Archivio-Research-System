@@ -73,7 +73,7 @@ function SendInvitations() {
       // Generate invitation token (kept for Firestore tracking)
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       // Clean link to the Sign Up page — no token in the URL
-      const studentPortalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL || 'http://localhost:5175';
+      const studentPortalUrl = 'http://localhost:5175';
       const invitationLink = `${studentPortalUrl}/signup`;
 
       // Create student invitation in Firestore
@@ -146,7 +146,7 @@ function SendInvitations() {
       // Resend email
       try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const studentPortalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL || 'http://localhost:5175';
+        const studentPortalUrl = 'http://localhost:5175';
         await fetch(`${backendUrl}/api/send-student-invitation-email`, {
           method: 'POST',
           headers: {

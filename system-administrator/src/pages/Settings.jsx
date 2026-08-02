@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import DepartmentsProgramsTab from './DepartmentsPrograms';
 import { db } from '../firebase/config';
 import { doc, setDoc, onSnapshot, getDocs, collection } from 'firebase/firestore';
+import { Building2, Settings2, Trash2, Lock } from 'lucide-react';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('system');
@@ -16,6 +17,15 @@ export default function Settings() {
     emailVerification: true,
   });
 
+  // Institution State
+  const [instInfo, setInstInfo] = useState({
+    name: 'Southwestern University PHINMA',
+    shortName: 'SWU PHINMA',
+    emailDomain: '@phinmaed.com',
+    location: 'Cebu City, Philippines'
+  });
+  const [savingInst, setSavingInst] = useState(false);
+
   // Storage Management State
   const [storageFiles, setStorageFiles] = useState({
     dataset: true,
@@ -26,12 +36,22 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
+    const unsubSystem = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
       if (snap.exists()) {
         setToggles(prev => ({ ...prev, ...snap.data() }));
       }
     });
-    return () => unsub();
+    
+    const unsubInst = onSnapshot(doc(db, 'settings', 'institution_info'), (snap) => {
+      if (snap.exists()) {
+        setInstInfo(prev => ({ ...prev, ...snap.data() }));
+      }
+    });
+
+    return () => {
+      unsubSystem();
+      unsubInst();
+    };
   }, []);
 
   const handleToggle = async (key) => {
@@ -45,6 +65,26 @@ export default function Settings() {
       }, { merge: true });
     } catch (error) {
       console.error("Failed to update setting:", error);
+    }
+  };
+
+  const handleSaveInst = async () => {
+    setSavingInst(true);
+    try {
+      await setDoc(doc(db, 'settings', 'institution_info'), instInfo, { merge: true });
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved!',
+          text: 'Institution information updated successfully.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      });
+    } catch (error) {
+      console.error("Failed to save institution info", error);
+    } finally {
+      setSavingInst(false);
     }
   };
 
@@ -83,31 +123,31 @@ export default function Settings() {
       <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-stone-200 bg-stone-50">
           <h4 className="font-bold text-stone-900 flex items-center gap-2">
-            🏛️ Institution Information
+            <Building2 className="w-5 h-5 text-[#801e38]" /> Institution Information
           </h4>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs font-semibold text-stone-500 mb-1.5">Institution Name</label>
-              <input type="text" defaultValue="Southwestern University PHINMA" className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.name} onChange={e => setInstInfo({...instInfo, name: e.target.value})} className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 mb-1.5">Short Name</label>
-              <input type="text" defaultValue="SWU PHINMA" className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.shortName} onChange={e => setInstInfo({...instInfo, shortName: e.target.value})} className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 mb-1.5">Email Domain</label>
-              <input type="text" defaultValue="@swu.phinma.edu.ph" className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.emailDomain} onChange={e => setInstInfo({...instInfo, emailDomain: e.target.value})} className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 mb-1.5">Location</label>
-              <input type="text" defaultValue="Cebu City, Philippines" className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.location} onChange={e => setInstInfo({...instInfo, location: e.target.value})} className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38]" />
             </div>
           </div>
           <div className="flex justify-end">
-            <button className="px-6 py-2.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
-              Save Changes
+            <button onClick={handleSaveInst} disabled={savingInst} className="px-6 py-2.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50">
+              {savingInst ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -117,7 +157,7 @@ export default function Settings() {
       <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-stone-200 bg-stone-50">
           <h4 className="font-bold text-stone-900 flex items-center gap-2">
-            ⚙️ System Preferences
+            <Settings2 className="w-5 h-5 text-[#801e38]" /> System Preferences
           </h4>
         </div>
         <div className="divide-y divide-stone-100">
@@ -174,7 +214,7 @@ export default function Settings() {
                 <span className="inline-block bg-[#f3e6ea] text-[#801e38] text-[10px] font-bold px-2 py-1 rounded-full">🔑 PIN Required</span>
               </div>
               <button className="flex items-center gap-2 px-4 py-2 bg-[#b91c1c] hover:bg-[#991b1b] text-white rounded-lg text-sm font-bold transition-all shadow-sm shrink-0">
-                🗑️ Delete All Data
+                <Trash2 className="w-4 h-4" /> Delete All Data
               </button>
             </div>
           </div>
@@ -248,8 +288,8 @@ export default function Settings() {
             {/* Locked Item */}
             <div className="flex items-center justify-between p-3 border border-amber-100 bg-[#fdfaf3] rounded-lg mt-2">
               <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded bg-amber-100 flex items-center justify-center text-amber-600 text-[10px]">
-                  🔒
+                <div className="w-6 h-6 rounded bg-amber-100 flex items-center justify-center text-amber-600">
+                  <Lock className="w-3.5 h-3.5" />
                 </div>
                 <div>
                   <span className="text-sm font-bold text-stone-800 block leading-tight">Final Manuscript</span>

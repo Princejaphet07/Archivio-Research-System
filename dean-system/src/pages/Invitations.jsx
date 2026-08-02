@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
 export default function Invitations() {
-  const { deanData } = useUser();
+  const { deanData, deanSettings } = useUser();
   const [advisers, setAdvisers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,22 +21,27 @@ export default function Invitations() {
   });
 
   // Default invitation message
-  const defaultMessage = `Dear [Adviser Name],
+  const defaultMessage = deanSettings?.emailTemplates?.adviserInvitation?.body || `Dear [Adviser Name],
 
 You have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.
 
 As a Research Adviser, you will be able to:
 • Manage your assigned student research groups
-• Review and endorse student research submissions
-• Collaborate with your dean for approvals
-• Access comprehensive research analytics
+• Review and evaluate submitted manuscripts
+• Track submission requirements and completion status
+• Approve and forward papers to the Dean for publication
 
-Please click the "Create Your Account" button below to set up your password and get started.
+Please click the button below to activate your account and set up your credentials.`;
 
-This invitation will expire in 7 days. If you did not request this invitation, please disregard this email.
+  const defaultSubject = deanSettings?.emailTemplates?.adviserInvitation?.subject || "You're Invited to Join ARCHIVIO — SWU PHINMA Research Management System";
 
-Best regards,
-ARCHIVIO Research Management System`;
+  // Pre-fill form when settings load
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      message: defaultMessage
+    }));
+  }, [defaultMessage]);
 
   // Fetch advisers on mount and when deanData changes
   useEffect(() => {
@@ -114,9 +119,29 @@ ARCHIVIO Research Management System`;
     try {
       // Generate a simple invitation token to track this specific invitation
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      // Clean link to the Sign Up page — no token exposed in the URL
-      const adviserPortalUrl = import.meta.env.VITE_ADVISER_PORTAL_URL || 'http://localhost:5176';
-      const invitationLink = `${adviserPortalUrl}/signup`;
+      
+      const targetEmail = formData.email.toLowerCase().trim();
+
+      // CLEANUP: If this email was manually deleted from Firebase Auth and is being recreated,
+      // wipe orphaned profile data tied to this email to ensure a fresh start.
+      const collectionsToClean = ['users', 'advisers', 'deans'];
+      for (const colName of collectionsToClean) {
+        const qClean = query(collection(db, colName), where('email', '==', targetEmail));
+        const snapClean = await getDocs(qClean);
+        const deletes = snapClean.docs.map(d => deleteDoc(doc(db, colName, d.id)));
+        await Promise.all(deletes);
+      }
+      
+      // Clean up orphaned groups tied to this adviser email
+      const qGroupsClean = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
+      const snapGroupsClean = await getDocs(qGroupsClean);
+      const deleteGroupsClean = snapGroupsClean.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
+      await Promise.all(deleteGroupsClean);
+
+      // Clean link to the Sign Up page — no token exposed in the URL, only the email
+      const adviserPortalUrl = 'http://localhost:5176';
+      const cleanEmail = encodeURIComponent(formData.email.toLowerCase().trim());
+      const invitationLink = `${adviserPortalUrl}/signup?email=${cleanEmail}`;
 
       // Create adviser invitation in Firestore
       const adviserData = {
@@ -148,6 +173,7 @@ ARCHIVIO Research Management System`;
           body: JSON.stringify({
             to: formData.email,
             adviserName: formData.firstName,
+            subject: defaultSubject,
             message: formData.message || defaultMessage,
             invitationLink: invitationLink,
             senderName: deanData?.displayName,
@@ -208,6 +234,7 @@ ARCHIVIO Research Management System`;
           body: JSON.stringify({
             to: adviserEmail,
             adviserName: adviser.firstName,
+            subject: defaultSubject,
             message: adviser.message,
             invitationLink: adviser.invitationLink,
             senderName: deanData?.displayName,

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
 import { useAdviser } from '../context/AdviserContext';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 function Sidebar() {
   const location = useLocation();
   const path = location.pathname;
+  const navigate = useNavigate();
   const { adviserData } = useAdviser();
 
   const [groupCount, setGroupCount] = useState(0);
@@ -60,6 +62,15 @@ function Sidebar() {
       if (unsubSub) unsubSub();
     };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const activeClass = "bg-[#6b253e]/80 text-white border border-[#d0a36e]/30";
   const inactiveClass = "text-gray-300 hover:bg-[#6b253e]/40 hover:text-white border border-transparent";
@@ -170,14 +181,21 @@ function Sidebar() {
 
       {/* User Profile Footer */}
       <div className="p-4 border-t border-[#6b253e]">
-        <div className="bg-[#6b253e]/50 flex items-center gap-3 p-3 rounded-xl border border-[#6b253e]">
-          <div className="w-8 h-8 rounded-full bg-[#d0a36e] flex items-center justify-center text-[#541b2f] font-bold text-xs">
-            {adviserData?.firstName?.charAt(0)}{adviserData?.lastName?.charAt(0)}
+        <div className="bg-[#6b253e]/50 flex items-center justify-between p-3 rounded-xl border border-[#6b253e]">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#d0a36e] flex items-center justify-center text-[#541b2f] font-bold text-xs">
+              {adviserData?.firstName?.charAt(0)}{adviserData?.lastName?.charAt(0)}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">{adviserData?.displayName || 'Research Adviser'}</p>
+              <p className="text-[10px] text-[#d0a36e]">💡 Adviser</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold text-white">{adviserData?.displayName || 'Research Adviser'}</p>
-            <p className="text-[10px] text-[#d0a36e]">💡 Adviser</p>
-          </div>
+          <button onClick={handleLogout} className="text-gray-300 hover:text-white bg-[#541b2f] hover:bg-[#7a2e46] p-1.5 rounded-lg transition" title="Log Out">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>

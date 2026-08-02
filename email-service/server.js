@@ -8,6 +8,15 @@ const cors = require('cors');
 const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config();
 
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
+const serviceAccount = require('./firebase-service-account.json');
+
+initializeApp({
+  credential: cert(serviceAccount)
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -31,6 +40,84 @@ transporter.verify((error, success) => {
     console.error('❌ Email service error:', error);
   } else {
     console.log('✅ Email service ready');
+  }
+});
+
+// ============================================
+// SEND OTP FOR PASSWORD RESET
+// ============================================
+app.post('/api/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    // Ensure user exists in Firebase Auth before sending OTP
+    try {
+      await getAuth().getUserByEmail(email);
+    } catch (authError) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
+
+    // Store in Firestore
+    await getFirestore().collection('password_resets').doc(email).set({
+      code,
+      expiresAt
+    });
+
+    const emailHTML = `
+      <div style="font-family: sans-serif; text-align: center; padding: 20px;">
+        <h2 style="color: #7B1F35;">ARCHIVIO Password Reset</h2>
+        <p>Your 6-digit verification code is:</p>
+        <h1 style="letter-spacing: 5px; color: #d0a36e;">${code}</h1>
+        <p>This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Password Reset Verification Code',
+      html: emailHTML
+    });
+
+    res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Send OTP Error:', error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+// ============================================
+// VERIFY OTP & RESET PASSWORD
+// ============================================
+app.post('/api/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) return res.status(400).json({ error: 'Missing required fields' });
+
+    const docRef = getFirestore().collection('password_resets').doc(email);
+    const doc = await docRef.get();
+
+    if (!doc.exists) return res.status(400).json({ error: 'Invalid or expired code' });
+
+    const data = doc.data();
+    if (data.code !== code) return res.status(400).json({ error: 'Incorrect code' });
+    if (data.expiresAt.toDate() < new Date()) return res.status(400).json({ error: 'Code has expired' });
+
+    // Code is valid, update user's password
+    const user = await getAuth().getUserByEmail(email);
+    await getAuth().updateUser(user.uid, { password: newPassword });
+
+    // Delete OTP record
+    await docRef.delete();
+
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -10,11 +10,43 @@ import jaggedEdge from '../assets/jagged-edge.png';
 
 function SignUp() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  const [isPrefilled, setIsPrefilled] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailParam = params.get('email');
+    
+    if (emailParam) {
+      const fetchInvitation = async () => {
+        try {
+          const q = query(collection(db, 'advisers'), where('email', '==', emailParam.toLowerCase()), where('status', '==', 'pending'));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const data = snap.docs[0].data();
+            setFormData(prev => ({
+              ...prev,
+              email: data.email,
+              firstName: data.firstName || '',
+              lastName: data.lastName || ''
+            }));
+            setIsPrefilled(true);
+          }
+        } catch (err) {
+          console.error("Failed to fetch invitation:", err);
+        }
+      };
+      fetchInvitation();
+    }
+  }, [location]);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -237,11 +269,15 @@ function SignUp() {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-[11px] font-semibold text-gray-700 mb-1">First Name</label>
-                <input name="firstName" value={formData.firstName} onChange={handleChange} type="text" placeholder="e.g. Maria" className="w-full bg-[#fcfcfc] border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition" required />
+                <input name="firstName" value={formData.firstName} onChange={handleChange} type="text" placeholder="e.g. Maria" 
+                  className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition ${isPrefilled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#fcfcfc]'}`} 
+                  readOnly={isPrefilled} required />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-gray-700 mb-1">Last Name</label>
-                <input name="lastName" value={formData.lastName} onChange={handleChange} type="text" placeholder="e.g. Cendana" className="w-full bg-[#fcfcfc] border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition" required />
+                <input name="lastName" value={formData.lastName} onChange={handleChange} type="text" placeholder="e.g. Cendana" 
+                  className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition ${isPrefilled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#fcfcfc]'}`} 
+                  readOnly={isPrefilled} required />
               </div>
             </div>
 
@@ -254,7 +290,9 @@ function SignUp() {
 
             <div className="mb-3">
               <label className="block text-[11px] font-semibold text-gray-700 mb-1">Email Address <span className="text-gray-400 font-normal">(must be @phinmaed.com)</span></label>
-              <input name="email" value={formData.email} onChange={handleChange} type="email" placeholder="e.g. adviser.cendana@phinmaed.com" className="w-full bg-[#fcfcfc] border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition" required />
+              <input name="email" value={formData.email} onChange={handleChange} type="email" placeholder="e.g. adviser.cendana@phinmaed.com" 
+                className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#7a2e46] transition ${isPrefilled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#fcfcfc]'}`} 
+                readOnly={isPrefilled} required />
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-2">
@@ -307,13 +345,13 @@ function SignUp() {
             <div className="flex items-center mb-4">
               <input name="agreeTerms" checked={formData.agreeTerms} onChange={handleChange} type="checkbox" className="w-3.5 h-3.5 text-[#7a2e46] bg-gray-100 border-gray-300 rounded focus:ring-[#7a2e46]" />
               <label className="ml-2 text-[11px] text-gray-600">
-                I agree to the ARCHIVIO Terms of Use and Privacy Policy
+                I agree to the ARCHIVIO <span onClick={() => setShowTerms(true)} className="text-[#7a2e46] hover:underline cursor-pointer font-semibold">Terms of Use</span> and <span onClick={() => setShowPrivacy(true)} className="text-[#7a2e46] hover:underline cursor-pointer font-semibold">Privacy Policy</span>
               </label>
             </div>
 
             <button 
               type="submit" 
-              disabled={loading}
+              disabled={loading || !formData.agreeTerms}
               className="w-full bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 mb-4 text-sm"
             >
               {loading ? 'Creating Account...' : 'Activate Account'}
@@ -330,6 +368,46 @@ function SignUp() {
           </form>
         </div>
       </div>
+
+      {/* Terms Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button onClick={() => setShowTerms(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+            <h3 className="text-xl font-serif font-bold mb-4 text-[#7a2e46]">Terms of Use</h3>
+            <div className="text-sm text-gray-600 max-h-60 overflow-y-auto space-y-3">
+              <p>Welcome to ARCHIVIO. By accessing our portal, you agree to these terms.</p>
+              <p>1. <strong>Usage:</strong> The system is strictly for academic research management.</p>
+              <p>2. <strong>Accountability:</strong> You are responsible for all activities under your account.</p>
+              <p>3. <strong>Data Integrity:</strong> Do not upload falsified or malicious data.</p>
+              <p>Please use this platform responsibly to guide our future researchers.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setShowTerms(false)} className="px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold hover:bg-[#5f2135]">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Policy Modal */}
+      {showPrivacy && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button onClick={() => setShowPrivacy(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+            <h3 className="text-xl font-serif font-bold mb-4 text-[#7a2e46]">Privacy Policy</h3>
+            <div className="text-sm text-gray-600 max-h-60 overflow-y-auto space-y-3">
+              <p>Your privacy is important to us. This policy outlines how we handle your data.</p>
+              <p>1. <strong>Data Collection:</strong> We collect only necessary academic and profile information.</p>
+              <p>2. <strong>Data Usage:</strong> Your data is used exclusively to facilitate the research management process within SWU Phinma.</p>
+              <p>3. <strong>Data Protection:</strong> We employ standard encryption and security practices to protect your records.</p>
+              <p>We do not share your information with third parties outside of academic administration requirements.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setShowPrivacy(false)} className="px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold hover:bg-[#5f2135]">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

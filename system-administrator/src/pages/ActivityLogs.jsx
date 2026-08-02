@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { Search } from 'lucide-react';
 
 const ROWS_PER_PAGE = 10;
 
@@ -135,11 +136,7 @@ export default function ActivityLogs() {
           {/* ── Title Row ──────────────────────────────────────────────────── */}
           <div className="flex items-start justify-between mb-6">
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-1 h-7 bg-[#801e38] rounded-full" />
-                <h3 className="text-2xl font-serif font-bold text-stone-900">Activity Logs</h3>
-              </div>
-              <p className="text-sm text-stone-500 ml-4">Track and audit all user activities across the system</p>
+              <p className="text-sm text-stone-500">Track and audit all user activities across the system</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="bg-[#801e38] text-white text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap">
@@ -151,8 +148,10 @@ export default function ActivityLogs() {
           {/* ── Filters ────────────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {/* Search */}
-            <div className="relative flex-1 min-w-[220px] max-w-sm">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔍</span>
+            <div className="relative flex-1 min-w-[220px] max-w-sm text-stone-500">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={16} />
+              </span>
               <input
                 type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by user, role, or action..."

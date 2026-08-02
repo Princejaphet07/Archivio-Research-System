@@ -5,8 +5,10 @@ import { db, auth } from '../firebase/config';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { logActivity } from '../firebase/logActivity';
+import { useUser } from '../context/UserContext';
 
 export default function PublishQueue({ activePage, onNavigate }) {
+  const { deanData } = useUser();
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [requirements, setRequirements] = useState([]);
@@ -14,14 +16,20 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Fetch Submissions
+    // Wait for deanData to load so we know the Dean's department
+    if (!deanData?.department) return;
+    const deanDept = deanData.department;
+
+    // 1. Fetch Submissions — filter by department
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
-      setSubmissions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setSubmissions(all.filter(s => (s.program || s.department) === deanDept));
     });
 
-    // 2. Fetch Groups
+    // 2. Fetch Groups — filter by department
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
-      setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGroups(all.filter(g => g.department === deanDept));
     });
 
     // 3. Fetch Requirements
@@ -35,7 +43,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
       unsubGroups();
       unsubReqs();
     };
-  }, []);
+  }, [deanData]);
 
   // Compute Enriched Data
   const enrichedSubmissions = submissions.map(sub => {

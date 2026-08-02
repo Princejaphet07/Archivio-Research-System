@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Search } from 'lucide-react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAcademicYear } from '../context/AcademicYearContext';
@@ -67,16 +68,20 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
 
       <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-end">
         {/* Search Box */}
-        <div className="relative hidden sm:block flex-1 sm:flex-initial">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔍</span>
-          <input 
-            type="text" 
-            placeholder="Search anything..." 
-            value={searchQuery !== undefined ? searchQuery : ''}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-            className="w-full sm:w-64 pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] transition-all"
-          />
-        </div>
+        {onSearchChange !== undefined && (
+          <div className="relative hidden sm:block flex-1 sm:flex-initial text-stone-500">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Search anything..." 
+              value={searchQuery !== undefined ? searchQuery : ''}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full sm:w-64 pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] transition-all"
+            />
+          </div>
+        )}
 
         {/* Academic Year Dropdown */}
         <div className="relative">

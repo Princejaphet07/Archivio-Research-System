@@ -40,10 +40,14 @@ class ErrorBoundary extends React.Component {
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
             <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>Oops! Something went wrong.</h1>
-            <p style={{ color: '#4b5563', marginBottom: '24px', fontSize: '15px' }}>
-              We encountered an unexpected error while loading this page. 
-              Don't worry, your data is safe.
+            <p style={{ color: '#4b5563', marginBottom: '24px' }}>
+              We're sorry, but something went wrong. Please try refreshing the page or contact support if the problem persists.
             </p>
+            {this.state.error && (
+              <pre style={{ textAlign: 'left', background: '#f3f4f6', padding: '10px', borderRadius: '4px', fontSize: '12px', overflowX: 'auto', marginBottom: '24px', color: '#ef4444' }}>
+                {this.state.error.toString()}
+              </pre>
+            )}
             <button 
               onClick={() => window.location.href = '/'}
               style={{

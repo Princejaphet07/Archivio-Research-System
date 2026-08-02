@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, where, deleteDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
-import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, auth, firebaseConfig } from '../firebase/config';
+import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { logActivity } from '../firebase/logActivity';
 import Swal from 'sweetalert2';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import { Trash2, Eye, Edit2, Ban, Plus } from 'lucide-react';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -34,10 +36,117 @@ export default function UserManagement() {
     }
   });
 
+  // Department & Program lists from Firestore
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [programsList, setProgramsList] = useState([]);
+  const [showAddDeptModal, setShowAddDeptModal] = useState(false);
+  const [newDeptName, setNewDeptName] = useState('');
+  const [addingDept, setAddingDept] = useState(false);
+  const [showProgramsDropdown, setShowProgramsDropdown] = useState(false);
+  const [selectedPrograms, setSelectedPrograms] = useState([]);
+  const [programSearch, setProgramSearch] = useState('');
+
   // Fetch deans from Firestore on mount
   useEffect(() => {
     fetchDeans();
+    fetchDepartmentsAndPrograms();
   }, []);
+
+  // Default program list — always available even if Firestore is empty
+  const defaultPrograms = [
+    { code: 'BSIT', name: 'Bachelor of Science in Information Technology' },
+    { code: 'BSCS', name: 'Bachelor of Science in Computer Science' },
+    { code: 'BSIS', name: 'Bachelor of Science in Information Systems' },
+    { code: 'BSEMC', name: 'Bachelor of Science in Entertainment & Multimedia Computing' },
+    { code: 'BSN', name: 'Bachelor of Science in Nursing' },
+    { code: 'BSBA', name: 'Bachelor of Science in Business Administration' },
+    { code: 'BSA', name: 'Bachelor of Science in Accountancy' },
+    { code: 'BSHRM', name: 'Bachelor of Science in Hotel & Restaurant Management' },
+    { code: 'BSTM', name: 'Bachelor of Science in Tourism Management' },
+    { code: 'BSCrim', name: 'Bachelor of Science in Criminology' },
+    { code: 'BSED', name: 'Bachelor of Secondary Education' },
+    { code: 'BEED', name: 'Bachelor of Elementary Education' },
+    { code: 'BSPsych', name: 'Bachelor of Science in Psychology' },
+    { code: 'BSPH', name: 'Bachelor of Science in Public Health' },
+    { code: 'BSPharma', name: 'Bachelor of Science in Pharmacy' },
+    { code: 'BSMT', name: 'Bachelor of Science in Medical Technology' },
+    { code: 'BSPT', name: 'Bachelor of Science in Physical Therapy' },
+    { code: 'BSRT', name: 'Bachelor of Science in Radiologic Technology' },
+    { code: 'DDM', name: 'Doctor of Dental Medicine' },
+    { code: 'BSCE', name: 'Bachelor of Science in Civil Engineering' },
+    { code: 'BSEE', name: 'Bachelor of Science in Electrical Engineering' },
+    { code: 'BSME', name: 'Bachelor of Science in Mechanical Engineering' },
+    { code: 'BSCpE', name: 'Bachelor of Science in Computer Engineering' },
+    { code: 'BSArch', name: 'Bachelor of Science in Architecture' },
+    { code: 'BSPE', name: 'Bachelor of Science in Physical Education' },
+    { code: 'BSMA', name: 'Bachelor of Science in Mathematics' },
+    { code: 'ABComm', name: 'Bachelor of Arts in Communication' },
+    { code: 'ABPolSci', name: 'Bachelor of Arts in Political Science' },
+  ];
+
+  const fetchDepartmentsAndPrograms = async () => {
+    try {
+      const deptsSnap = await getDocs(collection(db, 'departments'));
+      const deptsList = deptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setDepartmentsList(deptsList);
+
+      const progsSnap = await getDocs(collection(db, 'programs'));
+      const firestoreProgs = progsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Merge Firestore programs with defaults, removing duplicates by code
+      const seen = new Set();
+      const merged = [];
+      for (const prog of [...firestoreProgs, ...defaultPrograms]) {
+        if (!seen.has(prog.code)) {
+          seen.add(prog.code);
+          merged.push(prog);
+        }
+      }
+      // Sort alphabetically by code
+      merged.sort((a, b) => a.code.localeCompare(b.code));
+      setProgramsList(merged);
+    } catch (err) {
+      console.error('Error fetching departments/programs:', err);
+      // Fallback to defaults if Firestore fails
+      setProgramsList([...defaultPrograms].sort((a, b) => a.code.localeCompare(b.code)));
+    }
+  };
+
+  const handleAddNewDepartment = async () => {
+    if (!newDeptName.trim()) return;
+    setAddingDept(true);
+    try {
+      const existingSnap = await getDocs(query(collection(db, 'departments'), where('name', '==', newDeptName.trim())));
+      if (!existingSnap.empty) {
+        Swal.fire('Exists', 'This department already exists.', 'warning');
+        setAddingDept(false);
+        return;
+      }
+      await addDoc(collection(db, 'departments'), {
+        name: newDeptName.trim(),
+        status: 'Active',
+        createdAt: new Date().toISOString()
+      });
+      setFormData(prev => ({ ...prev, department: newDeptName.trim() }));
+      setNewDeptName('');
+      setShowAddDeptModal(false);
+      await fetchDepartmentsAndPrograms();
+      Swal.fire({ icon: 'success', title: 'Added!', text: 'Department added successfully.', timer: 1500, showConfirmButton: false });
+    } catch (err) {
+      console.error('Error adding department:', err);
+      Swal.fire('Error', 'Failed to add department.', 'error');
+    } finally {
+      setAddingDept(false);
+    }
+  };
+
+  const toggleProgram = (code) => {
+    setSelectedPrograms(prev => {
+      const newList = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code];
+      setFormData(f => ({ ...f, programs: newList.join(', ') }));
+      return newList;
+    });
+  };
 
   const fetchDeans = async () => {
     try {
@@ -172,6 +281,86 @@ export default function UserManagement() {
     }
   };
 
+  const handleViewUser = (user) => {
+    Swal.fire({
+      title: 'User Details',
+      html: `
+        <div class="text-left space-y-2 text-sm mt-4">
+          <p><strong>Name:</strong> ${user.displayName}</p>
+          <p><strong>Email:</strong> ${user.email}</p>
+          <p><strong>Department:</strong> ${user.department || 'N/A'}</p>
+          <p><strong>Role:</strong> <span class="capitalize">${user.role}</span></p>
+          <p><strong>Status:</strong> ${user.status}</p>
+          <p><strong>Created:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+        </div>
+      `,
+      icon: 'info'
+    });
+  };
+
+  const handleEditUser = async (user) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Department',
+      html: `<input id="swal-input1" class="swal2-input" value="${user.department || ''}" placeholder="Enter new department name">`,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => document.getElementById('swal-input1').value
+    });
+
+    if (formValues !== undefined) {
+      setLoading(true);
+      try {
+        await updateDoc(doc(db, user._collection, user.id), { department: formValues });
+        if (user.uid) await updateDoc(doc(db, 'users', user.uid), { department: formValues });
+        await fetchDeans();
+        Swal.fire('Saved!', 'User department has been updated.', 'success');
+      } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Failed to update user.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteSingleUser = async (user) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete ${user.displayName}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete!'
+    });
+    
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await deleteDoc(doc(db, user._collection, user.id));
+        if (user.uid) await deleteDoc(doc(db, 'users', user.uid));
+        
+        if (user.uid) {
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            await fetch(`${backendUrl}/api/delete-auth-user`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: user.uid, email: user.email })
+            });
+          } catch (err) {}
+        }
+        
+        await fetchDeans();
+        Swal.fire('Deleted!', 'User has been deleted.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Could not delete user.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleCreateDean = async () => {
     setError('');
     setSuccess('');
@@ -214,11 +403,19 @@ export default function UserManagement() {
       
       // === SUPER ADMIN FLOW ===
       if (formData.role === 'super-admin') {
-        const saPortalLink = import.meta.env.VITE_SA_PORTAL_URL || window.location.origin;
+        const saPortalLink = 'http://localhost:5173';
         
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, formData.email.toLowerCase().trim(), temporaryPassword);
+          const appName = 'SecondaryAppSA_' + Date.now().toString();
+          const secondaryApp = initializeApp(firebaseConfig, appName);
+          const secondaryAuth = getAuth(secondaryApp);
+
+          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email.toLowerCase().trim(), temporaryPassword);
           const firebaseUser = userCredential.user;
+          const newUid = firebaseUser.uid;
+
+          await secondaryAuth.signOut();
+          await deleteApp(secondaryApp);
 
           const superAdminData = {
             firstName: formData.firstName.trim(),
@@ -229,7 +426,7 @@ export default function UserManagement() {
             role: 'super-admin',
             moduleAccess: formData.moduleAccess,
             status: 'active',
-            uid: firebaseUser.uid,
+            uid: newUid,
             temporaryPassword: temporaryPassword,
             invitationToken: invitationToken,
             invitationLink: saPortalLink,
@@ -241,8 +438,8 @@ export default function UserManagement() {
 
           await addDoc(collection(db, 'super_admins'), superAdminData);
 
-          await setDoc(doc(db, 'users', firebaseUser.uid), {
-            uid: firebaseUser.uid,
+          await setDoc(doc(db, 'users', newUid), {
+            uid: newUid,
             email: formData.email.toLowerCase().trim(),
             displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
             role: 'super-admin',
@@ -281,6 +478,7 @@ export default function UserManagement() {
           await fetchDeans();
           setSuccess(`✅ Super Admin invitation sent to ${formData.email}!`);
           setFormData({ firstName: '', lastName: '', email: '', department: '', programs: '', role: 'dean+adviser', moduleAccess: { dashboard: false, reports: false, allUsers: false, activityLogs: false } });
+          setSelectedPrograms([]);
           setTimeout(() => { setIsModalOpen(false); setSuccess(''); }, 2000);
           return;
           
@@ -296,16 +494,24 @@ export default function UserManagement() {
       }
       // === END SUPER ADMIN FLOW ===
 
-      const deanPortalUrl = import.meta.env.VITE_DEAN_PORTAL_URL || 'http://localhost:5174';
+      const deanPortalUrl = 'http://localhost:5174';
       const invitationLink = `${deanPortalUrl}/login`;
       
       // Create Firebase Auth account with temporary password FIRST
       try {
+        const appName = 'SecondaryAppDean_' + Date.now().toString();
+        const secondaryApp = initializeApp(firebaseConfig, appName);
+        const secondaryAuth = getAuth(secondaryApp);
+
         // Create auth account
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email.toLowerCase().trim(), temporaryPassword);
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email.toLowerCase().trim(), temporaryPassword);
         const firebaseUser = userCredential.user;
+        const newUid = firebaseUser.uid;
         
-        console.log('✅ Firebase Auth account created for:', firebaseUser.email, 'UID:', firebaseUser.uid);
+        await secondaryAuth.signOut();
+        await deleteApp(secondaryApp);
+        
+        console.log('✅ Firebase Auth account created for:', formData.email, 'UID:', newUid);
 
         // Create dean invitation in Firestore
         const deanData = {
@@ -318,7 +524,7 @@ export default function UserManagement() {
           role: formData.role,
           status: 'active', // Auth account is created; activation pending password change
           accountStatus: 'pending_activation', // Flag: first-time login must change password
-          uid: firebaseUser.uid,
+          uid: newUid,
           temporaryPassword: temporaryPassword, // Store temp password for reference
           invitationToken: invitationToken,
           invitationLink: invitationLink,
@@ -331,8 +537,8 @@ export default function UserManagement() {
         await addDoc(collection(db, 'deans'), deanData);
 
         // Create user profile
-        await setDoc(doc(db, 'users', firebaseUser.uid), {
-          uid: firebaseUser.uid,
+        await setDoc(doc(db, 'users', newUid), {
+          uid: newUid,
           email: formData.email.toLowerCase().trim(),
           displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
           role: formData.role,
@@ -473,6 +679,7 @@ Please login with these credentials at the link below, and you'll be prompted to
           activityLogs: false
         }
       });
+      setSelectedPrograms([]);
 
       // Close modal after 2 seconds
       setTimeout(() => {
@@ -550,13 +757,13 @@ Please login with these credentials and set up your account.`
   };
 
   const filteredUsersList = React.useMemo(() => {
-    let list = filterByAcademicYear(allUsers, 'createdAt');
-    return list.filter(d => 
+    // User accounts are permanent — do NOT filter by academic year
+    return allUsers.filter(d => 
       d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.department?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [allUsers, searchQuery, selectedYear, filterByAcademicYear]);
+  }, [allUsers, searchQuery]);
   
   const totalPages = Math.max(1, Math.ceil(filteredUsersList.length / ITEMS_PER_PAGE));
   const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -582,7 +789,6 @@ Please login with these credentials and set up your account.`
           
           <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h3 className="text-3xl font-serif font-bold text-stone-900 mb-1">User Management</h3>
               <p className="text-sm text-stone-500">Create and manage user accounts. Assign roles and permissions for the system.</p>
             </div>
           </div>
@@ -605,7 +811,7 @@ Please login with these credentials and set up your account.`
                     disabled={loading}
                     className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap disabled:opacity-50"
                   >
-                    <span>🗑️</span> Delete ({selectedUsers.size})
+                    <Trash2 className="w-4 h-4" /> Delete ({selectedUsers.size})
                   </button>
                 )}
               </div>
@@ -704,14 +910,14 @@ Please login with these credentials and set up your account.`
                               </div>
                             ) : (
                               <div className="flex items-center justify-center gap-2">
-                                <button className="w-8 h-8 rounded border border-stone-200 text-blue-600 hover:bg-blue-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  👁️
+                                <button onClick={() => handleViewUser(user)} className="w-8 h-8 rounded border border-stone-200 text-blue-600 hover:bg-blue-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
+                                  <Eye className="w-4 h-4" />
                                 </button>
-                                <button className="w-8 h-8 rounded border border-stone-200 text-amber-500 hover:bg-amber-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  ✏️
+                                <button onClick={() => handleEditUser(user)} className="w-8 h-8 rounded border border-stone-200 text-amber-500 hover:bg-amber-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
+                                  <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  ⛔
+                                <button onClick={() => handleDeleteSingleUser(user)} className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
+                                  <Ban className="w-4 h-4" />
                                 </button>
                               </div>
                             )}
@@ -842,33 +1048,113 @@ Please login with these credentials and set up your account.`
                   <label className="block text-xs font-bold text-stone-700 mb-2">
                     Department <span className="text-red-500">*</span>
                   </label>
-                  <select 
-                    value={formData.department}
-                    onChange={(e) => setFormData({...formData, department: e.target.value})}
-                    className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
-                  >
-                    <option value="">Select department...</option>
-                    <option value="College of IT">College of Information Technology</option>
-                    <option value="College of Nursing">College of Nursing</option>
-                    <option value="College of Business">College of Business Administration</option>
-                    <option value="College of Dentistry">College of Dentistry</option>
-                    <option value="College of Medicine">College of Pre-Medicine</option>
-                    <option value="College of Engineering">College of Engineering</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      value={formData.department}
+                      onChange={(e) => setFormData({...formData, department: e.target.value})}
+                      className="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                    >
+                      <option value="">Select department...</option>
+                      {departmentsList.map(dept => (
+                        <option key={dept.id} value={dept.name}>{dept.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddDeptModal(true)}
+                      className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#801e38] text-white hover:bg-[#6a1830] transition shadow-sm shrink-0"
+                      title="Add new department"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Programs */}
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-2">
-                    Programs (comma-separated)
+                    Programs
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. BSIT, BSCS, BSIS — auto-adds to CMS"
-                    value={formData.programs}
-                    onChange={(e) => setFormData({...formData, programs: e.target.value})}
-                    className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
-                  />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
+                      className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 text-left flex items-center justify-between"
+                    >
+                      <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900'}>
+                        {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
+                      </span>
+                      <svg className={`w-4 h-4 text-stone-500 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showProgramsDropdown && (() => {
+                      const filtered = programsList.filter(p =>
+                        p.code.toLowerCase().includes(programSearch.toLowerCase()) || p.name.toLowerCase().includes(programSearch.toLowerCase())
+                      );
+                      return (
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-stone-300 rounded-lg shadow-lg overflow-hidden">
+                        {/* Search input */}
+                        <div className="p-2 border-b border-stone-200">
+                          <input
+                            type="text"
+                            placeholder="Search or type program code..."
+                            value={programSearch}
+                            onChange={(e) => setProgramSearch(e.target.value)}
+                            className="w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const val = programSearch.trim().toUpperCase();
+                                if (val && !selectedPrograms.includes(val)) {
+                                  setSelectedPrograms(prev => {
+                                    const newList = [...prev, val];
+                                    setFormData(f => ({ ...f, programs: newList.join(', ') }));
+                                    return newList;
+                                  });
+                                  setProgramSearch('');
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                        {/* Program list */}
+                        <div className="max-h-44 overflow-y-auto">
+                          {filtered.length === 0 ? (
+                            <div className="px-4 py-3 text-sm text-stone-500">No match found. Press <strong>Enter</strong> to add as custom.</div>
+                          ) : (
+                            filtered.map(prog => (
+                              <label
+                                key={prog.id || prog.code}
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPrograms.includes(prog.code)}
+                                  onChange={() => toggleProgram(prog.code)}
+                                  className="w-4 h-4 rounded border-stone-300 text-[#801e38] focus:ring-[#801e38]"
+                                />
+                                <span className="font-semibold text-stone-800">{prog.code}</span>
+                                <span className="text-stone-500">— {prog.name}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      );
+                    })()}
+                  </div>
+                  {selectedPrograms.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {selectedPrograms.map(code => (
+                        <span key={code} className="inline-flex items-center gap-1 bg-[#f3e6ea] text-[#801e38] text-xs font-bold px-2.5 py-1 rounded-full">
+                          {code}
+                          <button type="button" onClick={() => toggleProgram(code)} className="hover:text-red-700 text-[#801e38]/60">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Role Assignment */}
@@ -995,6 +1281,44 @@ Please login with these credentials and set up your account.`
         )}
       </main>
 
+      {/* Add Department Modal */}
+      {showAddDeptModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#801e38] px-6 py-4 flex justify-between items-center">
+              <h3 className="text-white font-bold text-lg">Add New Department</h3>
+              <button onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6">
+              <label className="block text-xs font-bold text-stone-700 mb-2">Department Name <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                placeholder="e.g. College of Engineering"
+                value={newDeptName}
+                onChange={(e) => setNewDeptName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddNewDepartment()}
+                className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                autoFocus
+              />
+            </div>
+            <div className="bg-stone-50 px-6 py-4 flex justify-end gap-3 border-t border-stone-200">
+              <button
+                onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNewDepartment}
+                disabled={addingDept || !newDeptName.trim()}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {addingDept ? 'Adding...' : <><Plus size={16} /> Add Department</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

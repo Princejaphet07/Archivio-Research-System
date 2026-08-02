@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -105,30 +106,33 @@ function Dashboard() {
     return [totalDepartments, totalPrograms, totalUsers, totalPending, publishedCount];
   }, [filteredSubmissions, filteredDeans, filteredAdvisers, filteredStudents]);
 
-  const { yearlyTrendData, shortLabels } = useMemo(() => {
+  const yearlyChartData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     const baseYear = currentMonth < 7 ? currentYear - 1 : currentYear;
     
     const syLabels = [];
-    const short = [];
     for (let i = 4; i >= 0; i--) {
-      syLabels.push(`${baseYear - i}-${baseYear - i + 1}`);
-      short.push(`SY ${String(baseYear - i).slice(2)}-${String(baseYear - i + 1).slice(2)}`);
+      syLabels.push({
+        full: `${baseYear - i}-${baseYear - i + 1}`,
+        short: `SY ${String(baseYear - i).slice(2)}-${String(baseYear - i + 1).slice(2)}`,
+        isCurrent: i === 0
+      });
     }
 
     const counts = {};
-    syLabels.forEach(sy => counts[sy] = 0);
+    syLabels.forEach(sy => counts[sy.full] = 0);
     
     filteredSubmissions.forEach(s => {
-      const sy = s.schoolYear || syLabels[4];
+      const sy = s.schoolYear || syLabels[4].full;
       if(counts[sy] !== undefined) counts[sy]++;
     });
     
-    return {
-      yearlyTrendData: syLabels.map(sy => counts[sy]),
-      shortLabels: short
-    };
+    return syLabels.map(sy => ({
+      name: sy.short,
+      uploads: counts[sy.full],
+      isCurrent: sy.isCurrent
+    }));
   }, [filteredSubmissions]);
 
   return (
@@ -166,28 +170,33 @@ function Dashboard() {
                 <p className="text-[10px] text-stone-400 mt-0.5">Total submissions recorded per academic school year</p>
               </div>
             </div>
-            <div className="w-full h-48 relative">
-              <svg className="w-full h-full" viewBox="0 0 1000 180" preserveAspectRatio="none">
-                <line x1="0" y1="140" x2="1000" y2="140" stroke="#f3f3f3" strokeWidth="1" />
-                <line x1="0" y1="95" x2="1000" y2="95" stroke="#f3f3f3" strokeWidth="1" />
-                <line x1="0" y1="50" x2="1000" y2="50" stroke="#f3f3f3" strokeWidth="1" strokeDasharray="4 4" />
-                <path d="M 100 140 L 325 110 L 550 75 L 775 40 L 910 115" fill="none" stroke="#801e38" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M 100 140 L 325 110 L 550 75 L 775 40 L 910 115 L 910 170 L 100 170 Z" fill="url(#trendGrad)" opacity="0.05"/>
-                <defs><linearGradient id="trendGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#801e38" /><stop offset="100%" stopColor="#801e38" stopOpacity="0" /></linearGradient></defs>
-                <circle cx="100" cy="140" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="100" y="125" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[0]}</text>
-                <circle cx="325" cy="110" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="325" y="95" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[1]}</text>
-                <circle cx="550" cy="75" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="550" y="60" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[2]}</text>
-                <circle cx="775" cy="40" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="775" y="25" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[3]}</text>
-                <circle cx="910" cy="115" r="6" fill="#3b1220" stroke="#ffffff" strokeWidth="2" />
-                <text x="910" y="100" textAnchor="middle" className="text-[11px] font-bold fill-stone-950">{yearlyTrendData[4]}</text>
-              </svg>
-              <div className="absolute inset-x-0 bottom-0 flex justify-between text-[9px] text-stone-400 font-bold uppercase tracking-wider px-6">
-                <span>{shortLabels[0]}</span><span>{shortLabels[1]}</span><span>{shortLabels[2]}</span><span>{shortLabels[3]}</span>
-                <span className="relative">{shortLabels[4]}<span className="absolute -top-7 right-0 whitespace-nowrap bg-amber-100 text-amber-800 text-[8px] px-1.5 py-0.5 rounded font-bold shadow-sm">in progress</span></span>
+            <div className="w-full h-64 relative mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={yearlyChartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c', fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e7e5e4', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#1c1917', marginBottom: '4px' }}
+                    cursor={{ stroke: '#801e38', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="uploads" 
+                    name="Total Submissions"
+                    stroke="#801e38" 
+                    strokeWidth={3} 
+                    dot={{ r: 5, fill: '#3b1220', stroke: '#ffffff', strokeWidth: 2 }}
+                    activeDot={{ r: 7, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
+                    animationDuration={1500}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="absolute bottom-6 right-8 pointer-events-none">
+                <span className="bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded font-bold shadow-sm border border-amber-200">
+                  IN PROGRESS
+                </span>
               </div>
             </div>
           </div>

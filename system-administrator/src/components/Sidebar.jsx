@@ -4,6 +4,7 @@ import logo from '../assets/logo.png';
 import { useUser } from '../context/UserContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
+import { BookOpen } from 'lucide-react';
 
 function Sidebar() {
   const navigate = useNavigate();

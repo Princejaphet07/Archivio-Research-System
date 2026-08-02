@@ -4,8 +4,10 @@ import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
 import { collection, query, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { useUser } from '../context/UserContext';
 
 export default function UserManagement({ activePage, onNavigate }) {
+  const { deanData } = useUser();
   const [activeTab, setActiveTab] = useState('advisers');
   const [advisers, setAdvisers] = useState([]);
   const [students, setStudents] = useState([]);
@@ -18,24 +20,32 @@ export default function UserManagement({ activePage, onNavigate }) {
   const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
-    // Fetch Advisers
+    // Wait for deanData to load so we know the Dean's department
+    if (!deanData?.department) return;
+    const deanDept = deanData.department;
+
+    // Fetch Advisers — filter by this Dean's department
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
-      setAdvisers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAdvisers(all.filter(a => a.department === deanDept));
     });
 
-    // Fetch Students
+    // Fetch Students — filter by this Dean's department
     const unsubStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
-      setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setStudents(all.filter(s => s.department === deanDept));
     });
 
-    // Fetch Groups
+    // Fetch Groups — filter by this Dean's department
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
-      setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGroups(all.filter(g => g.department === deanDept));
     });
 
-    // Fetch Submissions
+    // Fetch Submissions — filter by this Dean's department
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
-      setSubmissions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setSubmissions(all.filter(s => (s.program || s.department) === deanDept));
       setLoading(false);
     });
 
@@ -45,7 +55,7 @@ export default function UserManagement({ activePage, onNavigate }) {
       unsubGroups();
       unsubSubs();
     };
-  }, []);
+  }, [deanData]);
 
   // Process Advisers Data
   const enrichedAdvisers = advisers.map(adviser => {

@@ -11,6 +11,7 @@ function GroupRegistrations() {
   const [historyGroups, setHistoryGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(null);
 
   const filterGroup = (group) => {
     if (!searchQuery) return true;
@@ -111,6 +112,7 @@ function GroupRegistrations() {
         timer: 2000,
         showConfirmButton: false
       });
+      setSelectedGroup(null);
     } catch (err) {
       console.error(`Error ${decision} group:`, err);
       Swal.fire('Error', `Failed to ${decision}. Please try again.`, 'error');
@@ -118,11 +120,27 @@ function GroupRegistrations() {
   };
 
   return (
-    <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
+    <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={false}>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Group Registrations</h1>
-          <p className="text-sm text-gray-500">Approve or decline student group registration requests</p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Group Registrations</h1>
+            <p className="text-sm text-gray-500">Approve or decline student group registration requests</p>
+          </div>
+          <div className="relative w-full sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search groups..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#7a1f3d] focus:border-[#7a1f3d] w-full text-sm"
+            />
+          </div>
         </div>
 
 
@@ -147,26 +165,18 @@ function GroupRegistrations() {
                       {req.groupName} <span className="bg-[#fff7ed] text-[#c2410c] text-[10px] px-2 py-0.5 rounded-full border border-[#fed7aa] uppercase tracking-wider font-bold">• Pending Approval</span>
                     </h3>
                     <p className="text-sm text-gray-800 mt-1">Research Title: <strong>{req.researchTitle}</strong></p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Submitted by: {req.leaderName} (Group Leader) · Applied {new Date(req.createdAt).toLocaleDateString()} · {req.program}
-                    </p>
-                    <div className="mt-3 bg-gray-50 text-xs text-gray-600 p-2 rounded-md border border-gray-100 flex items-center gap-2">
-                      👥 Members: {req.leaderName} (Leader){req.members?.length > 0 ? `, ${req.members.map(m=>m.name || m.email).join(', ')}` : ''} ({1 + (req.members?.length || 0)} total)
-                    </div>
                   </div>
                 </div>
                 <div className="flex lg:flex-col gap-2 w-full lg:w-32">
                   <button 
-                    onClick={() => handleDecision(req, 'approve')}
-                    className="flex-1 lg:flex-none bg-green-600 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-green-700 flex justify-center items-center gap-1"
+                    onClick={() => setSelectedGroup(req)}
+                    className="flex-1 lg:flex-none bg-[#7a1f3d] text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-[#5a162d] flex justify-center items-center gap-2 shadow-sm transition"
                   >
-                    ✓ Approve
-                  </button>
-                  <button 
-                    onClick={() => handleDecision(req, 'decline')}
-                    className="flex-1 lg:flex-none bg-red-700 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-red-800 flex justify-center items-center gap-1"
-                  >
-                    ✕ Decline
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    View
                   </button>
                 </div>
               </div>
@@ -220,6 +230,89 @@ function GroupRegistrations() {
           </div>
         </div>
       </div>
+
+      {/* View Modal */}
+      {selectedGroup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-scale-in">
+            <div className="bg-[#7a1f3d] px-6 py-4 flex justify-between items-center text-white">
+              <h2 className="font-bold text-xl font-serif">Group Registration Details</h2>
+              <button onClick={() => setSelectedGroup(null)} className="text-white hover:text-gray-200 text-3xl font-light leading-none">&times;</button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Group Name</h3>
+                <p className="font-bold text-2xl text-gray-900">{selectedGroup.groupName}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Research Title</h3>
+                <p className="text-gray-800 text-lg font-medium">{selectedGroup.researchTitle}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Program</h3>
+                  <p className="text-gray-800 font-medium">{selectedGroup.program}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Applied Date</h3>
+                  <p className="text-gray-800 font-medium">{new Date(selectedGroup.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
+                <ul className="space-y-2 mt-2">
+                  <li className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                      {selectedGroup.leaderName?.substring(0,2).toUpperCase() || 'L'}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        {selectedGroup.leaderName} 
+                        <span className="text-[9px] bg-[#fff7ed] text-[#c2410c] px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] shadow-sm">Leader</span>
+                      </p>
+                    </div>
+                  </li>
+                  {selectedGroup.members?.map((m, idx) => (
+                    <li key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                      <span className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-sm font-bold border border-gray-300">
+                        {(m.name || m.email)?.substring(0,2).toUpperCase() || 'M'}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{m.name || m.email}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+              <button 
+                onClick={() => setSelectedGroup(null)}
+                className="px-5 py-2.5 rounded-lg font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 transition shadow-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => handleDecision(selectedGroup, 'decline')}
+                className="px-5 py-2.5 rounded-lg font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center gap-2"
+              >
+                ✕ Decline Group
+              </button>
+              <button 
+                onClick={() => handleDecision(selectedGroup, 'approve')}
+                className="px-5 py-2.5 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center gap-2"
+              >
+                ✓ Approve Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

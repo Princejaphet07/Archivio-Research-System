@@ -190,7 +190,7 @@ function Login() {
                   />
                   <label className="ml-2 text-[11px] text-gray-600">Remember me</label>
                 </div>
-                <Link to="#" className="text-[11px] font-semibold text-[#7a2e46] hover:underline">
+                <Link to="/forgot-password" className="text-[11px] font-semibold text-[#7a2e46] hover:underline">
                   Forgot password?
                 </Link>
               </div>

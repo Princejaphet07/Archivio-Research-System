@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { logActivity } from '../firebase/logActivity';
 import { useUser } from '../context/UserContext';
@@ -17,6 +17,39 @@ function Login() {
 
   // Navigation state sulod sa login: 'login' | 'recovery' | 'reset'
   const [view, setView] = useState('login');
+  
+  // Dynamic Stats
+  const [stats, setStats] = useState({ total: 24, pending: 8, published: 156 });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const subRef = collection(db, 'submissions');
+        
+        // 1. Total Submissions
+        const totalSnap = await getCountFromServer(subRef);
+        const totalCount = totalSnap.data().count;
+
+        // 2. Pending Submissions
+        const pendingQuery = query(subRef, where('status', '==', 'pending'));
+        const pendingSnap = await getCountFromServer(pendingQuery);
+        const pendingCount = pendingSnap.data().count;
+
+        // 3. Published Submissions
+        const publishedQuery = query(subRef, where('status', '==', 'published'));
+        const publishedSnap = await getCountFromServer(publishedQuery);
+        const publishedCount = publishedSnap.data().count;
+
+        setStats({ total: totalCount, pending: pendingCount, published: publishedCount });
+      } catch (err) {
+        console.error('Failed to load real stats:', err);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    fetchStats();
+  }, []);
   
   // Input states
   const [showPassword, setShowPassword] = useState(false);
@@ -207,17 +240,23 @@ function Login() {
           {/* DYNAMIC STATS SECTION ADDED BACK */}
           <div className="mt-12 flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl px-8 py-5 w-full max-w-sm backdrop-blur-md shadow-inner">
             <div className="flex flex-col items-center px-2">
-              <span className="text-[#d6ad60] font-bold text-2xl font-serif">24</span>
+              <span className="text-[#d6ad60] font-bold text-2xl font-serif">
+                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.total}
+              </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Submissions</span>
             </div>
             <div className="h-8 w-[1px] bg-white/10"></div>
             <div className="flex flex-col items-center px-2">
-              <span className="text-[#d6ad60] font-bold text-2xl font-serif font-semibold">8</span>
+              <span className="text-[#d6ad60] font-bold text-2xl font-serif font-semibold">
+                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.pending}
+              </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Pending</span>
             </div>
             <div className="h-8 w-[1px] bg-white/10"></div>
             <div className="flex flex-col items-center px-2">
-              <span className="text-[#d6ad60] font-bold text-2xl font-serif">156</span>
+              <span className="text-[#d6ad60] font-bold text-2xl font-serif">
+                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.published}
+              </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Published</span>
             </div>
           </div>
