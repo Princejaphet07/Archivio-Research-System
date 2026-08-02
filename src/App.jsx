@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import StudentLogin from './pages/StudentLogin';
 import StudentSignup from './pages/StudentSignup';
 import StudentActivate from './pages/StudentActivate';
+import StudentForgotPassword from './pages/StudentForgotPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import ResearchPage from './pages/ResearchPage';
 import ResearchUpload from './pages/ResearchUpload';
@@ -189,6 +190,9 @@ function App() {
       )}
       {currentPage === 'signup' && (
         <StudentSignup onSwitchPage={handlePageSwitch} />
+      )}
+      {currentPage === 'forgot-password' && (
+        <StudentForgotPassword onSwitchPage={handlePageSwitch} />
       )}
       {currentPage === 'activate' && (
         <StudentActivate />

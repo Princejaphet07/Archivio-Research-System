@@ -5,6 +5,7 @@ import { AcademicYearProvider } from './context/AcademicYearContext';
 
 // Pages
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import AllUsers from './pages/AllUsers';
@@ -21,6 +22,7 @@ function App() {
           <Routes>
           {/* Default Route: Login Page */}
           <Route path="/" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Main */}
           <Route path="/dashboard" element={<Dashboard />} />

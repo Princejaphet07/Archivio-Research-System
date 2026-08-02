@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { useNavigate, Link } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { logActivity } from '../firebase/logActivity';
@@ -14,9 +14,7 @@ import maroonBg from '../assets/maroon-bg.png';
 function Login() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
-
-  // Navigation state sulod sa login: 'login' | 'recovery' | 'reset'
-  const [view, setView] = useState('login');
+  const [showPassword, setShowPassword] = useState(false);
   
   // Dynamic Stats
   const [stats, setStats] = useState({ total: 24, pending: 8, published: 156 });
@@ -57,67 +55,6 @@ function Login() {
   const [loginPassword, setLoginPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // Recovery/Verification
-  const [email, setEmail] = useState('');
-  const [resetSent, setResetSent] = useState(false);
-  const [resetError, setResetError] = useState('');
-  
-  // Password Reset Validation
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const hasEightChars = newPassword.length >= 8;
-  const hasNumber = /\d/.test(newPassword);
-  const hasUpper = /[A-Z]/.test(newPassword);
-  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-  const strengthCount = [hasEightChars, hasNumber, hasUpper, hasSpecial].filter(Boolean).length;
-  
-  let strengthText = 'Weak';
-  let strengthColor = 'bg-red-500';
-  let strengthTextColor = 'text-red-500';
-  
-  if (strengthCount === 2 || strengthCount === 3) {
-    strengthText = 'Medium';
-    strengthColor = 'bg-amber-500';
-    strengthTextColor = 'text-amber-500';
-  } else if (strengthCount === 4) {
-    strengthText = 'Strong';
-    strengthColor = 'bg-emerald-500';
-    strengthTextColor = 'text-emerald-500';
-  }
-
-  const resetToLogin = () => {
-    setView('login');
-    setEmail('');
-    setResetSent(false);
-    setResetError('');
-  };
-
-  const handleForgotPassword = async () => {
-    setResetError('');
-    if (!email || !email.includes('@')) {
-      setResetError('Please enter a valid email address.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await sendPasswordResetEmail(auth, email.trim());
-      setResetSent(true);
-    } catch (err) {
-      console.error('Password reset error:', err);
-      if (err.code === 'auth/user-not-found') {
-        setResetError('No account found with this email.');
-      } else {
-        setResetError('Failed to send reset email. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // FIREBASE LOGIN LOGIC
   const handleLoginSubmit = async (e) => {
@@ -339,7 +276,7 @@ function Login() {
                       <input type="checkbox" className="w-4 h-4 rounded border-stone-300 text-[#3b1220] focus:ring-[#3b1220] accent-[#3b1220]" />
                       <span className="text-xs text-stone-500 font-medium">Remember me</span>
                     </label>
-                    <button type="button" onClick={() => setView('recovery')} className="text-xs text-[#801e38] font-semibold hover:underline">Forgot password?</button>
+                    <Link to="/forgot-password" className="text-xs text-[#801e38] font-semibold hover:underline">Forgot password?</Link>
                   </div>
 
                   <button 
@@ -351,81 +288,6 @@ function Login() {
                   </button>
                 </form>
               </div>
-            </>
-          )}
-
-          {/* VIEW: RECOVERY CARD */}
-          {view === 'recovery' && (
-            <div className="bg-white/95 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.08)] p-8 sm:p-10 border-t-[4px] border-[#3b1220] backdrop-blur-sm">
-              <div className="w-12 h-12 bg-[#3b1220] rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                <svg className="w-5 h-5 text-[#d6ad60]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-                </svg>
-              </div>
-
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-serif font-bold text-stone-900">Account Recovery</h3>
-                <p className="text-xs text-stone-500 mt-1">Regain access to your ARCHIVIO account</p>
-              </div>
-
-              {resetError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2 mb-4">
-                  <span className="text-red-500 text-sm">⚠️</span>
-                  <p className="text-sm text-red-700">{resetError}</p>
-                </div>
-              )}
-
-              {!resetSent ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-[#801e38] tracking-wider uppercase mb-2">Enter Your Email</label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">✉️</span>
-                      <input 
-                        type="email" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your institutional email" 
-                        className="w-full pl-10 pr-4 py-3 bg-[#fbfaf8] border-stone-200 border rounded-xl text-sm outline-none transition-all focus:border-[#3b1220]"
-                      />
-                    </div>
-                  </div>
-
-                  <button 
-                    type="button" 
-                    disabled={loading || !email.trim()}
-                    onClick={handleForgotPassword}
-                    className="w-full bg-[#801e38] hover:bg-[#601328] text-white font-bold text-xs py-3 rounded-xl shadow-md transition-all uppercase tracking-wider disabled:opacity-50"
-                  >
-                    {loading ? 'Sending...' : 'Send Reset Link'}
-                  </button>
-                  
-                  <div className="text-center mt-4">
-                    <button type="button" onClick={resetToLogin} className="text-xs text-stone-500 font-bold hover:text-stone-800">← Back to Login</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mb-6">
-                    <p className="text-sm text-emerald-800 font-medium">
-                      ✅ A password reset link has been sent to <strong>{email}</strong>
-                    </p>
-                    <p className="text-xs text-emerald-600 mt-2">
-                      Please check your inbox and spam folder, and click the link to create a new password.
-                    </p>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={resetToLogin}
-                    className="w-full bg-[#3b1220] hover:bg-[#2a0d16] text-[#d6ad60] font-bold text-xs py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-                  >
-                    Return to Sign In
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
       </div>
 

@@ -1,11 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import logoImg from '../assets/logo.png';
-import bgTexture from '../assets/Rectangle 9 (2).png';
+import swuLogoSeal from '../assets/new icon.png';
+import parchmentBg from '../assets/parchment.jpg';
 import Swal from 'sweetalert2';
 
-function ForgotPassword() {
-  const navigate = useNavigate();
+export default function StudentForgotPassword({ onSwitchPage }) {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   
   const [email, setEmail] = useState('');
@@ -113,13 +111,13 @@ function ForgotPassword() {
         icon: 'success',
         title: 'Password successfully changed!',
         text: 'You can now log in with your new password.',
-        confirmButtonColor: '#7a2e46',
+        confirmButtonColor: '#6B0F1A',
         confirmButtonText: 'Go to Login',
         background: '#fff',
         color: '#333'
       });
 
-      navigate('/login');
+      onSwitchPage('login');
       
     } catch (err) {
       setError(err.message);
@@ -129,16 +127,38 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex font-sans text-gray-800" style={{ backgroundImage: `url("${bgTexture}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      <div className="w-full flex justify-center items-center p-6 bg-black/20 backdrop-blur-sm">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 relative">
+    <div className="w-full h-screen flex justify-center items-center bg-[#FDF9ED] font-sans" style={{ backgroundImage: `url("${parchmentBg}")`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+      <div className="w-[1000px] h-[580px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] flex overflow-hidden border border-[#E8DFCB] relative z-10 m-4">
+        
+        {/* Left Side - Brand Banner */}
+        <div className="w-[45%] bg-[#4A1024] relative overflow-hidden flex flex-col items-center justify-center p-8 z-10">
+          <div className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.5)_50%,transparent_51%)] bg-[length:40px_100%]"></div>
           
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-16 h-16 bg-[#542133] rounded-full flex items-center justify-center border-2 border-[#d0a36e] mb-4 shadow-lg">
-              <img src={logoImg} alt="Logo" className="w-10 h-10 object-contain" />
+          <div className="z-10 flex flex-col items-center">
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+              <img src={swuLogoSeal} alt="SWU Logo" className="w-[70px] h-[70px] object-contain" />
             </div>
-            <h1 className="text-2xl font-serif font-bold text-gray-900">Forgot Password</h1>
-            <p className="text-xs text-gray-500 mt-1 text-center">
+            <div className="text-white text-[11px] tracking-[4px] mb-8 opacity-80 font-semibold font-sans">
+              SWU PHINMA
+            </div>
+            
+            <h1 className="text-white text-5xl font-serif tracking-[2px] mb-4 drop-shadow-md">
+              ARCHIVIO
+            </h1>
+            
+            <div className="w-2 h-2 bg-[#d0a36e] transform rotate-45 mb-4"></div>
+            
+            <p className="text-[#d0a36e] font-serif text-sm tracking-wide text-center">
+              Research Archive Management System
+            </p>
+          </div>
+        </div>
+
+        {/* Right Side - Forgot Password Flow */}
+        <div className="w-[55%] flex flex-col p-[60px] bg-white relative">
+          <div className="flex flex-col items-center mb-6">
+            <h1 className="text-3xl font-serif font-bold text-gray-900">Forgot Password</h1>
+            <p className="text-xs text-gray-500 mt-2 text-center">
               {step === 1 && "Enter your email to receive a verification code."}
               {step === 2 && "Check your email for the 6-digit code."}
               {step === 3 && "Create a new secure password."}
@@ -167,7 +187,7 @@ function ForgotPassword() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. adviser@phinmaed.com"
+                  placeholder="e.g. prdo.vender.swu@phinmaed.com"
                   className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] transition"
                   required
                   disabled={loading}
@@ -176,7 +196,7 @@ function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-60 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide"
               >
                 {loading ? 'Sending Code...' : 'Send Verification Code'}
               </button>
@@ -198,7 +218,7 @@ function ForgotPassword() {
                       onChange={(e) => handleChangeOtp(e.target, index)}
                       onKeyDown={(e) => handleKeyDownOtp(e, index)}
                       onFocus={(e) => e.target.select()}
-                      className="w-12 h-14 bg-[#faf7f5] border border-gray-200 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a2e46] transition shadow-sm"
+                      className="w-[14%] h-14 bg-[#faf7f5] border border-gray-200 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a2e46] transition shadow-sm"
                       required
                     />
                   ))}
@@ -206,12 +226,12 @@ function ForgotPassword() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-[#7a2e46] hover:bg-[#5f2135] text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide"
               >
                 Verify Code
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a2e46] hover:underline">
+                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#6B0F1A] hover:underline">
                   Resend Code
                 </button>
               </div>
@@ -232,8 +252,20 @@ function ForgotPassword() {
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
-                    {showPassword ? 'Hide' : 'Show'}
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-stone-400 hover:text-stone-600 focus:outline-none">
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                        <line x1="2" y1="2" x2="22" y2="22" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
                   </button>
                 </div>
                 
@@ -263,25 +295,37 @@ function ForgotPassword() {
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
-                    {showConfirmPassword ? 'Hide' : 'Show'}
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600 focus:outline-none">
+                    {showConfirmPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                        <line x1="2" y1="2" x2="22" y2="22" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-60 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide"
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>
             </form>
           )}
 
-          <div className="text-center mt-6 pt-4 border-t border-gray-100">
-            <Link to="/login" className="text-xs font-semibold text-gray-500 hover:text-[#7a2e46] transition">
+          <div className="text-center mt-8 pt-4">
+            <button onClick={() => onSwitchPage('login')} className="text-xs font-semibold text-gray-500 hover:text-[#6B0F1A] transition">
               ← Back to Login
-            </Link>
+            </button>
           </div>
 
         </div>
@@ -289,5 +333,3 @@ function ForgotPassword() {
     </div>
   );
 }
-
-export default ForgotPassword;

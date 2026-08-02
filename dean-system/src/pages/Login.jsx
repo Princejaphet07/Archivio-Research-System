@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -386,6 +386,9 @@ export default function Login() {
                       />
                       <span className="text-xs font-medium text-stone-600">Remember me</span>
                     </label>
+                    <Link to="/forgot-password" className="text-xs font-semibold text-[#7a1f3d] hover:underline">
+                      Forgot password?
+                    </Link>
                   </div>
 
                   {/* Submit Button */}

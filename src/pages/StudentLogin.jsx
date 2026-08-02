@@ -277,6 +277,7 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
                 </label>
                 <button 
                   type="button" 
+                  onClick={() => onSwitchPage('forgot-password')}
                   className="bg-transparent border-none text-[#6B0F1A] font-medium cursor-pointer p-0 hover:underline disabled:opacity-50"
                   disabled={loading}
                 >

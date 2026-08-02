@@ -5,6 +5,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase/config';
 import { UserProvider } from './context/UserContext';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import ResearchRecords from './pages/ResearchRecords';
 import PublishQueue from './pages/PublishQueue';
@@ -68,6 +69,7 @@ function App() {
       <Routes>
         {/* Login Route */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         {/* Protected Routes - Only accessible if user is logged in */}
         {user ? (

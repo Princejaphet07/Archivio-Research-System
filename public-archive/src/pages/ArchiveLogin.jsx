@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase/config';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
@@ -18,9 +18,6 @@ function ArchiveLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
   const { isDarkMode, toggleTheme } = useTheme();
@@ -105,28 +102,6 @@ function ArchiveLogin() {
       Swal.fire({ icon: 'error', title: 'Oops...', text: msg });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    if (!forgotEmail) {
-      Swal.fire({ icon: 'warning', title: 'Missing Email', text: 'Please enter your email address.' });
-      return;
-    }
-    setResetLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, forgotEmail);
-      Swal.fire({ icon: 'success', title: 'Email Sent!', text: 'Check your inbox for the password reset link.' });
-      setShowForgotModal(false);
-      setForgotEmail('');
-    } catch (error) {
-      console.error(error);
-      let msg = 'Failed to send reset email.';
-      if (error.code === 'auth/user-not-found') msg = 'No account found with this email address.';
-      Swal.fire({ icon: 'error', title: 'Oops...', text: msg });
-    } finally {
-      setResetLoading(false);
     }
   };
 
@@ -259,8 +234,10 @@ function ArchiveLogin() {
                 </button>
               </div>
               {isLogin && (
-                <div className="flex justify-end mt-1">
-                  <button type="button" onClick={() => setShowForgotModal(true)} className="text-[10px] text-[#5a1528] hover:underline font-bold cursor-pointer">Forgot Password?</button>
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-[11px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab] transition-colors mt-1">
+                    Forgot Password?
+                  </Link>
                 </div>
               )}
             </div>
@@ -378,42 +355,6 @@ function ArchiveLogin() {
           </div>
         </div>
       )}
-
-      {/* FORGOT PASSWORD MODAL */}
-      {showForgotModal && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#fdfbf7] dark:bg-gray-800 w-full max-w-sm rounded-xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center p-5 border-b border-stone-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Reset Password</h2>
-              <button onClick={() => setShowForgotModal(false)} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
-            </div>
-            <form onSubmit={handlePasswordReset} className="p-6 font-sans">
-              <p className="text-sm text-stone-600 dark:text-gray-400 mb-4">
-                Enter your email address and we will send you a link to reset your password.
-              </p>
-              <div className="mb-6">
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Email Address</label>
-                <input 
-                  type="email" 
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
-                  placeholder="juan@swu.phinma.edu.ph"
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={resetLoading}
-                className={`w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors ${resetLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#3f081b] cursor-pointer'}`}
-              >
-                {resetLoading ? 'Sending...' : 'Send Reset Link'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
