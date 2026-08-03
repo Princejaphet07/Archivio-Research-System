@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUser } from '../context/UserContext';
+import NotificationBell from './NotificationBell';
 
 const PAGE_TITLES = {
   'dashboard': { title: 'Dashboard', breadcrumb: '' },
@@ -81,10 +82,7 @@ export default function Header({ activePage, onMenuClick }) {
         </div>
 
         {/* Notification Bell */}
-        <button className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 border border-stone-200/40 text-sm shadow-sm hover:bg-stone-100 transition-colors shrink-0">
-          🔔
-          <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-white"></span>
-        </button>
+        <NotificationBell />
       </div>
 
     </header>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAdviser } from '../context/AdviserContext';
+import NotificationBell from './NotificationBell';
 
 function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", showSearch = true, searchQuery, onSearchChange }) {
   const { userRole } = useAdviser();
@@ -53,9 +54,7 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
         <select className="hidden lg:block bg-pink-50 text-[#541b2f] border border-pink-100 font-semibold text-xs py-1.5 px-3 rounded-lg focus:outline-none">
           <option>📅 S.Y. 2026-2027</option>
         </select>
-        <button className="relative text-gray-400 hover:text-[#541b2f] transition">
-          🔔<span className="absolute top-0 right-0 w-2 h-2 bg-yellow-400 rounded-full border border-white"></span>
-        </button>
+        <NotificationBell />
         <button className="text-gray-400 hover:text-[#541b2f] transition">👤</button>
       </div>
     </header>

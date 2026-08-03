@@ -53,6 +53,7 @@ function Login() {
   const [loginPassword, setLoginPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const view = 'login';
 
   // FIREBASE LOGIN LOGIC
   const handleLoginSubmit = async (e) => {
