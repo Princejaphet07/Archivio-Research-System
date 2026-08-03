@@ -41,14 +41,25 @@ function Dashboard() {
     // Mapping of student courses to standard department names
     const courseToDeptMap = {
       'BS Information Technology': 'College of Information Technology',
+      'Bachelor of Science in Information Technology': 'College of Information Technology',
       'BS Computer Science': 'College of Information Technology',
+      'Bachelor of Science in Computer Science': 'College of Information Technology',
       'BS Computer Engineering': 'College of Information Technology',
+      'Bachelor of Science in Computer Engineering': 'College of Information Technology',
       'BS Nursing': 'College of Nursing',
+      'Bachelor of Science in Nursing': 'College of Nursing',
       'BS Accountancy': 'College of Business and Management',
+      'Bachelor of Science in Accountancy': 'College of Business and Management',
       'BS Business Administration': 'College of Business and Management',
+      'Bachelor of Science in Business Administration': 'College of Business and Management',
       'BS Civil Engineering': 'College of Engineering',
+      'Bachelor of Science in Civil Engineering': 'College of Engineering',
       'BS Architecture': 'College of Architecture',
-      'Doctor of Medicine': 'School of Medicine'
+      'Bachelor of Science in Architecture': 'College of Architecture',
+      'Doctor of Medicine': 'School of Medicine',
+      'Doctor of Dental Medicine': 'School of Dentistry',
+      'BS Psychology': 'College of Arts and Sciences',
+      'Bachelor of Science in Psychology': 'College of Arts and Sciences',
     };
     
     filteredDeans.forEach(dean => {
@@ -85,11 +96,38 @@ function Dashboard() {
   const categories = useMemo(() => {
     const cats = {};
     let totalPub = 0;
+    
+    // Use the same courseToDeptMap for consistency
+    const courseToDeptMap = {
+      'BS Information Technology': 'College of Information Technology',
+      'Bachelor of Science in Information Technology': 'College of Information Technology',
+      'BS Computer Science': 'College of Information Technology',
+      'Bachelor of Science in Computer Science': 'College of Information Technology',
+      'BS Computer Engineering': 'College of Information Technology',
+      'Bachelor of Science in Computer Engineering': 'College of Information Technology',
+      'BS Nursing': 'College of Nursing',
+      'Bachelor of Science in Nursing': 'College of Nursing',
+      'BS Accountancy': 'College of Business and Management',
+      'Bachelor of Science in Accountancy': 'College of Business and Management',
+      'BS Business Administration': 'College of Business and Management',
+      'Bachelor of Science in Business Administration': 'College of Business and Management',
+      'BS Civil Engineering': 'College of Engineering',
+      'Bachelor of Science in Civil Engineering': 'College of Engineering',
+      'BS Architecture': 'College of Architecture',
+      'Bachelor of Science in Architecture': 'College of Architecture',
+      'Doctor of Medicine': 'School of Medicine',
+      'Doctor of Dental Medicine': 'School of Dentistry',
+      'BS Psychology': 'College of Arts and Sciences',
+      'Bachelor of Science in Psychology': 'College of Arts and Sciences',
+    };
+
     filteredSubmissions.forEach(sub => {
       if (sub.reviewStatus === 'published') {
         const group = filteredGroups.find(g => g.leaderUid === sub.studentUid);
-        const title = group?.researchTitle || sub.researchTitle || sub.title || 'Untitled';
-        cats[title] = (cats[title] || 0) + 1;
+        const rawDName = group?.department || sub.program || group?.program || 'Unknown';
+        const deptName = courseToDeptMap[rawDName] || rawDName;
+        
+        cats[deptName] = (cats[deptName] || 0) + 1;
         totalPub++;
       }
     });

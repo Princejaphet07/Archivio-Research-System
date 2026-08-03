@@ -97,8 +97,9 @@ export default function Dashboard({ activePage, onNavigate }) {
         if (tags.length > 0) {
           tags.forEach(tag => { categoriesMap[tag] = (categoriesMap[tag] || 0) + 1; });
         } else {
-           const prog = group.program || data.program || 'General IT';
-           categoriesMap[prog] = (categoriesMap[prog] || 0) + 1;
+           // Group by Department instead of Program for consistency
+           const dept = group.department || data.department || 'Unknown Department';
+           categoriesMap[dept] = (categoriesMap[dept] || 0) + 1;
         }
       }
       if (status === 'pending' || status === 'revision') pendingCount++;
