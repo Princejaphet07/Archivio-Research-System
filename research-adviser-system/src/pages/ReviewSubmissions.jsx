@@ -650,7 +650,7 @@ function ReviewSubmissions() {
                 Close
               </button>
               <div className="flex gap-3">
-                {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && selectedSubmission.completionPercent === 100 && (
+                {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && (
                   <>
                     <button
                       onClick={() => {
@@ -663,10 +663,15 @@ function ReviewSubmissions() {
                     </button>
                     <button
                       onClick={() => {
+                        if (selectedSubmission.completionPercent < 100) {
+                          Swal.fire('Incomplete', 'Student must upload all requirements before approval.', 'warning');
+                          return;
+                        }
                         setShowReviewModal(false);
                         handleApprove(selectedSubmission);
                       }}
-                      className="bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                      title={selectedSubmission.completionPercent < 100 ? 'Student must submit all documents first' : ''}
                     >
                       Approve
                     </button>

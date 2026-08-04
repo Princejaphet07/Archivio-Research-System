@@ -12,6 +12,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [invitationData, setInvitationData] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -111,6 +112,45 @@ export default function StudentSignup({ onSwitchPage }) {
     return true;
   };
 
+  const handleContinueFromStep1 = async () => {
+    if (!validateStep1()) return;
+    setLoading(true);
+    try {
+      const email = personalInfo.schoolEmail.trim().toLowerCase();
+      const invitationsRef = collection(db, 'studentInvitations');
+      const q = query(invitationsRef, where('studentEmail', '==', email), where('status', '==', 'pending'));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        setError('❌ No invitation found for this email. Please make sure you are using the email address that was invited.');
+        setLoading(false);
+        return;
+      }
+      
+      const sortedDocs = snapshot.docs.sort((a, b) => {
+        const dateA = new Date(a.data().createdAt || 0);
+        const dateB = new Date(b.data().createdAt || 0);
+        return dateB - dateA;
+      });
+
+      const invData = sortedDocs[0].data();
+      invData.id = sortedDocs[0].id; // store id for later use
+      setInvitationData(invData);
+
+      if (invData.invitedByLeader) {
+        // It's a member! Skip to step 3.
+        setStep(3);
+      } else {
+        setStep(2);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to verify invitation. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateStep2 = () => {
     if (!groupInfo.groupName || !groupInfo.researchTitle) {
       setError('Please provide your Group Name and Research Title.');
@@ -141,28 +181,11 @@ export default function StudentSignup({ onSwitchPage }) {
 
     try {
       const email = personalInfo.schoolEmail.trim().toLowerCase();
-
-      // Check that the student was actually invited
-      const invitationsRef = collection(db, 'studentInvitations');
-      const q = query(invitationsRef, where('studentEmail', '==', email), where('status', '==', 'pending'));
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
-        setError('❌ No invitation found for this email. Please make sure you are using the email address that was invited by your Research Adviser.');
+      if (!invitationData) {
+        setError('Invitation data missing. Please go back to step 1.');
         setLoading(false);
         return;
       }
-
-      // A student might have multiple pending invitations if they were invited multiple times.
-      // Sort in memory to get the most recent invitation.
-      const sortedDocs = snapshot.docs.sort((a, b) => {
-        const dateA = new Date(a.data().createdAt || 0);
-        const dateB = new Date(b.data().createdAt || 0);
-        return dateB - dateA;
-      });
-
-      const invitationDoc = sortedDocs[0];
-      const invitationData = invitationDoc.data();
 
       // Create Firebase Auth account
       const userCredential = await createUserWithEmailAndPassword(auth, email, securityInfo.password);
@@ -181,72 +204,108 @@ export default function StudentSignup({ onSwitchPage }) {
       const deleteGroupPromises = oldGroupSnap.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
       await Promise.all(deleteGroupPromises);
 
-      // Save student profile to Firestore
-      await setDoc(doc(db, 'students', uid), {
-        uid,
-        firstName: personalInfo.firstName.trim(),
-        middleName: personalInfo.middleName.trim(),
-        lastName: personalInfo.lastName.trim(),
-        displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
-        studentNumber: personalInfo.studentNumber.trim(),
-        email,
-        course: personalInfo.course,
-        yearLevel: personalInfo.yearLevel,
-        groupName: groupInfo.groupName.trim(),
-        researchTitle: groupInfo.researchTitle.trim(),
-        groupMembers: groupInfo.members,
-        invitedBy: invitationData.sentBy,
-        invitedByName: invitationData.sentByName,
-        department: invitationData.department,
-        role: 'student',
-        status: 'active',
-        groupStatus: 'pending', // Track approval status
-        createdAt: new Date().toISOString()
-      });
-
-      // Create Group Registration Document
-      await addDoc(collection(db, 'groups'), {
-        groupName: groupInfo.groupName.trim(),
-        researchTitle: groupInfo.researchTitle.trim(),
-        leaderUid: uid,
-        leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
-        leaderEmail: email,
-        program: personalInfo.course,
-        department: invitationData.department || 'Not specified',
-        members: groupInfo.members,
-        adviserUid: invitationData.sentBy,
-        adviserName: invitationData.sentByName,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      // Automatically generate system invitations for the other group members
-      for (const member of groupInfo.members) {
-        const memberEmail = typeof member === 'object' ? member.email : member;
+      if (invitationData.invitedByLeader) {
+        // --- MEMBER SIGNUP ---
         
-        // Check if an invitation already exists for this email
-        const existingInvitesSnap = await getDocs(
-          query(collection(db, 'studentInvitations'), where('studentEmail', '==', memberEmail))
-        );
+        // Find the leader's student profile
+        const leaderQ = query(collection(db, 'students'), where('email', '==', invitationData.invitedByLeader));
+        const leaderSnap = await getDocs(leaderQ);
         
-        if (existingInvitesSnap.empty) {
-          await addDoc(collection(db, 'studentInvitations'), {
-            studentEmail: memberEmail,
-            sentBy: invitationData.sentBy,
-            sentByName: invitationData.sentByName,
-            department: invitationData.department || 'Not specified',
-            status: 'pending',
-            invitationSentAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            invitedByLeader: email // Track who actually added them
-          });
+        let leaderData = {};
+        if (!leaderSnap.empty) {
+          leaderData = leaderSnap.docs[0].data();
+        }
+
+        await setDoc(doc(db, 'students', uid), {
+          uid,
+          firstName: personalInfo.firstName.trim(),
+          middleName: personalInfo.middleName.trim(),
+          lastName: personalInfo.lastName.trim(),
+          displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
+          studentNumber: personalInfo.studentNumber.trim(),
+          email,
+          course: personalInfo.course,
+          yearLevel: personalInfo.yearLevel,
+          groupName: leaderData.groupName || 'Unknown Group',
+          researchTitle: leaderData.researchTitle || 'Unknown Title',
+          groupMembers: leaderData.groupMembers || [], // Sync from leader
+          invitedBy: invitationData.sentBy || leaderData.invitedBy,
+          invitedByName: invitationData.sentByName || leaderData.invitedByName,
+          department: invitationData.department || leaderData.department,
+          leaderUid: leaderData.uid || null,
+          role: 'member',
+          status: 'active',
+          groupStatus: leaderData.groupStatus || 'pending',
+          createdAt: new Date().toISOString()
+        });
+        
+        // We do NOT create a new group.
+
+      } else {
+        // --- LEADER SIGNUP ---
+        await setDoc(doc(db, 'students', uid), {
+          uid,
+          firstName: personalInfo.firstName.trim(),
+          middleName: personalInfo.middleName.trim(),
+          lastName: personalInfo.lastName.trim(),
+          displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
+          studentNumber: personalInfo.studentNumber.trim(),
+          email,
+          course: personalInfo.course,
+          yearLevel: personalInfo.yearLevel,
+          groupName: groupInfo.groupName.trim(),
+          researchTitle: groupInfo.researchTitle.trim(),
+          groupMembers: groupInfo.members,
+          invitedBy: invitationData.sentBy,
+          invitedByName: invitationData.sentByName,
+          department: invitationData.department,
+          role: 'student',
+          status: 'active',
+          groupStatus: 'pending',
+          createdAt: new Date().toISOString()
+        });
+
+        await addDoc(collection(db, 'groups'), {
+          groupName: groupInfo.groupName.trim(),
+          researchTitle: groupInfo.researchTitle.trim(),
+          leaderUid: uid,
+          leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
+          leaderEmail: email,
+          program: personalInfo.course,
+          department: invitationData.department || 'Not specified',
+          members: groupInfo.members,
+          adviserUid: invitationData.sentBy,
+          adviserName: invitationData.sentByName,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        for (const member of groupInfo.members) {
+          const memberEmail = typeof member === 'object' ? member.email : member;
+          const existingInvitesSnap = await getDocs(
+            query(collection(db, 'studentInvitations'), where('studentEmail', '==', memberEmail))
+          );
+          
+          if (existingInvitesSnap.empty) {
+            await addDoc(collection(db, 'studentInvitations'), {
+              studentEmail: memberEmail,
+              sentBy: invitationData.sentBy,
+              sentByName: invitationData.sentByName,
+              department: invitationData.department || 'Not specified',
+              status: 'pending',
+              invitationSentAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              invitedByLeader: email
+            });
+          }
         }
       }
 
       // Update invitation status to active
+      // Update invitation status to active
       const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
-      await updateDoc(firestoreDoc(db, 'studentInvitations', invitationDoc.id), {
+      await updateDoc(firestoreDoc(db, 'studentInvitations', invitationData.id), {
         status: 'active',
         userId: uid,
         activatedAt: new Date().toISOString()
@@ -436,9 +495,10 @@ export default function StudentSignup({ onSwitchPage }) {
                 ‹ Back
               </button>
               <button
-                type="button" onClick={() => { if (validateStep1()) setStep(2); }}
-                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition">
-                Continue ›
+                type="button" onClick={handleContinueFromStep1}
+                disabled={loading}
+                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition disabled:opacity-50">
+                {loading ? 'Checking...' : 'Continue ›'}
               </button>
             </div>
           </div>

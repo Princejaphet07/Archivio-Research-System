@@ -11,7 +11,7 @@ import PortalHeader from '../Components/PortalHeader';
 
 // Dynamic requirements fetched from DB instead of hardcoded array
 
-export default function RequirementsPage({ onLogout, studentName, initials, studentUid, groupName, activeTab, setActiveTab, profilePhotoUrl }) {
+export default function RequirementsPage({ onLogout, studentName, initials, studentUid, groupName, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loadingData, setLoadingData] = useState(true);
@@ -354,7 +354,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         onLogout={onLogout}
         studentName={studentName || 'Student'}
         initials={displayInitials}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -365,7 +365,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           initials={displayInitials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-8 pb-10">

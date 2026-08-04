@@ -21,7 +21,7 @@ const AVATAR_COLORS = [
 ];
 const avatarColor = (name = '') => AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
-export default function MyGroupPage({ onLogout, studentName, initials, groupName: propGroupName, adviserName: propAdviserName, studentUid, activeTab, setActiveTab, profilePhotoUrl }) {
+export default function MyGroupPage({ onLogout, studentName, initials, groupName: propGroupName, adviserName: propAdviserName, studentUid, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [memberProfiles, setMemberProfiles] = useState([]);
@@ -253,7 +253,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         onLogout={onLogout}
         studentName={displayName}
         initials={initials || getInitials(displayName)}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT */}
@@ -265,7 +265,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           initials={initials || getInitials(displayName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* SCROLLABLE BODY */}
@@ -418,4 +418,4 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       </div>
     </div>
   );
-}
+}

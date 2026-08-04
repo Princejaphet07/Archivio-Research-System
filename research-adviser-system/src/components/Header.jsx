@@ -55,6 +55,13 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
           <option>📅 S.Y. 2026-2027</option>
         </select>
         <NotificationBell />
+        <button 
+          onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))} 
+          className="text-gray-400 hover:text-[#541b2f] transition"
+          title="Open Chat"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+        </button>
         <button className="text-gray-400 hover:text-[#541b2f] transition">👤</button>
       </div>
     </header>

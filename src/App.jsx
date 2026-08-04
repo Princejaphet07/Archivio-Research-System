@@ -90,6 +90,7 @@ function App() {
             let groupName = 'Your Group';
             let adviserName = 'Your Adviser';
             let profilePhotoUrl = null;
+            let role = 'student';
             
             if (!snapshot.empty) {
               const studentData = snapshot.docs[0].data();
@@ -97,10 +98,11 @@ function App() {
               groupName = studentData.groupName || 'Your Group';
               adviserName = studentData.invitedByName || 'Your Adviser';
               profilePhotoUrl = studentData.profilePhotoUrl || null;
+              role = studentData.role || 'student';
             }
             
             const initials = displayName.substring(0, 2).toUpperCase();
-            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl });
+            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl, role });
           });
           
           // Only redirect to dashboard if they are on login or an invite route
@@ -224,6 +226,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           groupName={studentInfo.groupName}
           adviserName={studentInfo.adviserName}
           onUploadClick={handleUploadClick}
@@ -237,6 +240,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -247,6 +251,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           studentUid={studentInfo.uid}
           groupName={studentInfo.groupName}
           activeTab={activeTab}
@@ -259,6 +264,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -269,6 +275,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           groupName={studentInfo.groupName}
           adviserName={studentInfo.adviserName}
           studentUid={studentInfo.uid}
@@ -283,6 +290,7 @@ function App() {
           studentName={studentInfo.name}
           initials={studentInfo.initials}
           profilePhotoUrl={studentInfo.profilePhotoUrl}
+          role={studentInfo.role}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />

@@ -7,7 +7,7 @@ import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, 
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 
-export default function SettingsPage({ onLogout, studentName, initials, activeTab, setActiveTab, profilePhotoUrl }) {
+export default function SettingsPage({ onLogout, studentName, initials, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState('Profile'); 
 
@@ -258,7 +258,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         onLogout={onLogout} 
         studentName={studentName}
         initials={initials}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT CONTAINER */}
@@ -270,7 +270,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* SUBTITLE */}

@@ -8,7 +8,7 @@ import PortalHeader from '../Components/PortalHeader';
 // ── Progress step config ─────────────────────────────────────────────────────
 const STEPS = ['Account', 'Manuscript', 'Documents', 'Review', 'Published'];
 
-export default function StudentDashboard({ onLogout, studentName, initials, groupName, adviserName, onUploadClick, activeTab, setActiveTab, profilePhotoUrl }) {
+export default function StudentDashboard({ onLogout, studentName, initials, groupName, adviserName, onUploadClick, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Real backend state
@@ -171,7 +171,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
         onLogout={onLogout}
         studentName={displayName}
         initials={initials}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -183,7 +183,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* SCROLLABLE BODY */}
@@ -561,4 +561,4 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
       </div>
     </div>
   );
-}
+}

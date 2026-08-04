@@ -6,7 +6,7 @@ import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
 import Swal from 'sweetalert2';
 
-export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl }) {
+export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [studentData, setStudentData] = useState(null);
@@ -25,7 +25,21 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
       if (!snapshot.empty) setStudentData(snapshot.docs[0].data());
     });
 
-    const submissionQuery = query(collection(db, 'submissions'), where('studentUid', '==', uid));
+    return () => unsubscribeStudent();
+  }, []);
+
+  useEffect(() => {
+    if (!studentData) return;
+
+    const uid = auth.currentUser?.uid;
+    const lookupUid = studentData.role === 'member' ? studentData.leaderUid : uid;
+
+    if (!lookupUid) {
+      setLoadingData(false);
+      return;
+    }
+
+    const submissionQuery = query(collection(db, 'submissions'), where('studentUid', '==', lookupUid));
     const unsubscribeSubmission = onSnapshot(submissionQuery, (snapshot) => {
       if (!snapshot.empty) {
         const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -44,10 +58,9 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     });
 
     return () => {
-      unsubscribeStudent();
       unsubscribeSubmission();
     };
-  }, []);
+  }, [studentData]);
 
   const manuscript = submission?.documents?.['Final Manuscript'];
   const hasManuscript = !!manuscript;
@@ -117,7 +130,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         onLogout={onLogout} 
         studentName={studentName}
         initials={initials}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -129,7 +142,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* SCROLLABLE BODY */}

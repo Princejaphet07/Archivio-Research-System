@@ -20,6 +20,13 @@ export default function ChatWidget() {
 
   const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
+  // Listen for custom event to open chat
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener('open-chat', handleOpenChat);
+    return () => window.removeEventListener('open-chat', handleOpenChat);
+  }, []);
+
   // Fetch groups when widget opens
   useEffect(() => {
     if (!isOpen) return;

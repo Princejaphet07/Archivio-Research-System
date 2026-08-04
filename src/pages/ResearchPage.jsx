@@ -4,7 +4,7 @@ import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
 import swuBuilding from '../assets/swu-building.png';
 
-export default function ResearchPage({ onLogout, studentName, initials, onUploadClick, activeTab, setActiveTab, profilePhotoUrl }) {
+export default function ResearchPage({ onLogout, studentName, initials, onUploadClick, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const displayName = studentName || 'STUDENT';
   const displayInitials = initials || 'JZ';
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -85,7 +85,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
           onLogout={onLogout}
           studentName={studentName}
           initials={initials}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* Right Side Content */}

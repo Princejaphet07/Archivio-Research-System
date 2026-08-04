@@ -3,7 +3,7 @@ import swuLogoSeal from '../assets/new icon.png';
 import { db, auth } from '../firebase/config';
 import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 
-export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl }) {
+export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl, role }) {
   const [missingCount, setMissingCount] = useState(0);
 
   useEffect(() => {
@@ -131,7 +131,10 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         <div className="px-6 pb-8 flex flex-col gap-4 mt-8">
           
           {/* Need help box */}
-          <div className="bg-[#F4DEE5] p-5 rounded-2xl flex flex-col gap-2">
+          <div 
+            className="bg-[#F4DEE5] p-5 rounded-2xl flex flex-col gap-2 cursor-pointer hover:bg-[#ebd0da] transition-colors"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))}
+          >
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm mb-1">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </div>
@@ -150,7 +153,9 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
             </div>
             <div className="flex flex-col flex-1 truncate">
               <span className="text-[13px] font-bold text-[#1A1A1A] truncate">{studentName || 'Student Name'}</span>
-              <span className="text-[11px] text-gray-500">Group Leader</span>
+              <span className="text-[11px] text-gray-500">
+                {role === 'member' ? 'Group Member' : 'Group Leader'}
+              </span>
             </div>
             <button 
               onClick={onLogout}

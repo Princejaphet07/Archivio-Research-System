@@ -9,7 +9,7 @@ import PortalHeader from '../Components/PortalHeader';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
-export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl }) {
+export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ── Message modal state ────────────────────────────────────────────────────
@@ -63,8 +63,22 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       }
     });
 
+    return () => unsubStudent();
+  }, []);
+
+  useEffect(() => {
+    if (!studentData) return;
+    
+    const uid = auth.currentUser?.uid;
+    const lookupUid = studentData.role === 'member' ? studentData.leaderUid : uid;
+    
+    if (!lookupUid) {
+      setLoading(false);
+      return;
+    }
+
     // 2. Submission doc
-    const subQ = query(collection(db, 'submissions'), where('studentUid', '==', uid));
+    const subQ = query(collection(db, 'submissions'), where('studentUid', '==', lookupUid));
     const unsubSub = onSnapshot(subQ, (snap) => {
       if (!snap.empty) {
         const subs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -89,8 +103,8 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       setRequirements(active);
     });
 
-    return () => { unsubStudent(); unsubSub(); unsubReq(); };
-  }, []);
+    return () => { unsubSub(); unsubReq(); };
+  }, [studentData]);
 
   // Show approval notification if newly approved
   useEffect(() => {
@@ -282,7 +296,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         onLogout={onLogout}
         studentName={studentName}
         initials={initials}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={profilePhotoUrl} role={role}
       />
 
       {/* MAIN CONTENT */}
@@ -294,7 +308,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
           initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl}
+          profilePhotoUrl={profilePhotoUrl} role={role}
         />
 
         {/* SCROLLABLE BODY */}
