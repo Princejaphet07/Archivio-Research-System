@@ -34,6 +34,7 @@ export default function StudentSignup({ onSwitchPage }) {
     members: []
   });
   const [memberInput, setMemberInput] = useState('');
+  const [memberNameInput, setMemberNameInput] = useState('');
 
   // Step 3 — Account Security
   const [securityInfo, setSecurityInfo] = useState({
@@ -58,7 +59,11 @@ export default function StudentSignup({ onSwitchPage }) {
 
   const handleAddMember = () => {
     const email = memberInput.trim().toLowerCase();
-    if (!email) return;
+    const name = memberNameInput.trim();
+    if (!email || !name) {
+      setError('Please provide both the member\'s name and email');
+      return;
+    }
     if (!email.endsWith('@phinmaed.com')) {
       setError('Member email must be @phinmaed.com');
       return;
@@ -70,9 +75,10 @@ export default function StudentSignup({ onSwitchPage }) {
     setError('');
     setGroupInfo(prev => ({
       ...prev,
-      members: [...prev.members, { email, name: email.split('@')[0] }]
+      members: [...prev.members, { email, name }]
     }));
     setMemberInput('');
+    setMemberNameInput('');
   };
 
   const handleRemoveMember = (email) => {
@@ -263,9 +269,7 @@ export default function StudentSignup({ onSwitchPage }) {
         text: 'Your account and group have been registered. Please wait for your research adviser to approve your group.',
         icon: 'success',
         confirmButtonColor: '#6B0F1A',
-        confirmButtonText: 'Go to Login'
-      }).then(() => {
-        onSwitchPage('login', { email: email });
+        confirmButtonText: 'Continue to Dashboard'
       });
 
     } catch (err) {
@@ -491,7 +495,8 @@ export default function StudentSignup({ onSwitchPage }) {
                     {i + 2}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{m.email}</p>
+                    <p className="text-xs font-medium truncate">{m.name}</p>
+                    <p className="text-[10px] text-gray-500 truncate">{m.email}</p>
                   </div>
                   <button onClick={() => handleRemoveMember(m.email)} className="text-gray-400 hover:text-red-500 text-sm flex-shrink-0">✕</button>
                 </div>
@@ -499,13 +504,19 @@ export default function StudentSignup({ onSwitchPage }) {
 
               {/* Add member input */}
               <div className="flex gap-2 mt-2">
-                <input
-                  value={memberInput} onChange={e => setMemberInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
-                  type="email" placeholder="member@phinmaed.com"
-                  className="flex-1 bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <input
+                    value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)}
+                    type="text" placeholder="Full Name (e.g. Juan Dela Cruz)"
+                    className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                  <input
+                    value={memberInput} onChange={e => setMemberInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
+                    type="email" placeholder="Email (member@phinmaed.com)"
+                    className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                </div>
                 <button type="button" onClick={handleAddMember}
-                  className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition">
+                  className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition self-stretch">
                   Add
                 </button>
               </div>

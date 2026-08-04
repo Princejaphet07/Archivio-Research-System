@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot } from 'firebase/firestore';
 import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
 
@@ -17,23 +17,19 @@ function GroupRegistrations() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return group.groupName?.toLowerCase().includes(q) ||
-           group.researchTitle?.toLowerCase().includes(q) ||
-           group.leaderName?.toLowerCase().includes(q) ||
-           group.program?.toLowerCase().includes(q);
+      group.researchTitle?.toLowerCase().includes(q) ||
+      group.leaderName?.toLowerCase().includes(q) ||
+      group.program?.toLowerCase().includes(q);
   };
 
-  const fetchGroups = async () => {
-    setLoading(true);
-    try {
-      // Use user.email as the ultimate source of truth for the adviser's email
-      const email = user?.email || adviserData?.email;
-      console.log("Fetching groups for adviser:", email);
-      if (!email) return;
+  useEffect(() => {
+    const email = user?.email || adviserData?.email;
+    if (!email) return;
 
-      const q = query(collection(db, 'groups'), where('adviserUid', '==', email));
-      const snap = await getDocs(q);
-      console.log("Groups found in DB for this adviser:", snap.size);
-      
+    console.log("Listening to groups for adviser:", email);
+    const q = query(collection(db, 'groups'), where('adviserUid', '==', email));
+    
+    const unsubscribe = onSnapshot(q, (snap) => {
       const pending = [];
       const history = [];
       
@@ -47,25 +43,20 @@ function GroupRegistrations() {
       });
       
       setPendingGroups(pending);
-      // Sort history by updated date if exists
       setHistoryGroups(history.sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)));
-    } catch (err) {
-      console.error('Error fetching groups:', err);
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      console.error('Error fetching groups:', error);
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    if (user?.email || adviserData?.email) {
-      fetchGroups();
-    }
+    return () => unsubscribe();
   }, [user?.email, adviserData?.email]);
 
   const handleDecision = async (group, decision) => {
     const actionText = decision === 'approve' ? 'approve' : 'decline';
     const confirmColor = decision === 'approve' ? '#10b981' : '#d33';
-    
+
     const result = await Swal.fire({
       title: 'Are you sure?',
       text: `Do you want to ${actionText} ${group.groupName}?`,
@@ -87,9 +78,13 @@ function GroupRegistrations() {
 
       // 2. Update students collection (the leader's profile)
       if (group.leaderUid) {
-        await updateDoc(doc(db, 'students', group.leaderUid), {
+        const updateData = {
           groupStatus: decision === 'approve' ? 'approved' : 'declined'
-        });
+        };
+        if (decision === 'approve') {
+          updateData.hasSeenApprovalNotification = false;
+        }
+        await updateDoc(doc(db, 'students', group.leaderUid), updateData);
       }
 
       // 3. Log Activity for Admin
@@ -102,8 +97,7 @@ function GroupRegistrations() {
         timestamp: new Date().toISOString()
       });
 
-      // Refresh list
-      fetchGroups();
+      // Refresh list (handled by onSnapshot)
 
       Swal.fire({
         title: 'Success!',
@@ -147,14 +141,14 @@ function GroupRegistrations() {
         {/* Pending Requests */}
         <div className="space-y-4">
           {loading ? (
-             <div className="py-12 flex flex-col items-center justify-center">
-               <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-               <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requests...</p>
-             </div>
+            <div className="py-12 flex flex-col items-center justify-center">
+              <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
+              <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requests...</p>
+            </div>
           ) : pendingGroups.filter(filterGroup).length === 0 ? (
-             <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
-               No pending group registrations found.
-             </div>
+            <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+              No pending group registrations found.
+            </div>
           ) : (
             pendingGroups.filter(filterGroup).map((req) => (
               <div key={req.id} className="bg-white border border-[#fed7aa] rounded-xl p-5 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
@@ -168,7 +162,7 @@ function GroupRegistrations() {
                   </div>
                 </div>
                 <div className="flex lg:flex-col gap-2 w-full lg:w-32">
-                  <button 
+                  <button
                     onClick={() => setSelectedGroup(req)}
                     className="flex-1 lg:flex-none bg-[#7a1f3d] text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-[#5a162d] flex justify-center items-center gap-2 shadow-sm transition"
                   >
@@ -215,9 +209,8 @@ function GroupRegistrations() {
                       <td className="py-3 px-5 text-gray-600">{item.researchTitle}</td>
                       <td className="py-3 px-5 text-gray-600">{item.program}</td>
                       <td className="py-3 px-5">
-                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${
-                          item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                          }`}>
                           • {item.status === 'approved' ? 'Approved' : 'Declined'}
                         </span>
                       </td>
@@ -239,18 +232,18 @@ function GroupRegistrations() {
               <h2 className="font-bold text-xl font-serif">Group Registration Details</h2>
               <button onClick={() => setSelectedGroup(null)} className="text-white hover:text-gray-200 text-3xl font-light leading-none">&times;</button>
             </div>
-            
+
             <div className="p-6 space-y-5">
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Group Name</h3>
                 <p className="font-bold text-2xl text-gray-900">{selectedGroup.groupName}</p>
               </div>
-              
+
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Research Title</h3>
                 <p className="text-gray-800 text-lg font-medium">{selectedGroup.researchTitle}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                   <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Program</h3>
@@ -267,47 +260,53 @@ function GroupRegistrations() {
                 <ul className="space-y-2 mt-2">
                   <li className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                     <span className="w-9 h-9 rounded-full bg-[#7a1f3d] text-white flex items-center justify-center text-sm font-bold shadow-sm">
-                      {selectedGroup.leaderName?.substring(0,2).toUpperCase() || 'L'}
+                      {selectedGroup.leaderName?.substring(0, 2).toUpperCase() || 'L'}
                     </span>
                     <div>
                       <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                        {selectedGroup.leaderName} 
+                        {selectedGroup.leaderName}
                         <span className="text-[9px] bg-[#fff7ed] text-[#c2410c] px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] shadow-sm">Leader</span>
                       </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{selectedGroup.leaderEmail}</p>
                     </div>
                   </li>
-                  {selectedGroup.members?.map((m, idx) => (
-                    <li key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                      <span className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-sm font-bold border border-gray-300">
-                        {(m.name || m.email)?.substring(0,2).toUpperCase() || 'M'}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{m.name || m.email}</p>
-                      </div>
-                    </li>
-                  ))}
+                  {selectedGroup.members?.map((m, idx) => {
+                    const memberName = typeof m === 'object' ? (m.name || m.email.split('@')[0]) : m.split('@')[0];
+                    const memberEmail = typeof m === 'object' ? m.email : m;
+                    return (
+                      <li key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <span className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-sm font-bold border border-gray-300">
+                          {memberName.substring(0, 2).toUpperCase()}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{memberName}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{memberEmail}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </div>
-            
+
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
-              <button 
+              <button
                 onClick={() => setSelectedGroup(null)}
                 className="px-5 py-2.5 rounded-lg font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 transition shadow-sm"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => handleDecision(selectedGroup, 'decline')}
                 className="px-5 py-2.5 rounded-lg font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center gap-2"
               >
-                ✕ Decline Group
+                ✕ Decline
               </button>
-              <button 
+              <button
                 onClick={() => handleDecision(selectedGroup, 'approve')}
                 className="px-5 py-2.5 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center gap-2"
               >
-                ✓ Approve Group
+                ✓ Approve
               </button>
             </div>
           </div>

@@ -224,8 +224,8 @@ function Sidebar() {
             {initials}
           </div>
           <div>
-            <h4 className="text-xs font-bold text-white tracking-tight">{currentUser?.displayName || 'User'}</h4>
-            <p className="text-[9px] text-stone-400">{isSuperAdmin ? 'Super Admin' : 'System Admin'}</p>
+            <h4 className="text-xs font-bold text-white tracking-tight">{isSuperAdmin ? 'Super Admin' : 'System Admin'}</h4>
+            <p className="text-[9px] text-stone-400">Archivio Workspace</p>
           </div>
         </div>
         <button

@@ -2,8 +2,46 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // 1. Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isSystemAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin';
+    }
+
+    // 2. Global Rules
     match /{document=**} {
-      allow read, write: if true;
+      // System Admins can do EVERYTHING
+      allow read, write: if isSystemAdmin();
+      
+      // Any logged-in user can interact with the database
+      allow read, write: if isAuthenticated();
+    }
+    
+    // 3. Public Exceptions (For Signup & Archive)
+    match /advisers/{adviserId} {
+      // Allow the Signup page to read pending adviser invitations
+      allow read: if true;
+    }
+    
+    match /studentInvitations/{inviteId} {
+      // Allow the Signup page to read pending student invitations
+      allow read: if true;
+    }
+    
+    match /submissions/{subId} {
+      // Allow anyone (even logged out) to read PUBLISHED papers for the Public Archive
+      allow read: if resource.data.reviewStatus == 'published' || resource.data.status == 'published';
+    }
+    
+    match /groups/{groupId} {
+      // The Public Archive needs to read group data to display author names and programs
+      allow read: if true;
     }
   }
 }

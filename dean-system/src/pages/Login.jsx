@@ -18,10 +18,11 @@ export default function Login() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Login State
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginEmail, setLoginEmail] = useState(localStorage.getItem('dean_remembered_email') || '');
   const [loginPassword, setLoginPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('dean_remembered_email'));
 
   const [activationData, setActivationData] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -107,6 +108,13 @@ export default function Login() {
 
       // Normal login — go to dashboard
       console.log('✅ Dean login successful! Redirecting to dashboard...');
+
+      if (rememberMe) {
+        localStorage.setItem('dean_remembered_email', trimmedEmail);
+      } else {
+        localStorage.removeItem('dean_remembered_email');
+      }
+
       navigate('/dashboard');
 
     } catch (error) {
@@ -382,6 +390,8 @@ export default function Login() {
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
                         className="h-3.5 w-3.5 rounded border-stone-300 text-[#7a1f3d] focus:ring-[#7a1f3d]"
                       />
                       <span className="text-xs font-medium text-stone-600">Remember me</span>
@@ -397,7 +407,7 @@ export default function Login() {
                     disabled={loading}
                     className="mt-4 w-full rounded-lg bg-[#7a1f3d] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Signing In...' : 'Activate Account'}
+                    {loading ? 'Signing In...' : 'Sign In'}
                   </button>
                 </form>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
@@ -11,7 +11,7 @@ export default function Invitations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Form state
   const [formData, setFormData] = useState({
     firstName: '',
@@ -43,52 +43,37 @@ Please click the button below to activate your account and set up your credentia
     }));
   }, [defaultMessage]);
 
-  // Fetch advisers on mount and when deanData changes
+  // Fetch advisers on mount and when deanData changes using onSnapshot
   useEffect(() => {
-    if (deanData?.email) {
-      fetchAdvisers();
-    }
-  }, [deanData?.email]);
+    if (!deanData?.email) return;
 
-  const fetchAdvisers = async () => {
-    if (!deanData?.email) {
-      console.log('Waiting for deanData to load...');
-      return;
-    }
+    const advisersQuery = query(
+      collection(db, 'advisers'),
+      where('invitedBy', '==', deanData.email)
+    );
 
-    try {
-      console.log('Fetching advisers for dean:', deanData.email);
-      
-      // Fetch advisers invited by this dean
-      const advisersQuery = query(
-        collection(db, 'advisers'),
-        where('invitedBy', '==', deanData.email)
-      );
-      
-      const snapshot = await getDocs(advisersQuery);
+    const unsubscribe = onSnapshot(advisersQuery, (snapshot) => {
       const advisersData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
+
       // Sort by createdAt descending in JavaScript
       advisersData.sort((a, b) => {
         const dateA = new Date(a.createdAt || 0);
         const dateB = new Date(b.createdAt || 0);
         return dateB - dateA;
       });
-      
-      console.log('Fetched advisers:', advisersData);
+
       setAdvisers(advisersData);
-      setError(''); // Clear any previous errors
-    } catch (error) {
+      setError('');
+    }, (error) => {
       console.error('Error fetching advisers:', error);
-      // Don't show error if it's just because orderBy is missing - still show results
-      if (!error.message.includes('orderBy')) {
-        setError('Error loading invitations');
-      }
-    }
-  };
+      setError('Error loading invitations');
+    });
+
+    return () => unsubscribe();
+  }, [deanData?.email]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -119,7 +104,7 @@ Please click the button below to activate your account and set up your credentia
     try {
       // Generate a simple invitation token to track this specific invitation
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
+
       const targetEmail = formData.email.toLowerCase().trim();
 
       // CLEANUP: If this email was manually deleted from Firebase Auth and is being recreated,
@@ -131,12 +116,18 @@ Please click the button below to activate your account and set up your credentia
         const deletes = snapClean.docs.map(d => deleteDoc(doc(db, colName, d.id)));
         await Promise.all(deletes);
       }
-      
+
       // Clean up orphaned groups tied to this adviser email
       const qGroupsClean = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
       const snapGroupsClean = await getDocs(qGroupsClean);
       const deleteGroupsClean = snapGroupsClean.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
       await Promise.all(deleteGroupsClean);
+
+      // Clean up orphaned adviser requirements
+      const qReqsClean = query(collection(db, 'requirements'), where('adviserUid', '==', targetEmail));
+      const snapReqsClean = await getDocs(qReqsClean);
+      const deleteReqsClean = snapReqsClean.docs.map(d => deleteDoc(doc(db, 'requirements', d.id)));
+      await Promise.all(deleteReqsClean);
 
       // Clean link to the Sign Up page — no token exposed in the URL, only the email
       const adviserPortalUrl = 'http://localhost:5176';
@@ -188,11 +179,10 @@ Please click the button below to activate your account and set up your credentia
         console.warn('Email service error (invitation still saved):', emailError);
       }
 
-      // Refresh advisers list
-      await fetchAdvisers();
+      // Refresh advisers list (handled by onSnapshot)
 
       setSuccess(`✅ Invitation sent to ${formData.email}!`);
-      
+
       // Reset form
       setFormData({
         firstName: '',
@@ -245,7 +235,7 @@ Please click the button below to activate your account and set up your credentia
         console.warn('Email service error:', emailError);
       }
 
-      await fetchAdvisers();
+
       setSuccess(`✅ Invitation resent to ${adviserEmail}`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
@@ -260,7 +250,7 @@ Please click the button below to activate your account and set up your credentia
       <Sidebar activePage="invitations" />
       <div className="flex-1 flex flex-col overflow-y-auto">
         <Header activePage="invitations" />
-        
+
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Send Invitations</h1>
@@ -268,7 +258,7 @@ Please click the button below to activate your account and set up your credentia
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
+
             {/* Left Column: Form Panel */}
             <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden">
               <div className="bg-[#4a1024] p-5 text-white relative">
@@ -276,7 +266,7 @@ Please click the button below to activate your account and set up your credentia
                 <h3 className="font-serif text-base font-bold mt-2">Invite a Research Adviser</h3>
                 <p className="text-[11px] text-stone-300">They'll receive a secure link to create their account</p>
               </div>
-              
+
               <div className="p-5 space-y-4">
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
@@ -295,12 +285,12 @@ Please click the button below to activate your account and set up your credentia
                 <form onSubmit={handleSendInvitation} className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      placeholder="e.g. Maria" 
+                      placeholder="e.g. Maria"
                       className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
@@ -308,12 +298,12 @@ Please click the button below to activate your account and set up your credentia
 
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      placeholder="e.g. Reyes" 
+                      placeholder="e.g. Reyes"
                       className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
@@ -321,12 +311,12 @@ Please click the button below to activate your account and set up your credentia
 
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      placeholder="adviser@phinmaed.com" 
+                      placeholder="adviser@phinmaed.com"
                       className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
@@ -336,7 +326,7 @@ Please click the button below to activate your account and set up your credentia
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1 flex justify-between tracking-wide">
                       <span>Invitation Message</span>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, message: '' }))}
                         className="text-blue-600 lowercase font-normal cursor-pointer hover:underline text-[9px]"
@@ -344,19 +334,19 @@ Please click the button below to activate your account and set up your credentia
                         💡 Reset to default
                       </button>
                     </label>
-                    <textarea 
+                    <textarea
                       name="message"
                       value={formData.message}
                       onChange={handleInputChange}
                       placeholder={defaultMessage}
-                      rows={5} 
+                      rows={5}
                       className="w-full text-xs p-2.5 border border-stone-200 rounded-xl bg-stone-50/50 text-stone-600 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
                   </div>
-                  
-                  <button 
+
+                  <button
                     type="submit"
                     disabled={loading}
                     className="w-full bg-[#4a1024] hover:bg-[#6b1834] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
@@ -412,7 +402,7 @@ Please click the button below to activate your account and set up your credentia
                           </td>
                           <td className="py-3.5 text-center">
                             {adviser.status === 'pending' && (
-                              <button 
+                              <button
                                 onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                 disabled={loading}
                                 className="px-2.5 py-1 border border-stone-200 rounded-lg text-[10px] font-bold text-stone-600 hover:bg-stone-50 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"

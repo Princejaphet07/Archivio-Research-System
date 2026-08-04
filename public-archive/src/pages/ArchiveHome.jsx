@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import heroBg from '../assets/Hero.png'; 
+import heroBg from '../assets/Hero.png';
 import Header from '../components/Header';
-import Footer from '../components/Footer'; 
+import Footer from '../components/Footer';
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, where, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -76,8 +76,8 @@ function ArchiveHome() {
           groupName: group?.groupName || sub.groupName,
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
-          authorDisplay: group 
-            ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
+          authorDisplay: group
+            ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
         };
       });
@@ -126,7 +126,7 @@ function ArchiveHome() {
 
   const categories = React.useMemo(() => {
     if (!publishedPapers.length) return [];
-    
+
     const counts = {};
     publishedPapers.forEach(p => {
       const cat = p.category || p.program || 'Uncategorized';
@@ -158,12 +158,12 @@ function ArchiveHome() {
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
             <div className="flex flex-1">
               <div className="flex items-center pl-4 pr-2 text-stone-400 dark:text-gray-400">🔍</div>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by title, author, keywords..." 
-                className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base" 
+                placeholder="Search by title, author, keywords..."
+                className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base"
               />
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
@@ -218,51 +218,51 @@ function ArchiveHome() {
             ))
           ) : (
             publishedPapers.slice(0, 3).map((paper, idx) => (
-            <div key={paper.id} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between transition-colors">
-              <div>
-                <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
-                  <span className="px-2 py-1 border border-stone-300 dark:border-gray-600 rounded bg-[#e8debe] dark:bg-gray-700 truncate max-w-[150px] text-stone-800 dark:text-gray-200">
-                    {paper.program || 'Research'}
-                  </span>
-                  <span>{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
-                </div>
-                <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
-                  {paper.researchTitle || 'Untitled Research'}
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-gray-400 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
-                <p className="text-[11px] text-stone-500 dark:text-gray-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
-                <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
-                  {paper.keywords?.slice(0, 3).map(kw => (
-                    <span key={kw} className="px-2 py-1 bg-stone-200/50 dark:bg-gray-700 rounded-full border border-stone-300 dark:border-gray-600 dark:text-gray-300">
-                      {kw}
+              <div key={paper.id} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between transition-colors">
+                <div>
+                  <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
+                    <span className="px-2 py-1 border border-stone-300 dark:border-gray-600 rounded bg-[#e8debe] dark:bg-gray-700 truncate max-w-[150px] text-stone-800 dark:text-gray-200">
+                      {paper.program || 'Research'}
                     </span>
-                  ))}
+                    <span>{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
+                  </div>
+                  <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
+                    {paper.researchTitle || 'Untitled Research'}
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-gray-400 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
+                  <p className="text-[11px] text-stone-500 dark:text-gray-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
+                  <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
+                    {paper.keywords?.slice(0, 3).map(kw => (
+                      <span key={kw} className="px-2 py-1 bg-stone-200/50 dark:bg-gray-700 rounded-full border border-stone-300 dark:border-gray-600 dark:text-gray-300">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-8">
+                  <div className="text-xs text-stone-500 flex gap-3 font-medium">
+                    <span
+                      onClick={(e) => handleLike(e, paper)}
+                      className="text-stone-500 hover:text-rose-500 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
+                      title="Like this paper"
+                    >
+                      {paper.likes?.includes(currentUser?.uid) ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+                      )}
+                      {paper.likes?.length || 0}
+                    </span>
+                    <span className="flex items-center gap-1" title="Views">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                      {paper.views || 0}
+                    </span>
+                  </div>
+                  <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
+                    View Paper
+                  </Link>
                 </div>
               </div>
-              <div className="flex justify-between items-center mt-8">
-                <div className="text-xs text-stone-500 flex gap-3 font-medium">
-                  <span 
-                    onClick={(e) => handleLike(e, paper)} 
-                    className="text-stone-500 hover:text-rose-500 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
-                    title="Like this paper"
-                  >
-                    {paper.likes?.includes(currentUser?.uid) ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-                    )}
-                    {paper.likes?.length || 0}
-                  </span> 
-                  <span className="flex items-center gap-1" title="Views">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
-                    {paper.views || 0}
-                  </span>
-                </div>
-                <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
-                  View Paper
-                </Link>
-              </div>
-            </div>
             ))
           )}
           {!loading && publishedPapers.length === 0 && (

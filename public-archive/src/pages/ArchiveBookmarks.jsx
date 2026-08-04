@@ -52,7 +52,7 @@ function ArchiveBookmarks() {
               const gSnap = await getDocs(qGroup);
               if (!gSnap.empty) {
                 const gData = gSnap.docs[0].data();
-                authorDisplay = `${gData.leaderName}${gData.members && gData.members.length > 0 ? ` & ${gData.members.length} other(s)` : ''}`;
+                authorDisplay = [gData.leaderName, ...(gData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ');
                 titleDisplay = gData.researchTitle || titleDisplay;
                 categoryDisplay = gData.program || categoryDisplay;
               }

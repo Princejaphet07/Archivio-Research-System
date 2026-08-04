@@ -267,8 +267,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         {/* ACTION HEADER */}
         <PortalHeader 
           title="Settings" 
-          initials={initials} 
+          initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
+          setActiveTab={setActiveTab}
           profilePhotoUrl={profilePhotoUrl}
         />
 

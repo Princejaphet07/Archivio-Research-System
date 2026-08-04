@@ -1,13 +1,13 @@
 // Firestore Database Service for Research Adviser System
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  getDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
+import {
+  collection,
+  doc,
+  addDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
   where,
   orderBy,
   limit
@@ -49,7 +49,7 @@ export const getResearchById = async (id) => {
   try {
     const docRef = doc(db, 'research', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
     } else {
@@ -105,7 +105,7 @@ export const getUserProfile = async (userId) => {
   try {
     const q = query(collection(db, 'users'), where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
       const doc = querySnapshot.docs[0];
       return { success: true, data: { id: doc.id, ...doc.data() } };
@@ -165,7 +165,7 @@ export const addGroup = async (groupData) => {
 export const getGroupsByAdviser = async (adviserId) => {
   try {
     const q = query(
-      collection(db, 'groups'), 
+      collection(db, 'groups'),
       where('adviserId', '==', adviserId)
     );
     const querySnapshot = await getDocs(q);
@@ -200,16 +200,17 @@ export const getUserNotifications = async (userId) => {
   try {
     const q = query(
       collection(db, 'notifications'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      where('userId', '==', userId)
     );
     const querySnapshot = await getDocs(q);
     const notifications = [];
     querySnapshot.forEach((doc) => {
       notifications.push({ id: doc.id, ...doc.data() });
     });
-    return { success: true, data: notifications };
+    
+    notifications.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    
+    return { success: true, data: notifications.slice(0, 50) };
   } catch (error) {
     return { success: false, error: error.message };
   }

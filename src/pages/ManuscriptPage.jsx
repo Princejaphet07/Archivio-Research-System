@@ -128,6 +128,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           title="Manuscript" 
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
+          setActiveTab={setActiveTab}
           profilePhotoUrl={profilePhotoUrl}
         />
 
@@ -257,7 +258,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                     <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Authors</p>
                     <p className="text-[#1A1A1A] font-bold text-[14px]">{members.length + 1} group member{members.length + 1 !== 1 ? 's' : ''}</p>
                     <p className="text-gray-500 text-[12px] mt-0.5 truncate">
-                      {[studentData?.firstName?.charAt(0) + '. ' + studentData?.lastName, ...members.map(m => m.name)].join(' · ')}
+                      {[studentData?.firstName?.charAt(0) + '. ' + studentData?.lastName, ...members.map(m => typeof m === 'object' ? m.name : m.split('@')[0])].join(' · ')}
                     </p>
                   </div>
                   <div>

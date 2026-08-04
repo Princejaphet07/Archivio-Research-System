@@ -1,7 +1,7 @@
 import React from 'react';
 import NotificationBell from './NotificationBell';
 
-export default function PortalHeader({ title, initials, setSidebarOpen, profilePhotoUrl }) {
+export default function PortalHeader({ title, initials, setSidebarOpen, setActiveTab, profilePhotoUrl }) {
   return (
     <header className="h-[90px] flex items-center justify-between px-8 z-10 shrink-0 bg-[#FDF9ED]">
       <div className="flex items-center gap-3">
@@ -18,7 +18,10 @@ export default function PortalHeader({ title, initials, setSidebarOpen, profileP
 
       <div className="flex items-center gap-4">
         <NotificationBell />
-        <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer overflow-hidden">
+        <div 
+          className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer overflow-hidden hover:ring-2 hover:ring-[#7B1F35]/50 transition-all"
+          onClick={() => setActiveTab && setActiveTab('Settings')}
+        >
           {profilePhotoUrl ? (
             <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
           ) : (

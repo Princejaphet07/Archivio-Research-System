@@ -182,6 +182,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
           title="Dashboard" 
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
+          setActiveTab={setActiveTab}
           profilePhotoUrl={profilePhotoUrl}
         />
 

@@ -23,6 +23,8 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const [showNewResearchModal, setShowNewResearchModal] = useState(false);
   const [newResearchTitle, setNewResearchTitle] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const PREDEFINED_CATEGORIES = ['Computer Science', 'Information Technology', 'Information Systems', 'Engineering', 'Business', 'Education'];
   const [isSubmittingNewResearch, setIsSubmittingNewResearch] = useState(false);
 
   // ── Real data state ────────────────────────────────────────────────────────
@@ -89,6 +91,22 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
     return () => { unsubStudent(); unsubSub(); unsubReq(); };
   }, []);
+
+  // Show approval notification if newly approved
+  useEffect(() => {
+    if (studentData?.groupStatus === 'approved' && studentData?.hasSeenApprovalNotification === false) {
+      Swal.fire({
+        title: 'Group Approved!',
+        text: 'Your research group has been approved by your adviser. You can now start uploading your requirements and manuscript.',
+        icon: 'success',
+        confirmButtonColor: '#7B1F35'
+      });
+      // Mark it as seen so it doesn't pop up again
+      updateDoc(doc(db, 'students', studentData.uid), {
+        hasSeenApprovalNotification: true
+      }).catch(err => console.error("Error updating notification status", err));
+    }
+  }, [studentData]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const adviserName    = studentData?.invitedByName || adviserData?.displayName || 'Your Adviser';
@@ -171,6 +189,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         members: studentData.groupMembers || [], // Could let them edit this later
         adviserUid: studentData.invitedBy, // keep same adviser email reference
         adviserName: studentData.invitedByName,
+        category: newCategory,
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -192,6 +211,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         groupName: newGroupName.trim(),
         adviserName: studentData.invitedByName || '',
         adviserUid: studentData.invitedBy || '',
+        category: newCategory,
         reviewStatus: 'pending',
         uploadedDocs: [],
         documents: {},
@@ -202,6 +222,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       setShowNewResearchModal(false);
       setNewResearchTitle('');
       setNewGroupName('');
+      setNewCategory('');
       
     } catch (error) {
       console.error('Error starting new research:', error);
@@ -270,8 +291,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         {/* HEADER */}
         <PortalHeader 
           title="Progress" 
-          initials={initials} 
+          initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
+          setActiveTab={setActiveTab}
           profilePhotoUrl={profilePhotoUrl}
         />
 
@@ -633,10 +655,25 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 />
               </div>
 
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Research Category <span className="text-red-500">*</span></label>
+                <select
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                  required
+                  className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition appearance-none"
+                >
+                  <option value="" disabled>Select a Category...</option>
+                  {PREDEFINED_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmittingNewResearch || !newResearchTitle.trim() || !newGroupName.trim()}
+                  disabled={isSubmittingNewResearch || !newResearchTitle.trim() || !newGroupName.trim() || !newCategory}
                   className="w-full bg-[#7a1f3d] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {isSubmittingNewResearch ? 'Initializing...' : 'Confirm & Start New Project'}

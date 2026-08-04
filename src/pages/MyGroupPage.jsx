@@ -65,19 +65,37 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
   const handleAddMember = async () => {
     if (!studentData) return;
     
-    const { value: email } = await Swal.fire({
+    const { value: formValues } = await Swal.fire({
       title: 'Add Team Member',
-      input: 'email',
-      inputLabel: 'Student Email Address',
-      inputPlaceholder: 'Enter their school email',
+      html:
+        '<div class="flex flex-col gap-3 text-left">' +
+        '  <label class="text-xs font-semibold text-gray-700">Full Name</label>' +
+        '  <input id="swal-input-name" class="swal2-input !m-0 !w-full" placeholder="e.g. Juan Dela Cruz" style="width: 100%; box-sizing: border-box; margin: 0;">' +
+        '  <label class="text-xs font-semibold text-gray-700 mt-2">Email Address</label>' +
+        '  <input id="swal-input-email" type="email" class="swal2-input !m-0 !w-full" placeholder="member@phinmaed.com" style="width: 100%; box-sizing: border-box; margin: 0;">' +
+        '</div>',
+      focusConfirm: false,
       showCancelButton: true,
       confirmButtonColor: '#7B1F35',
-      confirmButtonText: 'Add Member'
+      confirmButtonText: 'Add Member',
+      preConfirm: () => {
+        const name = document.getElementById('swal-input-name').value.trim();
+        const email = document.getElementById('swal-input-email').value.trim().toLowerCase();
+        if (!name || !email) {
+          Swal.showValidationMessage('Please provide both name and email');
+          return false;
+        }
+        if (!email.endsWith('@phinmaed.com')) {
+          Swal.showValidationMessage('Email must use @phinmaed.com domain');
+          return false;
+        }
+        return { name, email };
+      }
     });
 
-    if (!email) return;
+    if (!formValues) return;
     
-    const newEmail = email.trim().toLowerCase();
+    const { name: newName, email: newEmail } = formValues;
     
     // Check if already in group
     const currentMembers = studentData.groupMembers || [];
@@ -91,7 +109,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       setLoading(true);
       
       // Update the leader's student document
-      const newGroupMembers = [...currentMembers, { email: newEmail }];
+      const newGroupMembers = [...currentMembers, { email: newEmail, name: newName }];
       await updateDoc(doc(db, 'students', studentData.uid), {
         groupMembers: newGroupMembers
       });
@@ -103,7 +121,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         const groupData = groupSnap.docs[0].data();
         const existingGroupMembers = groupData.members || [];
         await updateDoc(doc(db, 'groups', groupId), {
-          members: [...existingGroupMembers, { email: newEmail }],
+          members: [...existingGroupMembers, { email: newEmail, name: newName }],
           updatedAt: new Date().toISOString()
         });
       }
@@ -163,29 +181,42 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     cardBorder: 'border-[#E8D0D6]',
   };
 
+  // Map emails to the names provided by the leader during group creation
+  const groupMemberNames = {};
+  (studentData?.groupMembers || []).forEach(m => {
+    if (typeof m === 'object') groupMemberNames[m.email] = m.name;
+    else groupMemberNames[m] = m.split('@')[0];
+  });
+
   // Members from Firestore (registered students)
-  const registeredMemberCards = memberProfiles.map((m, idx) => ({
-    name:      m.displayName || `${m.firstName} ${m.lastName}`,
-    role:      'Member',
-    email:     m.email,
-    studentId: m.studentNumber || '—',
-    isYou:     false,
-    initials:  getInitials(m.displayName || `${m.firstName} ${m.lastName}`),
-    color:     AVATAR_COLORS[(idx + 1) % AVATAR_COLORS.length],
-    cardBg:    'bg-[#FDFBF3]',
-    cardBorder: 'border-[#E6DFBF]',
-  }));
+  const registeredMemberCards = memberProfiles.map((m, idx) => {
+    const assignedName = groupMemberNames[m.email] || m.displayName || `${m.firstName} ${m.lastName}`;
+    return {
+      name:      assignedName,
+      role:      'Member',
+      email:     m.email,
+      studentId: m.studentNumber || '—',
+      isYou:     false,
+      initials:  getInitials(assignedName),
+      color:     AVATAR_COLORS[(idx + 1) % AVATAR_COLORS.length],
+      cardBg:    'bg-[#FDFBF3]',
+      cardBorder: 'border-[#E6DFBF]',
+    };
+  });
 
   // Members added during signup who haven't registered yet (show as pending)
   const registeredEmails = new Set(memberProfiles.map(m => m.email));
-  const pendingEmails = (studentData?.groupMembers || []).map(m => typeof m === 'object' ? m.email : m).filter(e => !registeredEmails.has(e));
-  const pendingCards = pendingEmails.map((email, idx) => ({
-    name:      email.split('@')[0],
+  const pendingMembers = (studentData?.groupMembers || [])
+    .map(m => (typeof m === 'object' ? m : { email: m, name: m.split('@')[0] }))
+    .filter(m => !registeredEmails.has(m.email));
+    
+  const pendingCards = pendingMembers.map((m, idx) => ({
+    name:      m.name || m.email.split('@')[0],
     role:      'Member (Pending)',
-    email,
+    email:     m.email,
     studentId: '—',
     isYou:     false,
-    initials:  email.substring(0, 2).toUpperCase(),
+    initials:  getInitials(m.name || m.email.split('@')[0]),
     color:     'bg-stone-400',
     cardBg:    'bg-stone-50',
     cardBorder: 'border-stone-200',
@@ -233,6 +264,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           title="My Group" 
           initials={initials || getInitials(displayName)} 
           setSidebarOpen={setSidebarOpen} 
+          setActiveTab={setActiveTab}
           profilePhotoUrl={profilePhotoUrl}
         />
 

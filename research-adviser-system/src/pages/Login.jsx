@@ -9,12 +9,12 @@ import jaggedEdge from '../assets/jagged-edge.png';
 
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(localStorage.getItem('adviser_remembered_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('adviser_remembered_email'));
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -38,6 +38,12 @@ function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
 
       console.log('Login successful:', userCredential.user.email);
+
+      if (rememberMe) {
+        localStorage.setItem('adviser_remembered_email', trimmedEmail);
+      } else {
+        localStorage.removeItem('adviser_remembered_email');
+      }
 
       // Login successful - protected routes will handle redirect
       navigate('/dashboard');

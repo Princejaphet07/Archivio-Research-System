@@ -7,10 +7,10 @@ import swuLogoSeal from '../assets/new icon.png';
 import parchmentBg from '../assets/parchment.jpg';
 
 export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) {
-  const [email, setEmail] = useState(prefilledEmail || '');
+  const [email, setEmail] = useState(prefilledEmail || localStorage.getItem('student_remembered_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('student_remembered_email'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +36,13 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
 
       // Fetch student document from Firestore to get full name
       const studentsRef = collection(db, 'students');
+      
+      // Save or remove remembered email
+      if (rememberMe) {
+        localStorage.setItem('student_remembered_email', trimmedEmail);
+      } else {
+        localStorage.removeItem('student_remembered_email');
+      }
       const q = query(studentsRef, where('uid', '==', user.uid));
       const snapshot = await getDocs(q);
 

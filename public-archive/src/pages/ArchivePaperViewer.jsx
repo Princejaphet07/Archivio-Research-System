@@ -102,7 +102,7 @@ function ArchivePaperViewer() {
               ...subData,
               researchTitle: groupData?.researchTitle || subData.researchTitle || subData.title,
               authorDisplay: groupData 
-                ? `${groupData.leaderName}${groupData.members && groupData.members.length > 0 ? ` & ${groupData.members.length} other(s)` : ''}`
+                ? [groupData.leaderName, ...(groupData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
                 : subData.studentName || subData.groupName || 'Unknown Author',
               program: groupData?.program || subData.program
             });

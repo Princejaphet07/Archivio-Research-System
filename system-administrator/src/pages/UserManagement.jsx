@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, where, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, where, deleteDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth, firebaseConfig } from '../firebase/config';
 import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
@@ -46,11 +46,12 @@ export default function UserManagement() {
   const [selectedPrograms, setSelectedPrograms] = useState([]);
   const [programSearch, setProgramSearch] = useState('');
 
-  // Fetch deans from Firestore on mount
-  useEffect(() => {
-    fetchDeans();
-    fetchDepartmentsAndPrograms();
-  }, []);
+  // Add Program Modal State
+  const [showAddProgModal, setShowAddProgModal] = useState(false);
+  const [newProgCode, setNewProgCode] = useState('');
+  const [newProgName, setNewProgName] = useState('');
+  const [addingProg, setAddingProg] = useState(false);
+
 
   // Default program list — always available even if Firestore is empty
   const defaultPrograms = [
@@ -84,16 +85,33 @@ export default function UserManagement() {
     { code: 'ABPolSci', name: 'Bachelor of Arts in Political Science' },
   ];
 
-  const fetchDepartmentsAndPrograms = async () => {
-    try {
-      const deptsSnap = await getDocs(collection(db, 'departments'));
-      const deptsList = deptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setDepartmentsList(deptsList);
+  useEffect(() => {
+    let deansData = [];
+    let saData = [];
 
-      const progsSnap = await getDocs(collection(db, 'programs'));
-      const firestoreProgs = progsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Merge Firestore programs with defaults, removing duplicates by code
+    const mergeUsers = () => {
+      const merged = [...saData, ...deansData].sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
+      setAllUsers(merged);
+    };
+
+    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+      deansData = snap.docs.map(d => ({ id: d.id, _collection: 'deans', ...d.data() }));
+      mergeUsers();
+    }, (error) => console.error('Error fetching users:', error));
+
+    const unsubSA = onSnapshot(collection(db, 'super_admins'), (snap) => {
+      saData = snap.docs.map(d => ({ id: d.id, _collection: 'super_admins', ...d.data() }));
+      mergeUsers();
+    }, (error) => console.error('Error fetching users:', error));
+
+    const unsubDepts = onSnapshot(collection(db, 'departments'), (snap) => {
+      setDepartmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error('Error fetching departments:', err));
+
+    const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
+      const firestoreProgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const seen = new Set();
       const merged = [];
       for (const prog of [...firestoreProgs, ...defaultPrograms]) {
@@ -102,15 +120,20 @@ export default function UserManagement() {
           merged.push(prog);
         }
       }
-      // Sort alphabetically by code
       merged.sort((a, b) => a.code.localeCompare(b.code));
       setProgramsList(merged);
-    } catch (err) {
-      console.error('Error fetching departments/programs:', err);
-      // Fallback to defaults if Firestore fails
+    }, (err) => {
+      console.error('Error fetching programs:', err);
       setProgramsList([...defaultPrograms].sort((a, b) => a.code.localeCompare(b.code)));
-    }
-  };
+    });
+
+    return () => {
+      unsubDeans();
+      unsubSA();
+      unsubDepts();
+      unsubProgs();
+    };
+  }, []);
 
   const handleAddNewDepartment = async () => {
     if (!newDeptName.trim()) return;
@@ -130,13 +153,53 @@ export default function UserManagement() {
       setFormData(prev => ({ ...prev, department: newDeptName.trim() }));
       setNewDeptName('');
       setShowAddDeptModal(false);
-      await fetchDepartmentsAndPrograms();
       Swal.fire({ icon: 'success', title: 'Added!', text: 'Department added successfully.', timer: 1500, showConfirmButton: false });
     } catch (err) {
-      console.error('Error adding department:', err);
+      console.error("Error adding department:", err);
       Swal.fire('Error', 'Failed to add department.', 'error');
     } finally {
       setAddingDept(false);
+    }
+  };
+
+  const handleAddNewProgram = async () => {
+    if (!newProgCode.trim() || !newProgName.trim() || !formData.department) {
+      Swal.fire('Error', 'Please enter both Program Code and Name, and ensure a Department is selected.', 'error');
+      return;
+    }
+    setAddingProg(true);
+    try {
+      await addDoc(collection(db, 'programs'), {
+        code: newProgCode.trim().toUpperCase(),
+        name: newProgName.trim(),
+        school: formData.department
+      });
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Program Added',
+        showConfirmButton: false,
+        timer: 3000
+      });
+      setShowAddProgModal(false);
+      setNewProgCode('');
+      setNewProgName('');
+
+      // Auto-select the newly added program
+      const newCode = newProgCode.trim().toUpperCase();
+      if (!selectedPrograms.includes(newCode)) {
+        setSelectedPrograms(prev => {
+          const newList = [...prev, newCode];
+          setFormData(f => ({ ...f, programs: newList.join(', ') }));
+          return newList;
+        });
+      }
+    } catch (err) {
+      console.error("Error adding program:", err);
+      Swal.fire('Error', 'Failed to add program.', 'error');
+    } finally {
+      setAddingProg(false);
     }
   };
 
@@ -148,27 +211,7 @@ export default function UserManagement() {
     });
   };
 
-  const fetchDeans = async () => {
-    try {
-      // Fetch deans
-      const deansQuery = query(collection(db, 'deans'), orderBy('createdAt', 'desc'));
-      const deansSnap = await getDocs(deansQuery);
-      const deansData = deansSnap.docs.map(d => ({ id: d.id, _collection: 'deans', ...d.data() }));
 
-      // Fetch super admins
-      const saQuery = query(collection(db, 'super_admins'), orderBy('createdAt', 'desc'));
-      const saSnap = await getDocs(saQuery);
-      const saData = saSnap.docs.map(d => ({ id: d.id, _collection: 'super_admins', ...d.data() }));
-
-      // Merge and sort by createdAt descending
-      const merged = [...saData, ...deansData].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      setAllUsers(merged);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
 
   const validateEmail = (email) => {
     // Must be @phinmaed.com domain
@@ -264,8 +307,8 @@ export default function UserManagement() {
 
       // 📅 Log deletion
       await logActivity({
-        user:   auth.currentUser?.email || 'System Admin',
-        role:   'System Admin',
+        user: auth.currentUser?.email || 'System Admin',
+        role: 'System Admin',
         action: `Deleted ${selectedUsers.size} user account(s)`,
         status: 'Success',
         details: `UIDs removed from system`,
@@ -333,13 +376,13 @@ export default function UserManagement() {
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, delete!'
     });
-    
+
     if (result.isConfirmed) {
       setLoading(true);
       try {
         await deleteDoc(doc(db, user._collection, user.id));
         if (user.uid) await deleteDoc(doc(db, 'users', user.uid));
-        
+
         if (user.uid) {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -348,9 +391,9 @@ export default function UserManagement() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ uid: user.uid, email: user.email })
             });
-          } catch (err) {}
+          } catch (err) { }
         }
-        
+
         await fetchDeans();
         Swal.fire('Deleted!', 'User has been deleted.', 'success');
       } catch (e) {
@@ -382,7 +425,7 @@ export default function UserManagement() {
       // CLEANUP: If the admin is reusing an email (e.g., testing after manual Firebase Auth deletion),
       // wipe orphaned data tied to this email to ensure a completely fresh start.
       const targetEmail = formData.email.toLowerCase().trim();
-      
+
       const collectionsToClean = ['users', 'deans', 'super_admins', 'advisers'];
       for (const colName of collectionsToClean) {
         const q = query(collection(db, colName), where('email', '==', targetEmail));
@@ -390,21 +433,27 @@ export default function UserManagement() {
         const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
         await Promise.all(deletes);
       }
-      
+
       // Clean up orphaned groups tied to this adviser/dean email
       const qGroups = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
       const snapGroups = await getDocs(qGroups);
       const deleteGroups = snapGroups.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
       await Promise.all(deleteGroups);
 
+      // Clean up orphaned adviser requirements
+      const qReqs = query(collection(db, 'requirements'), where('adviserUid', '==', targetEmail));
+      const snapReqs = await getDocs(qReqs);
+      const deleteReqs = snapReqs.docs.map(d => deleteDoc(doc(db, 'requirements', d.id)));
+      await Promise.all(deleteReqs);
+
       // Generate invitation token and temporary password
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const temporaryPassword = generateRandomPassword();
-      
+
       // === SUPER ADMIN FLOW ===
       if (formData.role === 'super-admin') {
         const saPortalLink = 'http://localhost:5173';
-        
+
         try {
           const appName = 'SecondaryAppSA_' + Date.now().toString();
           const secondaryApp = initializeApp(firebaseConfig, appName);
@@ -468,8 +517,8 @@ export default function UserManagement() {
 
           // 📅 Log Super Admin creation
           await logActivity({
-            user:   auth.currentUser?.email || 'System Admin',
-            role:   'System Admin',
+            user: auth.currentUser?.email || 'System Admin',
+            role: 'System Admin',
             action: `Created Super Admin account`,
             status: 'Success',
             details: `${formData.firstName.trim()} ${formData.lastName.trim()} (${formData.email.toLowerCase().trim()}) — ${formData.department || 'No dept'}`,
@@ -481,7 +530,7 @@ export default function UserManagement() {
           setSelectedPrograms([]);
           setTimeout(() => { setIsModalOpen(false); setSuccess(''); }, 2000);
           return;
-          
+
         } catch (authError) {
           if (authError.code === 'auth/email-already-in-use') {
             setError('This email is already registered. Please use a different email.');
@@ -496,7 +545,7 @@ export default function UserManagement() {
 
       const deanPortalUrl = 'http://localhost:5174';
       const invitationLink = `${deanPortalUrl}/login`;
-      
+
       // Create Firebase Auth account with temporary password FIRST
       try {
         const appName = 'SecondaryAppDean_' + Date.now().toString();
@@ -507,10 +556,10 @@ export default function UserManagement() {
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email.toLowerCase().trim(), temporaryPassword);
         const firebaseUser = userCredential.user;
         const newUid = firebaseUser.uid;
-        
+
         await secondaryAuth.signOut();
         await deleteApp(secondaryApp);
-        
+
         console.log('✅ Firebase Auth account created for:', formData.email, 'UID:', newUid);
 
         // Create dean invitation in Firestore
@@ -580,7 +629,7 @@ export default function UserManagement() {
       // ===== AUTO-SAVE PROGRAMS =====
       if (formData.programs) {
         const programCodes = formData.programs.split(',').map(p => p.trim());
-        
+
         // Map of program codes to full names
         const programNameMap = {
           'BSIT': 'Bachelor of Science in Information Technology',
@@ -650,20 +699,19 @@ Please login with these credentials at the link below, and you'll be prompted to
         console.warn('Email service error (dean account still created):', emailError);
       }
 
-      // Refresh the list
-      await fetchDeans();
+      // Refresh the list (handled by onSnapshot)
 
       // 📅 Log Dean creation
       await logActivity({
-        user:   auth.currentUser?.email || 'System Admin',
-        role:   'System Admin',
+        user: auth.currentUser?.email || 'System Admin',
+        role: 'System Admin',
         action: `Created ${formData.role === 'dean+adviser' ? 'Dean + Adviser' : 'Dean'} account`,
         status: 'Success',
         details: `${formData.firstName.trim()} ${formData.lastName.trim()} — ${formData.department}`,
       });
 
       setSuccess(`✅ Dean invitation sent to ${formData.email}!`);
-      
+
       // Reset form
       setFormData({
         firstName: '',
@@ -698,13 +746,13 @@ Please login with these credentials at the link below, and you'll be prompted to
   const resendInvitation = async (deanId, deanEmail, deanName) => {
     try {
       const deanRef = doc(db, 'deans', deanId);
-      
+
       // Get the invitation link from the dean document
       const deanSnap = await getDocs(query(collection(db, 'deans'), where('email', '==', deanEmail)));
       const deanData = deanSnap.docs[0]?.data();
       const deanPortalUrl = import.meta.env.VITE_DEAN_PORTAL_URL || 'http://localhost:5174';
       const invitationLink = deanData?.invitationLink || `${deanPortalUrl}/login`;
-      
+
       await updateDoc(deanRef, {
         invitationDate: new Date().toISOString(),
         invitationSent: true
@@ -735,7 +783,7 @@ Please login with these credentials and set up your account.`
       } catch (emailError) {
         console.warn('Email service error:', emailError);
       }
-      
+
       Swal.fire({
         title: 'Success!',
         text: `Invitation resent to ${deanEmail}`,
@@ -758,35 +806,35 @@ Please login with these credentials and set up your account.`
 
   const filteredUsersList = React.useMemo(() => {
     // User accounts are permanent — do NOT filter by academic year
-    return allUsers.filter(d => 
+    return allUsers.filter(d =>
       d.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.department?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [allUsers, searchQuery]);
-  
+
   const totalPages = Math.max(1, Math.ceil(filteredUsersList.length / ITEMS_PER_PAGE));
   const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
-      
+
       <Sidebar />
 
       {/* ================= MAIN CONTENT AREA ================= */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
+
         {/* Top Header Component */}
-        <Header 
-          title="User Management" 
-          breadcrumbs={['Accounts', 'Users']} 
+        <Header
+          title="User Management"
+          breadcrumbs={['Accounts', 'Users']}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
 
         {/* PAGE CONTENT */}
         <div className="flex-1 overflow-auto p-8">
-          
+
           <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <p className="text-sm text-stone-500">Create and manage user accounts. Assign roles and permissions for the system.</p>
@@ -795,18 +843,18 @@ Please login with these credentials and set up your account.`
 
           {/* TABLE CONTAINER */}
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col">
-            
+
             {/* Table Header Controls */}
             <div className="p-4 border-b border-stone-100 flex flex-col sm:flex-row items-center justify-end gap-4">
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button 
+                <button
                   onClick={() => setIsModalOpen(true)}
                   className="flex-1 sm:flex-none bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <span>+</span> Add User
                 </button>
                 {selectedUsers.size > 0 && (
-                  <button 
+                  <button
                     onClick={handleDeleteSelectedDeans}
                     disabled={loading}
                     className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap disabled:opacity-50"
@@ -823,7 +871,7 @@ Please login with these credentials and set up your account.`
                 <thead>
                   <tr className="bg-stone-50 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200">
                     <th className="px-4 py-4 w-10 text-center">
-                      <input 
+                      <input
                         type="checkbox"
                         checked={selectedUsers.size === filteredUsersList.length && filteredUsersList.length > 0}
                         onChange={(e) => {
@@ -854,76 +902,87 @@ Please login with these credentials and set up your account.`
                     </tr>
                   ) : (
                     paginatedUsers.map(user => (
-                        <tr key={user.id} className="hover:bg-stone-50 transition-colors group">
-                          <td className="px-4 py-4 text-center">
-                            <input 
-                              type="checkbox"
-                              checked={selectedUsers.has(user.id)}
-                              onChange={() => toggleSelectDean(user.id)}
-                              className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.displayName}</td>
-                          <td className="px-6 py-4 text-stone-500 whitespace-nowrap">{user.email}</td>
-                          <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.department || '—'}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-1.5 flex-wrap">
-                              {user.role === 'super-admin' && (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-700">
-                                  Super Admin
-                                </span>
-                              )}
-                              {user.role === 'dean' && (
+                      <tr key={user.id} className="hover:bg-stone-50 transition-colors group">
+                        <td className="px-4 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.has(user.id)}
+                            onChange={() => toggleSelectDean(user.id)}
+                            className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.displayName}</td>
+                        <td className="px-6 py-4 text-stone-500 whitespace-nowrap">{user.email}</td>
+                        <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.department || '—'}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1.5 flex-wrap">
+                            {user.role === 'super-admin' && (
+                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-700">
+                                Super Admin
+                              </span>
+                            )}
+                            {user.role === 'dean' && (
+                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-pink-100 text-pink-700">
+                                Dean
+                              </span>
+                            )}
+                            {user.role === 'dean+adviser' && (
+                              <>
                                 <span className="text-[10px] font-bold px-2 py-1 rounded bg-pink-100 text-pink-700">
                                   Dean
                                 </span>
-                              )}
-                              {user.role === 'dean+adviser' && (
-                                <>
-                                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-pink-100 text-pink-700">
-                                    Dean
-                                  </span>
-                                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">
-                                    Adviser
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`text-[11px] font-bold px-3 py-1 rounded-full text-white ${
-                              user.status === 'active' ? 'bg-emerald-600' : 'bg-[#801e38]'
-                            }`}>
-                              {user.status === 'active' ? 'Active' : 'Pending'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                          <td className="px-6 py-4">
-                            {user.status === 'pending' ? (
-                              <div className="flex justify-center">
-                                <button 
-                                  onClick={() => resendInvitation(user.id, user.email, user.displayName)}
-                                  className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer"
-                                >
-                                  Resend
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-2">
-                                <button onClick={() => handleViewUser(user)} className="w-8 h-8 rounded border border-stone-200 text-blue-600 hover:bg-blue-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleEditUser(user)} className="w-8 h-8 rounded border border-stone-200 text-amber-500 hover:bg-amber-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDeleteSingleUser(user)} className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer">
-                                  <Ban className="w-4 h-4" />
-                                </button>
-                              </div>
+                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                  Adviser
+                                </span>
+                              </>
                             )}
-                          </td>
-                        </tr>
-                      ))
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-3 py-1 rounded-full text-white ${user.status === 'active' ? 'bg-emerald-600' : 'bg-[#801e38]'
+                            }`}>
+                            {user.status === 'active' ? 'Active' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                        <td className="px-6 py-4">
+                          {user.status === 'pending' ? (
+                            <div className="flex justify-center">
+                              <button
+                                onClick={() => resendInvitation(user.id, user.email, user.displayName)}
+                                className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer"
+                              >
+                                Resend
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleViewUser(user)}
+                                className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                title="View details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="p-1.5 text-stone-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                title="Edit user"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSingleUser(user)}
+                                className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                                title="Delete user"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -936,23 +995,22 @@ Please login with these credentials and set up your account.`
               Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsersList.length)} of {filteredUsersList.length} users
             </span>
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
               >‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button 
+                <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 flex items-center justify-center rounded font-bold shadow-sm transition-colors cursor-pointer ${
-                    currentPage === page 
-                      ? 'bg-[#801e38] text-white' 
+                  className={`w-8 h-8 flex items-center justify-center rounded font-bold shadow-sm transition-colors cursor-pointer ${currentPage === page
+                      ? 'bg-[#801e38] text-white'
                       : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'
-                  }`}
+                    }`}
                 >{page}</button>
               ))}
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
@@ -974,7 +1032,7 @@ Please login with these credentials and set up your account.`
                   </h2>
                   <p className="text-xs text-stone-500 mt-1">Fill in user's info — activation link will be sent to their email</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
                 >
@@ -1006,11 +1064,11 @@ Please login with these credentials and set up your account.`
                     <label className="block text-xs font-bold text-stone-700 mb-2">
                       First Name <span className="text-red-500">*</span>
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g. Maria"
                       value={formData.firstName}
-                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                       className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                     />
                   </div>
@@ -1018,11 +1076,11 @@ Please login with these credentials and set up your account.`
                     <label className="block text-xs font-bold text-stone-700 mb-2">
                       Last Name <span className="text-red-500">*</span>
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g. Santos"
                       value={formData.lastName}
-                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                       className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                     />
                   </div>
@@ -1033,11 +1091,11 @@ Please login with these credentials and set up your account.`
                   <label className="block text-xs font-bold text-stone-700 mb-2">
                     Email Address <span className="text-red-500">*</span>
                   </label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder="e.g., prdo.vender.swu@phinmaed.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                   />
                   <p className="text-xs text-stone-500 mt-1">Must use @phinmaed.com domain</p>
@@ -1049,9 +1107,9 @@ Please login with these credentials and set up your account.`
                     Department <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
-                    <select 
+                    <select
                       value={formData.department}
-                      onChange={(e) => setFormData({...formData, department: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                       className="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                     >
                       <option value="">Select department...</option>
@@ -1076,72 +1134,88 @@ Please login with these credentials and set up your account.`
                     Programs
                   </label>
                   <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
-                      className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 text-left flex items-center justify-between"
-                    >
-                      <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900'}>
-                        {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
-                      </span>
-                      <svg className={`w-4 h-4 text-stone-500 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
+                        className="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 text-left flex items-center justify-between"
+                      >
+                        <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900'}>
+                          {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
+                        </span>
+                        <svg className={`w-4 h-4 text-stone-500 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!formData.department) {
+                            Swal.fire('Oops!', 'Please select a Department first before adding a Program.', 'warning');
+                            return;
+                          }
+                          setShowAddProgModal(true);
+                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#801e38] text-white hover:bg-[#6a1830] transition shadow-sm shrink-0"
+                        title="Add new program"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
                     {showProgramsDropdown && (() => {
                       const filtered = programsList.filter(p =>
                         p.code.toLowerCase().includes(programSearch.toLowerCase()) || p.name.toLowerCase().includes(programSearch.toLowerCase())
                       );
                       return (
-                      <div className="absolute z-50 mt-1 w-full bg-white border border-stone-300 rounded-lg shadow-lg overflow-hidden">
-                        {/* Search input */}
-                        <div className="p-2 border-b border-stone-200">
-                          <input
-                            type="text"
-                            placeholder="Search or type program code..."
-                            value={programSearch}
-                            onChange={(e) => setProgramSearch(e.target.value)}
-                            className="w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                const val = programSearch.trim().toUpperCase();
-                                if (val && !selectedPrograms.includes(val)) {
-                                  setSelectedPrograms(prev => {
-                                    const newList = [...prev, val];
-                                    setFormData(f => ({ ...f, programs: newList.join(', ') }));
-                                    return newList;
-                                  });
-                                  setProgramSearch('');
+                        <div className="absolute z-50 mt-1 w-full bg-white border border-stone-300 rounded-lg shadow-lg overflow-hidden">
+                          {/* Search input */}
+                          <div className="p-2 border-b border-stone-200">
+                            <input
+                              type="text"
+                              placeholder="Search or type program code..."
+                              value={programSearch}
+                              onChange={(e) => setProgramSearch(e.target.value)}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = programSearch.trim().toUpperCase();
+                                  if (val && !selectedPrograms.includes(val)) {
+                                    setSelectedPrograms(prev => {
+                                      const newList = [...prev, val];
+                                      setFormData(f => ({ ...f, programs: newList.join(', ') }));
+                                      return newList;
+                                    });
+                                    setProgramSearch('');
+                                  }
                                 }
-                              }
-                            }}
-                          />
+                              }}
+                            />
+                          </div>
+                          {/* Program list */}
+                          <div className="max-h-44 overflow-y-auto">
+                            {filtered.length === 0 ? (
+                              <div className="px-4 py-3 text-sm text-stone-500">No match found. Press <strong>Enter</strong> to add as custom.</div>
+                            ) : (
+                              filtered.map(prog => (
+                                <label
+                                  key={prog.id || prog.code}
+                                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer text-sm"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedPrograms.includes(prog.code)}
+                                    onChange={() => toggleProgram(prog.code)}
+                                    className="w-4 h-4 rounded border-stone-300 text-[#801e38] focus:ring-[#801e38]"
+                                  />
+                                  <span className="font-semibold text-stone-800">{prog.code}</span>
+                                  <span className="text-stone-500">— {prog.name}</span>
+                                </label>
+                              ))
+                            )}
+                          </div>
                         </div>
-                        {/* Program list */}
-                        <div className="max-h-44 overflow-y-auto">
-                          {filtered.length === 0 ? (
-                            <div className="px-4 py-3 text-sm text-stone-500">No match found. Press <strong>Enter</strong> to add as custom.</div>
-                          ) : (
-                            filtered.map(prog => (
-                              <label
-                                key={prog.id || prog.code}
-                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer text-sm"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedPrograms.includes(prog.code)}
-                                  onChange={() => toggleProgram(prog.code)}
-                                  className="w-4 h-4 rounded border-stone-300 text-[#801e38] focus:ring-[#801e38]"
-                                />
-                                <span className="font-semibold text-stone-800">{prog.code}</span>
-                                <span className="text-stone-500">— {prog.name}</span>
-                              </label>
-                            ))
-                          )}
-                        </div>
-                      </div>
                       );
                     })()}
                   </div>
@@ -1162,9 +1236,9 @@ Please login with these credentials and set up your account.`
                   <label className="block text-xs font-bold text-stone-700 mb-2">
                     Role Assignment <span className="text-red-500">*</span>
                   </label>
-                  <select 
+                  <select
                     value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                   >
                     <option value="">Select role...</option>
@@ -1181,17 +1255,17 @@ Please login with these credentials and set up your account.`
                       Module Access
                     </label>
                     <p className="text-xs text-stone-500 mb-3">Select modules this Super Admin can access:</p>
-                    
+
                     <div className="space-y-2.5">
                       {/* Dashboard */}
                       <div className="flex items-center gap-3">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           id="dashboard"
                           checked={formData.moduleAccess.dashboard}
                           onChange={(e) => setFormData({
-                            ...formData, 
-                            moduleAccess: {...formData.moduleAccess, dashboard: e.target.checked}
+                            ...formData,
+                            moduleAccess: { ...formData.moduleAccess, dashboard: e.target.checked }
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
@@ -1202,13 +1276,13 @@ Please login with these credentials and set up your account.`
 
                       {/* Reports */}
                       <div className="flex items-center gap-3">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           id="reports"
                           checked={formData.moduleAccess.reports}
                           onChange={(e) => setFormData({
-                            ...formData, 
-                            moduleAccess: {...formData.moduleAccess, reports: e.target.checked}
+                            ...formData,
+                            moduleAccess: { ...formData.moduleAccess, reports: e.target.checked }
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
@@ -1219,13 +1293,13 @@ Please login with these credentials and set up your account.`
 
                       {/* All Users */}
                       <div className="flex items-center gap-3">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           id="allUsers"
                           checked={formData.moduleAccess.allUsers}
                           onChange={(e) => setFormData({
-                            ...formData, 
-                            moduleAccess: {...formData.moduleAccess, allUsers: e.target.checked}
+                            ...formData,
+                            moduleAccess: { ...formData.moduleAccess, allUsers: e.target.checked }
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
@@ -1236,13 +1310,13 @@ Please login with these credentials and set up your account.`
 
                       {/* Activity Logs */}
                       <div className="flex items-center gap-3">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           id="activityLogs"
                           checked={formData.moduleAccess.activityLogs}
                           onChange={(e) => setFormData({
-                            ...formData, 
-                            moduleAccess: {...formData.moduleAccess, activityLogs: e.target.checked}
+                            ...formData,
+                            moduleAccess: { ...formData.moduleAccess, activityLogs: e.target.checked }
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
@@ -1257,7 +1331,7 @@ Please login with these credentials and set up your account.`
 
               {/* Modal Footer */}
               <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
-                <button 
+                <button
                   onClick={() => {
                     setIsModalOpen(false);
                     setError('');
@@ -1268,12 +1342,12 @@ Please login with these credentials and set up your account.`
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleCreateDean}
                   disabled={loading}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Creating...' : 'Send Invite & Add User'}
+                  {loading ? 'Creating...' : 'Add User'}
                 </button>
               </div>
             </div>
@@ -1314,6 +1388,61 @@ Please login with these credentials and set up your account.`
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {addingDept ? 'Adding...' : <><Plus size={16} /> Add Department</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Program Modal */}
+      {showAddProgModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#801e38] px-6 py-4 flex justify-between items-center">
+              <h3 className="text-white font-bold text-lg">Add New Program</h3>
+              <button onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3 py-2 rounded-lg mb-4">
+                <strong>Adding to:</strong> {formData.department}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-2">Program Code <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. BSIT"
+                  value={newProgCode}
+                  onChange={(e) => setNewProgCode(e.target.value)}
+                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 uppercase"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-2">Full Program Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bachelor of Science in Information Technology"
+                  value={newProgName}
+                  onChange={(e) => setNewProgName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddNewProgram()}
+                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                />
+              </div>
+            </div>
+            <div className="bg-stone-50 px-6 py-4 flex justify-end gap-3 border-t border-stone-200">
+              <button
+                onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNewProgram}
+                disabled={addingProg || !newProgCode.trim() || !newProgName.trim()}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {addingProg ? 'Adding...' : <><Plus size={16} /> Add Program</>}
               </button>
             </div>
           </div>

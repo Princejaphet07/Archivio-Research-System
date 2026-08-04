@@ -67,6 +67,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
         researchTitle: group?.researchTitle || sub.title || 'Untitled',
         adviserName: group?.adviserName || 'Unknown Adviser',
         adviserUid: group?.adviserUid || '',
+        program: group?.program || sub.program || '',
+        authorDisplay: group
+          ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
+          : sub.studentName || 'Unknown Author',
         completionPercent,
         reviewStatus: sub.reviewStatus || 'in_progress',
         isSelf: group?.adviserUid === auth.currentUser?.email
@@ -96,10 +100,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
     adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
   );
 
-  const handlePublish = async (id, title) => {
+  const handlePublish = async (item) => {
     const res = await Swal.fire({
       title: 'Publish Research?',
-      text: `Are you sure you want to publish "${title}" to the live archive?`,
+      text: `Are you sure you want to publish "${item.researchTitle}" to the live archive?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#c9a227',
@@ -109,16 +113,22 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
     if (res.isConfirmed) {
       try {
-        await updateDoc(doc(db, 'submissions', id), {
+        await updateDoc(doc(db, 'submissions', item.id), {
           reviewStatus: 'published',
-          publishedAt: new Date().toISOString()
+          publishedAt: new Date().toISOString(),
+          researchTitle: item.researchTitle,
+          groupName: item.groupName,
+          adviserName: item.adviserName,
+          adviserUid: item.adviserUid,
+          program: item.program,
+          authorDisplay: item.authorDisplay
         });
         
         await logActivity({
           user: auth.currentUser?.email || 'Dean',
           role: 'Dean',
           action: 'Published research to public archive',
-          details: `Title: ${title}`,
+          details: `Title: ${item.researchTitle}`,
           status: 'Success'
         });
 
@@ -148,7 +158,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
         const publishPromises = eligibleItems.map(item => 
           updateDoc(doc(db, 'submissions', item.id), {
             reviewStatus: 'published',
-            publishedAt: new Date().toISOString()
+            publishedAt: new Date().toISOString(),
+            researchTitle: item.researchTitle,
+            groupName: item.groupName,
+            adviserName: item.adviserName,
+            adviserUid: item.adviserUid,
+            program: item.program,
+            authorDisplay: item.authorDisplay
           })
         );
         await Promise.all(publishPromises);
@@ -291,7 +307,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                           Preview
                         </button>
                         <button
-                          onClick={() => handlePublish(item.id, item.researchTitle)}
+                          onClick={() => handlePublish(item)}
                           className="px-4 py-1.5 text-xs font-bold text-white bg-[#7a1f3d] rounded-lg hover:bg-[#5a162d] transition-colors flex items-center gap-1.5 shadow-sm"
                         >
                           🌐 Publish

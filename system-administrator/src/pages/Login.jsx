@@ -49,10 +49,11 @@ function Login() {
   
   // Input states
   const [showPassword, setShowPassword] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginEmail, setLoginEmail] = useState(localStorage.getItem('admin_remembered_email') || '');
   const [loginPassword, setLoginPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('admin_remembered_email'));
   const view = 'login';
 
   // FIREBASE LOGIN LOGIC
@@ -115,6 +116,13 @@ function Login() {
 
       // Success! Navigate to dashboard
       console.log('✅ Login successful! User:', userData);
+      
+      if (rememberMe) {
+        localStorage.setItem('admin_remembered_email', trimmedEmail);
+      } else {
+        localStorage.removeItem('admin_remembered_email');
+      }
+
       navigate('/dashboard');
 
     } catch (error) {
@@ -272,7 +280,12 @@ function Login() {
 
                   <div className="flex items-center justify-between pt-1">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" className="w-4 h-4 rounded border-stone-300 text-[#3b1220] focus:ring-[#3b1220] accent-[#3b1220]" />
+                      <input 
+                        type="checkbox" 
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 rounded border-stone-300 text-[#3b1220] focus:ring-[#3b1220] accent-[#3b1220]" 
+                      />
                       <span className="text-xs text-stone-500 font-medium">Remember me</span>
                     </label>
                     <Link to="/forgot-password" className="text-xs text-[#801e38] font-semibold hover:underline">Forgot password?</Link>

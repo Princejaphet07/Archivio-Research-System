@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where, onSnapshot } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 import { db } from '../firebase/config';
 
 // Program code options for the dropdown
@@ -31,46 +32,14 @@ export default function DepartmentsProgramsTab() {
 
   // Fetch all data from Firestore on mount
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    let deptsData = [];
+    let progsData = [];
+    let deansData = [];
 
-  const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      // Fetch departments
-      const deptsQuery = query(collection(db, 'departments'), orderBy('createdAt', 'desc'));
-      const deptsSnapshot = await getDocs(deptsQuery);
-      const deptsData = deptsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Fetch programs
-      const progsQuery = query(collection(db, 'programs'), orderBy('createdAt', 'desc'));
-      const progsSnapshot = await getDocs(progsQuery);
-      const progsData = progsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Fetch deans
-      const deansQuery = query(collection(db, 'deans'), orderBy('createdAt', 'desc'));
-      const deansSnapshot = await getDocs(deansQuery);
-      const deansData = deansSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      console.log('🔍 DEBUG - Departments:', deptsData);
-      console.log('🔍 DEBUG - Programs:', progsData);
-      console.log('🔍 DEBUG - Deans:', deansData);
-
-      // Process departments with programs and deans
+    const processData = () => {
       const processedDepts = deptsData.map(dept => {
         const deptPrograms = progsData.filter(prog => prog.school === dept.name);
         const deptDeans = deansData.filter(dean => dean.department === dept.name);
-        
-        console.log(`📍 Processing ${dept.name}: Found ${deptPrograms.length} programs, ${deptDeans.length} deans`);
         
         return {
           ...dept,
@@ -86,13 +55,35 @@ export default function DepartmentsProgramsTab() {
       setDepartments(processedDepts);
       setPrograms(progsData);
       setDeans(deansData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to load data');
-    } finally {
       setLoading(false);
-    }
-  };
+    };
+
+    setLoading(true);
+
+    const unsubDepts = onSnapshot(collection(db, 'departments'), (snap) => {
+      deptsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      processData();
+    }, (err) => { console.error('Error fetching departments:', err); setError('Failed to load data'); });
+
+    const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
+      progsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      processData();
+    }, (err) => { console.error('Error fetching programs:', err); setError('Failed to load data'); });
+
+    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+      deansData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      processData();
+    }, (err) => { console.error('Error fetching deans:', err); setError('Failed to load data'); });
+
+    return () => {
+      unsubDepts();
+      unsubProgs();
+      unsubDeans();
+    };
+  }, []);
 
   const handleAddDepartment = async () => {
     setError('');
@@ -121,7 +112,7 @@ export default function DepartmentsProgramsTab() {
       setSuccess('✅ Department added successfully!');
       setDepartmentForm({ name: '', status: 'Active' });
       setActiveModal(null);
-      
+
       // Refresh data
       setTimeout(() => fetchAllData(), 500);
     } catch (error) {
@@ -143,7 +134,7 @@ export default function DepartmentsProgramsTab() {
       // Save each selected program code to Firestore
       for (const code of programForm.codes) {
         const programData = programCodeOptions.find(p => p.code === code);
-        
+
         // Check if program already exists in this college
         const existing = programs.find(p => p.code === code && p.school === programForm.school);
         if (!existing) {
@@ -160,12 +151,131 @@ export default function DepartmentsProgramsTab() {
       setProgramForm({ codes: [], school: '' });
       setShowCodeDropdown(false);
       setActiveModal(null);
-      
+
       // Refresh data
       setTimeout(() => fetchAllData(), 500);
     } catch (error) {
       console.error('Error adding programs:', error);
       setError('Failed to add programs');
+    }
+  };
+
+  const handleDeleteProgram = async (programCode, departmentName) => {
+    const result = await Swal.fire({
+      title: 'Delete Program?',
+      html: `Are you sure you want to permanently delete <b>${programCode}</b> from <b>${departmentName}</b>?<br/><br/>This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      // Find the program document by code + school
+      const q = query(
+        collection(db, 'programs'),
+        where('code', '==', programCode),
+        where('school', '==', departmentName)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        Swal.fire('Not Found', 'Program not found in database.', 'error');
+        return;
+      }
+
+      // Delete all matching documents (should be 1)
+      for (const docSnap of snapshot.docs) {
+        await deleteDoc(doc(db, 'programs', docSnap.id));
+      }
+
+      Swal.fire('Deleted!', `${programCode} has been permanently removed.`, 'success');
+
+      // Update the selected department tags in real-time (so UI updates instantly)
+      setSelectedDepartment(prev => ({
+        ...prev,
+        tags: prev.tags.filter(t => t !== programCode),
+        programsCount: prev.programsCount - 1
+      }));
+
+      // Refresh all data in the background
+      fetchAllData();
+    } catch (error) {
+      console.error('Error deleting program:', error);
+      Swal.fire('Error', 'Failed to delete program. Please try again.', 'error');
+    }
+  };
+
+  const handleDeleteDepartment = async (dept) => {
+    const result = await Swal.fire({
+      title: 'Delete Entire Department?',
+      html: `<div style="text-align:left;font-size:14px;">
+        <p style="margin-bottom:12px;">You are about to permanently delete <b>${dept.name}</b> and everything connected to it:</p>
+        <ul style="list-style:disc;padding-left:20px;color:#991b1b;">
+          <li><b>${dept.programsCount || 0}</b> program(s) will be deleted</li>
+          <li><b>${dept.deansCount || 0}</b> dean assignment(s) will be affected</li>
+        </ul>
+        <p style="margin-top:12px;color:#991b1b;font-weight:bold;">⚠️ This action cannot be undone!</p>
+      </div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete everything!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Double confirmation for safety
+    const confirm2 = await Swal.fire({
+      title: 'Final Confirmation',
+      text: `Type the department name to confirm: ${dept.name}`,
+      input: 'text',
+      inputPlaceholder: dept.name,
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Delete Permanently',
+      inputValidator: (value) => {
+        if (value !== dept.name) {
+          return 'Department name does not match!';
+        }
+      }
+    });
+
+    if (!confirm2.isConfirmed) return;
+
+    try {
+      Swal.fire({ title: 'Deleting...', text: 'Removing department and all connected data...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      // 1. Delete all programs belonging to this department
+      const progsQuery = query(
+        collection(db, 'programs'),
+        where('school', '==', dept.name)
+      );
+      const progsSnap = await getDocs(progsQuery);
+      for (const progDoc of progsSnap.docs) {
+        await deleteDoc(doc(db, 'programs', progDoc.id));
+      }
+
+      // 2. Delete the department document itself
+      await deleteDoc(doc(db, 'departments', dept.id));
+
+      // Close modal if it was open for this department
+      setActiveModal(null);
+      setSelectedDepartment(null);
+
+      // Refresh all data
+      await fetchAllData();
+
+      Swal.fire('Deleted!', `${dept.name} and all its programs have been permanently removed.`, 'success');
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      Swal.fire('Error', 'Failed to delete department. Please try again.', 'error');
     }
   };
 
@@ -183,7 +293,7 @@ export default function DepartmentsProgramsTab() {
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Department Button */}
-          <button 
+          <button
             onClick={() => setActiveModal('department')}
             className="bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
           >
@@ -191,7 +301,7 @@ export default function DepartmentsProgramsTab() {
           </button>
 
           {/* Programs Button */}
-          <button 
+          <button
             onClick={() => setActiveModal('program')}
             className="bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
           >
@@ -231,9 +341,9 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Click to View Details Link */}
-            <div className="p-5 pt-3 border-t border-stone-100 group-hover:bg-stone-50 transition-colors">
-              <a 
-                href="#" 
+            <div className="p-5 pt-3 border-t border-stone-100 group-hover:bg-stone-50 transition-colors flex items-center justify-between">
+              <a
+                href="#"
                 onClick={(e) => {
                   e.preventDefault();
                   setSelectedDepartment(dept);
@@ -246,6 +356,18 @@ export default function DepartmentsProgramsTab() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </a>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteDepartment(dept);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                title={`Delete ${dept.name}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
           </div>
         ))}
@@ -265,7 +387,7 @@ export default function DepartmentsProgramsTab() {
                   Status: <span className={`font-bold ${selectedDepartment.status === 'Active' ? 'text-emerald-600' : selectedDepartment.status === 'Pending' ? 'text-[#801e38]' : 'text-stone-500'}`}>{selectedDepartment.status}</span>
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setActiveModal(null);
                   setSelectedDepartment(null);
@@ -284,8 +406,15 @@ export default function DepartmentsProgramsTab() {
                 {selectedDepartment.tags && selectedDepartment.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {selectedDepartment.tags.map((tag, idx) => (
-                      <span key={idx} className="text-sm font-semibold px-3 py-1.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                      <span key={idx} className="text-sm font-semibold px-3 py-1.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200 flex items-center gap-1.5 group">
                         {tag}
+                        <button
+                          onClick={() => handleDeleteProgram(tag, selectedDepartment.name)}
+                          className="w-4 h-4 rounded-full bg-stone-300 hover:bg-red-500 text-white flex items-center justify-center text-[10px] leading-none transition-colors cursor-pointer opacity-60 group-hover:opacity-100"
+                          title={`Delete ${tag}`}
+                        >
+                          ×
+                        </button>
                       </span>
                     ))}
                   </div>
@@ -321,13 +450,22 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
-              <button 
+            <div className="flex items-center justify-between gap-3 p-6 border-t border-stone-200 bg-stone-50">
+              <button
+                onClick={() => handleDeleteDepartment(selectedDepartment)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition flex items-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete Department
+              </button>
+              <button
                 onClick={() => {
                   setActiveModal(null);
                   setSelectedDepartment(null);
                 }}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition cursor-pointer"
               >
                 Close
               </button>
@@ -348,7 +486,7 @@ export default function DepartmentsProgramsTab() {
                 </h2>
                 <p className="text-xs text-stone-500 mt-1">Enter a new school or college in the system.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
               >
@@ -379,13 +517,14 @@ export default function DepartmentsProgramsTab() {
                 <label className="block text-xs font-bold text-stone-700 mb-2">
                   School / College Name <span className="text-red-500">*</span>
                 </label>
-                <select 
+                <select
                   value={departmentForm.name}
-                  onChange={(e) => setDepartmentForm({...departmentForm, name: e.target.value})}
+                  onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
                   className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                 >
                   <option value="">Select School / College...</option>
-                  <option value="College of IT & Engineering">College of IT & Engineering</option>
+                  <option value="College of Information Technology">College of Information Technology</option>
+                  <option value="College of Engineering">College of Engineering</option>
                   <option value="College of Dentistry">College of Dentistry</option>
                   <option value="Business School (B-School)">Business School (B-School)</option>
                   <option value="School of Health & Allied Health Sciences">School of Health & Allied Health Sciences</option>
@@ -393,6 +532,8 @@ export default function DepartmentsProgramsTab() {
                   <option value="School of Design + Communication">School of Design + Communication</option>
                   <option value="College of Veterinary Medicine">College of Veterinary Medicine</option>
                   <option value="College of Rehabilitative Sciences">College of Rehabilitative Sciences</option>
+                  <option value="College of Nursing">College of Nursing</option>
+                  <option value="College of Education">College of Education</option>
                 </select>
               </div>
 
@@ -401,9 +542,9 @@ export default function DepartmentsProgramsTab() {
                 <label className="block text-xs font-bold text-stone-700 mb-2">
                   Initial Status
                 </label>
-                <select 
+                <select
                   value={departmentForm.status}
-                  onChange={(e) => setDepartmentForm({...departmentForm, status: e.target.value})}
+                  onChange={(e) => setDepartmentForm({ ...departmentForm, status: e.target.value })}
                   className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                 >
                   <option value="Upcoming">Upcoming</option>
@@ -422,13 +563,13 @@ export default function DepartmentsProgramsTab() {
 
             {/* Modal Footer */}
             <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleAddDepartment}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition"
               >
@@ -453,7 +594,7 @@ export default function DepartmentsProgramsTab() {
                   Add a program under {programForm.school || 'selected college'}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
               >
@@ -484,9 +625,9 @@ export default function DepartmentsProgramsTab() {
                 <label className="block text-xs font-bold text-stone-700 mb-2">
                   Select College <span className="text-red-500">*</span>
                 </label>
-                <select 
+                <select
                   value={programForm.school}
-                  onChange={(e) => setProgramForm({...programForm, school: e.target.value})}
+                  onChange={(e) => setProgramForm({ ...programForm, school: e.target.value })}
                   className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
                 >
                   <option value="">Select College / School...</option>
@@ -543,13 +684,13 @@ export default function DepartmentsProgramsTab() {
 
             {/* Modal Footer */}
             <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleAddProgram}
                 disabled={programForm.codes.length === 0 || !programForm.school}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"

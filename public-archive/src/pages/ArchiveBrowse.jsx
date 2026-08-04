@@ -60,7 +60,7 @@ function ArchiveBrowse() {
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
           authorDisplay: group 
-            ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
+            ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
         };
       });
