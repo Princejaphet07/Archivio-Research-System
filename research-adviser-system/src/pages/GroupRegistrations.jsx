@@ -87,6 +87,29 @@ function GroupRegistrations() {
         await updateDoc(doc(db, 'students', group.leaderUid), updateData);
       }
 
+      // 2b. Update students collection (the members' profiles)
+      if (group.members && group.members.length > 0) {
+        const memberEmails = group.members.map(m => typeof m === 'object' ? m.email : m).filter(Boolean);
+        
+        if (memberEmails.length > 0) {
+          // Firebase 'in' queries support max 10 items. But a group max size is 5, so this is safe.
+          const membersQ = query(collection(db, 'students'), where('email', 'in', memberEmails));
+          const membersSnap = await getDocs(membersQ);
+          
+          const memberUpdates = membersSnap.docs.map(memberDoc => {
+            const updateData = {
+              groupStatus: decision === 'approve' ? 'approved' : 'declined'
+            };
+            if (decision === 'approve') {
+              updateData.hasSeenApprovalNotification = false;
+            }
+            return updateDoc(doc(db, 'students', memberDoc.id), updateData);
+          });
+          
+          await Promise.all(memberUpdates);
+        }
+      }
+
       // 3. Log Activity for Admin
       await addDoc(collection(db, 'systemLogs'), {
         user: auth.currentUser?.email || 'Adviser',

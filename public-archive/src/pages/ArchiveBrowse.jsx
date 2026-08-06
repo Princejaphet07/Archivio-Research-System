@@ -45,6 +45,7 @@ function ArchiveBrowse() {
 
     const computeData = () => {
       if (!subsList.length) {
+        setPublishedPapers([]);
         setTimeout(() => setLoading(false), 800);
         return;
       }

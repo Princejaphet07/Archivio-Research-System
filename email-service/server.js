@@ -213,10 +213,8 @@ app.post('/api/send-invitation-email', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate email domain - only @phinmaed.com allowed
-    if (!to.toLowerCase().endsWith('@phinmaed.com')) {
-      return res.status(400).json({ error: 'Invitations can only be sent to @phinmaed.com email addresses' });
-    }
+    // Domain validation relaxed for testing purposes
+    // (Previously restricted to @phinmaed.com)
 
     // Replace placeholders in message
     let emailMessage = message
@@ -1277,6 +1275,79 @@ app.post('/api/ai/global-search', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================
+// SEND ACCOUNT CREATION EMAIL (SYSTEM ADMIN)
+// ============================================
+app.post('/api/send-welcome-email', async (req, res) => {
+  try {
+    const { to, name, role, temporaryPassword, loginLink } = req.body;
+
+    if (!to || !name || !role || !temporaryPassword) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const emailHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #4a1024 0%, #6b1834 100%); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+    .content { padding: 40px 30px; }
+    .password-box { background: #f9f9f9; border: 1px dashed #ca8a04; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0; }
+    .password-box h2 { margin: 0; color: #b45309; letter-spacing: 3px; font-size: 28px; }
+    .password-box p { margin: 10px 0 0; font-size: 13px; color: #666; }
+    .btn { display: inline-block; background: #ca8a04; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; }
+    .footer { background: #f0f0f0; padding: 20px 30px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to ARCHIVIO</h1>
+      <p>Unified Research Portal</p>
+    </div>
+    <div class="content">
+      <p>Dear <strong>${name}</strong>,</p>
+      <p>An official <strong>${role}</strong> account has been created for you by the System Administrator in the ARCHIVIO Research Management System.</p>
+      
+      <div class="password-box">
+        <p style="margin-top:0; margin-bottom:10px;">Your temporary password is:</p>
+        <h2>${temporaryPassword}</h2>
+        <p>Please log in and change this password immediately.</p>
+      </div>
+      
+      <p>You can access your portal here:</p>
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="${loginLink || 'http://localhost:5173'}" class="btn">Log In to ARCHIVIO</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>This is an automated message from SWU PHINMA ARCHIVIO. Please do not reply.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `ARCHIVIO Admin <${process.env.EMAIL_USER}>`,
+      to,
+      subject: '[ARCHIVIO] Your New Account Details',
+      html: emailHTML
+    });
+
+    res.status(200).json({ success: true, message: 'Welcome email sent successfully' });
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error);
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`

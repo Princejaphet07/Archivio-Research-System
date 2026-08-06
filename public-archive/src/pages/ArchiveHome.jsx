@@ -64,7 +64,12 @@ function ArchiveHome() {
     let groupsList = [];
 
     const computeData = () => {
-      if (!subsList.length) return;
+      if (!subsList.length) {
+        setPublishedPapers([]);
+        setStats({ papers: 0, authors: 0, departments: 1, advisers: 0 });
+        setTimeout(() => setLoading(false), 800);
+        return;
+      }
 
       const enrichedPapers = subsList.map(sub => {
         const group = groupsList.find(g => g.leaderUid === sub.studentUid);
