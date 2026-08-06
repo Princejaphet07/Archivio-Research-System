@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header'; // Added Header Import
+import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
 import { Trash2 } from 'lucide-react';
 
@@ -22,8 +23,11 @@ export default function AllUsers() {
   const ITEMS_PER_PAGE = 10;
   
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
+  const { currentUser } = useUser();
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!currentUser) return;
+
     let deansData = [];
     let advisersData = [];
     let studentsData = [];
@@ -103,7 +107,7 @@ export default function AllUsers() {
       unsubAdvisers();
       unsubStudents();
     };
-  }, []);
+  }, [currentUser]);
 
   const yearFilteredUsers = React.useMemo(() => {
     return filterByAcademicYear(allUsers, 'createdAt');

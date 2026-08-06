@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useUser } from '../context/UserContext';
 import { Search } from 'lucide-react';
 
 const ROWS_PER_PAGE = 10;
@@ -62,9 +63,12 @@ export default function ActivityLogs() {
   const [roleFilter,   setRole]   = useState('all');
   const [page,         setPage]   = useState(1);
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
+  const { currentUser } = useUser();
 
   // ── Fetch from Firestore ────────────────────────────────────────────────────
   useEffect(() => {
+    if (!currentUser) return;
+    
     setLoading(true);
     const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     
@@ -78,7 +82,7 @@ export default function ActivityLogs() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   // ── Filtered list ───────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
