@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header'; // Added Header Import
 import { db } from '../firebase/config';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import Swal from 'sweetalert2';
+import { Trash2 } from 'lucide-react';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -138,6 +140,53 @@ export default function AllUsers() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedUsers = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const handleDeleteUser = async (user) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to permanently delete ${user.name}? This will remove all their data.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete!'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        // 1. Delete from specific role collection
+        let colName = 'students';
+        if (user.role === 'Dean') colName = 'deans';
+        if (user.role === 'Adviser') colName = 'advisers';
+        
+        await deleteDoc(doc(db, colName, user.id));
+
+        // 2. Delete from users collection (find by email since uid might not be attached to allUsers data)
+        const qUsers = query(collection(db, 'users'), where('email', '==', user.email));
+        const snapUsers = await getDocs(qUsers);
+        if (!snapUsers.empty) {
+          const uid = snapUsers.docs[0].id;
+          await deleteDoc(doc(db, 'users', uid));
+        }
+
+        // 3. Call backend to delete Auth
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        await fetch(`${backendUrl}/api/delete-auth-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email })
+        });
+
+        Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        Swal.fire('Error', 'Failed to delete user.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
       <Sidebar />
@@ -193,6 +242,7 @@ export default function AllUsers() {
                     <th className="px-6 py-4 cursor-pointer hover:text-stone-600">DEPARTMENT ↑</th>
                     <th className="px-6 py-4">STATUS</th>
                     <th className="px-6 py-4">LAST LOGIN</th>
+                    <th className="px-6 py-4 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
@@ -222,6 +272,15 @@ export default function AllUsers() {
                           <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">{user.status}</span>
                         </td>
                         <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.lastLogin}</td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
