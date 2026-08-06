@@ -81,45 +81,45 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         />
       )}
 
-      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#FDF9ED] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-[#E8DFCB] overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#faf9f6] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-stone-200/80 overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         
         <div>
-          <div className="flex items-center gap-3 px-8 pt-8 pb-10">
-            <div className="w-[32px] h-[32px] bg-[#7B1F35] rounded flex items-center justify-center">
-              <img src={swuLogoSeal} alt="SWU Logo" className="w-[20px] h-[20px] object-contain" />
-            </div>
+          <div className="flex items-center gap-3 px-6 pt-8 pb-8">
+            <img src={swuLogoSeal} alt="ARCHIVIO" className="w-10 h-10 rounded-full border border-stone-200/80 object-contain bg-white shadow-sm p-0.5" />
             <div>
-              <span className="text-[16px] font-bold text-[#1A1A1A] tracking-wide block leading-none">ARCHIVIO</span>
-              <span className="text-[11px] text-gray-500 font-medium">Student Portal</span>
+              <span className="text-[16px] font-bold text-gray-900 tracking-wide block leading-none mb-0.5">ARCHIVIO</span>
+              <span className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Student Portal</span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 px-4">
+          <div className="flex flex-col gap-1.5 px-4">
             {menuItems.map((item) => {
               const isActive = activeTab === item.name;
               return (
                 <button 
                   key={item.name} 
                   onClick={() => { setActiveTab(item.name); setIsOpen(false); }}
-                  className={`flex items-center justify-between px-5 py-3.5 rounded-xl text-[14px] font-medium transition-all duration-200 relative ${
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 relative ${
                     isActive 
-                      ? 'bg-[#F4DEE5] text-[#7B1F35] font-bold' 
-                      : 'bg-transparent text-gray-600 hover:bg-black/5 hover:text-[#1A1A1A]'
+                      ? 'bg-[#7B1F35]/5 text-[#7B1F35] font-bold' 
+                      : 'bg-transparent text-gray-500 hover:bg-stone-100/80 hover:text-gray-900'
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
-                    {item.icon}
+                    <div className={`${isActive ? 'text-[#7B1F35]' : 'text-gray-400'}`}>
+                      {item.icon}
+                    </div>
                     {item.name}
                   </div>
                   
                   {/* Right side Badge or active indicator */}
                   {item.badge && (
-                    <span className="bg-[#CF3645] text-white text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                    <span className="bg-[#CF3645] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
                       {item.badge}
                     </span>
                   )}
                   {isActive && (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#7B1F35] rounded-l-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#7B1F35] rounded-r-full" />
                   )}
                 </button>
               );
@@ -128,22 +128,22 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         </div>
         
         {/* Bottom Section (Need Help & Profile) */}
-        <div className="px-6 pb-8 flex flex-col gap-4 mt-8">
+        <div className="px-5 pb-6 flex flex-col gap-4 mt-8">
           
           {/* Need help box */}
           <div 
-            className="bg-[#F4DEE5] p-5 rounded-2xl flex flex-col gap-2 cursor-pointer hover:bg-[#ebd0da] transition-colors"
+            className="bg-gradient-to-br from-[#f9f1f3] to-[#f4e2e7] p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#7B1F35]/10"
             onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))}
           >
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm mb-1">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#7B1F35] shadow-sm mb-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </div>
-            <h4 className="text-[#7B1F35] font-bold text-[14px]">Need help?</h4>
-            <p className="text-gray-600 text-[12px] leading-tight">Contact your<br/>Research Adviser</p>
+            <h4 className="text-[#7B1F35] font-bold text-[13px]">Need help?</h4>
+            <p className="text-gray-600 text-[11px] leading-tight font-medium">Contact your<br/>Research Adviser</p>
           </div>
 
           {/* User Profile */}
-          <div className="border border-[#E8DFCB] rounded-2xl p-3 flex items-center gap-3 bg-transparent">
+          <div className="border border-stone-200 rounded-xl p-2.5 flex items-center gap-3 bg-white shadow-sm hover:border-[#7B1F35]/30 transition-colors">
             <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-[14px] shrink-0 shadow-sm overflow-hidden">
               {profilePhotoUrl ? (
                 <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
