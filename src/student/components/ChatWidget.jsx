@@ -296,7 +296,7 @@ export default function ChatWidget({ role, leaderUid }) {
       {/* Header */}
       <div className="bg-[#7B1F35] p-4 flex items-center justify-between text-white shadow-md z-10">
         <div>
-          <h3 className="font-bold text-sm tracking-wide">{groupData?.adviserName || 'Research Adviser'}</h3>
+          <h3 className="font-bold text-sm tracking-wide">{groupData?.leaderName || groupData?.groupName || 'Group Chat'}</h3>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="text-[10px] text-white/70 uppercase tracking-widest font-semibold">Group Chat</span>
             <span className="text-[10px] text-white/50">•</span>
