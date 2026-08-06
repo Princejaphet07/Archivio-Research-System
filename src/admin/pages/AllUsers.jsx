@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import { collection, onSnapshot, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
@@ -23,14 +24,23 @@ export default function AllUsers() {
   const ITEMS_PER_PAGE = 10;
   
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
-  const { currentUser } = useUser();
 
   useEffect(() => {
-    if (!currentUser) return;
+    let unsubDeans = null;
+    let unsubAdvisers = null;
+    let unsubStudents = null;
 
-    let deansData = [];
-    let advisersData = [];
-    let studentsData = [];
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        if (unsubDeans) unsubDeans();
+        if (unsubAdvisers) unsubAdvisers();
+        if (unsubStudents) unsubStudents();
+        return;
+      }
+
+      let deansData = [];
+      let advisersData = [];
+      let studentsData = [];
 
     const formatDate = (dateVal) => {
       if (!dateVal) return 'N/A';
@@ -45,7 +55,7 @@ export default function AllUsers() {
       setLoading(false);
     };
 
-    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+    unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(doc => {
         const data = doc.data();
         return {
@@ -64,7 +74,7 @@ export default function AllUsers() {
       console.error("Error fetching deans:", error);
     });
 
-    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+    unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       advisersData = snap.docs.map(doc => {
         const data = doc.data();
         return {
@@ -83,7 +93,7 @@ export default function AllUsers() {
       console.error("Error fetching advisers:", error);
     });
 
-    const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+    unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
       studentsData = snap.docs.map(doc => {
         const data = doc.data();
         return {
@@ -103,11 +113,12 @@ export default function AllUsers() {
     });
 
     return () => {
-      unsubDeans();
-      unsubAdvisers();
-      unsubStudents();
+      unsubAuth();
+      if (unsubDeans) unsubDeans();
+      if (unsubAdvisers) unsubAdvisers();
+      if (unsubStudents) unsubStudents();
     };
-  }, [currentUser]);
+  }, []);
 
   const yearFilteredUsers = React.useMemo(() => {
     return filterByAcademicYear(allUsers, 'createdAt');
