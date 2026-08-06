@@ -239,6 +239,17 @@ export default function StudentSignup({ onSwitchPage }) {
           createdAt: new Date().toISOString()
         });
         
+        // Create user document for member
+        await setDoc(doc(db, 'users', uid), {
+          uid,
+          email,
+          displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
+          role: 'student',
+          department: invitationData.department || leaderData.department || '',
+          status: 'active',
+          createdAt: new Date().toISOString()
+        });
+        
         // We do NOT create a new group.
 
       } else {
@@ -262,6 +273,17 @@ export default function StudentSignup({ onSwitchPage }) {
           role: 'student',
           status: 'active',
           groupStatus: 'pending',
+          createdAt: new Date().toISOString()
+        });
+
+        // Create user document for leader
+        await setDoc(doc(db, 'users', uid), {
+          uid,
+          email,
+          displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
+          role: 'student',
+          department: invitationData.department || '',
+          status: 'active',
           createdAt: new Date().toISOString()
         });
 
