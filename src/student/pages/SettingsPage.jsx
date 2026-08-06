@@ -24,6 +24,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   const [lastName, setLastName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const [notificationPrefs, setNotificationPrefs] = useState({
     'email-1': true,
@@ -171,6 +172,27 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       console.error('Error uploading photo:', error);
       Swal.fire('Error', 'Failed to upload photo', 'error');
     }
+  };
+
+  const handleChangePhotoClick = () => {
+    Swal.fire({
+      title: 'Update Profile Photo',
+      text: 'How would you like to update your photo?',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: '📸 Take Photo',
+      denyButtonText: '📁 Choose File',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#7B1F35',
+      denyButtonColor: '#475569',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        cameraInputRef.current?.click();
+      } else if (result.isDenied) {
+        fileInputRef.current?.click();
+      }
+    });
   };
 
   const handlePasswordChange = async () => {
@@ -347,8 +369,16 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         ref={fileInputRef} 
                         onChange={handlePhotoUpload} 
                       />
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        capture="user" 
+                        className="hidden" 
+                        ref={cameraInputRef} 
+                        onChange={handlePhotoUpload} 
+                      />
                       <button 
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={handleChangePhotoClick}
                         className="px-5 py-1.5 bg-[#7B1F35] text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] transition-colors mt-1"
                       >
                         Change Photo
