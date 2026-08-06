@@ -27,7 +27,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Users can update their own presence/profile as long as they don't change their role
       allow update: if isSystemAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
-      allow create, delete: if isSystemAdmin();
+      allow create, delete: if isSystemAdmin() || isDean();
     }
     
     match /students/{docId} {
@@ -38,12 +38,12 @@ service cloud.firestore {
     
     match /advisers/{docId} {
       allow read: if true; // Public for signup
-      allow write: if isSystemAdmin() || request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId;
+      allow write: if isSystemAdmin() || isDean() || request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId;
     }
     
     match /deans/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isSystemAdmin() || request.auth.uid == resource.data.uid || request.auth.uid == request.resource.data.uid;
+      allow write: if isSystemAdmin() || isDean() || request.auth.uid == resource.data.uid || request.auth.uid == request.resource.data.uid;
     }
 
     // 3. System Config & Logs
