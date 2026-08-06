@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc, deleteField, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc, deleteField, deleteDoc, increment } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
 export default function ChatWidget() {
@@ -27,9 +27,15 @@ export default function ChatWidget() {
     return () => window.removeEventListener('open-chat', handleOpenChat);
   }, []);
 
-  // Fetch groups when widget opens
+  // Set adviser unread count to 0 when a group is selected
   useEffect(() => {
-    if (!isOpen) return;
+    if (selectedGroup && isOpen) {
+      updateDoc(doc(db, 'groups', selectedGroup.id), { adviserUnreadCount: 0 }).catch(console.error);
+    }
+  }, [selectedGroup, isOpen]);
+
+  // Fetch groups to calculate unread messages and display list
+  useEffect(() => {
     const fetchGroups = async () => {
       const email = auth.currentUser?.email;
       if (!email) return;
@@ -113,6 +119,10 @@ export default function ChatWidget() {
       timestamp: serverTimestamp(),
       reactions: {} // Object instead of array
     });
+    
+    await updateDoc(doc(db, 'groups', selectedGroup.id), {
+      studentUnreadCount: increment(1)
+    });
   };
 
   const handleFileSelect = async (e) => {
@@ -157,6 +167,10 @@ export default function ChatWidget() {
         senderRole: 'adviser',
         timestamp: serverTimestamp(),
         reactions: {}
+      });
+      
+      await updateDoc(doc(db, 'groups', selectedGroup.id), {
+        studentUnreadCount: increment(1)
       });
       
       setUploadProgress(100);
@@ -234,12 +248,19 @@ export default function ChatWidget() {
     setEditMessageText('');
   };
 
+  const totalUnreadCount = groups.reduce((sum, g) => sum + (g.adviserUnreadCount || 0), 0);
+
   if (!isOpen) {
     return (
       <button 
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-[#7B1F35] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#5a1626] transition-all z-50 hover:scale-105 active:scale-95"
       >
+        {totalUnreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+            {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+          </span>
+        )}
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>

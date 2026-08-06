@@ -27,7 +27,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Users can update their own presence/profile as long as they don't change their role
       allow update: if isSystemAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
-      allow create, delete: if isSystemAdmin() || isDean();
+      allow create: if isSystemAdmin() || isDean() || (request.auth.uid == userId && (request.resource.data.role == 'adviser' || request.resource.data.role == 'student'));
+      allow delete: if isSystemAdmin() || isDean();
     }
     
     match /students/{docId} {

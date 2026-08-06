@@ -1348,6 +1348,36 @@ app.post('/api/send-welcome-email', async (req, res) => {
   }
 });
 
+// ============================================
+// DELETE USER FROM FIREBASE AUTH
+// ============================================
+app.post('/api/delete-auth-user', async (req, res) => {
+  try {
+    const { uid, email } = req.body;
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing uid or email' });
+    }
+
+    if (uid) {
+      await admin.auth().deleteUser(uid);
+      console.log(`✅ Successfully deleted user from Auth: ${uid}`);
+    } else if (email) {
+      const userRecord = await admin.auth().getUserByEmail(email);
+      await admin.auth().deleteUser(userRecord.uid);
+      console.log(`✅ Successfully deleted user by email from Auth: ${email}`);
+    }
+
+    res.status(200).json({ success: true, message: 'User deleted from Firebase Auth' });
+  } catch (error) {
+    console.error('❌ Error deleting user from Auth:', error);
+    // If user already doesn't exist, we can just return success
+    if (error.code === 'auth/user-not-found') {
+      return res.status(200).json({ success: true, message: 'User already deleted' });
+    }
+    res.status(500).json({ error: 'Failed to delete user from Auth' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`
