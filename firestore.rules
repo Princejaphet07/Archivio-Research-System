@@ -13,7 +13,7 @@ service cloud.firestore {
         : 'none';
     }
     function isSystemAdmin() {
-      return isAuthenticated() && getUserRole() == 'super-admin';
+      return isAuthenticated() && (getUserRole() == 'super-admin' || getUserRole() == 'admin');
     }
     function isDean() {
       return isAuthenticated() && (getUserRole() == 'dean' || getUserRole() == 'dean+adviser');
