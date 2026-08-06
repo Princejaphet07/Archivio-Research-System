@@ -26,6 +26,11 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [cameraStream, setCameraStream] = useState(null);
+
   const [notificationPrefs, setNotificationPrefs] = useState({
     'email-1': true,
     'email-2': true,
@@ -121,8 +126,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
     }
   };
 
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
+  const uploadPhotoFile = async (file) => {
     if (!file || !docId) return;
 
     if (file.size > 2 * 1024 * 1024) {
@@ -174,6 +178,54 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
     }
   };
 
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    uploadPhotoFile(file);
+  };
+
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStream(stream);
+      setIsCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Camera access error:", err);
+      Swal.fire('Error', 'Unable to access camera. Please check your permissions.', 'error');
+    }
+  };
+
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    setCameraStream(null);
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
+          closeCamera();
+          uploadPhotoFile(file);
+        }
+      }, 'image/jpeg');
+    }
+  };
+
   const handleChangePhotoClick = () => {
     Swal.fire({
       title: 'Update Profile Photo',
@@ -188,7 +240,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       denyButtonColor: '#475569',
     }).then((result) => {
       if (result.isConfirmed) {
-        cameraInputRef.current?.click();
+        openCamera();
       } else if (result.isDenied) {
         fileInputRef.current?.click();
       }
@@ -678,6 +730,28 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           </div>
         </div>
       </div>
+      </div>
+
+      {/* CAMERA MODAL */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-[500px] w-full shadow-2xl">
+            <h3 className="text-[20px] font-bold text-gray-900 mb-4 font-serif">Take a Photo</h3>
+            <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={closeCamera} className="px-5 py-2 text-gray-700 bg-gray-100 rounded-full font-semibold text-[13px] hover:bg-gray-200 transition-colors">Cancel</button>
+              <button onClick={capturePhoto} className="px-5 py-2 text-white bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Capture Photo
+              </button>
+            </div>
+            <canvas ref={canvasRef} className="hidden"></canvas>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
