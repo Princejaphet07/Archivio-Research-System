@@ -163,7 +163,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   );
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -194,7 +194,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pt-2">
 
             {/* ── WELCOME BANNER ────────────────────────────────── */}
-            <div className="w-full bg-[#7B1F35] rounded-2xl flex flex-col relative overflow-hidden shadow-sm">
+            <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-2xl flex flex-col relative overflow-hidden shadow-md border border-[#7B1F35]/20">
               <div className="absolute top-0 right-0 h-full w-[40%] bg-white/5 rounded-l-[100px] pointer-events-none" />
               <div className="absolute -top-10 right-20 h-[150%] w-[20%] bg-white/5 rounded-full pointer-events-none transform rotate-12" />
 
@@ -255,12 +255,12 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             ) : (
               <>
                 {/* ── WHAT'S NEXT CARD ──────────────────────────────── */}
-                <div className="bg-[#F3EADB] rounded-xl flex items-center p-6 relative overflow-hidden shadow-sm mt-6">
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#C73D4C]" />
+                <div className="bg-white border border-stone-200/80 rounded-xl flex items-center p-6 relative overflow-hidden shadow-sm mt-6 hover:shadow-md transition-shadow">
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#C73D4C] to-[#7B1F35]" />
 
                   <div className="flex items-center gap-6 w-full">
-                    <div className="w-[60px] h-[60px] bg-[#F4DEE5] rounded-xl flex items-center justify-center shrink-0">
-                      <svg className="w-8 h-8 text-[#A88C83]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <div className="w-[60px] h-[60px] bg-[#f8eef1] rounded-xl flex items-center justify-center shrink-0 border border-[#f0dee5]">
+                      <svg className="w-8 h-8 text-[#7B1F35]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                     </div>
@@ -295,7 +295,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                 </div>
 
                 {/* ── YOUR PROGRESS CARD ────────────────────────────── */}
-                <div className="bg-[#F3EADB] rounded-xl p-8 shadow-sm mt-6">
+                <div className="bg-white border border-stone-200/80 rounded-xl p-8 shadow-sm mt-6 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-end mb-8">
                     <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A]">Your Progress</h3>
                     {loadingData ? (
@@ -306,7 +306,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   </div>
 
                   <div className="relative pt-2 pb-6 px-4">
-                    <div className="absolute top-5 left-0 w-full h-3 bg-[#E8DFCB] rounded-full" />
+                    <div className="absolute top-5 left-0 w-full h-3 bg-stone-100 rounded-full" />
                     <div
                       className="absolute top-5 left-0 h-3 bg-[#7B1F35] rounded-full transition-all duration-700"
                       style={{ width: loadingData ? '0%' : `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
@@ -321,12 +321,12 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                             key={step}
                             className={`flex flex-col items-center gap-3 w-20 ${idx === 0 ? '-ml-4' : ''} ${idx === STEPS.length - 1 ? '-mr-4' : ''}`}
                           >
-                            <div className={`w-[34px] h-[34px] rounded-full ring-[6px] ring-[#F3EADB] flex items-center justify-center transition-all duration-500 ${
+                            <div className={`w-[34px] h-[34px] rounded-full ring-[6px] ring-white flex items-center justify-center transition-all duration-500 ${
                               isDone
-                                ? 'bg-[#7B1F35] text-white'
+                                ? 'bg-[#7B1F35] text-white shadow-md'
                                 : isCurrent
-                                  ? 'bg-white border-[5px] border-[#7B1F35]'
-                                  : 'bg-white border-[5px] border-[#E8DFCB]'
+                                  ? 'bg-white border-[5px] border-[#7B1F35] shadow-md'
+                                  : 'bg-white border-[5px] border-stone-200'
                             }`}>
                               {isDone && (
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
@@ -350,8 +350,8 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Manuscript Card */}
-              <div className="bg-[#F3EADB] rounded-xl flex flex-col shadow-sm">
-                <div className="bg-[#F4DEE5] px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-[#EAD0D8]">
+              <div className="bg-white border border-stone-200/80 rounded-xl flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-gradient-to-r from-stone-50 to-white px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-stone-100">
                   <div className="flex items-center gap-3">
                     <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -397,7 +397,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                       <>
                         <button
                           onClick={goToRequirements}
-                          className="border border-[#D6CBB8] hover:bg-black/5 text-[#1A1A1A] text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors"
+                          className="border border-stone-300 hover:bg-stone-50 text-[#1A1A1A] text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors"
                         >
                           Edit
                         </button>
@@ -421,8 +421,8 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
               </div>
 
               {/* Documents Card */}
-              <div className="bg-[#F3EADB] rounded-xl flex flex-col shadow-sm">
-                <div className="bg-[#F4DEE5] px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-[#EAD0D8]">
+              <div className="bg-white border border-stone-200/80 rounded-xl flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-gradient-to-r from-stone-50 to-white px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-stone-100">
                   <div className="flex items-center gap-3">
                     <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
