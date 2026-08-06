@@ -730,7 +730,6 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           </div>
         </div>
       </div>
-      </div>
 
       {/* CAMERA MODAL */}
       {isCameraOpen && (
