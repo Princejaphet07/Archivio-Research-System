@@ -343,7 +343,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const displayInitials = initials || (studentName ? studentName.substring(0, 2).toUpperCase() : 'ST');
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -378,7 +378,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             </div>
 
             {/* PROGRESS BAR CARD */}
-            <div className="w-full bg-[#F3EADB] rounded-2xl p-6 flex items-center justify-between shadow-sm border border-[#E8DFCB]/50">
+            <div className="w-full bg-white rounded-2xl p-6 flex items-center justify-between shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
               <div className="w-48">
                 {loadingData ? (
                   <div className="h-6 w-24 bg-stone-200 animate-pulse rounded mb-1" />
@@ -389,7 +389,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
               </div>
 
               <div className="flex-1 px-8">
-                <div className="w-full bg-[#E8DFCB] h-3 rounded-full overflow-hidden mb-2">
+                <div className="w-full bg-stone-100 h-3 rounded-full overflow-hidden mb-2">
                   <div
                     className="bg-[#7B1F35] h-full rounded-full transition-all duration-700"
                     style={{ width: `${loadingData ? 0 : progressPercent}%` }}
@@ -427,7 +427,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
                   return (
-                    <div key={item.id} className="bg-[#F3EADB] rounded-2xl p-6 shadow-sm border-t-4 border-[#7B1F35] flex flex-col h-full transition-transform hover:-translate-y-0.5 duration-200">
+                    <div key={item.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200/80 border-t-4 border-t-[#7B1F35] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
                       <div className="flex items-start gap-3 mb-4">
                         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
                           {item.icon}
@@ -439,7 +439,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       </div>
                       <p className="text-gray-600 text-[13px] mb-6 flex-1">{item.desc}</p>
 
-                      <div className="bg-[#FCF9F2] border border-[#E8DFCB] rounded-xl p-4 mb-4 relative group">
+                      <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-4 mb-4 relative group">
                         <div className="flex items-start gap-2">
                           <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                           <div className="min-w-0 flex-1">
@@ -488,7 +488,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 // ── MISSING CARD ──
                 return (
-                  <div key={item.id} className={`bg-[#F3EADB] rounded-2xl p-6 shadow-sm border-t-4 border-[#CF3645] flex flex-col h-full transition-transform hover:-translate-y-0.5 duration-200 ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
+                  <div key={item.id} className={`bg-white rounded-2xl p-6 shadow-sm border border-stone-200/80 border-t-4 border-t-[#CF3645] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
                         {item.icon}

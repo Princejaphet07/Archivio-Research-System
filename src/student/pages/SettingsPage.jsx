@@ -247,7 +247,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   ];
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9F1] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar 
@@ -283,7 +283,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           <div className="max-w-[1200px] flex flex-col md:flex-row gap-6">
             
             {/* Settings Sidebar */}
-            <div className="w-full md:w-[260px] shrink-0 bg-[#EFE7D5] rounded-xl p-3 h-fit border border-[#E3DAC4]">
+            <div className="w-full md:w-[260px] shrink-0 bg-white rounded-xl p-3 h-fit border border-stone-200/80 shadow-sm">
               <div className="flex flex-col gap-1">
                 {settingsTabs.map((tab) => (
                   <button
@@ -297,8 +297,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     }}
                     className={`flex items-center justify-between text-left px-4 py-3.5 rounded-lg font-medium text-[14px] transition-all ${
                       activeSettingsTab === tab.id
-                        ? 'bg-[#F2DFE7] text-[#6B0F1A]'
-                        : 'text-gray-700 hover:bg-[#E8DFC9]'
+                        ? 'bg-[#f8eef1] text-[#7B1F35]'
+                        : 'text-gray-700 hover:bg-stone-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -316,7 +316,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             </div>
 
             {/* Settings Content Area */}
-            <div className="flex-1 bg-[#EFE7D5] rounded-xl p-8 border border-[#E3DAC4] min-h-[600px]">
+            <div className="flex-1 bg-white rounded-xl p-8 border border-stone-200/80 min-h-[600px] shadow-sm hover:shadow-md transition-shadow">
               
               {/* === PROFILE TAB === */}
               {activeSettingsTab === 'Profile' && (
@@ -325,10 +325,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <h2 className="text-[24px] font-bold text-black font-serif mb-1">Profile Information</h2>
                     <p className="text-[14px] text-gray-500">Update your personal information</p>
                   </div>
-                  <hr className="border-[#DFD5BE] mb-8" />
+                  <hr className="border-stone-100 mb-8" />
                   
                   <div className="flex items-center gap-6 mb-10">
-                    <div className="w-[84px] h-[84px] rounded-full bg-[#6B0F1A] text-white flex items-center justify-center font-semibold text-[28px] shadow-sm tracking-wide overflow-hidden relative">
+                    <div className="w-[84px] h-[84px] rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-semibold text-[28px] shadow-sm tracking-wide overflow-hidden relative">
                       {studentData?.profilePhotoUrl ? (
                         <img src={studentData.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
@@ -349,7 +349,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                       />
                       <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-5 py-1.5 bg-[#6B0F1A] text-white text-[13px] font-medium rounded-full hover:bg-[#8C1523] transition-colors mt-1"
+                        className="px-5 py-1.5 bg-[#7B1F35] text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] transition-colors mt-1"
                       >
                         Change Photo
                       </button>
@@ -364,7 +364,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={firstName} 
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className="w-full bg-[#FCFBF8] border border-[#E3DAC4] text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -374,27 +374,27 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={lastName} 
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className="w-full bg-[#FCFBF8] border border-[#E3DAC4] text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-bold text-gray-800 ml-1">Student Number</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full bg-[#E5DBC4] border border-[#DFD5BE] text-[14px] text-gray-600 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-bold text-gray-800 ml-1">Course</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full bg-[#E5DBC4] border border-[#DFD5BE] text-[14px] text-gray-600 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5 md:col-span-2">
                       <label className="text-[13px] font-bold text-gray-800 ml-1">School Email</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full bg-[#E5DBC4] border border-[#DFD5BE] text-[14px] text-gray-600 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
@@ -409,7 +409,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <button 
                       onClick={handleSaveProfile} 
                       disabled={isSaving}
-                      className="px-6 py-2.5 bg-[#6B0F1A] text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] transition-colors shadow-md disabled:opacity-50"
+                      className="px-6 py-2.5 bg-[#7B1F35] text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50"
                     >
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -424,7 +424,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <h2 className="text-[24px] font-bold text-black font-serif mb-1">Change Password</h2>
                     <p className="text-[14px] text-gray-500">Keep your account secure with a strong password</p>
                   </div>
-                  <hr className="border-[#DFD5BE] mb-6" />
+                  <hr className="border-stone-100 mb-6" />
                   
                   <div className="flex flex-col gap-1.5 mb-6">
                     <label className="text-[13px] font-bold text-gray-800 ml-1">Current Password</label>
@@ -434,7 +434,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={currentPassword}
                         onChange={e => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password" 
-                        className="w-full bg-[#FCFBF8] border border-[#E3DAC4] text-[14px] text-black rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                       <button onClick={() => setShowCurrent(!showCurrent)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showCurrent ? (
@@ -563,7 +563,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
                   {/* Email Notifications Section */}
                   <div className="mb-8">
-                    <h3 className="text-[11px] font-bold text-[#6B0F1A] tracking-widest uppercase mb-4 ml-1">Email Notifications</h3>
+                    <h3 className="text-[11px] font-bold text-[#7B1F35] tracking-widest uppercase mb-4 ml-1">Email Notifications</h3>
                     
                     <div className="flex flex-col gap-6">
                       {emailNotifications.map((item) => (
@@ -586,18 +586,18 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-[#D3C7B0]/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6B0F1A]"></div>
+                            <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <hr className="border-[#DFD5BE] mb-6" />
+                  <hr className="border-stone-100 mb-6" />
 
                   {/* In-App Notifications Section */}
                   <div className="mb-auto">
-                    <h3 className="text-[11px] font-bold text-[#6B0F1A] tracking-widest uppercase mb-4 ml-1">In-App Notifications</h3>
+                    <h3 className="text-[11px] font-bold text-[#7B1F35] tracking-widest uppercase mb-4 ml-1">In-App Notifications</h3>
                     
                     <div className="flex flex-col gap-6">
                       {inAppNotifications.map((item) => (
@@ -620,7 +620,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-[#D3C7B0]/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6B0F1A]"></div>
+                            <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
@@ -633,10 +633,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                       if (studentData?.notificationPrefs) {
                         setNotificationPrefs(studentData.notificationPrefs);
                       }
-                    }} className="px-7 py-2.5 bg-white border border-[#DFD5BE] text-gray-700 text-[14px] font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm cursor-pointer">
+                    }} className="px-7 py-2.5 bg-white border border-stone-200 text-gray-700 text-[14px] font-semibold rounded-full hover:bg-stone-50 transition-colors shadow-sm cursor-pointer">
                       Cancel
                     </button>
-                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#6B0F1A] text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
+                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#7B1F35] text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
                       {isSaving ? 'Saving...' : 'Save Preferences'}
                     </button>
                   </div>

@@ -3,7 +3,7 @@ import NotificationBell from './NotificationBell';
 
 export default function PortalHeader({ title, initials, setSidebarOpen, setActiveTab, profilePhotoUrl }) {
   return (
-    <header className="h-[90px] flex items-center justify-between px-8 z-10 shrink-0 bg-[#FDF9ED]">
+    <header className="h-[80px] flex items-center justify-between px-8 z-10 shrink-0 bg-white/50 backdrop-blur-md border-b border-stone-200/50 sticky top-0">
       <div className="flex items-center gap-3">
         <button
           className="lg:hidden p-2 text-gray-500 hover:bg-black/5 rounded-lg transition-colors"
@@ -13,7 +13,7 @@ export default function PortalHeader({ title, initials, setSidebarOpen, setActiv
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <h1 className="text-[20px] font-bold text-[#1A1A1A]">{title}</h1>
+        <h1 className="text-[22px] font-serif font-bold text-gray-900 tracking-tight">{title}</h1>
       </div>
 
       <div className="flex items-center gap-4">

@@ -285,7 +285,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   );
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -325,7 +325,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
             {loading ? (
               <div className="w-full bg-[#7B1F35]/20 rounded-[20px] h-[120px] animate-pulse" />
             ) : (
-              <div className="w-full bg-[#7B1F35] rounded-[20px] p-8 flex items-center justify-between shadow-md relative overflow-hidden text-white">
+              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[20px] p-8 flex items-center justify-between shadow-md border border-[#7B1F35]/20 relative overflow-hidden text-white">
                 <div className="relative z-10">
                   <p className="text-[11px] font-bold tracking-widest text-white/70 uppercase mb-2">Overall Status</p>
                   <h3 className="text-[28px] font-serif font-bold mb-1">{bannerTitle}</h3>
@@ -352,7 +352,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
               {/* LEFT COLUMN: TIMELINE */}
-              <div className="lg:col-span-2 bg-[#F3EADB] rounded-2xl p-8 shadow-sm">
+              <div className="lg:col-span-2 bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] mb-8">Your Research Journey</h3>
 
@@ -374,12 +374,12 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 ) : (
                   <div className="relative pl-2">
                     {/* Vertical line */}
-                    <div className="absolute left-[23px] top-6 bottom-12 w-[2px] bg-[#D8CEB9]" />
+                    <div className="absolute left-[23px] top-6 bottom-12 w-[2px] bg-stone-200" />
 
                     {/* Step 1: Account */}
                     <div className="relative flex gap-5 mb-5 z-10">
                       <DoneNode />
-                      <div className="flex-1 bg-[#FCF9F2] border border-[#E8DFCB] rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="flex-1 bg-stone-50 border border-stone-200/80 rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all">
                         <div>
                           <h4 className="font-bold text-[#1A1A1A] text-[15px]">Account Approved</h4>
                           <p className="text-[12px] text-gray-500 mt-1 mb-2">{adviserName} (Adviser)</p>
@@ -394,8 +394,8 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       {currentStep >= 2 ? <DoneNode /> : <ActiveNode />}
                       <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all ${
                         currentStep >= 2
-                          ? 'bg-[#FCF9F2] border border-[#E8DFCB]'
-                          : 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
+                          ? 'bg-stone-50 border border-stone-200/80'
+                          : 'bg-[#f8eef1] border border-[#ebd0da] relative overflow-hidden'
                       }`}>
                         {currentStep < 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
                         <div>
@@ -416,10 +416,10 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       {currentStep >= 3 ? <DoneNode /> : currentStep === 2 ? <ActiveNode /> : <PendingNode num={3} />}
                       <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
                         currentStep >= 3
-                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                          ? 'bg-stone-50 border border-stone-200/80 hover:shadow-md'
                           : currentStep === 2
-                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
-                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB] opacity-70'
+                            ? 'bg-[#f8eef1] border border-[#ebd0da] relative overflow-hidden hover:shadow-md'
+                            : 'bg-transparent border border-stone-200 opacity-70'
                       }`}>
                         {currentStep === 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
                         <div>
@@ -444,10 +444,10 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       {currentStep >= 4 ? <DoneNode /> : currentStep === 3 ? <ActiveNode /> : <PendingNode num={4} />}
                       <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
                         currentStep >= 4
-                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                          ? 'bg-stone-50 border border-stone-200/80 hover:shadow-md'
                           : currentStep === 3
-                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
-                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB]'
+                            ? 'bg-[#f8eef1] border border-[#ebd0da] relative overflow-hidden hover:shadow-md'
+                            : 'bg-transparent border border-stone-200'
                       }`}>
                         {currentStep === 3 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
                         <div>
@@ -466,14 +466,14 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
 
                     {/* Step 5: Published */}
-                    <div className={`relative flex gap-5 z-10 ${currentStep < 4 ? 'opacity-50' : ''}`}>
-                      {isPublished ? <DoneNode /> : currentStep === 4 ? <ActiveNode /> : <PendingNode num={5} />}
+                    <div className={`relative flex gap-5 mb-5 z-10 ${currentStep < 4 ? 'opacity-60' : ''}`}>
+                      {currentStep >= 5 ? <DoneNode /> : currentStep === 4 ? <ActiveNode /> : <PendingNode num={5} />}
                       <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
-                        isPublished
-                          ? 'bg-[#FCF9F2] border border-[#E8DFCB] hover:shadow-md'
+                        currentStep >= 5
+                          ? 'bg-stone-50 border border-stone-200/80 hover:shadow-md'
                           : currentStep === 4
-                            ? 'bg-[#FDF5F6] border border-[#E5B5BC] relative overflow-hidden'
-                            : 'bg-[#FCF9F2]/60 border border-[#E8DFCB]'
+                            ? 'bg-[#f8eef1] border border-[#ebd0da] relative overflow-hidden hover:shadow-md'
+                            : 'bg-transparent border border-stone-200'
                       }`}>
                         {currentStep === 4 && !isPublished && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35]" />}
                         <div>
@@ -560,7 +560,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 )}
 
                 {/* Adviser Card */}
-                <div className="bg-[#F3EADB] rounded-2xl p-6 shadow-sm border border-[#E8DFCB]/50">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
                   <p className="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-4">Your Adviser</p>
                   {loading ? (
                     <div className="animate-pulse flex gap-4 mb-5">
@@ -596,7 +596,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 </div>
 
                 {/* Helpful Tips */}
-                <div className="bg-[#FCF9F2] rounded-2xl p-6 shadow-sm border border-[#E8DFCB]/50">
+                <div className="bg-stone-50 rounded-2xl p-6 shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
                   <p className="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-1">Helpful Tips</p>
                   <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] mb-5">Did you know?</h3>
                   <ul className="flex flex-col gap-4">

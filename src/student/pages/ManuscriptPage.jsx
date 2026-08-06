@@ -119,7 +119,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   };
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
       
       {/* SIDEBAR */}
       <Sidebar 
@@ -150,7 +150,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           <div className="max-w-[1200px] mx-auto animate-fade-in flex flex-col gap-6 pt-2">
             
             {/* BANNER */}
-            <div className="w-full bg-[#7B1F35] rounded-2xl p-8 flex items-center justify-between relative overflow-hidden shadow-sm">
+            <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-2xl p-8 flex items-center justify-between relative overflow-hidden shadow-md border border-[#7B1F35]/20">
               <div className="absolute right-0 top-0 h-full w-[30%] bg-white/5 rounded-l-[100px] pointer-events-none transform -skew-x-12" />
               <div className="relative z-10">
                 <h2 className="text-white text-[24px] font-serif font-bold mb-1">Your Research Manuscript</h2>
@@ -175,11 +175,11 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* LEFT COLUMN: Current File */}
-              <div className="lg:col-span-5 bg-[#F3EADB] rounded-2xl p-8 shadow-sm flex flex-col">
+              <div className="lg:col-span-5 bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-shadow">
                 <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-6">Current File</p>
                 
                 {/* PDF Thumbnail Mockup */}
-                <div className="bg-[#FCF9F2] border border-[#E8DFCB] rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative">
+                <div className="bg-stone-50 border border-stone-200/60 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative">
                   <div className="w-full bg-[#7B1F35] rounded-t-lg absolute top-0 left-0 h-12 flex items-center justify-center">
                     <p className="text-white/80 text-[8px] tracking-widest uppercase">Southwestern University</p>
                   </div>
@@ -211,7 +211,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   <button 
                     onClick={() => hasManuscript && window.open(manuscript.url, '_blank')}
                     disabled={!hasManuscript}
-                    className={`flex-1 border border-[#D6CBB8] text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-black/5' : 'opacity-50 cursor-not-allowed'}`}
+                    className={`flex-1 border border-stone-300 text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     Preview
@@ -228,7 +228,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       document.body.removeChild(a);
                     }}
                     disabled={!hasManuscript}
-                    className={`flex-1 border border-[#D6CBB8] text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-black/5' : 'opacity-50 cursor-not-allowed'}`}
+                    className={`flex-1 border border-stone-300 text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     Download
@@ -242,13 +242,13 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
               </div>
 
               {/* RIGHT COLUMN: Research Details */}
-              <div className="lg:col-span-7 bg-[#F3EADB] rounded-2xl p-8 shadow-sm flex flex-col">
-                <div className="flex justify-between items-start border-b border-[#E8DFCB] pb-4 mb-6">
+              <div className="lg:col-span-7 bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start border-b border-stone-100 pb-4 mb-6">
                   <div>
                     <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Research Details</p>
                     <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A]">Manuscript Information</h3>
                   </div>
-                  <button onClick={handleEditDetails} className="border border-[#D6CBB8] hover:bg-black/5 text-[#1A1A1A] text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                  <button onClick={handleEditDetails} className="border border-stone-300 hover:bg-stone-50 text-[#1A1A1A] text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     Edit
                   </button>
@@ -297,7 +297,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             </div>
 
             {/* VERSION HISTORY */}
-            <div className="bg-[#F3EADB] rounded-2xl p-8 shadow-sm">
+            <div className="bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex justify-between items-end mb-6">
                 <div>
                   <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Version History</p>
@@ -308,7 +308,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
               <div className="flex flex-col gap-3">
                 {hasManuscript ? (
-                  <div className="bg-[#F4DEE5] border border-[#EAD0D8] rounded-xl p-4 flex items-center justify-between">
+                  <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <span className="bg-[#7B1F35] text-white text-[12px] font-bold px-3 py-1 rounded-full">v1.0</span>
                       <span className="text-[#7B1F35] font-bold text-[13px] flex items-center gap-1.5">

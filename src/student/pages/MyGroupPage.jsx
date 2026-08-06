@@ -177,8 +177,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     isYou:    true,
     initials: getInitials(displayName),
     color:    'bg-[#7B1F35]',
-    cardBg:   'bg-[#FAF0F2]',
-    cardBorder: 'border-[#E8D0D6]',
+    cardBg:   'bg-stone-50',
+    cardBorder: 'border-stone-200/80',
   };
 
   // Map emails to the names provided by the leader during group creation
@@ -199,8 +199,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       isYou:     false,
       initials:  getInitials(assignedName),
       color:     AVATAR_COLORS[(idx + 1) % AVATAR_COLORS.length],
-      cardBg:    'bg-[#FDFBF3]',
-      cardBorder: 'border-[#E6DFBF]',
+      cardBg:    'bg-white',
+      cardBorder: 'border-stone-200/80 hover:border-stone-300',
     };
   });
 
@@ -242,7 +242,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
   );
 
   return (
-    <div className="flex w-full min-h-screen bg-[#FDF9ED] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -281,7 +281,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
             {loading ? (
               <div className="w-full bg-[#7B1F35]/20 rounded-[24px] h-[180px] animate-pulse" />
             ) : (
-              <div className="w-full bg-[#7B1F35] rounded-[24px] p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm relative overflow-hidden">
+              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[24px] p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-md border border-[#7B1F35]/20 relative overflow-hidden">
                 <div className="absolute right-0 top-0 h-full w-[40%] bg-white/5 rounded-l-[100px] pointer-events-none" />
 
                 <div className="relative z-10 text-white flex flex-col gap-4">
@@ -330,7 +330,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
             )}
 
             {/* ── TEAM MEMBERS SECTION ────────────────────────────────── */}
-            <div className="mt-2 bg-[#F3EADB] p-8 rounded-2xl shadow-sm">
+            <div className="mt-2 bg-white p-8 rounded-2xl shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] mb-1">Team Members</h3>
@@ -362,7 +362,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                   allMembers.map((member, idx) => (
                     <div
                       key={idx}
-                      className={`${member.cardBg} border ${member.cardBorder} rounded-2xl p-6 flex items-start gap-4 transition-transform hover:-translate-y-0.5 duration-200`}
+                      className={`${member.cardBg} border ${member.cardBorder} rounded-2xl p-6 flex items-start gap-4 transition-all hover:shadow-sm hover:-translate-y-0.5 duration-200`}
                     >
                       {/* Avatar */}
                       <div className={`w-14 h-14 rounded-full ${member.color} text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm`}>
@@ -376,13 +376,13 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                           {member.isYou && (
                             <span className="bg-[#7B1F35] text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
                           )}
-                          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                            member.isYou
-                              ? 'bg-[#7B1F35]/10 text-[#7B1F35]'
-                              : member.pending
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-[#E8DFCB] text-gray-600'
-                          }`}>
+                            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                              member.isYou
+                                ? 'bg-[#7B1F35]/10 text-[#7B1F35]'
+                                : member.pending
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-stone-100 text-gray-600'
+                            }`}>
                             {member.role}
                           </span>
                         </div>
