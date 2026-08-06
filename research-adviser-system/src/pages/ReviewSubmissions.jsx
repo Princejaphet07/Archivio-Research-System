@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../firebase/logActivity';
 
 function ReviewSubmissions() {
+  const location = useLocation();
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'pending');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterGroup, setFilterGroup] = useState('All Groups');
+  const [filterGroup, setFilterGroup] = useState(location.state?.filterGroup || 'All Groups');
   const [filterYear, setFilterYear] = useState('All Year');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase/config';
 import Layout from '../components/Layout';
 import { useAdviser } from '../context/AdviserContext';
@@ -8,6 +9,7 @@ import Swal from 'sweetalert2';
 
 function Dashboard() {
   const { adviserData } = useAdviser();
+  const navigate = useNavigate();
   const [pendingGroupsCount, setPendingGroupsCount] = useState(0);
   
   // Real dynamic state
@@ -170,7 +172,10 @@ function Dashboard() {
                 <h3 className="font-serif font-bold text-lg text-gray-900">My Submissions Dashboard</h3>
                 <p className="text-xs text-gray-500">Recent activity from your groups</p>
               </div>
-              <button className="text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+              <button 
+                onClick={() => navigate('/review-submissions')}
+                className="text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+              >
                 Review All →
               </button>
             </div>
@@ -224,7 +229,12 @@ function Dashboard() {
                             </h4>
                             <p className="text-xs text-gray-500 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
                           </div>
-                          <button className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50">Details</button>
+                          <button 
+                            onClick={() => navigate('/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
+                            className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50"
+                          >
+                            Details
+                          </button>
                         </div>
                         <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
                           <span>
