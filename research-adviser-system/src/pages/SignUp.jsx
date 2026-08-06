@@ -123,7 +123,18 @@ function SignUp() {
       const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const newUser = userCredential.user;
 
-      // 3. Update the existing invitation record in Firestore
+      // 3. Create user document
+      await setDoc(doc(db, 'users', newUser.uid), {
+        uid: newUser.uid,
+        email: trimmedEmail,
+        displayName: `${formData.firstName.trim() || invitationData.firstName} ${formData.lastName.trim() || invitationData.lastName}`,
+        role: 'adviser',
+        department: invitationData.department || '',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      });
+
+      // 4. Update the existing invitation record in Firestore
       const adviserRef = doc(db, 'advisers', invitationDoc.id);
       await updateDoc(adviserRef, {
         status: 'active',
