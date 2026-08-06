@@ -302,7 +302,12 @@ export default function UserManagement() {
         }
       }
 
-      setSuccess(`✅ ${selectedUsers.size} user(s) deleted successfully!`);
+      Swal.fire({
+        title: 'Success!',
+        text: `${selectedUsers.size} user(s) deleted successfully!`,
+        icon: 'success',
+        confirmButtonColor: '#801e38'
+      });
       setSelectedUsers(new Set());
 
       // 📅 Log deletion
@@ -315,7 +320,6 @@ export default function UserManagement() {
       });
 
       await fetchDeans();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error deleting users:', error);
       setError('Failed to delete user(s). Please try again.');
@@ -525,10 +529,17 @@ export default function UserManagement() {
           });
 
           await fetchDeans();
-          setSuccess(`✅ Super Admin invitation sent to ${formData.email}!`);
+          
+          Swal.fire({
+            title: 'Success!',
+            text: `Super Admin invitation sent to ${formData.email}!`,
+            icon: 'success',
+            confirmButtonColor: '#801e38'
+          });
+          
           setFormData({ firstName: '', lastName: '', email: '', department: '', programs: '', role: 'dean+adviser', moduleAccess: { dashboard: false, reports: false, allUsers: false, activityLogs: false } });
           setSelectedPrograms([]);
-          setTimeout(() => { setIsModalOpen(false); setSuccess(''); }, 2000);
+          setIsModalOpen(false);
           return;
 
         } catch (authError) {
@@ -710,7 +721,12 @@ Please login with these credentials at the link below, and you'll be prompted to
         details: `${formData.firstName.trim()} ${formData.lastName.trim()} — ${formData.department}`,
       });
 
-      setSuccess(`✅ Dean invitation sent to ${formData.email}!`);
+      Swal.fire({
+        title: 'Success!',
+        text: `Dean invitation sent to ${formData.email}!`,
+        icon: 'success',
+        confirmButtonColor: '#801e38'
+      });
 
       // Reset form
       setFormData({
@@ -729,11 +745,8 @@ Please login with these credentials at the link below, and you'll be prompted to
       });
       setSelectedPrograms([]);
 
-      // Close modal after 2 seconds
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setSuccess('');
-      }, 2000);
+      // Close modal
+      setIsModalOpen(false);
 
     } catch (error) {
       console.error('Error creating dean:', error);
@@ -1042,14 +1055,6 @@ Please login with these credentials and set up your account.`
 
               {/* Modal Body */}
               <div className="p-6 space-y-5">
-                {/* Success Message */}
-                {success && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                    <span className="text-green-500 text-sm">✅</span>
-                    <p className="text-sm text-green-700">{success}</p>
-                  </div>
-                )}
-
                 {/* Error Message */}
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
