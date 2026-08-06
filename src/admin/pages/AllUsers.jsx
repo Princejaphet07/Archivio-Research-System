@@ -161,15 +161,45 @@ export default function AllUsers() {
         
         await deleteDoc(doc(db, colName, user.id));
 
-        // 2. Delete from users collection (find by email since uid might not be attached to allUsers data)
+        // 2. Delete from users collection and get UID
+        let uid = null;
         const qUsers = query(collection(db, 'users'), where('email', '==', user.email));
         const snapUsers = await getDocs(qUsers);
         if (!snapUsers.empty) {
-          const uid = snapUsers.docs[0].id;
+          uid = snapUsers.docs[0].id;
           await deleteDoc(doc(db, 'users', uid));
         }
 
-        // 3. Call backend to delete Auth
+        // 3. Delete related data (Cascading Delete for Fresh Testing)
+        try {
+          if (user.role === 'Student') {
+            // Delete student's groups
+            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', user.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            // Delete student's submissions
+            if (uid) {
+              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', uid));
+              const snapSub = await getDocs(qSub);
+              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
+            }
+          } else if (user.role === 'Adviser' || user.role === 'Dean') {
+            // Delete adviser's groups
+            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', user.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            // Delete adviser's requirements
+            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', user.email));
+            const snapReq = await getDocs(qReq);
+            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
+          }
+        } catch (cleanupErr) {
+          console.error("Error cleaning up related data:", cleanupErr);
+        }
+
+        // 4. Call backend to delete Auth
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
         await fetch(`${backendUrl}/api/delete-auth-user`, {
           method: 'POST',
@@ -177,7 +207,7 @@ export default function AllUsers() {
           body: JSON.stringify({ email: user.email })
         });
 
-        Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
+        Swal.fire('Deleted!', 'User and all related data have been permanently deleted.', 'success');
       } catch (error) {
         console.error("Error deleting user:", error);
         Swal.fire('Error', 'Failed to delete user.', 'error');
