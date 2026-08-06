@@ -112,6 +112,8 @@ export default function AllUsers() {
       console.error("Error fetching students:", error);
     });
 
+    });
+
     return () => {
       unsubAuth();
       if (unsubDeans) unsubDeans();
