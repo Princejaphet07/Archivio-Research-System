@@ -10,7 +10,7 @@ function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, o
     // Update presence every minute
     const updatePresence = async () => {
       const user = auth.currentUser;
-      if (user && document.hasFocus()) {
+      if (user) {
         try {
           await updateDoc(doc(db, 'users', user.uid), {
             lastActive: serverTimestamp()

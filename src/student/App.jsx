@@ -39,7 +39,7 @@ function App() {
   React.useEffect(() => {
     const updatePresence = async () => {
       const user = auth.currentUser;
-      if (user && document.hasFocus()) {
+      if (user) {
         try {
           await updateDoc(doc(db, 'users', user.uid), {
             lastActive: serverTimestamp()
