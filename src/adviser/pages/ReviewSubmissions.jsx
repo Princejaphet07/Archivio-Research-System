@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
@@ -283,6 +283,53 @@ function ReviewSubmissions() {
       } catch (err) {
         console.error('Error rejecting:', err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#7a2e46' });
+      }
+    }
+  };
+
+  // Handle Delete action
+  const handleDeleteSubmission = async (sub) => {
+    const res = await Swal.fire({
+      title: 'Delete this research?',
+      text: 'This will permanently delete this research group and its submission data. The student will have to start over.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete it'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        // Delete submission
+        await deleteDoc(doc(db, 'submissions', sub.id));
+        // Delete group
+        const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+        if (group) {
+          await deleteDoc(doc(db, 'groups', group.id));
+        }
+
+        // Reset the student's groupStatus so they can start a new research
+        if (sub.studentUid) {
+          await updateDoc(doc(db, 'students', sub.studentUid), {
+            groupStatus: 'none',
+            groupName: '',
+            researchTitle: ''
+          });
+        }
+        
+        await logActivity({
+          user: auth.currentUser?.email || 'Adviser',
+          role: 'Research Adviser',
+          action: 'Deleted a research submission',
+          details: `Deleted "${sub.researchTitle}"`,
+          status: 'Success'
+        });
+
+        Swal.fire('Deleted!', 'The research has been permanently deleted.', 'success');
+      } catch (err) {
+        console.error('Error deleting submission:', err);
+        Swal.fire('Error', 'Failed to delete research.', 'error');
       }
     }
   };
@@ -679,6 +726,15 @@ function ReviewSubmissions() {
                     </button>
                   </>
                 )}
+                <button
+                  onClick={() => {
+                    setShowReviewModal(false);
+                    handleDeleteSubmission(selectedSubmission);
+                  }}
+                  className="bg-red-50 text-red-600 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 transition border border-red-200"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
