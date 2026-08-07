@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import NotificationBell from './NotificationBell';
 
@@ -13,7 +14,12 @@ const PAGE_TITLES = {
   'settings': { title: 'Settings', breadcrumb: 'ARCHIVIO > Settings' },
 };
 
-export default function Header({ activePage, onMenuClick }) {
+export default function Header({ onMenuClick }) {
+  const location = useLocation();
+  // Ensure we get the last part of the path, avoiding any base path issues
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const activePage = pathParts.length > 0 ? pathParts[pathParts.length - 1] : 'dashboard';
+  
   const { deanData } = useUser();
   const currentView = PAGE_TITLES[activePage] || { title: 'Dashboard', breadcrumb: '' };
 
