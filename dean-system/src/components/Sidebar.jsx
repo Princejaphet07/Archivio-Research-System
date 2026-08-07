@@ -92,10 +92,10 @@ const NAV_ITEMS_MANAGEMENT = [
   },
 ];
 
-export default function Sidebar({ onNavigate }) {
+export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const activePage = location.pathname.slice(1) || 'dashboard';
+  const activePage = location.pathname.substring(1) || 'dashboard';
   const { deanData } = useUser();
   const [counts, setCounts] = useState({ researchRecords: 0, publishQueue: 0, userManagement: 0 });
 
@@ -197,12 +197,15 @@ export default function Sidebar({ onNavigate }) {
                 <li key={item.id}>
                   <button
                     onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group relative
                       ${activePage === item.id
                         ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
                         : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
+                    {activePage === item.id && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#d0a36e] rounded-r-full" />
+                    )}
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
                       {item.icon}
                       {item.label}
@@ -231,12 +234,15 @@ export default function Sidebar({ onNavigate }) {
                 <li key={item.id}>
                   <button
                     onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group relative
                       ${activePage === item.id
                         ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
                         : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
+                    {activePage === item.id && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#d0a36e] rounded-r-full" />
+                    )}
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
                       {item.icon}
                       {item.label}
