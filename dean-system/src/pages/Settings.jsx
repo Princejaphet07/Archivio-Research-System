@@ -325,11 +325,11 @@ export default function Settings({ activePage, onNavigate }) {
   const approvedProposals = requirements.filter(r => r.scope === 'adviser' && r.status === 'approved');
 
   return (
-    <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+    <div className="flex h-screen bg-[#fcfbfa] overflow-hidden font-sans antialiased">
+      <Sidebar activePage="settings" onNavigate={onNavigate} />
       
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <Header activePage={activePage} onMenuClick={() => {}} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Header activePage="settings" onMenuClick={() => {}} />
         
         <main className="p-6 lg:p-8 w-full max-w-[1400px] mx-auto flex-1">
           {/* Page Title */}

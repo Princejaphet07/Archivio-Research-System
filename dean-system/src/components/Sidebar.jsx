@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -92,12 +92,8 @@ const NAV_ITEMS_MANAGEMENT = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ activePage }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathParts = location.pathname.split('/').filter(Boolean);
-  const activePage = pathParts.length > 0 ? pathParts[pathParts.length - 1] : 'dashboard';
-
   const { deanData } = useUser();
   const [counts, setCounts] = useState({ researchRecords: 0, publishQueue: 0, userManagement: 0 });
 

@@ -191,7 +191,7 @@ export default function Dashboard({ activePage }) {
       {/* Right Core Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <Header activePage={activePage} />
+        <Header activePage="dashboard" />
 
         {/* Main Workspace Panel */}
         <main className="flex-1 overflow-y-auto p-8 bg-[#fbf9f6]">

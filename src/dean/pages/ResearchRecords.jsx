@@ -193,11 +193,11 @@ export default function ResearchRecords({ activePage, onNavigate }) {
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
       {/* Sidebar */}
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+      <Sidebar activePage="research-records" onNavigate={onNavigate} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <Header activePage={activePage} onMenuClick={() => {}} />
+        <Header activePage="research-records" onMenuClick={() => {}} />
 
         <main className="flex-1 overflow-y-auto p-8 bg-[#fbf9f6]">
 

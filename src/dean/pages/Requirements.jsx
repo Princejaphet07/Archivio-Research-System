@@ -110,9 +110,9 @@ export default function Requirements({ activePage, onNavigate }) {
 
   return (
     <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+      <Sidebar activePage="requirements" onNavigate={onNavigate} />
       <div className="flex-1 flex flex-col overflow-y-auto relative">
-        <Header activePage={activePage} onMenuClick={() => {}} />
+        <Header activePage="requirements" onMenuClick={() => {}} />
         
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
