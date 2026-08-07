@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -31,7 +32,8 @@ const ACTION_STYLES = {
 
 const RECORDS_PER_PAGE = 10;
 
-export default function ResearchRecords({ activePage, onNavigate }) {
+export default function ResearchRecords() {
+  const navigate = useNavigate();
   const { deanData } = useUser();
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('All Years');
@@ -193,7 +195,7 @@ export default function ResearchRecords({ activePage, onNavigate }) {
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
       {/* Sidebar */}
-      <Sidebar activePage="research-records" onNavigate={onNavigate} />
+      <Sidebar activePage="research-records" />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -328,7 +330,7 @@ export default function ResearchRecords({ activePage, onNavigate }) {
                             className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors shadow-sm ${ACTION_STYLES[record.action] || ACTION_STYLES.View}`}
                             onClick={() => {
                               if (record.action === 'Publish') {
-                                onNavigate('publishQueue');
+                                navigate('/dean/publish-queue');
                               } else {
                                 handleView(record);
                               }

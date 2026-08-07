@@ -15,7 +15,7 @@ const REPORT_TYPES = [
   { id: 'category-report', title: 'Category Report', desc: 'By field of study', icon: '🏷️' },
 ];
 
-export default function Reports({ onNavigate }) {
+export default function Reports() {
   const { deanData } = useUser();
   const [selectedReport, setSelectedReport] = useState('completion-status');
   const [records, setRecords] = useState([]);
@@ -192,7 +192,7 @@ export default function Reports({ onNavigate }) {
         `}
       </style>
       <div className="no-print h-full shrink-0">
-        <Sidebar activePage="reports" onNavigate={onNavigate} />
+        <Sidebar activePage="reports" />
       </div>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden print-container">
         <div className="no-print">
