@@ -79,8 +79,8 @@ function Sidebar() {
     <div className="w-64 bg-[#541b2f] text-white flex flex-col h-full shadow-xl hidden md:flex z-20">
       {/* Brand & Logo */}
       <div className="p-6 flex items-center gap-3">
-        <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50">
-          <img src={logoImg} alt="Archivio" className="w-8 h-8 object-contain" />
+        <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center overflow-hidden w-11 h-11">
+          <img src={logoImg} alt="Archivio" className="w-full h-full object-cover rounded-full" />
         </div>
         <div>
           <h1 className="font-serif font-bold tracking-widest text-lg leading-tight">ARCHIVIO</h1>
