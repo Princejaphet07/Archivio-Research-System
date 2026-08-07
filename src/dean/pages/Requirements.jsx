@@ -111,10 +111,10 @@ export default function Requirements({ activePage, onNavigate }) {
   return (
     <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
       <Sidebar activePage="requirements" onNavigate={onNavigate} />
-      <div className="flex-1 flex flex-col overflow-y-auto relative">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="requirements" onMenuClick={() => {}} />
         
-        <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Requirements Tracking</h1>
             <p className="text-xs text-stone-500 mt-0.5">Monitor completion status across all research groups under your supervision</p>

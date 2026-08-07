@@ -160,7 +160,7 @@ export default function UserManagement({ activePage, onNavigate }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="user-management" />
         
-        <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Users / Advisers</h1>

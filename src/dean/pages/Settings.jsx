@@ -331,7 +331,7 @@ export default function Settings({ activePage, onNavigate }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="settings" onMenuClick={() => {}} />
         
-        <main className="p-6 lg:p-8 w-full max-w-[1400px] mx-auto flex-1">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 w-full max-w-[1400px] mx-auto">
           {/* Page Title */}
           <div className="mb-6">
             <h1 className="text-3xl font-serif font-bold text-[#1a1a1a]">Settings</h1>

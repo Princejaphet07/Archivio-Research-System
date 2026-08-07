@@ -18,7 +18,7 @@ export default function Reports({ activePage, onNavigate }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="reports" />
         
-        <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Generate Reports</h1>
             <p className="text-xs text-stone-500 mt-0.5">Select a report type, apply filters, and export</p>
