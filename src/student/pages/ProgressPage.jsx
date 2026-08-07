@@ -203,6 +203,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         members: studentData.groupMembers || [], // Could let them edit this later
         adviserUid: studentData.invitedBy, // keep same adviser email reference
         adviserName: studentData.invitedByName,
+        department: studentData.department || 'Not specified',
         category: newCategory,
         status: 'pending',
         createdAt: new Date().toISOString(),
