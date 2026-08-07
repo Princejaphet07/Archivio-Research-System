@@ -19,18 +19,11 @@ function UnifiedLogin() {
       try {
         const subRef = collection(db, 'submissions');
         
-        const totalSnap = await getCountFromServer(subRef);
-        const totalCount = totalSnap.data().count;
-
-        const pendingQuery = query(subRef, where('status', '==', 'pending'));
-        const pendingSnap = await getCountFromServer(pendingQuery);
-        const pendingCount = pendingSnap.data().count;
-
         const publishedQuery = query(subRef, where('status', '==', 'published'));
         const publishedSnap = await getCountFromServer(publishedQuery);
         const publishedCount = publishedSnap.data().count;
 
-        setStats({ total: totalCount, pending: pendingCount, published: publishedCount });
+        setStats(prev => ({ ...prev, published: publishedCount }));
       } catch (err) {
         console.error('Failed to load stats:', err);
       } finally {
@@ -261,7 +254,7 @@ function UnifiedLogin() {
                 <span className="text-[13px] text-gray-600 font-medium group-hover:text-gray-800 transition-colors">Remember me</span>
               </label>
               
-              <Link to="/admin/forgot-password" className="text-[13px] font-bold text-[#7a1f3d] hover:text-[#5c172e] transition-colors">
+              <Link to="/dean/forgot-password" className="text-[13px] font-bold text-[#7a1f3d] hover:text-[#5c172e] transition-colors">
                 Forgot Password?
               </Link>
             </div>
