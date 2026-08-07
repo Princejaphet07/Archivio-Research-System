@@ -48,7 +48,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
   // Compute Enriched Data
   const enrichedSubmissions = submissions
     .map(sub => {
-      const group = groups.find(g => g.leaderUid === sub.studentUid);
+      const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
       
       if (!group) return null; // Exclude submissions that don't belong to a group in this Dean's department
 

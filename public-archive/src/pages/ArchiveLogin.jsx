@@ -42,7 +42,7 @@ function ArchiveLogin() {
       const uniquePrograms = new Set();
 
       subsList.forEach(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
         if (sub.studentUid) uniqueAuthors.add(sub.studentUid);
         const program = group?.program || sub.program;
         if (program) uniquePrograms.add(program);

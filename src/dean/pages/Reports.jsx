@@ -47,7 +47,7 @@ export default function Reports() {
              .filter(r => r.status === 'approved');
              
           const merged = groupsData.map((g) => {
-            const sub = subsData.find(s => s.studentUid === g.leaderUid) || {};
+            const sub = subsData.find(s => s.studentUid === g.leaderUid && (s.groupName === g.groupName || (s.title || s.researchTitle) === g.researchTitle)) || {};
             const status = sub.reviewStatus || 'pending';
             const submittedDate = sub.submittedDate || sub.createdAt || g.createdAt || '';
             const year = submittedDate ? new Date(submittedDate).getFullYear().toString() : new Date().getFullYear().toString();

@@ -80,7 +80,7 @@ function Dashboard() {
     });
 
     filteredSubmissions.forEach(sub => {
-      const group = filteredGroups.find(g => g.leaderUid === sub.studentUid);
+      const group = filteredGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
       const rawDName = group?.department || sub.program || group?.program || 'Unknown';
       const dName = courseToDeptMap[rawDName] || rawDName;
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
@@ -123,7 +123,7 @@ function Dashboard() {
 
     filteredSubmissions.forEach(sub => {
       if (sub.reviewStatus === 'published') {
-        const group = filteredGroups.find(g => g.leaderUid === sub.studentUid);
+        const group = filteredGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
         const rawDName = group?.department || sub.program || group?.program || 'Unknown';
         const deptName = courseToDeptMap[rawDName] || rawDName;
         

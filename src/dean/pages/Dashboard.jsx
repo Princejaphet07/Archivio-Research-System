@@ -86,7 +86,7 @@ export default function Dashboard({ activePage }) {
 
     allRawSubmissions.forEach(data => {
       // Join submission to group to securely verify department
-      const group = allGroups.find(g => g.leaderUid === data.studentUid);
+      const group = allGroups.find(g => g.leaderUid === data.studentUid && (g.groupName === data.groupName || g.researchTitle === (data.title || data.researchTitle)));
       if (!group) return; // Skip if it doesn't belong to a group in this Dean's department
 
       const status = data.reviewStatus || 'pending';

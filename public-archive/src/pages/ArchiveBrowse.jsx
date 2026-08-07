@@ -51,7 +51,7 @@ function ArchiveBrowse() {
       }
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid);
+        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
         const manuscriptName = sub.documents?.['Final Manuscript']?.name?.replace('.pdf', '');
 
         return {

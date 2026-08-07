@@ -66,7 +66,7 @@ export default function UserManagement() {
     
     // Find submissions for those groups to check published count
     const publishedCount = supervisedGroups.reduce((count, g) => {
-      const sub = submissions.find(s => s.studentUid === g.leaderUid);
+      const sub = submissions.find(s => s.studentUid === g.leaderUid && (s.groupName === g.groupName || (s.title || s.researchTitle) === g.researchTitle));
       if (sub && sub.reviewStatus === 'published') return count + 1;
       return count;
     }, 0);
