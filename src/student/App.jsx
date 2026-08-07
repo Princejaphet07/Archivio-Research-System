@@ -11,7 +11,7 @@ import RequirementsPage from './pages/RequirementsPage';
 import ProgressPage from './pages/ProgressPage';
 import MyGroupPage from './pages/MyGroupPage';
 import SettingsPage from './pages/SettingsPage'; // 1. Added SettingsPage import
-import ChatWidget from './Components/ChatWidget';
+import ChatWidget from './components/ChatWidget';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
