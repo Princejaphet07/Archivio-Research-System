@@ -81,14 +81,16 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         />
       )}
 
-      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#faf9f6] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-stone-200/80 overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#541b2f] flex flex-col justify-between z-50 transition-transform duration-300 font-sans border-r border-[#6b253e] overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         
         <div>
           <div className="flex items-center gap-3 px-6 pt-8 pb-8">
-            <img src={swuLogoSeal} alt="ARCHIVIO" className="w-10 h-10 rounded-full border border-stone-200/80 object-contain bg-white shadow-sm p-0.5" />
+            <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center overflow-hidden w-11 h-11">
+              <img src={swuLogoSeal} alt="ARCHIVIO" className="w-full h-full object-cover rounded-full" />
+            </div>
             <div>
-              <span className="text-[16px] font-bold text-gray-900 tracking-wide block leading-none mb-0.5">ARCHIVIO</span>
-              <span className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Student Portal</span>
+              <span className="text-[16px] font-bold text-white tracking-wide block leading-none mb-0.5">ARCHIVIO</span>
+              <span className="text-[11px] text-[#d0a36e] font-medium uppercase tracking-wider">Student Portal</span>
             </div>
           </div>
 
@@ -101,12 +103,12 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
                   onClick={() => { setActiveTab(item.name); setIsOpen(false); }}
                   className={`flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 relative ${
                     isActive 
-                      ? 'bg-[#7B1F35]/5 text-[#7B1F35] font-bold' 
-                      : 'bg-transparent text-gray-500 hover:bg-stone-100/80 hover:text-gray-900'
+                      ? 'bg-[#6b253e]/80 text-white font-bold border border-[#d0a36e]/30' 
+                      : 'bg-transparent text-gray-300 hover:bg-[#6b253e]/40 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
-                    <div className={`${isActive ? 'text-[#7B1F35]' : 'text-gray-400'}`}>
+                    <div className={`${isActive ? 'text-white' : 'text-gray-300'}`}>
                       {item.icon}
                     </div>
                     {item.name}
@@ -119,7 +121,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
                     </span>
                   )}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#7B1F35] rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#d0a36e] rounded-r-full" />
                   )}
                 </button>
               );
@@ -132,19 +134,19 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
           
           {/* Need help box */}
           <div 
-            className="bg-gradient-to-br from-[#f9f1f3] to-[#f4e2e7] p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#7B1F35]/10"
+            className="bg-[#6b253e]/40 p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#d0a36e]/20"
             onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))}
           >
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#7B1F35] shadow-sm mb-1">
+            <div className="w-8 h-8 bg-[#d0a36e] rounded-full flex items-center justify-center text-[#541b2f] shadow-sm mb-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </div>
-            <h4 className="text-[#7B1F35] font-bold text-[13px]">Need help?</h4>
-            <p className="text-gray-600 text-[11px] leading-tight font-medium">Contact your<br/>Research Adviser</p>
+            <h4 className="text-white font-bold text-[13px]">Need help?</h4>
+            <p className="text-gray-300 text-[11px] leading-tight font-medium">Contact your<br/>Research Adviser</p>
           </div>
 
           {/* User Profile */}
-          <div className="border border-stone-200 rounded-xl p-2.5 flex items-center gap-3 bg-white shadow-sm hover:border-[#7B1F35]/30 transition-colors">
-            <div className="w-10 h-10 rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-bold text-[14px] shrink-0 shadow-sm overflow-hidden">
+          <div className="border border-[#d0a36e]/30 rounded-xl p-2.5 flex items-center gap-3 bg-[#541b2f] shadow-sm hover:border-[#d0a36e]/60 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-[#d0a36e] text-[#541b2f] flex items-center justify-center font-bold text-[14px] shrink-0 shadow-sm overflow-hidden">
               {profilePhotoUrl ? (
                 <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -152,14 +154,14 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
               )}
             </div>
             <div className="flex flex-col flex-1 truncate">
-              <span className="text-[13px] font-bold text-[#1A1A1A] truncate">{studentName || 'Student Name'}</span>
-              <span className="text-[11px] text-gray-500">
+              <span className="text-[13px] font-bold text-white truncate">{studentName || 'Student Name'}</span>
+              <span className="text-[11px] text-gray-400">
                 {role === 'member' ? 'Group Member' : 'Group Leader'}
               </span>
             </div>
             <button 
               onClick={onLogout}
-              className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
+              className="p-2 text-gray-400 hover:bg-[#6b253e]/80 hover:text-white rounded-lg transition-colors"
               title="Log out"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
