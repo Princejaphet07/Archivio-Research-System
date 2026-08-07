@@ -119,7 +119,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   };
 
   return (
-    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
       
       {/* SIDEBAR */}
       <Sidebar 

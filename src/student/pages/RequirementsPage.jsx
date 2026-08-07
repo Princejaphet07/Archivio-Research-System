@@ -343,7 +343,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const displayInitials = initials || (studentName ? studentName.substring(0, 2).toUpperCase() : 'ST');
 
   return (
-    <div className="flex w-full min-h-screen bg-[#faf9f6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
 
       {/* SIDEBAR */}
       <Sidebar
