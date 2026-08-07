@@ -78,14 +78,14 @@ function App() {
             element={
               <UserProvider>
                 <Routes>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/research-records" element={<ResearchRecords />} />
-                  <Route path="/publish-queue" element={<PublishQueue />} />
-                  <Route path="/requirements" element={<Requirements />} />
-                  <Route path="/invitations" element={<Invitations />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/user-management" element={<UserManagement />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/dashboard" element={<Dashboard activePage="dashboard" />} />
+                  <Route path="/research-records" element={<ResearchRecords activePage="research-records" />} />
+                  <Route path="/publish-queue" element={<PublishQueue activePage="publish-queue" />} />
+                  <Route path="/requirements" element={<Requirements activePage="requirements" />} />
+                  <Route path="/invitations" element={<Invitations activePage="invitations" />} />
+                  <Route path="/reports" element={<Reports activePage="reports" />} />
+                  <Route path="/user-management" element={<UserManagement activePage="user-management" />} />
+                  <Route path="/settings" element={<Settings activePage="settings" />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </UserProvider>
