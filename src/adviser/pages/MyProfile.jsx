@@ -42,7 +42,7 @@ function MyProfile() {
           console.error("Error fetching adviser profile:", error);
         }
       } else {
-        navigate('/adviser/login');
+        navigate('/');
       }
       setLoading(false);
     });
@@ -80,10 +80,10 @@ function MyProfile() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   };
 

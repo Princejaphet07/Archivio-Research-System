@@ -120,7 +120,7 @@ function ForgotPassword() {
         color: '#333'
       });
 
-      navigate('/adviser/login');
+      navigate('/');
       
     } catch (err) {
       setError(err.message);
@@ -280,7 +280,7 @@ function ForgotPassword() {
           )}
 
           <div className="text-center mt-6 pt-4 border-t border-gray-100">
-            <Link to="/adviser/login" className="text-xs font-semibold text-gray-500 hover:text-[#7a2e46] transition">
+            <Link to="/" className="text-xs font-semibold text-gray-500 hover:text-[#7a2e46] transition">
               ← Back to Login
             </Link>
           </div>

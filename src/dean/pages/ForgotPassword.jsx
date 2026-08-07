@@ -120,7 +120,7 @@ export default function ForgotPassword() {
         color: '#333'
       });
 
-      navigate('/dean/login');
+      navigate('/');
       
     } catch (err) {
       setError(err.message);
@@ -285,7 +285,7 @@ export default function ForgotPassword() {
           )}
 
           <div className="text-center mt-6 pt-4 border-t border-stone-100">
-            <Link to="/dean/login" className="text-xs font-bold text-stone-500 hover:text-[#7a1f3d] transition-colors">
+            <Link to="/" className="text-xs font-bold text-stone-500 hover:text-[#7a1f3d] transition-colors">
               ← Back to Login
             </Link>
           </div>

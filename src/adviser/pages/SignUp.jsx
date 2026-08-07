@@ -133,7 +133,7 @@ function SignUp() {
 
       setSuccess('✅ Account created successfully! Redirecting to login...');
       setTimeout(() => {
-        navigate('/adviser/login');
+        navigate('/');
       }, 2000);
 
     } catch (err) {

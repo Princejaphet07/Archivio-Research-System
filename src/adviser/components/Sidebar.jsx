@@ -66,7 +66,7 @@ function Sidebar() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/adviser/login');
+      navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
     }

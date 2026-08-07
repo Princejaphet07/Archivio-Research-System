@@ -145,7 +145,7 @@ export default function Sidebar({ onNavigate }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       Swal.fire('Error', 'Failed to logout. Please try again.', 'error');
