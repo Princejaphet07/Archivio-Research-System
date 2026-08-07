@@ -90,7 +90,7 @@ function ArchiveBrowse() {
   const filteredPapers = publishedPapers.filter(paper => {
     const q = searchQuery.toLowerCase();
     const title = (paper.researchTitle || paper.title || '').toLowerCase();
-    const author = (paper.studentName || '').toLowerCase();
+    const author = (paper.authorDisplay || '').toLowerCase();
     const keywords = (paper.keywords || []).join(' ').toLowerCase();
     return title.includes(q) || author.includes(q) || keywords.includes(q);
   }).sort((a, b) => {

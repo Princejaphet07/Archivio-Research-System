@@ -117,7 +117,9 @@ function ReviewSubmissions() {
   // Filter by year
   const finalFiltered = filteredByGroup.filter(sub => {
     if (filterYear === 'All Year') return true;
-    const year = new Date(sub.submittedDate).getFullYear().toString();
+    const dateStr = sub.submittedDate || sub.createdAt || '';
+    const dateObj = new Date(dateStr);
+    const year = isNaN(dateObj.getTime()) ? '' : dateObj.getFullYear().toString();
     return year === filterYear;
   });
 
