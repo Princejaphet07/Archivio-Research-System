@@ -5,7 +5,11 @@ import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, 
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 function ArchivePaperViewer() {
   const { id } = useParams();
   const { currentUser, signOut } = useAuth();
@@ -18,6 +22,11 @@ function ArchivePaperViewer() {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(null);
+
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+  }
   
   // AI Chat State
   const [chatHistory, setChatHistory] = useState([]);
@@ -447,40 +456,31 @@ function ArchivePaperViewer() {
                 <div className="p-4 border-b border-stone-200 dark:border-gray-700">
                   <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Pages</h2>
                 </div>
-                <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-6 items-center custom-scrollbar">
-                  {Array.from({ length: paper.documents?.['Final Manuscript']?.pageCount || 1 }).map((_, idx) => (
-                    <div key={idx} className="flex flex-col items-center gap-2">
-                      <button 
-                        onClick={() => setCurrentPage(idx + 1)}
-                        className={`w-32 h-[170px] bg-white cursor-pointer transition-all overflow-hidden ${currentPage === idx + 1 ? 'ring-2 ring-[#7a2039] border-none shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
-                      >
-                        {/* Scaled down native iframe as thumbnail hack */}
-                        <div className="w-full h-full relative pointer-events-none bg-white">
-                          {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
-                            <iframe
-                              loading="lazy"
-                              src={`${paper.documents['Final Manuscript'].url}#page=${idx + 1}&toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-                              className="absolute top-0 left-0 border-none bg-white"
-                              style={{
-                                width: '1024px',
-                                height: '1360px',
-                                transform: 'scale(0.125)',
-                                transformOrigin: 'top left'
-                              }}
-                              title={`Page ${idx + 1} Thumbnail`}
+                <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 items-center custom-scrollbar">
+                  {numPages ? (
+                    <Document file={paper.documents['Final Manuscript'].url}>
+                      {Array.from({ length: numPages }).map((_, idx) => (
+                        <div key={idx} className="flex flex-col items-center gap-2 mb-4">
+                          <button 
+                            onClick={() => setCurrentPage(idx + 1)}
+                            className={`w-28 bg-white cursor-pointer transition-all overflow-hidden ${currentPage === idx + 1 ? 'ring-2 ring-[#7a2039] border-none shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
+                          >
+                            <Page 
+                              pageNumber={idx + 1} 
+                              width={112} 
+                              renderTextLayer={false}
+                              renderAnnotationLayer={false}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-stone-400 text-xs text-center p-2">
-                              No preview available
-                            </div>
-                          )}
+                          </button>
+                          <span className={`text-xs font-bold ${currentPage === idx + 1 ? 'text-[#7a2039]' : 'text-stone-500'}`}>
+                            Page {idx + 1}
+                          </span>
                         </div>
-                      </button>
-                      <span className={`text-xs font-bold ${currentPage === idx + 1 ? 'text-[#7a2039]' : 'text-stone-500'}`}>
-                        Page {idx + 1}
-                      </span>
-                    </div>
-                  ))}
+                      ))}
+                    </Document>
+                  ) : (
+                    <div className="text-stone-400 text-xs p-4 text-center">Open a document to see pages...</div>
+                  )}
                 </div>
               </div>
             )}
@@ -517,14 +517,55 @@ function ArchivePaperViewer() {
           <div className="w-full h-full flex flex-col relative select-none transition-all duration-300">
             {/* EMBEDDED MANUSCRIPT VIEWER */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
-              <div className="w-full h-full relative">
-                {/* Removed absolute overlay so the user can scroll the PDF */}
-                <iframe 
-                  key={currentPage}
-                  src={`${paper.documents['Final Manuscript'].url}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0`}
-                  title="Final Manuscript"
-                  className="absolute inset-0 w-full h-full border-none"
-                />
+              <div className="w-full h-full relative overflow-y-auto flex justify-center custom-scrollbar py-8 pb-32">
+                <Document
+                  file={paper.documents['Final Manuscript'].url}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  loading={
+                    <div className="flex items-center justify-center p-12 text-stone-500">
+                      <div className="w-8 h-8 border-4 border-[#7a2039]/30 border-t-[#7a2039] rounded-full animate-spin"></div>
+                    </div>
+                  }
+                  className="flex flex-col items-center shadow-2xl bg-white relative"
+                >
+                  <Page 
+                    pageNumber={currentPage} 
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    width={800}
+                    className="relative pointer-events-none"
+                  />
+                  
+                  {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-50">
+                    <div className="w-full h-full relative flex items-center justify-center opacity-10">
+                      <h2 className="text-8xl font-bold transform -rotate-45 text-stone-900 absolute">SWU PHINMA</h2>
+                      <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute top-1/4">CONFIDENTIAL</h2>
+                      <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute bottom-1/4">DO NOT COPY</h2>
+                    </div>
+                  </div>
+                </Document>
+
+                {/* PAGINATION CONTROLS */}
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#242b35]/90 backdrop-blur px-6 py-3 rounded-full shadow-lg z-50 border border-[#1f252e]">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-sm font-bold text-gray-300 min-w-[100px] text-center">
+                    Page {currentPage} of {numPages || '--'}
+                  </span>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(numPages || p, p + 1))}
+                    disabled={currentPage >= numPages}
+                    className="text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer"
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-stone-500 dark:text-gray-400 z-20">
