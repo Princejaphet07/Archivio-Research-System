@@ -12,9 +12,22 @@ function ArchiveBrowse() {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
   const [sortOption, setSortOption] = useState('Newest First');
+  const [selectedYears, setSelectedYears] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+
+  const toggleYear = (year) => {
+    setSelectedYears(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]);
+    setCurrentPage(1);
+  };
+
+  const clearAll = () => {
+    setSearchQuery('');
+    setSortOption('Newest First');
+    setSelectedYears([]);
+    setCurrentPage(1);
+  };
 
   const { currentUser } = useAuth();
 
@@ -92,17 +105,26 @@ function ArchiveBrowse() {
     const title = (paper.researchTitle || paper.title || '').toLowerCase();
     const author = (paper.authorDisplay || '').toLowerCase();
     const keywords = (paper.keywords || []).join(' ').toLowerCase();
-    return title.includes(q) || author.includes(q) || keywords.includes(q);
+    const matchesSearch = title.includes(q) || author.includes(q) || keywords.includes(q);
+    
+    // Year filter logic
+    const pubYear = new Date(paper.publishedAt || paper.createdAt || Date.now()).getFullYear().toString();
+    const matchesYear = selectedYears.length === 0 || selectedYears.includes(pubYear);
+    
+    return matchesSearch && matchesYear;
   }).sort((a, b) => {
     if (sortOption === 'Newest First') {
-      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+      return new Date(b.publishedAt || b.createdAt || 0) - new Date(a.publishedAt || a.createdAt || 0);
     }
     if (sortOption === 'A-Z') {
       const titleA = a.researchTitle || a.title || '';
       const titleB = b.researchTitle || b.title || '';
       return titleA.localeCompare(titleB);
     }
-    return 0; // Most Viewed would require an analytics field, placeholder for now
+    if (sortOption === 'Most Viewed') {
+      return (b.views || 0) - (a.views || 0);
+    }
+    return 0;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredPapers.length / ITEMS_PER_PAGE));
@@ -127,12 +149,12 @@ function ArchiveBrowse() {
           </div>
           <select 
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
+            onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
             className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded px-4 py-2.5 text-sm text-stone-600 dark:text-gray-300 outline-none shadow-sm cursor-pointer hidden md:block transition-colors"
           >
-            <option>Sort: Newest First</option>
-            <option>Sort: Most Viewed</option>
-            <option>Sort: A-Z</option>
+            <option value="Newest First">Sort: Newest First</option>
+            <option value="Most Viewed">Sort: Most Viewed</option>
+            <option value="A-Z">Sort: A-Z</option>
           </select>
         </div>
         <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
@@ -147,7 +169,7 @@ function ArchiveBrowse() {
         <aside className="w-64 bg-[#efe9d9] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 hidden md:block font-sans flex-shrink-0 transition-colors">
           <div className="bg-[#7a2039] text-white px-6 py-4 flex justify-between items-center">
             <span className="font-bold text-sm">Refine Results</span>
-            <button className="text-xs text-stone-300 hover:text-white cursor-pointer">Clear all</button>
+            <button onClick={clearAll} className="text-xs text-stone-300 hover:text-white cursor-pointer">Clear all</button>
           </div>
 
           <div className="p-6 space-y-8">
@@ -170,7 +192,12 @@ function ArchiveBrowse() {
               <div className="space-y-2">
                 {['2026', '2025', '2024', '2023'].map(year => (
                   <label key={year} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                    <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 accent-[#7a2039] cursor-pointer"
+                      checked={selectedYears.includes(year)}
+                      onChange={() => toggleYear(year)}
+                    />
                     <span className="group-hover:text-[#7a2039] transition">{year}</span>
                   </label>
                 ))}
