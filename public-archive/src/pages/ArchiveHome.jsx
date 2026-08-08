@@ -161,14 +161,16 @@ function ArchiveHome() {
             Discover peer-reviewed research, theses, and academic manuscripts from SWU PHINMA students and faculty.
           </p>
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
-            <div className="flex flex-1">
-              <div className="flex items-center pl-4 pr-2 text-stone-400 dark:text-gray-400">🔍</div>
+            <div className="flex flex-1 relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by title, author, keywords..."
-                className="w-full py-3 px-2 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base"
+                className="w-full py-3 pl-12 pr-4 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base"
               />
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>

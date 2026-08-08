@@ -138,7 +138,9 @@ function ArchiveBrowse() {
       <div className="bg-[#f2ead3] dark:bg-gray-800 px-8 py-4 border-b border-stone-300 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm z-10 transition-colors">
         <div className="flex gap-4 w-full md:w-auto flex-1 font-sans">
           <div className="relative flex-1 max-w-2xl">
-            <span className="absolute left-3 top-2.5 text-stone-400">🔍</span>
+            <span className="absolute left-3 top-2.5 text-stone-400">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
             <input 
               type="text" 
               placeholder="Search title, author, keywords..." 
