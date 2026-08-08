@@ -175,12 +175,16 @@ function Dashboard() {
 
     const counts = {};
     const publishedCounts = {};
-    syLabels.forEach(sy => { counts[sy.full] = 0; publishedCounts[sy.full] = 0; });
+    const approvedCounts = {};
+    syLabels.forEach(sy => { counts[sy.full] = 0; publishedCounts[sy.full] = 0; approvedCounts[sy.full] = 0; });
     
     filteredSubmissions.forEach(s => {
       const sy = s.schoolYear || syLabels[4].full;
       if(counts[sy] !== undefined) {
         counts[sy]++;
+        if (s.reviewStatus === 'endorsed' || s.adviserStatus === 'approved' || s.reviewStatus === 'published') {
+          approvedCounts[sy]++;
+        }
         if (s.reviewStatus === 'published') {
           publishedCounts[sy]++;
         }
@@ -190,6 +194,7 @@ function Dashboard() {
     return syLabels.map(sy => ({
       name: sy.short,
       uploads: counts[sy.full],
+      approved: approvedCounts[sy.full],
       published: publishedCounts[sy.full],
       isCurrent: sy.isCurrent
     }));
@@ -245,6 +250,16 @@ function Dashboard() {
                   />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
                   <Bar dataKey="uploads" name="Total Uploads" fill="#64b494" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="approved" 
+                    name="Approved Papers"
+                    stroke="#d97706" 
+                    strokeWidth={3} 
+                    dot={{ r: 5, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
+                    activeDot={{ r: 7, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
+                    animationDuration={1500}
+                  />
                   <Line 
                     type="monotone" 
                     dataKey="published" 

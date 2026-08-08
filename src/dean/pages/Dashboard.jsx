@@ -108,8 +108,9 @@ export default function Dashboard({ activePage }) {
       if (status === 'pending' || status === 'revision') pendingCount++;
       
       const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
-      if (!yearMap[year]) yearMap[year] = { count: 0, published: 0 };
+      if (!yearMap[year]) yearMap[year] = { count: 0, approved: 0, published: 0 };
       yearMap[year].count++;
+      if (status === 'approved' || status === 'endorsed' || status === 'published') yearMap[year].approved++;
       if (status === 'published') yearMap[year].published++;
       
       const adviserUid = group.adviserUid || data.adviserUid;
@@ -140,7 +141,7 @@ export default function Dashboard({ activePage }) {
     catArray.sort((a, b) => b.count - a.count);
     setTopCategories(catArray.slice(0, 7));
     
-    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y].count, published: yearMap[y].published }));
+    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y].count, approved: yearMap[y].approved, published: yearMap[y].published }));
     yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
     setYearlyStats(yearArray);
 
@@ -170,7 +171,7 @@ export default function Dashboard({ activePage }) {
   if (chartData.length < 4) {
     const padCount = 4 - chartData.length;
     const startYear = chartData.length > 0 ? parseInt(chartData[0].year) - padCount : currentYear - 3;
-    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0, published: 0 }));
+    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0, approved: 0, published: 0 }));
     chartData = [...padding, ...chartData];
   }
   const maxCount = Math.max(...chartData.map(d => d.count), 10);
@@ -258,6 +259,16 @@ export default function Dashboard({ activePage }) {
                     />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
                     <Bar dataKey="count" name="Total Uploads" fill="#7a1f3d" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="approved" 
+                      name="Approved Papers"
+                      stroke="#059669" 
+                      strokeWidth={3} 
+                      dot={{ r: 5, fill: '#059669', stroke: '#ffffff', strokeWidth: 2 }}
+                      activeDot={{ r: 7, fill: '#059669', stroke: '#ffffff', strokeWidth: 2 }}
+                      animationDuration={1500}
+                    />
                     <Line 
                       type="monotone" 
                       dataKey="published" 
