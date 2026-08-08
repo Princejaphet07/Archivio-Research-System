@@ -3,7 +3,7 @@ import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ComposedChart, Line, Bar, CartesianGrid, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { db } from '../firebase/config';
 
 import { useNavigate } from 'react-router-dom';
@@ -108,8 +108,9 @@ export default function Dashboard({ activePage }) {
       if (status === 'pending' || status === 'revision') pendingCount++;
       
       const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
-      if (!yearMap[year]) yearMap[year] = 0;
-      yearMap[year]++;
+      if (!yearMap[year]) yearMap[year] = { count: 0, published: 0 };
+      yearMap[year].count++;
+      if (status === 'published') yearMap[year].published++;
       
       const adviserUid = group.adviserUid || data.adviserUid;
       if (adviserUid) {
@@ -139,7 +140,7 @@ export default function Dashboard({ activePage }) {
     catArray.sort((a, b) => b.count - a.count);
     setTopCategories(catArray.slice(0, 7));
     
-    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y] }));
+    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y].count, published: yearMap[y].published }));
     yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
     setYearlyStats(yearArray);
 
@@ -169,7 +170,7 @@ export default function Dashboard({ activePage }) {
   if (chartData.length < 4) {
     const padCount = 4 - chartData.length;
     const startYear = chartData.length > 0 ? parseInt(chartData[0].year) - padCount : currentYear - 3;
-    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0 }));
+    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0, published: 0 }));
     chartData = [...padding, ...chartData];
   }
   const maxCount = Math.max(...chartData.map(d => d.count), 10);
@@ -247,20 +248,27 @@ export default function Dashboard({ activePage }) {
 
               <div className="relative h-44 w-full mt-2 flex items-end">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7a1f3d" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#7a1f3d" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
                     <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
                     <Tooltip 
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                       labelStyle={{ fontWeight: 'bold', color: '#1c1917' }}
+                      cursor={{ fill: '#f5f5f4' }}
                     />
-                    <Area type="monotone" dataKey="count" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
-                  </AreaChart>
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
+                    <Bar dataKey="count" name="Total Uploads" fill="#7a1f3d" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="published" 
+                      name="Published Papers"
+                      stroke="#d97706" 
+                      strokeWidth={3} 
+                      dot={{ r: 5, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
+                      activeDot={{ r: 7, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
+                      animationDuration={1500}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>

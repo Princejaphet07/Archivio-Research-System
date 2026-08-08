@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -174,16 +174,23 @@ function Dashboard() {
     }
 
     const counts = {};
-    syLabels.forEach(sy => counts[sy.full] = 0);
+    const publishedCounts = {};
+    syLabels.forEach(sy => { counts[sy.full] = 0; publishedCounts[sy.full] = 0; });
     
     filteredSubmissions.forEach(s => {
       const sy = s.schoolYear || syLabels[4].full;
-      if(counts[sy] !== undefined) counts[sy]++;
+      if(counts[sy] !== undefined) {
+        counts[sy]++;
+        if (s.reviewStatus === 'published') {
+          publishedCounts[sy]++;
+        }
+      }
     });
     
     return syLabels.map(sy => ({
       name: sy.short,
       uploads: counts[sy.full],
+      published: publishedCounts[sy.full],
       isCurrent: sy.isCurrent
     }));
   }, [filteredSubmissions]);
@@ -227,19 +234,21 @@ function Dashboard() {
             </div>
             <div className="w-full h-64 relative mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={yearlyChartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                <ComposedChart data={yearlyChartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c', fontWeight: 600 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c' }} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e7e5e4', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     labelStyle={{ fontWeight: 'bold', color: '#1c1917', marginBottom: '4px' }}
-                    cursor={{ stroke: '#801e38', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    cursor={{ fill: '#f5f5f4' }}
                   />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
+                  <Bar dataKey="uploads" name="Total Uploads" fill="#64b494" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
                   <Line 
                     type="monotone" 
-                    dataKey="uploads" 
-                    name="Total Submissions"
+                    dataKey="published" 
+                    name="Published Papers"
                     stroke="#801e38" 
                     strokeWidth={3} 
                     dot={{ r: 5, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
@@ -247,13 +256,13 @@ function Dashboard() {
                     animationDuration={1500}
                   >
                     <LabelList 
-                      dataKey="uploads" 
+                      dataKey="published" 
                       position="top" 
                       offset={12} 
                       style={{ fill: '#801e38', fontSize: 11, fontWeight: 'bold' }} 
                     />
                   </Line>
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
               <div className="absolute right-0 top-1/2 -mt-4 pointer-events-none" style={{ right: '5%' }}>
                 <span className="bg-[#f5ebd9] text-[#801e38] text-[8px] px-2 py-0.5 rounded font-bold shadow-sm">
