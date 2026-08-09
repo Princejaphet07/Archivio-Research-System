@@ -136,11 +136,10 @@ export default function HomepageChatbot() {
     }
   };
 
-  const handleChatSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!chatInput.trim() || isTyping) return;
+  const sendMessage = async (messageText) => {
+    if (!messageText.trim() || isTyping) return;
 
-    const userMessage = chatInput.trim();
+    const userMessage = messageText.trim();
     setChatInput('');
     const newHistoryUser = [...chatHistory, { role: 'user', content: userMessage }];
     const savedChatId = await updateAndSaveHistory(newHistoryUser, currentChatId);
@@ -188,6 +187,19 @@ export default function HomepageChatbot() {
       setIsTyping(false);
     }
   };
+
+  const handleChatSubmit = async (e) => {
+    if (e) e.preventDefault();
+    await sendMessage(chatInput);
+  };
+
+  const suggestions = [
+    "What are the latest research papers?",
+    "How do I search for a specific topic?",
+    "Can you help me brainstorm a research title?",
+    "What are the requirements for uploading?",
+    "Summarize the main features of Archivio."
+  ];
 
   // Hide the chatbot on the viewer page (has its own AI) and login page
   if (location.pathname.startsWith('/viewer') || location.pathname.startsWith('/login')) {
@@ -274,14 +286,28 @@ export default function HomepageChatbot() {
                   <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
                   <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                   <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                </div>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
+          {/* Suggestions */}
+          {chatHistory.length <= 1 && !isTyping && (
+            <div className="flex flex-wrap gap-2 px-4 pb-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700">
+              {suggestions.map((text, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => sendMessage(text)}
+                  className="text-xs bg-white dark:bg-gray-800 border border-[#7a2039]/40 text-[#7a2039] dark:text-[#f3e5ab] px-3 py-1.5 rounded-full hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-[#7a2039] transition-colors text-left shadow-sm"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Input Area */}
-          <form onSubmit={handleChatSubmit} className="p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors relative z-20">
+          <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-gray-800 shrink-0 transition-colors relative z-20">
             <div className="flex gap-2">
               <input 
                 type="text" 
