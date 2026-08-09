@@ -27,6 +27,16 @@ function ArchivePaperViewer() {
   const [relatedPapers, setRelatedPapers] = useState([]);
   const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Smart Dictionary State
+  const [dictPopup, setDictPopup] = useState({
+    isOpen: false,
+    word: '',
+    definition: '',
+    loading: false,
+    x: 0,
+    y: 0
+  });
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -298,10 +308,8 @@ function ArchivePaperViewer() {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      // Ensure any existing speech is stopped
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(paper.abstract);
-      // Optional: you can set the voice/rate here if desired
       utterance.rate = 0.9;
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
@@ -309,6 +317,52 @@ function ArchivePaperViewer() {
       setIsSpeaking(true);
     }
   };
+
+  const handleAbstractDoubleClick = async (e) => {
+    const selection = window.getSelection();
+    const word = selection.toString().trim().replace(/[^a-zA-Z]/g, ''); // strip punctuation
+    
+    if (word && word.length > 1) {
+      // Get exact coordinates of the selection
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      setDictPopup({
+        isOpen: true,
+        word: word,
+        definition: '',
+        loading: true,
+        x: rect.left + (rect.width / 2),
+        y: rect.top - 10
+      });
+
+      try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        
+        let def = '';
+        if (data && data[0] && data[0].meanings && data[0].meanings[0].definitions) {
+          def = data[0].meanings[0].definitions[0].definition;
+        } else {
+          def = "Definition not found.";
+        }
+        
+        setDictPopup(prev => ({ ...prev, definition: def, loading: false }));
+      } catch (err) {
+        setDictPopup(prev => ({ ...prev, definition: "Definition not found.", loading: false }));
+      }
+    }
+  };
+
+  // Close popup if clicked anywhere else
+  useEffect(() => {
+    const closePopup = () => setDictPopup(prev => ({ ...prev, isOpen: false }));
+    if (dictPopup.isOpen) {
+      window.addEventListener('click', closePopup);
+    }
+    return () => window.removeEventListener('click', closePopup);
+  }, [dictPopup.isOpen]);
 
   const generateRIS = () => {
     if (!paper) return;
@@ -611,10 +665,35 @@ function ArchivePaperViewer() {
                     </button>
                   )}
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                  <p className="text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6">
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative">
+                  <p 
+                    onDoubleClick={handleAbstractDoubleClick}
+                    className="text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6 selection:bg-[#7a2039]/20 selection:text-[#7a2039]"
+                    title="Double-click any word for its definition"
+                  >
                     {paper.abstract || 'No abstract available for this research paper.'}
                   </p>
+
+                  {/* Dictionary Popup */}
+                  {dictPopup.isOpen && (
+                    <div 
+                      className="absolute z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-[#7a2039]/20 dark:border-[#f3e5ab]/20 shadow-xl rounded-lg p-3 w-48 -translate-x-1/2 -translate-y-full"
+                      style={{ left: Math.min(Math.max(100, dictPopup.x), 200), top: dictPopup.y - 120 }} // Keep inside sidebar bounds roughly
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-[#7a2039] dark:text-[#f3e5ab] text-xs capitalize">{dictPopup.word}</h4>
+                        <button onClick={() => setDictPopup(prev => ({...prev, isOpen: false}))} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200">✕</button>
+                      </div>
+                      <div className="text-[10px] text-stone-600 dark:text-gray-300 leading-snug max-h-24 overflow-y-auto custom-scrollbar">
+                        {dictPopup.loading ? (
+                          <span className="animate-pulse">Loading definition...</span>
+                        ) : (
+                          dictPopup.definition
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white/90 dark:bg-gray-800/90 border-b border-r border-[#7a2039]/20 dark:border-[#f3e5ab]/20 transform rotate-45"></div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
