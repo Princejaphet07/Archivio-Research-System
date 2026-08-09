@@ -194,22 +194,38 @@ function ArchiveAbout() {
             <h2 className="text-3xl md:text-4xl font-bold">Meet The Developers</h2>
           </div>
           
-          <div className="flex flex-col md:flex-row justify-center gap-12 md:gap-24">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 justify-items-center">
             
             <div className="flex flex-col items-center text-center group">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-5xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+              <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-4xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
                 👨‍💻
               </div>
-              <h3 className="text-xl font-bold text-[#f3e5ab] mb-1">Prince Japhet Vender</h3>
-              <p className="text-sm font-sans text-stone-400 uppercase tracking-wider">Lead Developer / System Architect</p>
+              <h3 className="text-lg font-bold text-[#f3e5ab] mb-1">Prince Japhet Vender</h3>
+              <p className="text-xs font-sans text-stone-400 uppercase tracking-wider">Lead Developer / System Architect</p>
             </div>
 
             <div className="flex flex-col items-center text-center group">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-5xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+              <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-4xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                👩‍💼
+              </div>
+              <h3 className="text-lg font-bold text-[#f3e5ab] mb-1">Hylla Mae Tejada</h3>
+              <p className="text-xs font-sans text-stone-400 uppercase tracking-wider">Project Manager</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center group">
+              <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-4xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
                 👩‍💻
               </div>
-              <h3 className="text-xl font-bold text-[#f3e5ab] mb-1">Jerika Zamoras</h3>
-              <p className="text-sm font-sans text-stone-400 uppercase tracking-wider">UI/UX Designer / Researcher</p>
+              <h3 className="text-lg font-bold text-[#f3e5ab] mb-1">Andrea Cañete Perote</h3>
+              <p className="text-xs font-sans text-stone-400 uppercase tracking-wider">Co-Developer / Programmer</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center group">
+              <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-4xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                👩‍🎨
+              </div>
+              <h3 className="text-lg font-bold text-[#f3e5ab] mb-1">Jerika Zamoras</h3>
+              <p className="text-xs font-sans text-stone-400 uppercase tracking-wider">UI/UX Designer / Researcher</p>
             </div>
             
           </div>
