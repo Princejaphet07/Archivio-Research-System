@@ -56,12 +56,6 @@ export default function HomepageChatbot() {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const suggestedPrompts = [
-    "Help me formulate a research title",
-    "How to write an abstract?",
-    "Suggest a topic for IT"
-  ];
-
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -371,11 +365,11 @@ export default function HomepageChatbot() {
   };
 
   const suggestions = [
-    "📄 What are the latest research papers?",
-    "🔍 How do I search for a specific topic?",
-    "💡 Can you help me brainstorm a research title?",
-    "📋 What are the requirements for uploading?",
-    "✨ Summarize the main features of Archivio."
+    "💡 Help me formulate a research title",
+    "📝 How do I write a good abstract?",
+    "💻 Suggest a thesis topic for IT",
+    "📄 What are the latest research papers here?",
+    "📋 What are the requirements for uploading?"
   ];
 
   // Hide the chatbot on the viewer page (has its own AI) and login page
@@ -503,20 +497,6 @@ export default function HomepageChatbot() {
                         </button>
                       )}
                     </div>
-                    {/* Suggested Prompts */}
-                    {idx === 0 && chatHistory.length === 1 && !isTyping && (
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {suggestedPrompts.map((prompt, i) => (
-                          <button
-                            key={i}
-                            onClick={() => sendMessage(prompt)}
-                            className="text-xs bg-stone-100 dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-600 dark:text-gray-300 px-3 py-1.5 rounded-full hover:bg-stone-200 dark:hover:bg-gray-700 transition cursor-pointer shadow-sm text-left"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))
