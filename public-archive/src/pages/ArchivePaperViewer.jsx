@@ -253,16 +253,6 @@ function ArchivePaperViewer() {
     setIsTyping(true);
 
     try {
-      const paperContext = `
-        You are the Archivio AI Assistant. You are answering questions about the following research paper:
-        Title: ${paper.researchTitle}
-        Abstract: ${paper.abstract}
-        Authors: ${paper.authorDisplay}
-        Year: ${new Date(paper.publishedAt || Date.now()).getFullYear()}
-        Keywords: ${paper.keywords?.join(', ')}
-
-        Answer the user's questions based primarily on this paper's metadata and the attached full manuscript PDF. Be helpful, concise, and academic.
-      `;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
@@ -270,8 +260,14 @@ function ArchivePaperViewer() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          paperContext,
-          chatHistory: chatHistory.slice(1), // Exclude initial greeting to save tokens/payload size
+          paper: {
+            researchTitle: paper.researchTitle || paper.title || 'Untitled',
+            authorDisplay: paper.authorDisplay || 'Unknown',
+            abstract: paper.abstract || '',
+            keywords: paper.keywords || [],
+            publishedAt: paper.publishedAt || null
+          },
+          chatHistory: chatHistory.slice(1),
           userMessage,
           pdfUrl: paper?.documents?.['Final Manuscript']?.url
         })

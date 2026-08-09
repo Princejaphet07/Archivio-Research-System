@@ -1161,7 +1161,7 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // ============================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { paperContext, chatHistory, userMessage, pdfUrl, image } = req.body;
+    const { paper, chatHistory, userMessage, pdfUrl, image } = req.body;
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
@@ -1171,13 +1171,33 @@ app.post('/api/ai/chat', async (req, res) => {
     
     // Inject developer identity prompt
     const developerPrompt = `
-    CRITICAL INSTRUCTION FOR ALL YOUR RESPONSES:
-    If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by Prince Japhet Vender. 
-    You must state that Prince Japhet Vender is a Full Stack Developer.
-    Always be polite and helpful.
+    === SYSTEM INSTRUCTIONS ===
+    You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System.
+    
+    YOUR IDENTITY:
+    - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
 
-    Here is the context of the paper you are assisting with:
-    ${paperContext}
+    YOUR PRIMARY ROLE:
+    - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
+    - You must read and deeply analyze the FULL PDF manuscript (if attached) to provide accurate, detailed, and well-structured answers.
+    - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
+
+    RESPONSE FORMATTING RULES:
+    - Use clean, well-structured responses. Use bullet points, numbered lists, and bold text (**like this**) for key terms.
+    - Keep paragraphs short (2-3 sentences max).
+    - When summarizing, follow this structure: **Purpose → Methodology → Key Findings → Conclusion**.
+    - Use simple, clear academic English that a college student can easily understand.
+    - Do NOT use excessive emojis or informal language. Be professional but friendly.
+    - When citing specific parts of the paper, mention the chapter or section if possible.
+
+    PAPER CONTEXT:
+    Title: ${paper.researchTitle}
+    Authors: ${paper.authorDisplay}
+    Year: ${new Date(paper.publishedAt || Date.now()).getFullYear()}
+    Keywords: ${paper.keywords?.join(', ') || 'None provided'}
+    Abstract: ${paper.abstract || 'No abstract available'}
+
+    IMPORTANT: The full PDF manuscript is attached below. Read it thoroughly before answering any questions. Base your answers primarily on the actual content of the PDF, not just the abstract.
     `;
     
     const initialUserParts = [{ text: developerPrompt }];
@@ -1194,7 +1214,7 @@ app.post('/api/ai/chat', async (req, res) => {
             mimeType: 'application/pdf'
           }
         });
-        initialUserParts.push({ text: "Please read the attached full manuscript PDF carefully to answer my questions." });
+        initialUserParts.push({ text: "I have attached the full manuscript PDF. Please read it carefully and use its contents to answer all my questions accurately." });
       } catch (e) {
         console.error("Backend PDF fetch error:", e);
         // Continue even if PDF fetch fails, relying on metadata
@@ -1212,10 +1232,10 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [
         { role: 'user', parts: initialUserParts },
-        { role: 'model', parts: [{ text: 'Understood. I will act as the Archivio AI Assistant for this paper.' }] },
+        { role: 'model', parts: [{ text: 'Understood. I have carefully read the full manuscript PDF and all metadata. I am ready to provide accurate, well-structured academic analysis. How can I help you with this paper?' }] },
         ...chatHistory.map(msg => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.content }]
