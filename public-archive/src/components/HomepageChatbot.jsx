@@ -10,26 +10,48 @@ import Swal from 'sweetalert2';
 
 const TypewriterWord = ({ content }) => {
   const [visibleWords, setVisibleWords] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  const timerRef = useRef(null);
   const words = content.split(' ');
   
   useEffect(() => {
     setVisibleWords(0);
-    const timer = setInterval(() => {
+    setIsTyping(true);
+    timerRef.current = setInterval(() => {
       setVisibleWords(prev => {
         if (prev >= words.length) {
-          clearInterval(timer);
+          clearInterval(timerRef.current);
+          setIsTyping(false);
           return prev;
         }
         return prev + 1;
       });
     }, 30);
-    return () => clearInterval(timer);
+    return () => clearInterval(timerRef.current);
   }, [content]);
+
+  const stopTyping = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setVisibleWords(words.length);
+    setIsTyping(false);
+  };
 
   const displayedContent = words.slice(0, visibleWords).join(' ');
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedContent}</ReactMarkdown>
+    <div className="relative group">
+      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedContent}</ReactMarkdown>
+      </div>
+      {isTyping && (
+        <button
+          onClick={stopTyping}
+          className="absolute -bottom-10 left-0 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full px-2.5 py-1 text-xs shadow hover:bg-stone-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1 z-10 cursor-pointer animate-fade-in-up"
+          title="Stop Generating"
+        >
+          <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"></rect></svg>
+          Stop typing
+        </button>
+      )}
     </div>
   );
 };
