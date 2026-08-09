@@ -27,6 +27,7 @@ function ArchivePaperViewer() {
   const [relatedPapers, setRelatedPapers] = useState([]);
   const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isZenMode, setIsZenMode] = useState(false);
   
   // Smart Dictionary State
   const [dictPopup, setDictPopup] = useState({
@@ -555,40 +556,44 @@ function ArchivePaperViewer() {
   return (
     <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 font-sans overflow-hidden transition-colors">
       
-      {/* HEADER */}
-      <header className="bg-[#5a1528] text-white flex justify-between items-center px-6 py-3 shadow-md z-20">
-        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
-          <img src={logo} alt="Archivio Logo" className="w-9 h-9 object-contain bg-white rounded-full p-1 shadow-sm" />
-          <span className="font-serif font-bold tracking-widest text-lg text-[#f3e5ab]">ARCHIVIO</span>
-        </Link>
-        <nav className="hidden md:flex gap-8 text-sm font-medium">
-          <Link to="/" className="hover:text-[#d6ad60] transition cursor-pointer">Home</Link>
-          <Link to="/browse" className="hover:text-[#d6ad60] transition cursor-pointer">Browse</Link>
-          <Link to="/bookmarks" className="hover:text-[#d6ad60] transition cursor-pointer">Bookmarks</Link>
-          <Link to="/about" className="hover:text-[#d6ad60] transition cursor-pointer">About</Link>
-        </nav>
-        <div className="flex items-center gap-3 text-sm">
-          <div className="w-8 h-8 bg-[#d6ad60] rounded-full flex items-center justify-center font-bold text-[#5a1528]">
-            {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+      {/* HEADER - Hidden in Zen Mode */}
+      {!isZenMode && (
+        <header className="bg-[#5a1528] text-white flex justify-between items-center px-6 py-3 shadow-md z-20">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
+            <img src={logo} alt="Archivio Logo" className="w-9 h-9 object-contain bg-white rounded-full p-1 shadow-sm" />
+            <span className="font-serif font-bold tracking-widest text-lg text-[#f3e5ab]">ARCHIVIO</span>
+          </Link>
+          <nav className="hidden md:flex gap-8 text-sm font-medium">
+            <Link to="/" className="hover:text-[#d6ad60] transition cursor-pointer">Home</Link>
+            <Link to="/browse" className="hover:text-[#d6ad60] transition cursor-pointer">Browse</Link>
+            <Link to="/bookmarks" className="hover:text-[#d6ad60] transition cursor-pointer">Bookmarks</Link>
+            <Link to="/about" className="hover:text-[#d6ad60] transition cursor-pointer">About</Link>
+          </nav>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="w-8 h-8 bg-[#d6ad60] rounded-full flex items-center justify-center font-bold text-[#5a1528]">
+              {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span className="hidden md:block">
+              {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User'} ▾
+            </span>
+            <button onClick={() => signOut()} className="ml-4 px-3 py-1 bg-white/10 hover:bg-white/20 rounded cursor-pointer transition">
+              Logout
+            </button>
           </div>
-          <span className="hidden md:block">
-            {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User'} ▾
-          </span>
-          <button onClick={() => signOut()} className="ml-4 px-3 py-1 bg-white/10 hover:bg-white/20 rounded cursor-pointer transition">
-            Logout
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* VIEW-ONLY BANNER */}
-      <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center gap-4 text-xs z-10 shadow-sm transition-colors">
-        <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer">←</Link>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 bg-[#ff8c00] rounded-full"></span>
-          <span className="font-bold text-white">View-only access</span> 
-          <span className="text-gray-300">—copying and downloading are disabled. This document is protected for academic integrity.</span>
+      {/* VIEW-ONLY BANNER - Hidden in Zen Mode */}
+      {!isZenMode && (
+        <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center gap-4 text-xs z-10 shadow-sm transition-colors">
+          <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer">←</Link>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-[#ff8c00] rounded-full"></span>
+            <span className="font-bold text-white">View-only access</span> 
+            <span className="text-gray-300">—copying and downloading are disabled. This document is protected for academic integrity.</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MAIN CONTENT WORKSPACE */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -646,6 +651,17 @@ function ArchivePaperViewer() {
 
           <button onClick={() => handleTabClick('related')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'related' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Related Researches">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+          </button>
+
+          <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
+
+          {/* ZEN MODE TOGGLE */}
+          <button 
+            onClick={() => { setIsZenMode(!isZenMode); if (!isZenMode) { setIsFullscreen(true); } else { setIsFullscreen(false); } }}
+            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isZenMode ? 'bg-[#7a2039] text-white shadow-md ring-2 ring-[#d6ad60]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`}
+            title={isZenMode ? 'Exit Zen Mode' : 'Zen Mode (Focus Reading)'}
+          >
+            🧘
           </button>
         </div>
 
