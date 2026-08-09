@@ -5,6 +5,30 @@ import { db } from '../firebase/config';
 import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import logo from '../assets/logo.png';
 
+const TypewriterWord = ({ content }) => {
+  const [visibleWords, setVisibleWords] = useState(0);
+  const words = content.split(' ');
+  
+  useEffect(() => {
+    setVisibleWords(0);
+    const timer = setInterval(() => {
+      setVisibleWords(prev => {
+        if (prev >= words.length) {
+          clearInterval(timer);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 30);
+    return () => clearInterval(timer);
+  }, [content]);
+
+  const displayedContent = words.slice(0, visibleWords).join(' ');
+  return (
+    <span>{displayedContent.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}</span>
+  );
+};
+
 export default function HomepageChatbot() {
   const location = useLocation();
   const { currentUser } = useAuth();
@@ -194,11 +218,11 @@ export default function HomepageChatbot() {
   };
 
   const suggestions = [
-    "What are the latest research papers?",
-    "How do I search for a specific topic?",
-    "Can you help me brainstorm a research title?",
-    "What are the requirements for uploading?",
-    "Summarize the main features of Archivio."
+    "📄 What are the latest research papers?",
+    "🔍 How do I search for a specific topic?",
+    "💡 Can you help me brainstorm a research title?",
+    "📋 What are the requirements for uploading?",
+    "✨ Summarize the main features of Archivio."
   ];
 
   // Hide the chatbot on the viewer page (has its own AI) and login page
@@ -210,7 +234,7 @@ export default function HomepageChatbot() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-80 sm:w-96 h-[500px] mb-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-stone-200 dark:border-gray-700 transition-colors origin-bottom-right relative">
+        <div className="w-80 sm:w-96 h-[500px] mb-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/40 dark:border-gray-700 transition-all origin-bottom-right relative animate-fade-in-up">
           
           {/* Header */}
           <div className="bg-[#7a2039] text-white p-4 flex justify-between items-center shrink-0 z-40 relative shadow-sm">
@@ -260,7 +284,7 @@ export default function HomepageChatbot() {
           )}
 
           {/* Chat History */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#fcfbf7] dark:bg-gray-900 transition-colors z-10">
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-transparent transition-colors z-10 scrollbar-hide">
             {!historyLoaded ? (
               <div className="flex-1 flex items-center justify-center">
                 <span className="text-stone-400 dark:text-gray-500 text-sm animate-pulse">Loading...</span>
@@ -271,8 +295,12 @@ export default function HomepageChatbot() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
-                  <div className={`text-sm p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
-                    {msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}
+                  <div className={`text-sm p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
+                    {msg.role === 'model' && idx === chatHistory.length - 1 ? (
+                      <TypewriterWord content={msg.content} />
+                    ) : (
+                      msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
+                    )}
                   </div>
                 </div>
               ))
@@ -294,7 +322,7 @@ export default function HomepageChatbot() {
 
           {/* Suggestions */}
           {chatHistory.length <= 1 && !isTyping && (
-            <div className="flex flex-wrap gap-2 px-4 pb-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700">
+            <div className="flex flex-wrap gap-2 px-4 pb-3 bg-transparent border-b border-stone-200/50 dark:border-gray-700">
               {suggestions.map((text, idx) => (
                 <button
                   key={idx}
@@ -308,7 +336,7 @@ export default function HomepageChatbot() {
           )}
 
           {/* Input Area */}
-          <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-gray-800 shrink-0 transition-colors relative z-20">
+          <form onSubmit={handleChatSubmit} className="p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm shrink-0 transition-colors relative z-20">
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -334,9 +362,10 @@ export default function HomepageChatbot() {
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)}
-          className="bg-[#7a2039] text-white w-14 h-14 rounded-full shadow-[0_4px_14px_0_rgba(122,32,57,0.39)] hover:shadow-[0_6px_20px_rgba(122,32,57,0.23)] hover:-translate-y-1 transform transition-all duration-200 flex items-center justify-center group cursor-pointer border-2 border-white"
+          className="relative bg-[#7a2039] text-white w-14 h-14 rounded-full shadow-[0_4px_14px_0_rgba(122,32,57,0.39)] hover:shadow-[0_6px_20px_rgba(122,32,57,0.23)] hover:-translate-y-1 transform transition-all duration-200 flex items-center justify-center group cursor-pointer border-2 border-white"
         >
-          <svg className="w-7 h-7 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+          <span className="absolute w-full h-full rounded-full bg-[#7a2039] opacity-40 animate-ping" style={{ animationDuration: '3s' }}></span>
+          <svg className="w-7 h-7 text-white group-hover:scale-110 transition-transform relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
         </button>
       )}
     </div>
