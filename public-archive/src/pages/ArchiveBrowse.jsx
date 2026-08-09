@@ -119,7 +119,10 @@ function ArchiveBrowse() {
     const matchesYear = selectedYears.length === 0 || selectedYears.includes(pubYear);
     
     // Department filter logic
-    const matchesDept = selectedDepartments.length === 0 || selectedDepartments.includes(paper.program || paper.category);
+    const matchesDept = selectedDepartments.length === 0 || selectedDepartments.some(dept => {
+      const p = (paper.program || paper.category || '').toLowerCase();
+      return p.includes(dept.toLowerCase());
+    });
     
     return matchesSearch && matchesYear && matchesDept;
   }).sort((a, b) => {
