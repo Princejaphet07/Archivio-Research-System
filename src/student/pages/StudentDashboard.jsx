@@ -100,7 +100,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
       unsubscribeSubmission();
       unsubscribeGroups();
     };
-  }, []);
+  }, [role, leaderUid]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const displayName       = studentData?.displayName || studentName || 'Student';

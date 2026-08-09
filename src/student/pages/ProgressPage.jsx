@@ -9,6 +9,8 @@ import PortalHeader from '../Components/PortalHeader';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
+const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
+
 export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

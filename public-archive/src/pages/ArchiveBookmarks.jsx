@@ -25,67 +25,96 @@ function ArchiveBookmarks() {
   ];
 
   useEffect(() => {
-    if (!currentUser) {
+    const fetchPaperDetails = async (paperIds) => {
+      const paperPromises = paperIds.map(async (id) => {
+        const pSnap = await getDoc(doc(db, 'submissions', id));
+        if (pSnap.exists()) {
+          const pData = pSnap.data();
+          
+          let authorDisplay = pData.studentName || pData.groupName || 'Unknown Author';
+          let titleDisplay = pData.researchTitle || pData.title;
+          let categoryDisplay = pData.category || pData.program;
+
+          if (pData.studentUid) {
+            const { query, collection, where, getDocs } = await import('firebase/firestore');
+            const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', pData.studentUid));
+            const gSnap = await getDocs(qGroup);
+            if (!gSnap.empty) {
+              const gData = gSnap.docs[0].data();
+              authorDisplay = [gData.leaderName, ...(gData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ');
+              titleDisplay = gData.researchTitle || titleDisplay;
+              categoryDisplay = gData.program || categoryDisplay;
+            }
+          }
+
+          return {
+            id: pSnap.id,
+            category: categoryDisplay || 'Uncategorized',
+            dateSaved: `Saved ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+            title: titleDisplay || 'Untitled',
+            authors: authorDisplay,
+            tags: pData.tags || [],
+            likesCount: pData.likes?.length || 0,
+            views: pData.views || 0,
+            createdAt: pData.publishedAt || new Date().toISOString()
+          };
+        }
+        return null;
+      });
+
+      const results = await Promise.all(paperPromises);
+      setBookmarkedPapers(results.filter(p => p !== null));
       setLoading(false);
+    };
+
+    if (!currentUser) {
+      // Guest User: Fetch from LocalStorage
+      try {
+        const localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
+        if (localBookmarks.length > 0) {
+          fetchPaperDetails(localBookmarks);
+        } else {
+          setBookmarkedPapers([]);
+          setLoading(false);
+        }
+      } catch (e) {
+        setBookmarkedPapers([]);
+        setLoading(false);
+      }
       return;
     }
 
-    const unsub = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), async (docSnap) => {
+    // Logged-in User: Fetch from Firestore
+    const unsub = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const paperIds = data.bookmarks || [];
-        
-        // Fetch details for each bookmarked paper
-        const paperPromises = paperIds.map(async (id) => {
-          const pSnap = await getDoc(doc(db, 'submissions', id));
-          if (pSnap.exists()) {
-            const pData = pSnap.data();
-            
-            // Try to fetch group for author details
-            let authorDisplay = pData.studentName || pData.groupName || 'Unknown Author';
-            let titleDisplay = pData.researchTitle || pData.title;
-            let categoryDisplay = pData.category || pData.program;
-
-            if (pData.studentUid) {
-              const { query, collection, where, getDocs } = await import('firebase/firestore');
-              const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', pData.studentUid));
-              const gSnap = await getDocs(qGroup);
-              if (!gSnap.empty) {
-                const gData = gSnap.docs[0].data();
-                authorDisplay = [gData.leaderName, ...(gData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ');
-                titleDisplay = gData.researchTitle || titleDisplay;
-                categoryDisplay = gData.program || categoryDisplay;
-              }
-            }
-
-            return {
-              id: pSnap.id,
-              category: categoryDisplay || 'Uncategorized',
-              dateSaved: `Saved ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-              title: titleDisplay || 'Untitled',
-              authors: authorDisplay,
-              tags: pData.tags || [],
-              likesCount: pData.likes?.length || 0,
-              views: pData.views || 0,
-              createdAt: pData.publishedAt || new Date().toISOString()
-            };
-          }
-          return null;
-        });
-
-        const results = await Promise.all(paperPromises);
-        setBookmarkedPapers(results.filter(p => p !== null));
+        fetchPaperDetails(paperIds);
       } else {
         setBookmarkedPapers([]);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsub();
   }, [currentUser]);
 
   const handleRemoveBookmark = async (paperId) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      // Guest User: Remove from LocalStorage
+      try {
+        let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
+        localBookmarks = localBookmarks.filter(id => id !== paperId);
+        localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
+        setBookmarkedPapers(prev => prev.filter(p => p.id !== paperId));
+        Swal.fire({ icon: 'success', title: 'Removed', text: 'Bookmark removed from offline Library', timer: 1500, showConfirmButton: false });
+      } catch (e) {
+        console.error(e);
+      }
+      return;
+    }
+
+    // Logged-in User: Remove from Firestore
     try {
       const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
       await setDoc(bookmarkRef, { bookmarks: arrayRemove(paperId) }, { merge: true });

@@ -359,7 +359,6 @@ export default function UserManagement() {
       try {
         await updateDoc(doc(db, user._collection, user.id), { department: formValues });
         if (user.uid) await updateDoc(doc(db, 'users', user.uid), { department: formValues });
-        await fetchDeans();
         Swal.fire('Saved!', 'User department has been updated.', 'success');
       } catch (e) {
         console.error(e);
@@ -398,7 +397,6 @@ export default function UserManagement() {
           } catch (err) { }
         }
 
-        await fetchDeans();
         Swal.fire('Deleted!', 'User has been deleted.', 'success');
       } catch (e) {
         Swal.fire('Error', 'Could not delete user.', 'error');

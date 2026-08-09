@@ -60,13 +60,23 @@ function ArchivePaperViewer() {
 
   useEffect(() => {
     let unsubBookmark = () => {};
-    if (currentUser && paper) {
-      unsubBookmark = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setIsBookmarked(data.bookmarks?.includes(paper.id) || false);
+    if (paper) {
+      if (currentUser) {
+        unsubBookmark = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setIsBookmarked(data.bookmarks?.includes(paper.id) || false);
+          }
+        });
+      } else {
+        // Guest user initialization
+        try {
+          const localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
+          setIsBookmarked(localBookmarks.includes(paper.id));
+        } catch (e) {
+          setIsBookmarked(false);
         }
-      });
+      }
     }
     return () => unsubBookmark();
   }, [currentUser, paper]);
@@ -458,27 +468,38 @@ function ArchivePaperViewer() {
 
   const handleBookmarkToggle = async () => {
     if (!currentUser) {
-      Swal.fire({
-        title: 'Login Required',
-        text: 'Please log in to save papers to your bookmarks.',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Go to Login',
-        confirmButtonColor: '#7a2039'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = '/login';
+      // Guest User: Save to LocalStorage
+      try {
+        let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
+        
+        if (isBookmarked) {
+          localBookmarks = localBookmarks.filter(id => id !== paper.id);
+          setIsBookmarked(false);
+          Swal.fire({ title: 'Removed', text: 'Paper removed from your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+          if (!localBookmarks.includes(paper.id)) {
+            localBookmarks.push(paper.id);
+          }
+          setIsBookmarked(true);
+          Swal.fire({ title: 'Saved!', text: 'Paper saved to your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
         }
-      });
+        
+        localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
+      } catch (err) {
+        console.error('Guest bookmark error:', err);
+      }
       return;
     }
     
+    // Logged-in User: Save to Firestore
     const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
     try {
       if (isBookmarked) {
         await setDoc(bookmarkRef, { bookmarks: arrayRemove(paper.id) }, { merge: true });
+        Swal.fire({ title: 'Removed', text: 'Paper removed from your Bookmarks.', icon: 'success', timer: 1500, showConfirmButton: false });
       } else {
         await setDoc(bookmarkRef, { bookmarks: arrayUnion(paper.id) }, { merge: true });
+        Swal.fire({ title: 'Saved!', text: 'Paper saved to your Bookmarks.', icon: 'success', timer: 1500, showConfirmButton: false });
       }
     } catch (err) {
       console.error('Bookmark error:', err);
@@ -779,6 +800,8 @@ function ArchivePaperViewer() {
               <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
                 <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+                  
+                  {/* APA Format */}
                   <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
@@ -793,7 +816,45 @@ function ArchivePaperViewer() {
                       </button>
                     </div>
                     <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                      {authorName} ({year}). {title}. SWU PHINMA.
+                      {authorName} ({year}). <i>{title}</i>. SWU PHINMA.
+                    </p>
+                  </div>
+
+                  {/* MLA Format */}
+                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${authorName}. "${title}." SWU PHINMA, ${year}.`);
+                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        }}
+                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
+                      {authorName}. "{title}." <i>SWU PHINMA</i>, {year}.
+                    </p>
+                  </div>
+
+                  {/* IEEE Format */}
+                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${authorName}, "${title}," SWU PHINMA, ${year}.`);
+                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        }}
+                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
+                      {authorName}, "{title}," SWU PHINMA, {year}.
                     </p>
                   </div>
                   
@@ -816,23 +877,52 @@ function ArchivePaperViewer() {
             )}
 
             {activeTab === 'share' && (
-              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors overflow-y-auto custom-scrollbar">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Share Research</h2>
+                
                 <div className="flex flex-col items-center gap-6 mt-4">
-                  <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200">
+                  {/* Social Buttons */}
+                  <div className="flex justify-center gap-3 w-full">
+                    <a 
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex-1 flex flex-col items-center justify-center p-3 bg-[#1877F2] text-white rounded-lg shadow-sm hover:opacity-90 transition cursor-pointer"
+                    >
+                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                      <span className="text-[10px] font-bold">Facebook</span>
+                    </a>
+                    <a 
+                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('Read this research paper: ' + title)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex-1 flex flex-col items-center justify-center p-3 bg-black text-white rounded-lg shadow-sm hover:bg-gray-800 transition cursor-pointer"
+                    >
+                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                      <span className="text-[10px] font-bold">X (Twitter)</span>
+                    </a>
+                    <a 
+                      href={`mailto:?subject=${encodeURIComponent('Read this research paper: ' + title)}&body=${encodeURIComponent('I thought you might find this research interesting: ' + window.location.href)}`}
+                      className="flex-1 flex flex-col items-center justify-center p-3 bg-stone-500 text-white rounded-lg shadow-sm hover:bg-stone-600 transition cursor-pointer"
+                    >
+                      <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      <span className="text-[10px] font-bold">Email</span>
+                    </a>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200 mt-2">
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} 
                       alt="QR Code" 
                       className="w-32 h-32 object-contain"
                     />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Scan to read on mobile devices</p>
+                  <div className="text-center w-full">
+                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-3">Scan to read on mobile devices</p>
                     <button 
                       onClick={copyLink}
-                      className="bg-[#7a2039] text-white px-6 py-2 rounded-full hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
+                      className="w-full bg-[#7a2039] text-white px-6 py-3 rounded-lg hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
                     >
-                      Copy Link
+                      Copy Direct Link
                     </button>
                   </div>
                 </div>

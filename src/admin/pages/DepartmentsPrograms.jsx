@@ -112,9 +112,6 @@ export default function DepartmentsProgramsTab() {
       setSuccess('✅ Department added successfully!');
       setDepartmentForm({ name: '', status: 'Active' });
       setActiveModal(null);
-
-      // Refresh data
-      setTimeout(() => fetchAllData(), 500);
     } catch (error) {
       console.error('Error adding department:', error);
       setError('Failed to add department');
@@ -151,9 +148,6 @@ export default function DepartmentsProgramsTab() {
       setProgramForm({ codes: [], school: '' });
       setShowCodeDropdown(false);
       setActiveModal(null);
-
-      // Refresh data
-      setTimeout(() => fetchAllData(), 500);
     } catch (error) {
       console.error('Error adding programs:', error);
       setError('Failed to add programs');
@@ -201,9 +195,6 @@ export default function DepartmentsProgramsTab() {
         tags: prev.tags.filter(t => t !== programCode),
         programsCount: prev.programsCount - 1
       }));
-
-      // Refresh all data in the background
-      fetchAllData();
     } catch (error) {
       console.error('Error deleting program:', error);
       Swal.fire('Error', 'Failed to delete program. Please try again.', 'error');

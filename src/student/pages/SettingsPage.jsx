@@ -7,6 +7,8 @@ import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, 
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 
+const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
+
 export default function SettingsPage({ onLogout, studentName, initials, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState('Profile'); 

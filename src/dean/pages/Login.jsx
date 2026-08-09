@@ -139,6 +139,7 @@ export default function Login() {
   };
 
   // NOTE: handleActivation removed — Admin pre-creates the Firebase Auth account.
+  const handleActivation = (e) => { e.preventDefault(); };
   // First-time login is handled via handleChangePassword after handleLogin detects
   // accountStatus === 'pending_activation'.
 

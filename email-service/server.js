@@ -1237,7 +1237,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-flash-latest',
       contents: [
         { role: 'user', parts: initialUserParts },
         { role: 'model', parts: [{ text: 'Understood. I have carefully read the full manuscript PDF and all metadata. I am ready to provide accurate, well-structured academic analysis. How can I help you with this paper?' }] },
@@ -1252,7 +1252,18 @@ app.post('/api/ai/chat', async (req, res) => {
     res.json({ success: true, text: response.text });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    res.status(500).json({ error: error.message });
+    let errorMessage = error.message;
+    if (error.message.includes('503') || error.message.includes('UNAVAILABLE') || error.message.includes('overloaded')) {
+      errorMessage = "The AI is currently experiencing high demand. Please wait a few moments and try asking again.";
+    } else if (error.message.includes('429')) {
+      errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
+    } else if (error.message.includes('{')) {
+      try {
+        const parsed = JSON.parse(error.message.substring(error.message.indexOf('{')));
+        if (parsed.error && parsed.error.message) errorMessage = parsed.error.message;
+      } catch (e) {}
+    }
+    res.status(500).json({ error: errorMessage });
   }
 });
 
