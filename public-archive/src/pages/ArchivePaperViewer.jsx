@@ -274,8 +274,6 @@ function ArchivePaperViewer() {
     }
   };
 
-  };
-
   const generateRIS = () => {
     if (!paper) return;
     const titleStr = paper.researchTitle || paper.title || 'Untitled';
