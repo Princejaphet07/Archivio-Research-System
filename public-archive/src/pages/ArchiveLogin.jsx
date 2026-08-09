@@ -347,8 +347,6 @@ function ArchiveLogin() {
             </button>
           </form>
 
-          </form>
-
           {/* Removed the old text-based toggle button here */}
 
           <div className="w-full flex items-center my-2">
