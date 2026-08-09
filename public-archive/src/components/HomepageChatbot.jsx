@@ -6,6 +6,7 @@ import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimesta
 import logo from '../assets/logo.png';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Swal from 'sweetalert2';
 
 const TypewriterWord = ({ content }) => {
   const [visibleWords, setVisibleWords] = useState(0);
@@ -204,10 +205,24 @@ export default function HomepageChatbot() {
   };
 
   const clearChat = () => {
-    if (window.confirm('Are you sure you want to clear this conversation and start a new topic?')) {
-      setChatHistory(defaultGreeting);
-      setCurrentChatId(null);
-    }
+    Swal.fire({
+      title: 'Clear Conversation?',
+      text: "Are you sure you want to clear this conversation and start a new topic?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7a2039',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, clear it!',
+      customClass: {
+        popup: 'dark:bg-gray-800 dark:text-gray-100',
+        title: 'dark:text-gray-100',
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setChatHistory(defaultGreeting);
+        setCurrentChatId(null);
+      }
+    });
   };
 
   const updateAndSaveHistory = async (newHistory, explicitChatId = null) => {
