@@ -367,12 +367,12 @@ function ArchiveLogin() {
           {/* Removed the old text-based toggle button here */}
 
           <div className="w-full flex items-center my-2">
-            <div className="flex-1 h-[1px] bg-stone-200"></div>
-            <span className="px-3 text-xs text-stone-400 italic">or</span>
-            <div className="flex-1 h-[1px] bg-stone-200"></div>
+            <div className="flex-1 h-[1px] bg-stone-200 dark:bg-gray-600"></div>
+            <span className="px-3 text-xs text-stone-400 dark:text-stone-500 italic">or</span>
+            <div className="flex-1 h-[1px] bg-stone-200 dark:bg-gray-600"></div>
           </div>
 
-          <button onClick={handleGoogleAuth} className="w-full py-3 px-4 border border-stone-300 rounded-lg flex items-center justify-center space-x-3 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors mb-4 cursor-pointer shadow-sm">
+          <button onClick={handleGoogleAuth} className="w-full py-3 px-4 border border-stone-300 dark:border-gray-600 rounded-lg flex items-center justify-center space-x-3 text-sm font-medium text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors mb-4 cursor-pointer shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -384,7 +384,7 @@ function ArchiveLogin() {
 
           {/* LINK PABALIK SA HOME */}
           <div className="mt-8">
-            <Link to="/" className="text-xs text-stone-500 hover:text-stone-800 flex items-center space-x-1 transition-colors">
+            <Link to="/" className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 flex items-center space-x-1 transition-colors">
               <span>←</span>
               <span>Back to Archive</span>
             </Link>
