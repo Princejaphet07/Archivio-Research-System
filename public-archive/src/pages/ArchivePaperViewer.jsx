@@ -127,16 +127,25 @@ function ArchivePaperViewer() {
           unsubGroup = onSnapshot(qGroup, (groupSnap) => {
             let groupData = null;
             if (!groupSnap.empty) {
-              groupData = groupSnap.docs[0].data();
+              // Find the CORRECT group for this submission
+              // Match by groupId if available, otherwise match by title
+              const matchedDoc = groupSnap.docs.find(d => {
+                const g = d.data();
+                if (subData.groupId && d.id === subData.groupId) return true;
+                if (subData.researchTitle && g.researchTitle === subData.researchTitle) return true;
+                if (subData.title && g.researchTitle === subData.title) return true;
+                return false;
+              });
+              groupData = matchedDoc ? matchedDoc.data() : (groupSnap.docs.length === 1 ? groupSnap.docs[0].data() : null);
             }
             setPaper({
               ...subData,
-              researchTitle: groupData?.researchTitle || subData.researchTitle || subData.title,
+              researchTitle: subData.researchTitle || groupData?.researchTitle || subData.title,
               authorDisplay: groupData 
                 ? [groupData.leaderName, ...(groupData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
                 : subData.studentName || subData.groupName || 'Unknown Author',
-              program: groupData?.program || subData.program,
-              abstract: groupData?.abstract || subData.abstract
+              program: subData.program || groupData?.program,
+              abstract: subData.abstract || groupData?.abstract
             });
             setTimeout(() => setLoading(false), 800);
           });
