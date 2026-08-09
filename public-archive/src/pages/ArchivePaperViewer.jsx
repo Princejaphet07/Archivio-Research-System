@@ -1036,9 +1036,38 @@ function ArchivePaperViewer() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
-                  <div className={`text-xs p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
-                    {/* Render bold text simply for now */}
-                    {msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}
+                  <div className="flex flex-col gap-1 max-w-[85%]">
+                    <div className={`text-xs p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
+                      {/* Render bold text simply for now */}
+                      {msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}
+                    </div>
+                    {msg.role !== 'user' && (
+                      <button
+                        onClick={() => {
+                          if (window.speechSynthesis.speaking) {
+                            window.speechSynthesis.cancel();
+                            return;
+                          }
+                          const cleanText = msg.content.replace(/[*#_`]/g, '');
+                          const utterance = new SpeechSynthesisUtterance(cleanText);
+                          utterance.rate = 0.95;
+                          utterance.pitch = 1.0;
+                          const voices = window.speechSynthesis.getVoices();
+                          const voice = voices.find(v => v.lang.includes('en') && v.name.includes('Female')) || voices.find(v => v.lang.includes('en')) || voices[0];
+                          if (voice) utterance.voice = voice;
+                          window.speechSynthesis.speak(utterance);
+                        }}
+                        className="self-start flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer ml-1"
+                        title="Listen to this response"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                          <path d="M15.54 8.46a5 5 0 010 7.07" />
+                          <path d="M19.07 4.93a10 10 0 010 14.14" />
+                        </svg>
+                        Listen
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
