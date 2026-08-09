@@ -137,11 +137,11 @@ export default function ArchiveForgotPassword() {
       ></div>
 
       <div className="w-full flex justify-center items-center p-6 z-10">
-        <div className="bg-[#fdfbf7] dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#24050f] dark:border-[#f3e5ab]">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] w-full max-w-md p-8 relative border border-white/40 dark:border-gray-700/50">
           
           <div className="flex flex-col items-center mb-6">
-            <Link to="/" className="w-16 h-16 bg-[#24050f] dark:bg-gray-700 rounded-full flex items-center justify-center border-2 border-[#d6ad60] mb-4 shadow-lg hover:scale-105 transition-transform">
-              <img src={logoImg} alt="Logo" className="w-10 h-10 object-contain filter brightness-0 invert dark:brightness-100 dark:invert-0" />
+            <Link to="/" className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border-2 border-stone-200 dark:border-gray-600 mb-4 shadow-md hover:scale-105 transition-transform p-2">
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain" />
             </Link>
             <h1 className="text-2xl font-serif font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Forgot Password</h1>
             <p className="text-xs text-stone-500 dark:text-gray-400 mt-1 text-center">
@@ -187,7 +187,7 @@ export default function ArchiveForgotPassword() {
                 disabled={loading}
                 className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {loading ? 'Sending...' : 'Send Reset Link'}
+                {loading ? 'Sending...' : 'Send Verification Code'}
               </button>
             </form>
           )}
