@@ -178,14 +178,9 @@ function ArchiveLogin() {
             </div>
           </div>
 
-          {/* ANIMATED ACTIVITY TICKER */}
-          <div className="hidden md:flex items-center gap-2 mt-8 bg-green-500/10 border border-green-500/30 text-green-300 px-4 py-2 rounded-full animate-bounce text-[10px] font-sans">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span>Someone just published a new research paper!</span>
-          </div>
+          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-8">
+            Access thousands of approved academic papers, theses, and capstone projects from SWU PHINMA students and faculty.
+          </p>
         </div>
 
         <div className="hidden md:grid grid-cols-3 gap-4 bg-black/20 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center relative z-30">
