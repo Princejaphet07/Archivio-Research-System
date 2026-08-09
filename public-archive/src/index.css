@@ -11,7 +11,23 @@
 }
 
 @keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
   100% {
-    transform: translateX(100%);
+    background-position: 1000px 0;
+  }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 2.5s infinite linear;
+    background: linear-gradient(to right, #e5e7eb 4%, #d1d5db 25%, #e5e7eb 36%);
+    background-size: 1000px 100%;
+  }
+
+  .dark .animate-shimmer {
+    background: linear-gradient(to right, #374151 4%, #4b5563 25%, #374151 36%);
+    background-size: 1000px 100%;
   }
 }

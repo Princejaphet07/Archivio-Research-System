@@ -250,19 +250,18 @@ function ArchiveHome() {
           {loading ? (
             [1, 2, 3].map(n => (
               <div key={n} className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-gray-700/50 flex flex-col justify-between h-64 relative overflow-hidden">
-                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent"></div>
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <div className="h-6 w-28 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
-                    <div className="h-5 w-12 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="h-6 w-28 rounded animate-shimmer"></div>
+                    <div className="h-5 w-12 rounded animate-shimmer"></div>
                   </div>
-                  <div className="h-7 w-3/4 bg-stone-300/70 dark:bg-gray-600 rounded mb-3 animate-pulse"></div>
-                  <div className="h-7 w-1/2 bg-stone-300/70 dark:bg-gray-600 rounded mb-5 animate-pulse"></div>
-                  <div className="h-4 w-1/3 bg-stone-200/70 dark:bg-gray-700 rounded mb-4 animate-pulse"></div>
+                  <div className="h-7 w-3/4 rounded mb-3 animate-shimmer"></div>
+                  <div className="h-7 w-1/2 rounded mb-5 animate-shimmer"></div>
+                  <div className="h-4 w-1/3 rounded mb-4 animate-shimmer"></div>
                 </div>
                 <div className="flex justify-between items-center mt-8 pt-4 border-t border-stone-200/50 dark:border-gray-700/50">
-                  <div className="h-5 w-16 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
-                  <div className="h-9 w-24 bg-stone-300/70 dark:bg-gray-600 rounded animate-pulse"></div>
+                  <div className="h-5 w-16 rounded animate-shimmer"></div>
+                  <div className="h-9 w-24 rounded animate-shimmer"></div>
                 </div>
               </div>
             ))

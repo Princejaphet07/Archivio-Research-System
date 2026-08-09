@@ -397,13 +397,13 @@ function ArchivePaperViewer() {
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden animate-pulse">
+      <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden">
         {/* Header Skeleton */}
         <header className="bg-[#5a1528] px-6 py-4 flex justify-between items-center z-20 h-[60px]">
-          <div className="h-6 w-32 bg-white/20 rounded"></div>
+          <div className="h-6 w-32 rounded animate-shimmer"></div>
           <div className="flex gap-4">
-            <div className="h-6 w-16 bg-white/20 rounded hidden sm:block"></div>
-            <div className="h-8 w-8 bg-white/20 rounded-full"></div>
+            <div className="h-6 w-16 rounded hidden sm:block animate-shimmer"></div>
+            <div className="h-8 w-8 rounded-full animate-shimmer"></div>
           </div>
         </header>
         
@@ -411,40 +411,35 @@ function ArchivePaperViewer() {
         <div className="flex flex-1 overflow-hidden">
           {/* Left Sidebar Skeleton */}
           <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10">
-            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
-            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+            <div className="w-10 h-10 rounded animate-shimmer"></div>
+            <div className="w-10 h-10 rounded animate-shimmer"></div>
             <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
-            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
-            <div className="w-10 h-10 bg-stone-200 dark:bg-gray-700 rounded"></div>
+            <div className="w-10 h-10 rounded animate-shimmer"></div>
+            <div className="w-10 h-10 rounded animate-shimmer"></div>
           </div>
 
           {/* Table of Contents Panel Skeleton */}
           <div className="w-64 lg:w-72 bg-[#fdfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 p-4 flex flex-col hidden md:flex z-10">
-            <div className="h-5 w-24 bg-stone-200 dark:bg-gray-700 rounded mb-6"></div>
+            <div className="h-5 w-24 rounded mb-6 animate-shimmer"></div>
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>)}
+              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 w-full rounded animate-shimmer"></div>)}
             </div>
           </div>
 
           {/* Document Content Skeleton */}
           <div className="flex-1 p-2 md:p-8 flex justify-center bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden">
             <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-8 md:p-12 lg:p-20 flex flex-col h-full rounded-sm">
-              <div className="h-10 w-3/4 bg-stone-200 dark:bg-gray-700 rounded mb-6 mx-auto"></div>
-              <div className="h-4 w-1/2 bg-stone-100 dark:bg-gray-700 rounded mb-12 mx-auto"></div>
+              <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
+              <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
               <div className="space-y-4 mb-8">
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-5/6 bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full rounded animate-shimmer"></div>
+                <div className="h-4 w-full rounded animate-shimmer"></div>
+                <div className="h-4 w-5/6 rounded animate-shimmer"></div>
               </div>
               <div className="space-y-4 mb-8">
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-4/5 bg-stone-100 dark:bg-gray-700 rounded"></div>
-              </div>
-              <div className="space-y-4">
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-full bg-stone-100 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-3/4 bg-stone-100 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full rounded animate-shimmer"></div>
+                <div className="h-4 w-full rounded animate-shimmer"></div>
+                <div className="h-4 w-4/6 rounded animate-shimmer"></div>
               </div>
             </div>
           </div>

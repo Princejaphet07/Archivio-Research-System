@@ -303,21 +303,21 @@ function ArchiveBrowse() {
             {loading ? (
               <div className="space-y-6">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-6 sm:p-8 border-l-4 border-l-gray-200 dark:border-l-gray-600 animate-pulse">
+                  <div key={n} className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-6 sm:p-8 border-l-4 border-l-gray-200 dark:border-l-gray-600">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                      <div className="h-6 rounded w-24 animate-shimmer"></div>
+                      <div className="h-4 rounded w-32 animate-shimmer"></div>
                     </div>
-                    <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-3"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
+                    <div className="h-8 rounded w-3/4 mb-3 animate-shimmer"></div>
+                    <div className="h-4 rounded w-1/2 mb-6 animate-shimmer"></div>
                     <div className="space-y-2 mb-8">
-                      <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded w-full"></div>
-                      <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded w-5/6"></div>
+                      <div className="h-3 rounded w-full animate-shimmer"></div>
+                      <div className="h-3 rounded w-5/6 animate-shimmer"></div>
                     </div>
                     <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-50 dark:border-gray-700">
                       <div className="flex gap-4">
-                        <div className="h-5 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-5 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-5 w-10 rounded animate-shimmer"></div>
+                        <div className="h-5 w-10 rounded animate-shimmer"></div>
                       </div>
                       <div className="h-10 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
                     </div>
