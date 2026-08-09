@@ -214,7 +214,8 @@ function ArchiveBookmarks() {
             {/* BOOKMARKS LIST */}
             <div className="flex flex-col gap-4">
               {sortedPapers.map((paper) => (
-                <div key={paper.id} className="bg-[#fdfbf7] dark:bg-gray-800 border border-stone-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row justify-between p-6 gap-6 rounded hover:shadow-md transition-colors">
+                <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_15px_35px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_15px_35px_rgb(243,229,171,0.05)] flex flex-col md:flex-row justify-between p-6 gap-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 group overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                   
                   <div className="flex-1 font-sans">
                     <div className="flex items-center gap-3 mb-2">

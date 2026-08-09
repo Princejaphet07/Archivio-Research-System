@@ -331,7 +331,8 @@ function ArchiveBrowse() {
               </div>
             ) : (
               paginatedPapers.map((paper) => (
-                <div key={paper.id} className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-6 sm:p-8 hover:shadow-lg hover:border-stone-300 dark:hover:border-gray-600 transition-all border-l-4 border-l-[#7a2e46]">
+                <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 rounded-xl p-6 sm:p-8 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_15px_35px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_15px_35px_rgb(243,229,171,0.05)] transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-[#7a2039] dark:border-l-[#f3e5ab] group overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
                       <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded text-xs font-medium">
