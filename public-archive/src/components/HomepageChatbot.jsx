@@ -52,6 +52,7 @@ export default function HomepageChatbot() {
   const [isListening, setIsListening] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
+  const [copiedIndex, setCopiedIndex] = useState(null);
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -232,6 +233,12 @@ export default function HomepageChatbot() {
         console.error("Failed to delete chat", err);
       }
     }
+  };
+
+  const handleCopy = (content, idx) => {
+    navigator.clipboard.writeText(content);
+    setCopiedIndex(idx);
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const updateAndSaveHistory = async (newHistory, explicitChatId = null) => {
@@ -474,11 +481,18 @@ export default function HomepageChatbot() {
                     
                     {msg.role === 'model' && (
                       <button 
-                        onClick={() => navigator.clipboard.writeText(msg.content)} 
-                        className="absolute -right-2 -bottom-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow hover:bg-stone-200 dark:hover:bg-gray-600 cursor-pointer"
+                        onClick={() => handleCopy(msg.content, idx)} 
+                        className="absolute -right-2 -bottom-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow hover:bg-stone-200 dark:hover:bg-gray-600 cursor-pointer flex items-center justify-center gap-1"
                         title="Copy to clipboard"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        {copiedIndex === idx ? (
+                          <>
+                            <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span className="text-[10px] text-green-600 dark:text-green-400 font-bold pr-1">Copied!</span>
+                          </>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        )}
                       </button>
                     )}
                   </div>
