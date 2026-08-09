@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import logo from '../assets/logo.png';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import ForceGraph2D from 'react-force-graph-2d';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 function ArchivePaperViewer() {
@@ -24,6 +25,7 @@ function ArchivePaperViewer() {
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(null);
   const [relatedPapers, setRelatedPapers] = useState([]);
+  const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   function onDocumentLoadSuccess({ numPages }) {
@@ -169,7 +171,7 @@ function ArchivePaperViewer() {
         const related = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(doc => doc.id !== paper.id) // Exclude current paper
-          .slice(0, 4); // Limit to 4 papers
+          .slice(0, 15); // Increased to 15 for map visualization
           
         setRelatedPapers(related);
       } catch (err) {
@@ -178,6 +180,40 @@ function ArchivePaperViewer() {
     };
     fetchRelated();
   }, [paper?.id, paper?.program, paper?.category]);
+
+  const graphData = useMemo(() => {
+    if (!paper || relatedPapers.length === 0) return { nodes: [], links: [] };
+    
+    const nodes = [
+      { id: paper.id, name: paper.researchTitle || paper.title, group: 'current', val: 25 },
+      ...relatedPapers.map(rp => ({
+        id: rp.id, 
+        name: rp.researchTitle || rp.title, 
+        group: 'related', 
+        val: 10
+      }))
+    ];
+
+    const links = [];
+    relatedPapers.forEach(rp => {
+      links.push({ source: paper.id, target: rp.id, color: '#f3e5ab' });
+    });
+
+    for (let i = 0; i < relatedPapers.length; i++) {
+      for (let j = i + 1; j < relatedPapers.length; j++) {
+        const rp1 = relatedPapers[i];
+        const rp2 = relatedPapers[j];
+        if (rp1.keywords && rp2.keywords) {
+          const common = rp1.keywords.filter(k => rp2.keywords.includes(k));
+          if (common.length > 0) {
+            links.push({ source: rp1.id, target: rp2.id, color: '#d6ad60' });
+          }
+        }
+      }
+    }
+
+    return { nodes, links };
+  }, [paper, relatedPapers]);
 
   // Increment view count when paper viewer opens
   useEffect(() => {
@@ -696,11 +732,23 @@ function ArchivePaperViewer() {
 
             {activeTab === 'related' && (
               <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
-                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Related Researches</h2>
+                <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
+                  <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Related Researches</h2>
+                  {relatedPapers.length > 0 && (
+                    <button 
+                      onClick={() => setIsMapView(true)}
+                      className="text-[10px] bg-[#7a2039] text-white px-2 py-1 rounded hover:bg-[#5a1528] transition font-medium flex items-center gap-1 shadow-sm"
+                      title="View Interactive Map"
+                    >
+                      <span>🕸️</span> Map View
+                    </button>
+                  )}
+                </div>
+                
                 <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
                   {relatedPapers.length > 0 ? (
-                    relatedPapers.map(rp => (
-                      <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded p-4 shadow-sm hover:shadow-md transition">
+                    relatedPapers.slice(0, 5).map(rp => ( // Limit list view to 5 to keep sidebar clean
+                      <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded p-4 shadow-sm hover:shadow-md transition relative group">
                         <span className="text-[10px] bg-stone-100 dark:bg-gray-600 px-2 py-1 rounded text-stone-600 dark:text-gray-300 font-medium mb-2 inline-block truncate max-w-full">
                           {rp.program || 'Research'}
                         </span>
@@ -719,6 +767,66 @@ function ArchivePaperViewer() {
                     </div>
                   )}
                 </div>
+
+                {/* FULL SCREEN NETWORK MAP MODAL */}
+                {isMapView && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 w-[95vw] h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative border border-stone-200 dark:border-gray-700">
+                      
+                      {/* Modal Header */}
+                      <div className="flex justify-between items-center p-4 border-b border-stone-200 dark:border-gray-800 bg-[#fcfbf7] dark:bg-gray-900">
+                        <div>
+                          <h2 className="text-xl font-bold text-[#7a2039] dark:text-[#f3e5ab] flex items-center gap-2">
+                            <span>🕸️</span> Interactive Research Network
+                          </h2>
+                          <p className="text-xs text-stone-500 dark:text-gray-400">
+                            Explore connections between papers in <strong>{paper.program || paper.category}</strong>. Drag nodes to interact.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => setIsMapView(false)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 dark:bg-gray-800 text-stone-600 dark:text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Map Container */}
+                      <div className="flex-1 w-full bg-[#111] relative">
+                        <ForceGraph2D
+                          graphData={graphData}
+                          nodeLabel="name"
+                          nodeAutoColorBy="group"
+                          nodeRelSize={6}
+                          linkColor={() => 'rgba(255,255,255,0.2)'}
+                          linkWidth={1.5}
+                          linkDirectionalParticles={2}
+                          linkDirectionalParticleSpeed={d => d.val * 0.001}
+                          onNodeClick={node => window.location.href = `/viewer/${node.id}`}
+                          width={window.innerWidth * 0.95}
+                          height={window.innerHeight * 0.95 - 75} // Subtract header height
+                        />
+                        
+                        {/* Legend */}
+                        <div className="absolute bottom-6 left-6 bg-black/60 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white font-sans shadow-lg">
+                          <h4 className="text-xs font-bold mb-2 uppercase tracking-widest text-stone-300">Legend</h4>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full bg-[#7a2039]"></div>
+                            <span className="text-xs">Current Research</span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full bg-[#d6ad60]"></div>
+                            <span className="text-xs">Related Research</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-0.5 bg-white/40"></div>
+                            <span className="text-[10px] text-stone-400">Shared Keywords Connection</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
