@@ -10,6 +10,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomepageChatbot from './components/HomepageChatbot';
+import SpotlightSearch from './components/SpotlightSearch';
 
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -66,6 +67,7 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
+        <SpotlightSearch />
         <HomepageChatbot />
       </Router>
       </AuthProvider>
