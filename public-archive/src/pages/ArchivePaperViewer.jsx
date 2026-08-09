@@ -122,7 +122,8 @@ function ArchivePaperViewer() {
               authorDisplay: groupData 
                 ? [groupData.leaderName, ...(groupData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
                 : subData.studentName || subData.groupName || 'Unknown Author',
-              program: groupData?.program || subData.program
+              program: groupData?.program || subData.program,
+              abstract: groupData?.abstract || subData.abstract
             });
             setTimeout(() => setLoading(false), 800);
           });
@@ -131,7 +132,8 @@ function ArchivePaperViewer() {
             ...subData,
             researchTitle: subData.researchTitle || subData.title,
             authorDisplay: subData.studentName || subData.groupName || 'Unknown Author',
-            program: subData.program
+            program: subData.program,
+            abstract: subData.abstract
           });
           setTimeout(() => setLoading(false), 800);
         }
