@@ -43,7 +43,27 @@ export default function HomepageChatbot() {
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const chatEndRef = useRef(null);
+
+  const speakText = (text) => {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    
+    // Clean text from markdown bold/italics
+    const cleanText = text.replace(/[*#_]/g, '');
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    
+    // Try to find a good female voice or just use default
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google US English')) || voices[0];
+    if (voice) utterance.voice = voice;
+    
+    window.speechSynthesis.speak(utterance);
+  };
 
   const userName = currentUser?.displayName || currentUser?.email?.split('@')[0];
   const greetingText = userName 
@@ -203,6 +223,9 @@ export default function HomepageChatbot() {
 
       const newHistoryModel = [...newHistoryUser, { role: 'model', content: data.text }];
       await updateAndSaveHistory(newHistoryModel, savedChatId);
+      if (isVoiceEnabled) {
+        speakText(data.text);
+      }
     } catch (err) {
       console.error("AI Error:", err);
       const newHistoryError = [...newHistoryUser, { role: 'model', content: `**Error:** ${err.message}` }];
@@ -250,7 +273,23 @@ export default function HomepageChatbot() {
                 <p className="text-xs text-[#f3e5ab] opacity-90">Always here to help</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white font-bold text-2xl cursor-pointer transition-colors px-2">&times;</button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => {
+                  if (isVoiceEnabled) window.speechSynthesis.cancel();
+                  setIsVoiceEnabled(!isVoiceEnabled);
+                }}
+                title={isVoiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isVoiceEnabled ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              >
+                {isVoiceEnabled ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                )}
+              </button>
+              <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white font-bold text-2xl cursor-pointer transition-colors px-2">&times;</button>
+            </div>
           </div>
 
           {/* History Sidebar Overlay (Logged-in Only) */}
