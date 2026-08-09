@@ -13,7 +13,7 @@ function ArchiveBrowse() {
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
   const [sortOption, setSortOption] = useState('Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
-  const [selectedDepartments, setSelectedDepartments] = useState([]);
+  const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [location.state.dept] : []);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -35,6 +35,15 @@ function ArchiveBrowse() {
     setSelectedDepartments([]);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    if (location.state?.dept) {
+      setSelectedDepartments([location.state.dept]);
+      setCurrentPage(1);
+      // scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location.state?.dept]);
 
   const { currentUser } = useAuth();
 
