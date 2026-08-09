@@ -150,8 +150,8 @@ function ArchiveLogin() {
         />
 
         <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-6 relative z-30">
-          <div className="bg-white/5 p-2 rounded-full mb-1 md:mb-2 hidden md:block">
-            <img src={logo} alt="Archivio Logo" className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-lg" />
+          <div className="bg-white/5 p-2 rounded-full mb-1 hidden md:block">
+            <img src={logo} alt="Archivio Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-lg" />
           </div>
           {/* Mobile Logo row */}
           <div className="md:hidden flex items-center gap-3">
@@ -159,11 +159,11 @@ function ArchiveLogin() {
             <h1 className="text-4xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
           </div>
           
-          <h1 className="hidden md:block text-5xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
-          <h2 className="text-xs md:text-sm font-medium tracking-wide text-amber-200/80 italic mb-4">Research Archive Management System</h2>
+          <h1 className="hidden md:block text-4xl md:text-5xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
+          <h2 className="text-xs md:text-sm font-medium tracking-wide text-amber-200/80 italic mb-2">Research Archive Management System</h2>
           
           {/* PREMIUM FEATURES CHECKLIST */}
-          <div className="hidden md:flex flex-col gap-3 mt-6 text-left w-full max-w-sm mx-auto">
+          <div className="hidden md:flex flex-col gap-2 mt-4 text-left w-full max-w-sm mx-auto">
             <div className="flex items-center gap-3 text-stone-200 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10 shadow-sm">
               <span className="text-xl">🔓</span>
               <span className="text-xs font-sans tracking-wide">Read full-text PDF manuscripts</span>
@@ -178,7 +178,7 @@ function ArchiveLogin() {
             </div>
           </div>
 
-          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-12 mb-8">
+          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-6">
             Access thousands of approved academic papers, theses, and capstone projects from SWU PHINMA students and faculty.
           </p>
         </div>
