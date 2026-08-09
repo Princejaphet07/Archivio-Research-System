@@ -89,9 +89,20 @@ export default function HomepageChatbot() {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     
-    // Try to find a good female voice or just use default
+    // Try to find a Filipino/Tagalog voice for natural pronunciation
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google US English')) || voices[0];
+    let voice = voices.find(v => v.lang.includes('fil') || v.lang.includes('tl') || v.name.includes('Tagalog') || v.name.includes('Filipino'));
+    
+    // Fallback to Indonesian if no PH voice (Indo vowels sound very similar to Bisaya)
+    if (!voice) {
+      voice = voices.find(v => v.lang.includes('id') || v.name.includes('Indonesian'));
+    }
+    
+    // Ultimate fallback
+    if (!voice) {
+      voice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google US English')) || voices[0];
+    }
+    
     if (voice) utterance.voice = voice;
     
     window.speechSynthesis.speak(utterance);
