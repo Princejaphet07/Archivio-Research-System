@@ -178,7 +178,7 @@ function ArchiveLogin() {
             </div>
           </div>
 
-          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-8">
+          <p className="hidden md:block text-xs text-stone-300 max-w-sm leading-relaxed mt-12 mb-8">
             Access thousands of approved academic papers, theses, and capstone projects from SWU PHINMA students and faculty.
           </p>
         </div>
