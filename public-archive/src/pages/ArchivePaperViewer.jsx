@@ -274,6 +274,67 @@ function ArchivePaperViewer() {
     }
   };
 
+  };
+
+  const generateRIS = () => {
+    if (!paper) return;
+    const titleStr = paper.researchTitle || paper.title || 'Untitled';
+    const authorStr = paper.authorDisplay || 'Unknown Author';
+    const yearStr = new Date(paper.publishedAt || Date.now()).getFullYear();
+    const content = [
+      'TY  - RPRT',
+      `TI  - ${titleStr}`,
+      `AU  - ${authorStr}`,
+      `PY  - ${yearStr}`,
+      `PB  - SWU PHINMA`,
+      `UR  - ${window.location.href}`,
+      `AB  - ${paper.abstract || ''}`,
+      'ER  - '
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${titleStr.replace(/\s+/g, '_')}.ris`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateBibTeX = () => {
+    if (!paper) return;
+    const titleStr = paper.researchTitle || paper.title || 'Untitled';
+    const authorStr = paper.authorDisplay || 'Unknown Author';
+    const yearStr = new Date(paper.publishedAt || Date.now()).getFullYear();
+    const citationKey = `${authorStr.split(',')[0].replace(/\s+/g, '')}${yearStr}`;
+    const content = [
+      `@techreport{${citationKey},`,
+      `  title = {${titleStr}},`,
+      `  author = {${authorStr}},`,
+      `  year = {${yearStr}},`,
+      `  institution = {SWU PHINMA},`,
+      `  url = {${window.location.href}}`,
+      `}`
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${titleStr.replace(/\s+/g, '_')}.bib`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    Swal.fire({
+      title: 'Link Copied',
+      text: 'The link has been copied to your clipboard.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
   const handleChapterClick = (chap) => {
     const map = {
       'Chapter 1: Introduction': 1,
@@ -492,6 +553,10 @@ function ArchivePaperViewer() {
           
           <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Cite">❞</button>
           
+          <button onClick={() => handleTabClick('share')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'share' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Share">
+            🔗
+          </button>
+          
           <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
 
           <button onClick={() => handleTabClick('related')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'related' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Related Researches">
@@ -573,17 +638,62 @@ function ArchivePaperViewer() {
             {activeTab === 'cite' && (
               <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar">
                   <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
-                      <button className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${authorName} (${year}). ${title}. SWU PHINMA.`);
+                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        }}
+                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
+                      >
                         Copy
                       </button>
                     </div>
                     <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
                       {authorName} ({year}). {title}. SWU PHINMA.
                     </p>
+                  </div>
+                  
+                  {/* Export Section */}
+                  <div className="mt-4 border-t border-stone-200 dark:border-gray-700 pt-4">
+                    <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-3 uppercase tracking-wider">Export Citation</h3>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={generateRIS} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-4 py-2 rounded text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
+                        <span>Download .RIS (Mendeley, EndNote)</span>
+                        <span className="text-[10px]">⬇</span>
+                      </button>
+                      <button onClick={generateBibTeX} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-4 py-2 rounded text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
+                        <span>Download .BibTeX (LaTeX)</span>
+                        <span className="text-[10px]">⬇</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'share' && (
+              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Share Research</h2>
+                <div className="flex flex-col items-center gap-6 mt-4">
+                  <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} 
+                      alt="QR Code" 
+                      className="w-32 h-32 object-contain"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Scan to read on mobile devices</p>
+                    <button 
+                      onClick={copyLink}
+                      className="bg-[#7a2039] text-white px-6 py-2 rounded-full hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
+                    >
+                      Copy Link
+                    </button>
                   </div>
                 </div>
               </div>

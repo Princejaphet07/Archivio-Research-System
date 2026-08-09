@@ -146,6 +146,30 @@ function ArchiveBrowse() {
   const totalPages = Math.max(1, Math.ceil(filteredPapers.length / ITEMS_PER_PAGE));
   const paginatedPapers = filteredPapers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  // Calculate popular keywords
+  const getPopularKeywords = () => {
+    const counts = {};
+    publishedPapers.forEach(paper => {
+      // Some papers might have keywords as an array or comma-separated string
+      let kws = [];
+      if (Array.isArray(paper.keywords)) {
+        kws = paper.keywords;
+      } else if (typeof paper.keywords === 'string') {
+        kws = paper.keywords.split(',').map(k => k.trim());
+      }
+      
+      kws.forEach(kw => {
+        const k = kw?.trim().toLowerCase();
+        if (k) counts[k] = (counts[k] || 0) + 1;
+      });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12) // Top 12 keywords
+      .map(([keyword, count]) => ({ keyword, count }));
+  };
+  const popularKeywords = getPopularKeywords();
+
   return (
     <div className="font-serif min-h-screen flex flex-col bg-[#faf7f0] dark:bg-gray-900 transition-colors">
       <Header />
@@ -237,6 +261,36 @@ function ArchiveBrowse() {
                     <span className="group-hover:text-[#7a2039] transition">{dept}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+
+            {/* KEYWORD CLOUD */}
+            <div>
+              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Popular Keywords ☁️</h3>
+              <div className="flex flex-wrap gap-2">
+                {popularKeywords.map((item, idx) => {
+                  // Calculate font size dynamically based on count (min 10px, max 16px)
+                  const fontSize = Math.max(10, Math.min(16, 9 + item.count * 1.5));
+                  const isSelected = searchQuery.toLowerCase() === item.keyword.toLowerCase();
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSearchQuery(isSelected ? '' : item.keyword);
+                        setCurrentPage(1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`px-3 py-1 border rounded-full text-stone-600 dark:text-gray-300 hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#7a2039] transition cursor-pointer shadow-sm capitalize ${isSelected ? 'bg-[#7a2039] text-white border-[#7a2039]' : 'bg-white dark:bg-gray-700 border-stone-200 dark:border-gray-600'}`}
+                      style={{ fontSize: fontSize + 'px' }}
+                      title={`${item.count} papers`}
+                    >
+                      {item.keyword}
+                    </button>
+                  );
+                })}
+                {popularKeywords.length === 0 && (
+                  <span className="text-xs text-stone-400">No keywords found</span>
+                )}
               </div>
             </div>
           </div>
