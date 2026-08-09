@@ -658,10 +658,19 @@ function ArchivePaperViewer() {
           {/* ZEN MODE TOGGLE */}
           <button 
             onClick={() => { setIsZenMode(!isZenMode); if (!isZenMode) { setIsFullscreen(true); } else { setIsFullscreen(false); } }}
-            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isZenMode ? 'bg-[#7a2039] text-white shadow-md ring-2 ring-[#d6ad60]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`}
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 cursor-pointer ${isZenMode ? 'bg-[#7a2039] text-white shadow-lg scale-110' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`}
             title={isZenMode ? 'Exit Zen Mode' : 'Zen Mode (Focus Reading)'}
           >
-            🧘
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+              {isZenMode && <>
+                <line x1="2" y1="2" x2="6" y2="6" strokeWidth="1.5" opacity="0.5" />
+                <line x1="18" y1="2" x2="22" y2="6" strokeWidth="1.5" opacity="0.5" />
+                <line x1="2" y1="22" x2="6" y2="18" strokeWidth="1.5" opacity="0.5" />
+                <line x1="18" y1="22" x2="22" y2="18" strokeWidth="1.5" opacity="0.5" />
+              </>}
+            </svg>
           </button>
         </div>
 
