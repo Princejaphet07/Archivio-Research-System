@@ -294,7 +294,7 @@ export default function HomepageChatbot() {
 
           {/* Suggestions */}
           {chatHistory.length <= 1 && !isTyping && (
-            <div className="flex overflow-x-auto whitespace-nowrap scrollbar-hide gap-2 px-4 pb-3 pt-1 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700">
+            <div className="flex overflow-x-auto whitespace-nowrap gap-2 px-4 pb-3 pt-1 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {suggestions.map((text, idx) => (
                 <button
                   key={idx}
