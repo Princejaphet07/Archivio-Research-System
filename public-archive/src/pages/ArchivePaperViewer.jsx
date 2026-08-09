@@ -24,10 +24,18 @@ function ArchivePaperViewer() {
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(null);
   const [relatedPapers, setRelatedPapers] = useState([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
   }
+
+  // Cleanup speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
   
   // AI Chat State
   const [chatHistory, setChatHistory] = useState([]);
@@ -245,6 +253,25 @@ function ArchivePaperViewer() {
     setIsFullscreen(false);
   };
 
+  const handleToggleAudio = () => {
+    if (!paper || !paper.abstract) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      // Ensure any existing speech is stopped
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(paper.abstract);
+      // Optional: you can set the voice/rate here if desired
+      utterance.rate = 0.9;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    }
+  };
+
   const handleChapterClick = (chap) => {
     const map = {
       'Chapter 1: Introduction': 1,
@@ -422,6 +449,9 @@ function ArchivePaperViewer() {
         
         {/* THIN LEFT NAVIGATION (ICONS) */}
         <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors">
+          <button onClick={() => handleTabClick('abstract')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'abstract' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Abstract">
+            📝
+          </button>
           <button onClick={() => handleTabClick('toc')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'toc' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Table of Content">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
@@ -470,6 +500,27 @@ function ArchivePaperViewer() {
         {/* EXPANDABLE SIDEBAR PANEL */}
         {!isFullscreen && (
           <div className="w-[calc(100%-3.5rem)] sm:w-64 absolute sm:relative left-14 sm:left-0 h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto z-20 sm:z-10 shadow-xl sm:shadow-none transition-colors">
+            {activeTab === 'abstract' && (
+              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+                <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
+                  <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Abstract</h2>
+                  {paper.abstract && (
+                    <button 
+                      onClick={handleToggleAudio}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition cursor-pointer shadow-sm ${isSpeaking ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'}`}
+                    >
+                      {isSpeaking ? 'Stop ⏹️' : 'Play 🎧'}
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                  <p className="text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6">
+                    {paper.abstract || 'No abstract available for this research paper.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'toc' && (
               <div className="p-4 flex flex-col h-full">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Table of Content</h2>
