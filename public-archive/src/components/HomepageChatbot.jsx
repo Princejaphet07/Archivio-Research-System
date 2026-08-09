@@ -60,6 +60,9 @@ export default function HomepageChatbot() {
   const location = useLocation();
   const { currentUser } = useAuth();
   
+  // Hide on authentication pages
+  if (location.pathname === '/login' || location.pathname === '/forgot-password') return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   
