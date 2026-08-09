@@ -56,6 +56,12 @@ export default function HomepageChatbot() {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const suggestedPrompts = [
+    "Help me formulate a research title",
+    "How to write an abstract?",
+    "Suggest a topic for IT"
+  ];
+
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -463,37 +469,53 @@ export default function HomepageChatbot() {
             ) : (
               chatHistory.map((msg, idx) => (
                 <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm mt-1 ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
-                  <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
-                    {msg.role === 'model' && idx === chatHistory.length - 1 ? (
-                      <TypewriterWord content={msg.content} />
-                    ) : (
-                      msg.role === 'model' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                        </div>
+                  <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
+                      {msg.role === 'model' && idx === chatHistory.length - 1 ? (
+                        <TypewriterWord content={msg.content} />
                       ) : (
-                        msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
-                      )
-                    )}
-                    
-                    {msg.role === 'model' && (
-                      <button 
-                        onClick={() => handleCopy(msg.content, idx)} 
-                        className="absolute -right-2 -bottom-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow hover:bg-stone-200 dark:hover:bg-gray-600 cursor-pointer flex items-center justify-center gap-1"
-                        title="Copy to clipboard"
-                      >
-                        {copiedIndex === idx ? (
-                          <>
-                            <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span className="text-[10px] text-green-600 dark:text-green-400 font-bold pr-1">Copied!</span>
-                          </>
+                        msg.role === 'model' ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                          </div>
                         ) : (
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                        )}
-                      </button>
+                          msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
+                        )
+                      )}
+                      
+                      {msg.role === 'model' && (
+                        <button 
+                          onClick={() => handleCopy(msg.content, idx)} 
+                          className="absolute -right-2 -bottom-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow hover:bg-stone-200 dark:hover:bg-gray-600 cursor-pointer flex items-center justify-center gap-1"
+                          title="Copy to clipboard"
+                        >
+                          {copiedIndex === idx ? (
+                            <>
+                              <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                              <span className="text-[10px] text-green-600 dark:text-green-400 font-bold pr-1">Copied!</span>
+                            </>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {/* Suggested Prompts */}
+                    {idx === 0 && chatHistory.length === 1 && !isTyping && (
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {suggestedPrompts.map((prompt, i) => (
+                          <button
+                            key={i}
+                            onClick={() => sendMessage(prompt)}
+                            className="text-xs bg-stone-100 dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-600 dark:text-gray-300 px-3 py-1.5 rounded-full hover:bg-stone-200 dark:hover:bg-gray-700 transition cursor-pointer shadow-sm text-left"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
