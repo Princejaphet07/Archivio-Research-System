@@ -45,7 +45,32 @@ export default function HomepageChatbot() {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
   const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be less than 5MB");
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageBase64(reader.result.split(',')[1]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImageBase64(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -224,11 +249,18 @@ export default function HomepageChatbot() {
   };
 
   const sendMessage = async (messageText) => {
-    if (!messageText.trim() || isTyping) return;
+    if ((!messageText.trim() && !imageBase64) || isTyping) return;
 
-    const userMessage = messageText.trim();
+    const imagePayload = imageBase64 ? { data: imageBase64, mimeType: selectedImage.type } : null;
+    
+    // Clear image immediately for UI
+    setSelectedImage(null);
+    setImageBase64(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    const userMessage = messageText.trim() || "[Attached an image]";
     setChatInput('');
-    const newHistoryUser = [...chatHistory, { role: 'user', content: userMessage }];
+    const newHistoryUser = [...chatHistory, { role: 'user', content: userMessage + (imagePayload ? ' 🖼️' : '') }];
     const savedChatId = await updateAndSaveHistory(newHistoryUser, currentChatId);
     setIsTyping(true);
 
@@ -255,6 +287,7 @@ export default function HomepageChatbot() {
           paperContext,
           chatHistory: chatHistory.slice(1), // Exclude initial greeting
           userMessage,
+          image: imagePayload,
           pdfUrl: null
         })
       });
@@ -423,9 +456,29 @@ export default function HomepageChatbot() {
             </div>
           )}
 
+          {/* Image Preview Area */}
+          {selectedImage && (
+            <div className="absolute bottom-[72px] left-4 mb-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-stone-200 dark:border-gray-700 z-30 animate-fade-in-up">
+              <div className="relative">
+                <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="h-16 w-16 object-cover rounded-lg" />
+                <button type="button" onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600 cursor-pointer">&times;</button>
+              </div>
+            </div>
+          )}
+
           {/* Input Area */}
           <form onSubmit={handleChatSubmit} className="p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm shrink-0 transition-colors relative z-20">
             <div className="flex gap-2">
+              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isTyping || isListening}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shadow-md shrink-0 disabled:opacity-50 bg-stone-200 dark:bg-gray-700 text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-gray-600"
+                title="Attach Image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+              </button>
               <input 
                 type="text" 
                 value={chatInput}

@@ -1161,7 +1161,7 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // ============================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { paperContext, chatHistory, userMessage, pdfUrl } = req.body;
+    const { paperContext, chatHistory, userMessage, pdfUrl, image } = req.body;
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
@@ -1201,6 +1201,16 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     }
 
+    const finalParts = [{ text: userMessage }];
+    if (image && image.data && image.mimeType) {
+      finalParts.push({
+        inlineData: {
+          data: image.data,
+          mimeType: image.mimeType
+        }
+      });
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-flash-latest',
       contents: [
@@ -1210,7 +1220,7 @@ app.post('/api/ai/chat', async (req, res) => {
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.content }]
         })),
-        { role: 'user', parts: [{ text: userMessage }] }
+        { role: 'user', parts: finalParts }
       ]
     });
 
