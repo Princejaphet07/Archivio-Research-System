@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import logo from '../assets/logo.png';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const TypewriterWord = ({ content }) => {
   const [visibleWords, setVisibleWords] = useState(0);
@@ -25,7 +27,9 @@ const TypewriterWord = ({ content }) => {
 
   const displayedContent = words.slice(0, visibleWords).join(' ');
   return (
-    <span>{displayedContent.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}</span>
+    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedContent}</ReactMarkdown>
+    </div>
   );
 };
 
@@ -199,6 +203,13 @@ export default function HomepageChatbot() {
     setShowSidebar(false);
   };
 
+  const clearChat = () => {
+    if (window.confirm('Are you sure you want to clear this conversation and start a new topic?')) {
+      setChatHistory(defaultGreeting);
+      setCurrentChatId(null);
+    }
+  };
+
   const updateAndSaveHistory = async (newHistory, explicitChatId = null) => {
     setChatHistory(newHistory);
     let resolvedChatId = explicitChatId || currentChatId;
@@ -357,6 +368,13 @@ export default function HomepageChatbot() {
             </div>
             <div className="flex items-center gap-1">
               <button 
+                onClick={clearChat}
+                title="Clear Chat / New Topic"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer text-white/60 hover:text-white hover:bg-white/10"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+              <button 
                 onClick={() => {
                   if (isVoiceEnabled) window.speechSynthesis.cancel();
                   setIsVoiceEnabled(!isVoiceEnabled);
@@ -416,11 +434,27 @@ export default function HomepageChatbot() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
-                  <div className={`text-sm p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
+                  <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
                     {msg.role === 'model' && idx === chatHistory.length - 1 ? (
                       <TypewriterWord content={msg.content} />
                     ) : (
-                      msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
+                      msg.role === 'model' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
+                      )
+                    )}
+                    
+                    {msg.role === 'model' && (
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(msg.content)} 
+                        className="absolute -right-2 -bottom-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow hover:bg-stone-200 dark:hover:bg-gray-600 cursor-pointer"
+                        title="Copy to clipboard"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                      </button>
                     )}
                   </div>
                 </div>
