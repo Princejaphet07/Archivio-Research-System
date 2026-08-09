@@ -44,7 +44,39 @@ export default function HomepageChatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef(null);
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support voice input. Please try using Google Chrome or Edge.");
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(transcript);
+      // Auto-send the transcribed voice
+      sendMessage(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
+  };
 
   const speakText = (text) => {
     if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
@@ -382,9 +414,18 @@ export default function HomepageChatbot() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={isTyping}
-                placeholder="Ask me anything..." 
+                placeholder={isListening ? "Listening..." : "Ask me anything..."}
                 className="flex-1 border border-stone-300 dark:border-gray-600 bg-stone-50 dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors" 
               />
+              <button
+                type="button"
+                onClick={startListening}
+                disabled={isTyping || isListening}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shadow-md shrink-0 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-stone-200 dark:bg-gray-700 text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-gray-600'}`}
+                title="Use Voice Input"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+              </button>
               <button 
                 type="submit"
                 disabled={isTyping || !chatInput.trim()}
