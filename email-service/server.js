@@ -1163,6 +1163,9 @@ app.post('/api/ai/chat', async (req, res) => {
   try {
     const { paper, chatHistory, userMessage, pdfUrl, image } = req.body;
 
+    // Debug log to verify correct paper is being sent
+    console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
     }
@@ -1181,6 +1184,7 @@ app.post('/api/ai/chat', async (req, res) => {
     - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
     - You must read and deeply analyze the FULL PDF manuscript (if attached) to provide accurate, detailed, and well-structured answers.
     - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
+    - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
 
     RESPONSE FORMATTING RULES:
     - Use clean, well-structured responses. Use bullet points, numbered lists, and bold text (**like this**) for key terms.
@@ -1190,14 +1194,15 @@ app.post('/api/ai/chat', async (req, res) => {
     - Do NOT use excessive emojis or informal language. Be professional but friendly.
     - When citing specific parts of the paper, mention the chapter or section if possible.
 
-    PAPER CONTEXT:
-    Title: ${paper.researchTitle}
-    Authors: ${paper.authorDisplay}
-    Year: ${new Date(paper.publishedAt || Date.now()).getFullYear()}
-    Keywords: ${paper.keywords?.join(', ') || 'None provided'}
-    Abstract: ${paper.abstract || 'No abstract available'}
+    === THE PAPER YOU ARE ANALYZING ===
+    Title: "${paper?.researchTitle || 'Untitled'}"
+    Authors: ${paper?.authorDisplay || 'Unknown'}
+    Year: ${new Date(paper?.publishedAt || Date.now()).getFullYear()}
+    Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
+    Abstract: ${paper?.abstract || 'No abstract available'}
+    === END OF PAPER METADATA ===
 
-    IMPORTANT: The full PDF manuscript is attached below. Read it thoroughly before answering any questions. Base your answers primarily on the actual content of the PDF, not just the abstract.
+    CRITICAL: If a PDF is attached below, that PDF is the ONLY paper you should analyze. Ignore any other papers you may have been trained on. Your answers must be 100% based on THIS specific paper's content.
     `;
     
     const initialUserParts = [{ text: developerPrompt }];
