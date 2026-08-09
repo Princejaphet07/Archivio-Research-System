@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import logo from '../assets/logo.png';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -204,25 +204,34 @@ export default function HomepageChatbot() {
     setShowSidebar(false);
   };
 
-  const clearChat = () => {
-    Swal.fire({
-      title: 'Clear Conversation?',
-      text: "Are you sure you want to clear this conversation and start a new topic?",
+  const deleteConversation = async (chatId, e) => {
+    e.stopPropagation();
+    const result = await Swal.fire({
+      title: 'Delete Chat?',
+      text: "Are you sure you want to permanently delete this conversation?",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#7a2039',
+      confirmButtonColor: '#d33',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, clear it!',
+      confirmButtonText: 'Yes, delete it!',
       customClass: {
         popup: 'dark:bg-gray-800 dark:text-gray-100',
         title: 'dark:text-gray-100',
       }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setChatHistory(defaultGreeting);
-        setCurrentChatId(null);
-      }
     });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'userChats', currentUser.uid, 'conversations', chatId));
+        setConversations(prev => prev.filter(c => c.id !== chatId));
+        if (currentChatId === chatId) {
+          setChatHistory(defaultGreeting);
+          setCurrentChatId(null);
+        }
+      } catch (err) {
+        console.error("Failed to delete chat", err);
+      }
+    }
   };
 
   const updateAndSaveHistory = async (newHistory, explicitChatId = null) => {
@@ -383,13 +392,6 @@ export default function HomepageChatbot() {
             </div>
             <div className="flex items-center gap-1">
               <button 
-                onClick={clearChat}
-                title="Clear Chat / New Topic"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer text-white/60 hover:text-white hover:bg-white/10"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-              </button>
-              <button 
                 onClick={() => {
                   if (isVoiceEnabled) window.speechSynthesis.cancel();
                   setIsVoiceEnabled(!isVoiceEnabled);
@@ -425,13 +427,21 @@ export default function HomepageChatbot() {
                   <p className="text-sm text-stone-400 px-2 py-2">No history yet.</p>
                 )}
                 {conversations.map(conv => (
-                  <button 
-                    key={conv.id}
-                    onClick={() => loadChat(conv.id, conv.history)}
-                    className={`w-full text-left p-3 rounded-lg text-sm truncate mb-1 transition cursor-pointer ${currentChatId === conv.id ? 'bg-stone-100 dark:bg-gray-700 font-bold text-stone-800 dark:text-gray-100' : 'text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700/50'}`}
-                  >
-                    💬 {conv.title || 'Conversation'}
-                  </button>
+                  <div key={conv.id} className="relative group mb-1">
+                    <button 
+                      onClick={() => loadChat(conv.id, conv.history)}
+                      className={`w-full text-left p-3 pr-10 rounded-lg text-sm truncate transition cursor-pointer ${currentChatId === conv.id ? 'bg-stone-100 dark:bg-gray-700 font-bold text-stone-800 dark:text-gray-100' : 'text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700/50'}`}
+                    >
+                      💬 {conv.title || 'Conversation'}
+                    </button>
+                    <button
+                      onClick={(e) => deleteConversation(conv.id, e)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
+                      title="Delete Conversation"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
