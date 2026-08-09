@@ -194,11 +194,11 @@ export default function HomepageChatbot() {
   };
 
   const suggestions = [
-    "What are the latest research papers?",
-    "How do I search for a specific topic?",
-    "Can you help me brainstorm a research title?",
-    "What are the requirements for uploading?",
-    "Summarize the main features of Archivio."
+    "Latest research papers?",
+    "How to search?",
+    "Brainstorm a title",
+    "Upload requirements",
+    "About Archivio"
   ];
 
   // Hide the chatbot on the viewer page (has its own AI) and login page
@@ -294,12 +294,12 @@ export default function HomepageChatbot() {
 
           {/* Suggestions */}
           {chatHistory.length <= 1 && !isTyping && (
-            <div className="flex flex-wrap gap-2 px-4 pb-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700">
+            <div className="flex overflow-x-auto whitespace-nowrap scrollbar-hide gap-2 px-4 pb-3 pt-1 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700">
               {suggestions.map((text, idx) => (
                 <button
                   key={idx}
                   onClick={() => sendMessage(text)}
-                  className="text-xs bg-white dark:bg-gray-800 border border-[#7a2039]/40 text-[#7a2039] dark:text-[#f3e5ab] px-3 py-1.5 rounded-full hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-[#7a2039] transition-colors text-left shadow-sm"
+                  className="shrink-0 text-[11.5px] bg-white dark:bg-gray-800 border border-[#7a2039]/30 text-[#7a2039] dark:text-[#f3e5ab] px-3.5 py-1.5 rounded-full hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-[#7a2039] transition-colors shadow-sm"
                 >
                   {text}
                 </button>
