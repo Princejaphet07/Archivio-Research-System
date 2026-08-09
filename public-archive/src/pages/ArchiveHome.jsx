@@ -12,7 +12,49 @@ function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
+  const [placeholderText, setPlaceholderText] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const phrases = [
+      'Search for "Computer Science"...',
+      'Search for "Nursing"...',
+      'Search by author name...',
+      'Search keywords...',
+    ];
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    let timer;
+
+    const type = () => {
+      const currentPhrase = phrases[phraseIndex];
+      
+      if (isDeleting) {
+        setPlaceholderText(currentPhrase.substring(0, charIndex - 1));
+        charIndex--;
+      } else {
+        setPlaceholderText(currentPhrase.substring(0, charIndex + 1));
+        charIndex++;
+      }
+
+      let speed = isDeleting ? 50 : 100;
+
+      if (!isDeleting && charIndex === currentPhrase.length) {
+        speed = 2000; // Pause at end of phrase
+        isDeleting = true;
+      } else if (isDeleting && charIndex === 0) {
+        isDeleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        speed = 500; // Pause before new phrase
+      }
+
+      timer = setTimeout(type, speed);
+    };
+
+    timer = setTimeout(type, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -169,8 +211,8 @@ function ArchiveHome() {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by title, author, keywords..."
-                className="w-full py-3 pl-12 pr-4 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base"
+                placeholder={placeholderText}
+                className="w-full py-3 pl-12 pr-4 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base placeholder-stone-400/70 dark:placeholder-gray-500 transition-all"
               />
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
@@ -207,46 +249,50 @@ function ArchiveHome() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
           {loading ? (
             [1, 2, 3].map(n => (
-              <div key={n} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between animate-pulse h-64">
+              <div key={n} className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-gray-700/50 flex flex-col justify-between h-64 relative overflow-hidden">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent"></div>
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <div className="h-5 w-24 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
-                    <div className="h-4 w-10 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
+                    <div className="h-6 w-28 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="h-5 w-12 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
                   </div>
-                  <div className="h-6 w-3/4 bg-stone-300 dark:bg-gray-600 rounded mb-2"></div>
-                  <div className="h-6 w-1/2 bg-stone-300 dark:bg-gray-600 rounded mb-4"></div>
-                  <div className="h-3 w-1/3 bg-[#e5d4a6] dark:bg-gray-700 rounded mb-4"></div>
+                  <div className="h-7 w-3/4 bg-stone-300/70 dark:bg-gray-600 rounded mb-3 animate-pulse"></div>
+                  <div className="h-7 w-1/2 bg-stone-300/70 dark:bg-gray-600 rounded mb-5 animate-pulse"></div>
+                  <div className="h-4 w-1/3 bg-stone-200/70 dark:bg-gray-700 rounded mb-4 animate-pulse"></div>
                 </div>
-                <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#e5d4a6]/30 dark:border-gray-700">
-                  <div className="h-5 w-16 bg-[#e5d4a6] dark:bg-gray-700 rounded"></div>
-                  <div className="h-8 w-24 bg-stone-300 dark:bg-gray-600 rounded"></div>
+                <div className="flex justify-between items-center mt-8 pt-4 border-t border-stone-200/50 dark:border-gray-700/50">
+                  <div className="h-5 w-16 bg-stone-200/70 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-9 w-24 bg-stone-300/70 dark:bg-gray-600 rounded animate-pulse"></div>
                 </div>
               </div>
             ))
           ) : (
             publishedPapers.slice(0, 3).map((paper, idx) => (
-              <div key={paper.id} className="bg-[#f2ead3] dark:bg-gray-800 rounded-xl p-6 shadow-md border border-[#e5d4a6] dark:border-gray-700 flex flex-col justify-between transition-colors">
-                <div>
+              <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden">
+                {/* Subtle Glow Effect on Hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                
+                <div className="relative z-10">
                   <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
-                    <span className="px-2 py-1 border border-stone-300 dark:border-gray-600 rounded bg-[#e8debe] dark:bg-gray-700 truncate max-w-[150px] text-stone-800 dark:text-gray-200">
+                    <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[150px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
                       {paper.program || 'Research'}
                     </span>
-                    <span>{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
+                    <span className="font-medium bg-stone-100 dark:bg-gray-800 px-2 py-1 rounded-md">{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
                   </div>
-                  <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3" title={paper.researchTitle || 'Untitled Research'}>
+                  <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3 group-hover:text-[#7a2039] dark:group-hover:text-[#f3e5ab] transition-colors" title={paper.researchTitle || 'Untitled Research'}>
                     {paper.researchTitle || 'Untitled Research'}
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-gray-400 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
                   <p className="text-[11px] text-stone-500 dark:text-gray-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
                   <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
                     {paper.keywords?.slice(0, 3).map(kw => (
-                      <span key={kw} className="px-2 py-1 bg-stone-200/50 dark:bg-gray-700 rounded-full border border-stone-300 dark:border-gray-600 dark:text-gray-300">
+                      <span key={kw} className="px-2 py-1 bg-stone-200/40 dark:bg-gray-700/50 rounded-full border border-stone-200/60 dark:border-gray-600/50 dark:text-gray-300">
                         {kw}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="flex justify-between items-center mt-8">
+                <div className="flex justify-between items-center mt-8 relative z-10">
                   <div className="text-xs text-stone-500 flex gap-3 font-medium">
                     <span
                       onClick={(e) => handleLike(e, paper)}
@@ -265,7 +311,7 @@ function ArchiveHome() {
                       {paper.views || 0}
                     </span>
                   </div>
-                  <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#3d0c1b] text-white text-xs rounded hover:bg-[#24050f] transition cursor-pointer inline-block">
+                  <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#7a2039] text-white text-xs font-medium rounded-lg hover:bg-[#5a1528] transition-colors cursor-pointer inline-block shadow-sm">
                     View Paper
                   </Link>
                 </div>
