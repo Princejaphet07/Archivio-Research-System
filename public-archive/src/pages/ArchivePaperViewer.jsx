@@ -23,6 +23,7 @@ function ArchivePaperViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(null);
+  const [relatedPapers, setRelatedPapers] = useState([]);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -142,6 +143,31 @@ function ArchivePaperViewer() {
       unsubGroup();
     };
   }, [id]);
+
+  // Fetch Related Researches
+  useEffect(() => {
+    if (!paper || (!paper.program && !paper.category)) return;
+    
+    const fetchRelated = async () => {
+      try {
+        const qRelated = query(
+          collection(db, 'submissions'),
+          where('reviewStatus', '==', 'published'),
+          where('program', '==', paper.program || paper.category)
+        );
+        const snapshot = await getDocs(qRelated);
+        const related = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(doc => doc.id !== paper.id) // Exclude current paper
+          .slice(0, 4); // Limit to 4 papers
+          
+        setRelatedPapers(related);
+      } catch (err) {
+        console.error('Failed to fetch related papers', err);
+      }
+    };
+    fetchRelated();
+  }, [paper?.id, paper?.program, paper?.category]);
 
   // Increment view count when paper viewer opens
   useEffect(() => {
@@ -433,6 +459,12 @@ function ArchivePaperViewer() {
           </div>
           
           <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Cite">❞</button>
+          
+          <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
+
+          <button onClick={() => handleTabClick('related')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'related' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Related Researches">
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+          </button>
         </div>
 
         {/* EXPANDABLE SIDEBAR PANEL */}
@@ -500,6 +532,34 @@ function ArchivePaperViewer() {
                       {authorName} ({year}). {title}. SWU PHINMA.
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'related' && (
+              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Related Researches</h2>
+                <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
+                  {relatedPapers.length > 0 ? (
+                    relatedPapers.map(rp => (
+                      <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded p-4 shadow-sm hover:shadow-md transition">
+                        <span className="text-[10px] bg-stone-100 dark:bg-gray-600 px-2 py-1 rounded text-stone-600 dark:text-gray-300 font-medium mb-2 inline-block truncate max-w-full">
+                          {rp.program || 'Research'}
+                        </span>
+                        <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-1 line-clamp-2" title={rp.researchTitle || rp.title}>
+                          {rp.researchTitle || rp.title || 'Untitled Research'}
+                        </h3>
+                        <p className="text-[10px] text-stone-500 dark:text-gray-400 mb-3 truncate">{rp.studentName || rp.groupName || 'Unknown Author'}</p>
+                        <a href={`/viewer/${rp.id}`} className="text-[10px] bg-[#7a2039] text-white px-3 py-2 rounded hover:bg-[#5a1528] transition inline-block text-center w-full shadow-sm font-medium">
+                          Read Paper
+                        </a>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-stone-500 dark:text-gray-400 text-xs mt-10">
+                      No related researches found for this department.
+                    </div>
+                  )}
                 </div>
               </div>
             )}

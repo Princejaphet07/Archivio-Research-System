@@ -13,6 +13,7 @@ function ArchiveBrowse() {
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
   const [sortOption, setSortOption] = useState('Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -22,10 +23,16 @@ function ArchiveBrowse() {
     setCurrentPage(1);
   };
 
+  const toggleDepartment = (dept) => {
+    setSelectedDepartments(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]);
+    setCurrentPage(1);
+  };
+
   const clearAll = () => {
     setSearchQuery('');
     setSortOption('Newest First');
     setSelectedYears([]);
+    setSelectedDepartments([]);
     setCurrentPage(1);
   };
 
@@ -111,7 +118,10 @@ function ArchiveBrowse() {
     const pubYear = new Date(paper.publishedAt || paper.createdAt || Date.now()).getFullYear().toString();
     const matchesYear = selectedYears.length === 0 || selectedYears.includes(pubYear);
     
-    return matchesSearch && matchesYear;
+    // Department filter logic
+    const matchesDept = selectedDepartments.length === 0 || selectedDepartments.includes(paper.program || paper.category);
+    
+    return matchesSearch && matchesYear && matchesDept;
   }).sort((a, b) => {
     if (sortOption === 'Newest First') {
       return new Date(b.publishedAt || b.createdAt || 0) - new Date(a.publishedAt || a.createdAt || 0);
@@ -123,6 +133,9 @@ function ArchiveBrowse() {
     }
     if (sortOption === 'Most Viewed') {
       return (b.views || 0) - (a.views || 0);
+    }
+    if (sortOption === 'Most Liked') {
+      return (b.likes?.length || 0) - (a.likes?.length || 0);
     }
     return 0;
   });
@@ -156,6 +169,7 @@ function ArchiveBrowse() {
           >
             <option value="Newest First">Sort: Newest First</option>
             <option value="Most Viewed">Sort: Most Viewed</option>
+            <option value="Most Liked">Sort: Most Liked</option>
             <option value="A-Z">Sort: A-Z</option>
           </select>
         </div>
@@ -192,7 +206,7 @@ function ArchiveBrowse() {
             <div>
               <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Publication Year</h3>
               <div className="space-y-2">
-                {['2026', '2025', '2024', '2023'].map(year => (
+                {['2026', '2025', '2024', '2023', '2022'].map(year => (
                   <label key={year} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                     <input 
                       type="checkbox" 
@@ -201,6 +215,23 @@ function ArchiveBrowse() {
                       onChange={() => toggleYear(year)}
                     />
                     <span className="group-hover:text-[#7a2039] transition">{year}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Department</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                {['Computer Science', 'Information Technology', 'Nursing', 'Business', 'Education', 'Engineering', 'Architecture', 'Pharmacy'].map(dept => (
+                  <label key={dept} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 accent-[#7a2039] cursor-pointer"
+                      checked={selectedDepartments.includes(dept)}
+                      onChange={() => toggleDepartment(dept)}
+                    />
+                    <span className="group-hover:text-[#7a2039] transition">{dept}</span>
                   </label>
                 ))}
               </div>
