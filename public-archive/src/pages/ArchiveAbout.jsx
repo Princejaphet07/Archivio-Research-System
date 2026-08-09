@@ -1,8 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { db } from '../firebase/config';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+
+const AnimatedCounter = ({ target }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const duration = 2000;
+    if (target === 0) return;
+    const increment = target / (duration / 16);
+    
+    const animate = () => {
+      start += increment;
+      if (start < target) {
+        setCount(Math.ceil(start));
+        requestAnimationFrame(animate);
+      } else {
+        setCount(target);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [target]);
+
+  return <>{count.toLocaleString()}</>;
+};
 
 function ArchiveAbout() {
+  const [stats, setStats] = useState({ papers: 0, authors: 0, advisers: 0, departments: 0 });
+
+  useEffect(() => {
+    const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
+    
+    const unsubSubs = onSnapshot(qSubs, (snapshot) => {
+      const papers = snapshot.docs.map(d => d.data());
+      
+      const uniqueAuthors = new Set();
+      const uniqueAdvisers = new Set();
+      const uniqueDepartments = new Set();
+
+      papers.forEach(p => {
+        if (p.studentUid) uniqueAuthors.add(p.studentUid);
+        else if (p.studentName) uniqueAuthors.add(p.studentName);
+
+        if (p.adviserName) uniqueAdvisers.add(p.adviserName);
+        if (p.program || p.category) uniqueDepartments.add(p.program || p.category);
+      });
+
+      setStats({
+        papers: papers.length,
+        authors: uniqueAuthors.size || 0,
+        advisers: uniqueAdvisers.size || 0,
+        departments: uniqueDepartments.size || 0
+      });
+    });
+
+    return () => unsubSubs();
+  }, []);
+
   return (
     <div className="font-serif min-h-screen flex flex-col bg-white dark:bg-gray-900 transition-colors">
       <Header />
@@ -72,28 +130,89 @@ function ArchiveAbout() {
             <div className="bg-[#7a2039] rounded-xl p-10 shadow-lg grid grid-cols-2 gap-y-10 gap-x-4 text-center divide-x divide-white/10">
               
               <div className="px-2">
-                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2">1,248</h3>
+                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2"><AnimatedCounter target={stats.papers} /></h3>
                 <p className="text-[10px] font-sans text-stone-200 uppercase tracking-wider">Papers Archived</p>
               </div>
               
               <div className="px-2">
-                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2">342</h3>
+                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2"><AnimatedCounter target={stats.authors} /></h3>
                 <p className="text-[10px] font-sans text-stone-200 uppercase tracking-wider">Student Authors</p>
               </div>
               
               <div className="px-2">
-                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2">89</h3>
+                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2"><AnimatedCounter target={stats.advisers} /></h3>
                 <p className="text-[10px] font-sans text-stone-200 uppercase tracking-wider">Faculty Advisers</p>
               </div>
               
               <div className="px-2">
-                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2">14</h3>
+                <h3 className="text-4xl font-bold text-[#d6ad60] mb-2"><AnimatedCounter target={stats.departments} /></h3>
                 <p className="text-[10px] font-sans text-stone-200 uppercase tracking-wider">Departments</p>
               </div>
 
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* SYSTEM FEATURES HIGHLIGHT */}
+      <div className="py-20 px-4 md:px-16 max-w-7xl mx-auto w-full">
+        <div className="text-center mb-12">
+          <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-2">Powered by Technology</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-gray-100">Premium Features</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
+            <div className="text-4xl mb-4">🤖</div>
+            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">AI-Powered Assistant</h3>
+            <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">An intelligent chatbot ready to summarize abstracts, suggest topics, and answer research queries instantly.</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
+            <div className="text-4xl mb-4">🔒</div>
+            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Secure Viewer</h3>
+            <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Advanced anti-screenshot and anti-print measures to protect the intellectual property of student researchers.</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
+            <div className="text-4xl mb-4">📑</div>
+            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Instant Citations</h3>
+            <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Automatically generate accurate APA, MLA, and Chicago citations for any published research paper.</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
+            <div className="text-4xl mb-4">🔍</div>
+            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Advanced Filtering</h3>
+            <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Easily find exactly what you need with fast, categorized searching by department, year, and popularity.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* MEET THE DEVELOPERS SECTION */}
+      <div className="bg-stone-900 text-white py-20 px-4 md:px-16 border-t border-stone-800">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <p className="text-[#d6ad60] text-xs font-bold tracking-[0.2em] uppercase font-sans mb-2">The Minds Behind The System</p>
+            <h2 className="text-3xl md:text-4xl font-bold">Meet The Developers</h2>
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-center gap-12 md:gap-24">
+            
+            <div className="flex flex-col items-center text-center group">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-5xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                👨‍💻
+              </div>
+              <h3 className="text-xl font-bold text-[#f3e5ab] mb-1">Prince Japhet Vender</h3>
+              <p className="text-sm font-sans text-stone-400 uppercase tracking-wider">Lead Developer / System Architect</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center group">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800 border-4 border-[#7a2039] mb-4 flex items-center justify-center text-5xl overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                👩‍💻
+              </div>
+              <h3 className="text-xl font-bold text-[#f3e5ab] mb-1">Jerika Zamoras</h3>
+              <p className="text-sm font-sans text-stone-400 uppercase tracking-wider">UI/UX Designer / Researcher</p>
+            </div>
+            
+          </div>
         </div>
       </div>
 
