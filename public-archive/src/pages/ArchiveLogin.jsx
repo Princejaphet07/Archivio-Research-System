@@ -6,7 +6,6 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthP
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
-import edge from '../assets/edge.png'; 
 import bg from '../assets/parchment.png';
 
 function ArchiveLogin() {
@@ -141,15 +140,7 @@ function ArchiveLogin() {
       </button>
 
       {/* LEFT SIDE: Maroon Panel */}
-      <div className="w-full md:w-[45%] h-[25vh] md:h-full bg-[#24050f] text-white flex flex-col justify-center md:justify-between p-6 md:p-12 relative z-20 shadow-xl md:shadow-none">
-        
-        <img 
-          src={edge} 
-          alt="Torn Edge" 
-          className="hidden md:block absolute top-0 right-0 h-full w-14 translate-x-1/2 pointer-events-none z-50 object-cover"
-        />
-
-        <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-6 relative z-30">
+      <div className="w-full md:w-[45%] h-[25vh] md:h-full bg-[#24050f] text-white flex flex-col justify-center md:justify-between p-6 md:p-12 relative z-20 shadow-xl md:shadow-[15px_0_30px_-5px_rgba(0,0,0,0.6)]">        <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-6 relative z-30">
           <div className="bg-white/5 p-2 rounded-full mb-1 hidden md:block">
             <img src={logo} alt="Archivio Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-lg" />
           </div>
