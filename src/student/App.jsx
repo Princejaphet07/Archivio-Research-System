@@ -4,8 +4,7 @@ import StudentSignup from './pages/StudentSignup';
 import StudentActivate from './pages/StudentActivate';
 import StudentForgotPassword from './pages/StudentForgotPassword';
 import StudentDashboard from './pages/StudentDashboard';
-import ResearchPage from './pages/ResearchPage';
-import ResearchUpload from './pages/ResearchUpload';
+
 import ManuscriptPage from './pages/ManuscriptPage';
 import RequirementsPage from './pages/RequirementsPage';
 import ProgressPage from './pages/ProgressPage';
@@ -153,13 +152,7 @@ function App() {
     }
   };
 
-  const handleUploadClick = () => {
-    setCurrentPage('upload');
-  };
 
-  const handleBackToResearch = () => {
-    setCurrentPage('research');
-  };
 
   const handleNavigation = (tabName) => {
     setActiveTab(tabName);
@@ -175,8 +168,6 @@ function App() {
       setCurrentPage('mygroup'); 
     } else if (tabName === 'Settings') { // 2. Added routing logic for Settings
       setCurrentPage('settings'); 
-    } else if (tabName === 'Research') {
-      setCurrentPage('research');
     }
   };
 
@@ -226,7 +217,6 @@ function App() {
           leaderUid={studentInfo.leaderUid}
           groupName={studentInfo.groupName}
           adviserName={studentInfo.adviserName}
-          onUploadClick={handleUploadClick}
           activeTab={activeTab}
           setActiveTab={handleNavigation}
         />
@@ -296,25 +286,7 @@ function App() {
           setActiveTab={handleNavigation}
         />
       )}
-      {currentPage === 'research' && (
-        <ResearchPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          onUploadClick={handleUploadClick}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {currentPage === 'upload' && (
-        <ResearchUpload
-          onBackToResearch={handleBackToResearch}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-        />
-      )}
+
 
       {/* Global Chat Widget - Rendered when logged in */}
       {auth.currentUser && !['login', 'signup', 'forgot-password', 'activate'].includes(currentPage) && (

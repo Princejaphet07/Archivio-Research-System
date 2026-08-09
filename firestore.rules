@@ -21,6 +21,10 @@ service cloud.firestore {
     function isAdviser() {
       return isAuthenticated() && (getUserRole() == 'adviser' || getUserRole() == 'dean+adviser');
     }
+    function isGroupMember(groupId) {
+      let groupData = get(/databases/$(database)/documents/groups/$(groupId)).data;
+      return isAuthenticated() && (request.auth.uid == groupData.leaderUid || (groupData.coAuthors != null && request.auth.uid in groupData.coAuthors));
+    }
 
     // 2. Protect Users & Profiles
     match /users/{userId} {
@@ -101,7 +105,7 @@ service cloud.firestore {
       // Public can read published papers. Logged in users can read all.
       allow read: if (resource.data.reviewStatus == 'published' || resource.data.status == 'published') || isAuthenticated();
       // To create/update/delete, must be admin, dean, adviser, or the student owner
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && (isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid);
       allow update, delete: if isSystemAdmin() || isDean() || isAdviser() || resource.data.studentUid == request.auth.uid;
     }
     
@@ -120,17 +124,15 @@ service cloud.firestore {
     }
     
     match /chats/{groupId}/messages/{messageId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAuthenticated() && (isSystemAdmin() || isDean() || isAdviser() || isGroupMember(groupId));
     }
     
     match /user_bookmarks/{userId} {
       allow read, write: if request.auth.uid == userId;
     }
     
-    match /activity_logs/{docId} {
+    match /activity_logs_backup/{docId} {
       allow read: if isSystemAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if isSystemAdmin();
     }
 
     // 5. Fallback Default Deny
