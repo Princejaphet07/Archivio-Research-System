@@ -25,8 +25,19 @@ function ArchiveLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Where to redirect after login (e.g., if they tried to view a paper first)
+  // Where to redirect after login
   const from = location.state?.from?.pathname || '/';
+
+  const calculatePasswordStrength = (pass) => {
+    let score = 0;
+    if (!pass) return 0;
+    if (pass.length > 6) score += 1;
+    if (pass.length > 10) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+    return Math.min(score, 4);
+  };
 
   useEffect(() => {
     const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
@@ -181,15 +192,38 @@ function ArchiveLogin() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-6 md:p-10 rounded-2xl shadow-xl max-w-md w-full border border-stone-200/60 dark:border-gray-700 flex flex-col items-center transition-colors my-auto md:my-auto pb-8 md:pb-10">
-          <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1 mt-6 md:mt-0">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-6 md:p-10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] max-w-md w-full border border-white/40 dark:border-gray-700/50 flex flex-col items-center transition-colors my-auto md:my-auto pb-8 md:pb-10 relative">
+          
+          {/* Animated Toggle Switch */}
+          <div className="flex bg-stone-200/50 dark:bg-gray-800/50 p-1 rounded-full mb-6 w-full max-w-[240px] relative mt-2 md:mt-0">
+            <div 
+              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-gray-700 rounded-full shadow-sm transition-transform duration-300 ease-in-out"
+              style={{ transform: isLogin ? 'translateX(0)' : 'translateX(100%)', left: '4px' }}
+            ></div>
+            <button 
+              type="button"
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 text-xs font-bold py-2 rounded-full relative z-10 transition-colors ${isLogin ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
+            >
+              Sign In
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 text-xs font-bold py-2 rounded-full relative z-10 transition-colors ${!isLogin ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <h3 className="text-2xl font-bold text-stone-800 dark:text-gray-100 tracking-wide mb-1">
             {isLogin ? 'Welcome Back' : 'Create an Account'}
           </h3>
           <p className="text-xs text-stone-500 dark:text-gray-400 text-center mb-6">
             {isLogin ? 'Sign in to access restricted papers and your reading list.' : 'Sign up to read restricted full texts and bookmark your favorites.'}
           </p>
 
-          <form onSubmit={handleEmailAuth} className="w-full space-y-5 mb-4 font-sans mt-2">
+          <form onSubmit={handleEmailAuth} className="w-full space-y-4 mb-4 font-sans">
             {!isLogin && (
               <div>
                 <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Full Name</label>
@@ -234,10 +268,35 @@ function ArchiveLogin() {
                 </button>
               </div>
               {isLogin && (
-                <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-[11px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab] transition-colors mt-1">
+                <div className="flex justify-end mt-1">
+                  <Link to="/forgot-password" className="text-[11px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab] transition-colors">
                     Forgot Password?
                   </Link>
+                </div>
+              )}
+              
+              {/* Password Strength Meter (Only for Signup) */}
+              {!isLogin && password && (
+                <div className="mt-2">
+                  <div className="flex gap-1 h-1.5 mb-1">
+                    {[1, 2, 3, 4].map(level => {
+                      const strength = calculatePasswordStrength(password);
+                      let bgColor = "bg-stone-200 dark:bg-gray-700";
+                      if (level <= strength) {
+                        if (strength <= 1) bgColor = "bg-red-500";
+                        else if (strength === 2) bgColor = "bg-orange-400";
+                        else if (strength === 3) bgColor = "bg-yellow-400";
+                        else bgColor = "bg-green-500";
+                      }
+                      return <div key={level} className={`flex-1 rounded-full transition-colors duration-300 ${bgColor}`}></div>;
+                    })}
+                  </div>
+                  <p className="text-[9px] text-stone-500 dark:text-gray-400 text-right">
+                    {calculatePasswordStrength(password) <= 1 && "Weak"}
+                    {calculatePasswordStrength(password) === 2 && "Fair"}
+                    {calculatePasswordStrength(password) === 3 && "Good"}
+                    {calculatePasswordStrength(password) === 4 && "Strong"}
+                  </p>
                 </div>
               )}
             </div>
@@ -288,15 +347,9 @@ function ArchiveLogin() {
             </button>
           </form>
 
-          <div className="w-full text-center mb-4">
-            <button 
-              type="button" 
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs text-[#5a1528] hover:underline font-sans cursor-pointer font-bold"
-            >
-              {isLogin ? "Don't have an account? Sign up here" : "Already have an account? Log in here"}
-            </button>
-          </div>
+          </form>
+
+          {/* Removed the old text-based toggle button here */}
 
           <div className="w-full flex items-center my-2">
             <div className="flex-1 h-[1px] bg-stone-200"></div>
