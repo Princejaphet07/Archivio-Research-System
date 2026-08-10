@@ -140,6 +140,33 @@ export default function PublishQueue({ activePage, onNavigate }) {
     }
   };
 
+  const handlePreview = (item) => {
+    const abstractHtml = item.abstract 
+      ? `<p style="font-size: 13px; text-align: justify; color: #555; margin-top: 10px;">${item.abstract}</p>`
+      : `<p style="font-size: 13px; font-style: italic; color: #999; margin-top: 10px;">No abstract provided.</p>`;
+      
+    Swal.fire({
+      title: `<span style="font-size: 20px; font-weight: bold; color: #1a1a1a;">${item.researchTitle}</span>`,
+      html: `
+        <div style="text-align: left;">
+          <p style="font-size: 12px; color: #7a1f3d; font-weight: bold; margin-bottom: 5px;">
+            ${item.authorDisplay} • Advised by ${item.adviserName}
+          </p>
+          <hr style="margin: 10px 0; border-color: #eee;" />
+          <div style="font-weight: bold; font-size: 13px; color: #333;">Abstract</div>
+          ${abstractHtml}
+        </div>
+      `,
+      width: 600,
+      showCloseButton: true,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#7a1f3d',
+      customClass: {
+        popup: 'rounded-2xl',
+      }
+    });
+  };
+
   const handlePublishAll = async () => {
     if (eligibleCount === 0) return;
     
@@ -303,7 +330,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
-                        <button className="px-4 py-1.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
+                        <button 
+                          onClick={() => handlePreview(item)}
+                          className="px-4 py-1.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
+                        >
                           Preview
                         </button>
                         <button
