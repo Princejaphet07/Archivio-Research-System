@@ -196,7 +196,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           toast: true,
           position: 'bottom-end',
           title: 'AI is reading your PDF...',
-          text: 'Extracting abstract, please wait.',
+          text: 'Generating an abstract based on your research, please wait.',
           showConfirmButton: false,
           didOpen: () => { Swal.showLoading(); }
         });
@@ -219,16 +219,16 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 toast: true,
                 position: 'bottom-end',
                 icon: 'success',
-                title: 'AI Auto-extracted abstract from PDF!',
+                title: 'AI successfully generated an abstract for this PDF!',
                 showConfirmButton: false,
                 timer: 4000
               });
-            } else if (res.status === 404) {
+            } else if (!res.ok) {
               Swal.fire({
                 toast: true,
                 position: 'bottom-end',
-                icon: 'warning',
-                title: 'AI could not find an Abstract in this PDF',
+                icon: 'error',
+                title: 'AI failed to generate an abstract',
                 showConfirmButton: false,
                 timer: 4000
               });

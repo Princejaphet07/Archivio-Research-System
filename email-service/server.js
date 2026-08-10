@@ -1358,11 +1358,10 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const prompt = `
-      You are an expert academic data extractor.
-      Your task is to find and extract the "Abstract" or "Summary" of the attached academic research paper PDF.
-      Please scan the document carefully to locate it. It is usually on the first few pages.
-      Return exactly the abstract text, and absolutely nothing else. Do not add labels like "Abstract:" at the beginning.
-      If there is truly no abstract or summary in this entire document, return exactly the word "NOT_FOUND".
+      You are an expert academic research assistant.
+      Read the attached academic research paper PDF thoroughly.
+      Generate a comprehensive and well-written "Abstract" (around 150-250 words) that summarizes the entire research paper, including the problem, methodology, results, and conclusion if available.
+      Return ONLY the generated abstract text, and absolutely nothing else. Do not add labels like "Abstract:" at the beginning.
     `;
 
     const response = await ai.models.generateContent({
@@ -1386,10 +1385,10 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     let rawText = response.text || '';
     rawText = rawText.trim();
     
-    console.log(`🤖 Extraction Result Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
+    console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
     
-    if (rawText === 'NOT_FOUND' || rawText === '') {
-      return res.status(404).json({ error: 'Abstract not found in the document' });
+    if (rawText === '') {
+      return res.status(500).json({ error: 'AI failed to generate an abstract from this document' });
     }
 
     res.json({ abstract: rawText });
