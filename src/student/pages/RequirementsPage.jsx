@@ -214,6 +214,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 showConfirmButton: false,
                 timer: 4000
               });
+            } else if (res.status === 404) {
+              Swal.fire({
+                toast: true,
+                position: 'bottom-end',
+                icon: 'warning',
+                title: 'AI could not find an Abstract in this PDF',
+                showConfirmButton: false,
+                timer: 4000
+              });
             }
           } catch (aiErr) {
             console.error('Background AI extraction failed:', aiErr);
