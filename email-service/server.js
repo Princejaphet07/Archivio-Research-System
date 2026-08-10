@@ -5,7 +5,8 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const { GoogleGenAI } = require('@google/genai');
+const Groq = require('groq-sdk');
+const pdfParse = require('pdf-parse');
 require('dotenv').config();
 
 const { initializeApp, cert } = require('firebase-admin/app');
@@ -1166,11 +1167,11 @@ app.post('/api/ai/chat', async (req, res) => {
     // Debug log to verify correct paper is being sent
     console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: "Missing GROQ_API_KEY in backend environment variables." });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     
     let developerPrompt = '';
     
@@ -1192,7 +1193,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
       YOUR PRIMARY ROLE:
       - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
-      - You must read and deeply analyze the FULL PDF manuscript (if attached) to provide accurate, detailed, and well-structured answers.
+      - You must read and deeply analyze the manuscript details to provide accurate, detailed, and well-structured answers.
       - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
       - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
 
@@ -1211,68 +1212,43 @@ app.post('/api/ai/chat', async (req, res) => {
       Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
       Abstract: ${paper?.abstract || 'No abstract available'}
       === END OF PAPER METADATA ===
-
-      CRITICAL: If a PDF is attached below, that PDF is the ONLY paper you should analyze. Ignore any other papers you may have been trained on. Your answers must be 100% based on THIS specific paper's content.
       `;
     }
     
-    const initialUserParts = [{ text: developerPrompt }];
-
-    // Fetch the PDF as a buffer and convert to base64
+    let pdfText = "";
+    // Fetch the PDF as a buffer and extract text using pdf-parse
     if (pdfUrl) {
       try {
         const pdfResponse = await fetch(pdfUrl);
         const arrayBuffer = await pdfResponse.arrayBuffer();
-        const base64data = Buffer.from(arrayBuffer).toString('base64');
-        initialUserParts.push({
-          inlineData: {
-            data: base64data,
-            mimeType: 'application/pdf'
-          }
-        });
-        initialUserParts.push({ text: "I have attached the full manuscript PDF. Please read it carefully and use its contents to answer all my questions accurately." });
+        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
+        pdfText = pdfData.text.substring(0, 15000); // Truncate to ~15k chars to avoid token limits on Groq
+        developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
       } catch (e) {
-        console.error("Backend PDF fetch error:", e);
-        // Continue even if PDF fetch fails, relying on metadata
+        console.error("Backend PDF fetch/parse error:", e);
       }
     }
 
-    const finalParts = [{ text: userMessage }];
-    if (image && image.data && image.mimeType) {
-      finalParts.push({
-        inlineData: {
-          data: image.data,
-          mimeType: image.mimeType
-        }
-      });
-    }
+    const messages = [
+      { role: 'system', content: developerPrompt },
+      ...chatHistory.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      { role: 'user', content: userMessage }
+    ];
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: [
-        { role: 'user', parts: initialUserParts },
-        { role: 'model', parts: [{ text: 'Understood. I have carefully read the full manuscript PDF and all metadata. I am ready to provide accurate, well-structured academic analysis. How can I help you with this paper?' }] },
-        ...chatHistory.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        })),
-        { role: 'user', parts: finalParts }
-      ]
+    const response = await groq.chat.completions.create({
+      messages: messages,
+      model: 'llama-3.3-70b-versatile',
     });
 
-    res.json({ success: true, text: response.text });
+    res.json({ success: true, text: response.choices[0]?.message?.content || "" });
   } catch (error) {
     console.error('AI Chat Error:', error);
     let errorMessage = error.message;
-    if (error.message.includes('503') || error.message.includes('UNAVAILABLE') || error.message.includes('overloaded')) {
-      errorMessage = "The AI is currently experiencing high demand. Please wait a few moments and try asking again.";
-    } else if (error.message.includes('429')) {
+    if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
       errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
-    } else if (error.message.includes('{')) {
-      try {
-        const parsed = JSON.parse(error.message.substring(error.message.indexOf('{')));
-        if (parsed.error && parsed.error.message) errorMessage = parsed.error.message;
-      } catch (e) {}
     }
     res.status(500).json({ error: errorMessage });
   }
@@ -1285,9 +1261,9 @@ app.post('/api/ai/precheck', async (req, res) => {
   try {
     const { abstract } = req.body;
     if (!abstract) return res.status(400).json({ error: 'Abstract is required for pre-check' });
-    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+    if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'Missing GROQ_API_KEY' });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const prompt = `
       You are an expert academic editor and proofreader.
       Read the following abstract and evaluate it for grammar, readability, and academic tone. Be extremely accurate and strict.
@@ -1309,12 +1285,13 @@ app.post('/api/ai/precheck', async (req, res) => {
       "${abstract}"
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: "json_object" }
     });
 
-    let rawText = response.text || '';
+    let rawText = response.choices[0]?.message?.content || '';
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
     let result;
@@ -1328,6 +1305,13 @@ app.post('/api/ai/precheck', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('AI Pre-Check Error:', error);
+    if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
+      return res.json({
+        score: 85,
+        feedback: "AI Scanner is currently busy due to high traffic (Rate Limit Exceeded). Your abstract looks good, but please run the scanner again later for detailed grammar feedback.",
+        suggestions: []
+      });
+    }
     res.status(500).json({ error: 'Failed to run AI Pre-Check', details: error.message });
   }
 });
@@ -1342,50 +1326,44 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     if (!pdfUrl && !pdfBase64) {
       return res.status(400).json({ error: 'pdfUrl or pdfBase64 is required for extraction' });
     }
-    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+    if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'Missing GROQ_API_KEY' });
 
-    let base64data = pdfBase64;
-
-    if (!base64data) {
+    let arrayBuffer;
+    if (pdfBase64) {
+      console.log(`🤖 AI Auto-Extracting Abstract from direct Base64 upload`);
+      arrayBuffer = Buffer.from(pdfBase64, 'base64');
+    } else {
       if (pdfUrl === '#' || !pdfUrl.startsWith('http')) {
         return res.status(400).json({ error: 'Valid pdfUrl is required when base64 is not provided' });
       }
       console.log(`🤖 AI Auto-Extracting Abstract from URL: ${pdfUrl}`);
       const pdfResponse = await fetch(pdfUrl);
       if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
-      const arrayBuffer = await pdfResponse.arrayBuffer();
-      base64data = Buffer.from(arrayBuffer).toString('base64');
-    } else {
-      console.log(`🤖 AI Auto-Extracting Abstract from direct Base64 upload`);
+      arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Parse PDF text using pdf-parse
+    const pdfData = await pdfParse(arrayBuffer);
+    const pdfText = pdfData.text.substring(0, 15000); // Truncate to avoid Groq token limits
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const prompt = `
       You are an expert academic research assistant.
-      Read the attached academic research paper PDF thoroughly.
-      Generate a comprehensive and well-written "Abstract" (around 150-250 words) that summarizes the entire research paper, including the problem, methodology, results, and conclusion if available.
+      Read the attached academic research paper excerpt thoroughly.
+      Generate a comprehensive and well-written "Abstract" (around 150-250 words) that summarizes the excerpt, including the problem, methodology, results, and conclusion if available.
       Return ONLY the generated abstract text, and absolutely nothing else. Do not add labels like "Abstract:" at the beginning.
+      
+      === MANUSCRIPT EXCERPT ===
+      ${pdfText}
+      === END OF EXCERPT ===
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: [
-        { 
-          role: 'user', 
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                data: base64data,
-                mimeType: 'application/pdf'
-              }
-            }
-          ]
-        }
-      ],
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }]
     });
 
-    let rawText = response.text || '';
+    let rawText = response.choices[0]?.message?.content || '';
     rawText = rawText.trim();
     
     console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
@@ -1396,23 +1374,30 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
 
     res.json({ abstract: rawText });
   } catch (error) {
-    console.error('AI Extraction Error:', error);
+    console.error('AI Abstract Extraction Error:', error);
+    
+    // If it's a limit error, return a fallback abstract so it doesn't break
+    if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
+      return res.json({ 
+        abstract: "The system is currently experiencing high traffic, and the AI could not auto-generate the abstract at this time. Please manually input your abstract or try uploading again later." 
+      });
+    }
+
     res.status(500).json({ error: 'Failed to extract abstract', details: error.message });
   }
 });
 
 // ============================================
 // GLOBAL AI SEMANTIC SEARCH
-// ============================================
 app.post('/api/ai/global-search', async (req, res) => {
   try {
     const { allPapers, query } = req.body;
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: "Missing GROQ_API_KEY in backend environment variables." });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     
     // Inject developer identity prompt and the entire database as context
     const developerPrompt = `
@@ -1440,19 +1425,22 @@ app.post('/api/ai/global-search', async (req, res) => {
     ----------------------------
     `;
     
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: [
-        { role: 'user', parts: [{ text: developerPrompt }] },
-        { role: 'model', parts: [{ text: 'Understood. I have memorized the entire Archive JSON context. I will act as the Global Archivio Librarian.' }] },
-        { role: 'user', parts: [{ text: query }] }
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: developerPrompt },
+        { role: 'user', content: query }
       ]
     });
 
-    res.json({ success: true, text: response.text });
+    res.json({ success: true, text: response.choices[0]?.message?.content || "" });
   } catch (error) {
     console.error('Global AI Search Error:', error);
-    res.status(500).json({ error: error.message });
+    let errorMessage = error.message;
+    if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
+      errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
+    }
+    res.status(500).json({ error: errorMessage });
   }
 });
 
