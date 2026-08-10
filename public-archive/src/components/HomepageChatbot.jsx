@@ -344,7 +344,7 @@ export default function HomepageChatbot() {
         - If the user speaks in Tagalog, reply in natural, conversational Tagalog. Avoid awkward or overly formal translations.
         - If the user speaks in Cebuano/Bisaya, reply in pure, natural, and conversational Bisaya (Cebuano). Do not use awkward slang or Tagalog-Bisaya mix unless the user does. Your Bisaya must be extremely fluent and authentic.
       `;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {
@@ -585,7 +585,7 @@ export default function HomepageChatbot() {
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={isTyping}
                 placeholder={isListening ? "Listening..." : "Ask me anything..."}
-                className="flex-1 border border-stone-300 dark:border-gray-600 bg-stone-50 dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors" 
+                className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-stone-50 dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors" 
               />
               <button
                 type="button"
