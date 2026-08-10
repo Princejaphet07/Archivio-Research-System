@@ -153,13 +153,21 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         : (file.size / 1024).toFixed(1) + ' KB';
 
       let pageCount = null;
+      let base64Pdf = null;
       if (item.title === 'Final Manuscript' && file.type === 'application/pdf') {
         try {
+          // Get base64 for AI extraction
+          const reader = new FileReader();
+          base64Pdf = await new Promise((resolve) => {
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await PDFDocument.load(arrayBuffer);
           pageCount = pdfDoc.getPageCount();
         } catch (pdfErr) {
-          console.warn('Failed to extract PDF pages:', pdfErr);
+          console.warn('Failed to extract PDF pages or base64:', pdfErr);
         }
       }
 
@@ -183,14 +191,16 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       });
 
       // Background AI Abstract Extraction
-      if (item.title === 'Final Manuscript' && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http') && savedDocId) {
+      if (item.title === 'Final Manuscript' && savedDocId && (base64Pdf || (fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')))) {
         setTimeout(async () => {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+            const payload = base64Pdf ? { pdfBase64: base64Pdf } : { pdfUrl: fileUrl };
+            
             const res = await fetch(`${backendUrl}/api/ai/extract-abstract`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pdfUrl: fileUrl })
+              body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (res.ok && data.abstract) {

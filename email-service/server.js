@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Email Configuration for Mailtrap
 const transporter = nodemailer.createTransport({
@@ -1334,19 +1334,27 @@ app.post('/api/ai/precheck', async (req, res) => {
 // ============================================
 app.post('/api/ai/extract-abstract', async (req, res) => {
   try {
-    const { pdfUrl } = req.body;
-    if (!pdfUrl || pdfUrl === '#' || !pdfUrl.startsWith('http')) {
-      return res.status(400).json({ error: 'Valid pdfUrl is required for extraction' });
+    const { pdfUrl, pdfBase64 } = req.body;
+    
+    if (!pdfUrl && !pdfBase64) {
+      return res.status(400).json({ error: 'pdfUrl or pdfBase64 is required for extraction' });
     }
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 
-    console.log(`🤖 AI Auto-Extracting Abstract from: ${pdfUrl}`);
+    let base64data = pdfBase64;
 
-    const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
-    
-    const arrayBuffer = await pdfResponse.arrayBuffer();
-    const base64data = Buffer.from(arrayBuffer).toString('base64');
+    if (!base64data) {
+      if (pdfUrl === '#' || !pdfUrl.startsWith('http')) {
+        return res.status(400).json({ error: 'Valid pdfUrl is required when base64 is not provided' });
+      }
+      console.log(`🤖 AI Auto-Extracting Abstract from URL: ${pdfUrl}`);
+      const pdfResponse = await fetch(pdfUrl);
+      if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
+      const arrayBuffer = await pdfResponse.arrayBuffer();
+      base64data = Buffer.from(arrayBuffer).toString('base64');
+    } else {
+      console.log(`🤖 AI Auto-Extracting Abstract from direct Base64 upload`);
+    }
     
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const prompt = `
