@@ -153,7 +153,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         : (file.size / 1024).toFixed(1) + ' KB';
 
       let pageCount = null;
-      if (item.id === 'Final Manuscript' && file.type === 'application/pdf') {
+      if (item.title === 'Final Manuscript' && file.type === 'application/pdf') {
         try {
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await PDFDocument.load(arrayBuffer);
@@ -183,7 +183,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       });
 
       // Background AI Abstract Extraction
-      if (item.id === 'Final Manuscript' && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http') && savedDocId) {
+      if (item.title === 'Final Manuscript' && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http') && savedDocId) {
         setTimeout(async () => {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
