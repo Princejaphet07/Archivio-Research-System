@@ -148,7 +148,17 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
       if (data.score < 60) color = '#DC2626'; // Red
 
       const suggestionsHtml = data.suggestions && data.suggestions.length > 0 
-        ? `<ul style="text-align: left; margin-top: 15px; font-size: 13px; color: #555;">${data.suggestions.map(s => `<li>• ${s}</li>`).join('')}</ul>`
+        ? `<ul style="text-align: left; margin-top: 15px; font-size: 13px; color: #555; list-style-type: none; padding: 0;">
+            ${data.suggestions.map(s => {
+              if (typeof s === 'string') return `<li style="margin-bottom: 8px;">• ${s}</li>`;
+              return `
+              <li style="margin-bottom: 12px; background: #fff; padding: 10px; border-radius: 6px; border-left: 4px solid #D97706; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="text-decoration: line-through; color: #DC2626; margin-bottom: 4px;">"${s.original}"</div>
+                <div style="color: #1E8E3E; font-weight: bold; margin-bottom: 4px;">"${s.suggested}"</div>
+                <div style="font-size: 11px; color: #666; font-style: italic;">Reason: ${s.reason}</div>
+              </li>`;
+            }).join('')}
+           </ul>`
         : '<p style="text-align: left; margin-top: 15px; font-size: 13px; color: #555;">No major suggestions. Looks great!</p>';
 
       Swal.fire({

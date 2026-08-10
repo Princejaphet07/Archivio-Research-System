@@ -1290,14 +1290,17 @@ app.post('/api/ai/precheck', async (req, res) => {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const prompt = `
       You are an expert academic editor and proofreader.
-      Read the following abstract and evaluate it for grammar, readability, and academic tone.
+      Read the following abstract and evaluate it for grammar, readability, and academic tone. Be extremely accurate and strict.
       Return the result in JSON format ONLY, matching this structure:
       {
         "score": 85,
         "feedback": "Overall good, but some sentences are too long.",
         "suggestions": [
-          "Change 'is going to' to 'will'",
-          "Break the second sentence into two shorter sentences."
+          {
+            "original": "The research is going to analyze...",
+            "suggested": "The research will analyze...",
+            "reason": "Uses a more formal academic tone."
+          }
         ]
       }
       Do NOT include markdown formatting like \`\`\`json. Just the raw JSON object.
