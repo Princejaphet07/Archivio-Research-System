@@ -1161,7 +1161,7 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // ============================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { paper, chatHistory, userMessage, pdfUrl, image } = req.body;
+    const { paper, chatHistory, userMessage, pdfUrl, image, paperContext } = req.body;
 
     // Debug log to verify correct paper is being sent
     console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
@@ -1172,38 +1172,49 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
-    // Inject developer identity prompt
-    const developerPrompt = `
-    === SYSTEM INSTRUCTIONS ===
-    You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System.
+    let developerPrompt = '';
     
-    YOUR IDENTITY:
-    - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
+    if (paperContext) {
+      developerPrompt = `
+      === SYSTEM INSTRUCTIONS ===
+      YOUR IDENTITY:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
+      
+      ${paperContext}
+      `;
+    } else {
+      developerPrompt = `
+      === SYSTEM INSTRUCTIONS ===
+      You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System.
+      
+      YOUR IDENTITY:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
 
-    YOUR PRIMARY ROLE:
-    - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
-    - You must read and deeply analyze the FULL PDF manuscript (if attached) to provide accurate, detailed, and well-structured answers.
-    - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
-    - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
+      YOUR PRIMARY ROLE:
+      - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
+      - You must read and deeply analyze the FULL PDF manuscript (if attached) to provide accurate, detailed, and well-structured answers.
+      - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
+      - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
 
-    RESPONSE FORMATTING RULES:
-    - Use clean, well-structured responses. Use bullet points, numbered lists, and bold text (**like this**) for key terms.
-    - Keep paragraphs short (2-3 sentences max).
-    - When summarizing, follow this structure: **Purpose → Methodology → Key Findings → Conclusion**.
-    - Use simple, clear academic English that a college student can easily understand.
-    - Do NOT use excessive emojis or informal language. Be professional but friendly.
-    - When citing specific parts of the paper, mention the chapter or section if possible.
+      RESPONSE FORMATTING RULES:
+      - Use clean, well-structured responses. Use bullet points, numbered lists, and bold text (**like this**) for key terms.
+      - Keep paragraphs short (2-3 sentences max).
+      - When summarizing, follow this structure: **Purpose → Methodology → Key Findings → Conclusion**.
+      - Use simple, clear academic English that a college student can easily understand.
+      - Do NOT use excessive emojis or informal language. Be professional but friendly.
+      - When citing specific parts of the paper, mention the chapter or section if possible.
 
-    === THE PAPER YOU ARE ANALYZING ===
-    Title: "${paper?.researchTitle || 'Untitled'}"
-    Authors: ${paper?.authorDisplay || 'Unknown'}
-    Year: ${new Date(paper?.publishedAt || Date.now()).getFullYear()}
-    Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
-    Abstract: ${paper?.abstract || 'No abstract available'}
-    === END OF PAPER METADATA ===
+      === THE PAPER YOU ARE ANALYZING ===
+      Title: "${paper?.researchTitle || 'Untitled'}"
+      Authors: ${paper?.authorDisplay || 'Unknown'}
+      Year: ${new Date(paper?.publishedAt || Date.now()).getFullYear()}
+      Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
+      Abstract: ${paper?.abstract || 'No abstract available'}
+      === END OF PAPER METADATA ===
 
-    CRITICAL: If a PDF is attached below, that PDF is the ONLY paper you should analyze. Ignore any other papers you may have been trained on. Your answers must be 100% based on THIS specific paper's content.
-    `;
+      CRITICAL: If a PDF is attached below, that PDF is the ONLY paper you should analyze. Ignore any other papers you may have been trained on. Your answers must be 100% based on THIS specific paper's content.
+      `;
+    }
     
     const initialUserParts = [{ text: developerPrompt }];
 
