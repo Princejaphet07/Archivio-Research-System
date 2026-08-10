@@ -144,6 +144,25 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         });
       }
 
+      // Send email to the new member
+      try {
+        await fetch('http://localhost:3001/api/send-student-invitation-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: newEmail,
+            invitationLink: window.location.origin + '/student/login',
+            senderName: studentData.displayName || studentData.email,
+            senderDepartment: studentData.department || 'Your Department',
+            message: 'I have added you to our research group in ARCHIVIO. Please sign up using this exact email to access our group portal.'
+          }),
+        });
+      } catch (emailErr) {
+        console.error('Error sending invitation email to member:', emailErr);
+      }
+
       // Refresh the page data locally
       const memberSnap = await getDocs(
         query(collection(db, 'students'), where('email', 'in', newGroupMembers.map(m => typeof m === 'object' ? m.email : m)))
