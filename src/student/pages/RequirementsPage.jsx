@@ -144,8 +144,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         const data = await res.json();
         fileUrl = data.secure_url;
       } catch (uploadErr) {
-        console.warn('Cloudinary upload failed. Saving metadata to Firestore anyway.', uploadErr);
-        fileUrl = '#'; // Fallback link
+        console.warn('Cloudinary upload failed. Falling back to Firebase Storage.', uploadErr);
+        try {
+          const fileRef = ref(storage, `requirements/${uid}/${Date.now()}_${file.name}`);
+          await uploadBytes(fileRef, file);
+          fileUrl = await getDownloadURL(fileRef);
+        } catch (fbErr) {
+          console.error('Firebase storage upload failed too:', fbErr);
+          fileUrl = '#'; // Ultimate fallback link
+        }
       }
 
       const sizeStr = file.size > 1024 * 1024
