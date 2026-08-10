@@ -294,81 +294,53 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   </div>
                 </div>
 
-                {/* ── KANBAN PROGRESS BOARD ──────────────────────────── */}
-                <div className="mt-8 mb-6">
-                  <div className="flex justify-between items-end mb-6">
-                    <div>
-                      <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A]">Approval Tracker</h3>
-                      <p className="text-[14px] text-gray-500 mt-1">Live Kanban tracking of your research manuscript.</p>
-                    </div>
+                {/* ── YOUR PROGRESS CARD ────────────────────────────── */}
+                <div className="bg-white border border-stone-200/80 rounded-xl p-8 shadow-sm mt-6 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-end mb-8">
+                    <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A]">Your Progress</h3>
+                    {loadingData ? (
+                      <div className="h-5 w-24 bg-stone-200 rounded animate-pulse" />
+                    ) : (
+                      <span className="text-[#7B1F35] font-bold text-[14px]">{progressPercent}% complete</span>
+                    )}
                   </div>
 
-                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-                    {[
-                      { id: 1, title: 'Draft / Uploads', icon: '📝', activeSteps: [1, 2] },
-                      { id: 2, title: 'Adviser Review', icon: '👨‍🏫', activeSteps: [3] },
-                      { id: 3, title: 'Dean Review', icon: '🏛️', activeSteps: [4] },
-                      { id: 4, title: 'Published', icon: '🎉', activeSteps: [5] }
-                    ].map(col => {
-                      const isCurrentCol = col.activeSteps.includes(currentStep);
-                      const isPastCol = currentStep > Math.max(...col.activeSteps);
-                      
-                      return (
-                        <div key={col.id} className={`flex-1 min-w-[260px] snap-center rounded-xl p-4 border ${isCurrentCol ? 'bg-[#fdf9fa] border-[#7B1F35]/30 shadow-sm' : 'bg-stone-50/50 border-stone-200/60'}`}>
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-[13px] text-stone-700 uppercase tracking-wider flex items-center gap-2">
-                              <span>{col.icon}</span> {col.title}
-                            </h4>
-                            <span className="text-[11px] font-bold bg-white px-2 py-1 rounded shadow-sm text-stone-500 border border-stone-100">
-                              {isCurrentCol ? '1' : '0'}
+                  <div className="relative pt-2 pb-6 px-4">
+                    <div className="absolute top-5 left-0 w-full h-3 bg-stone-100 rounded-full" />
+                    <div
+                      className="absolute top-5 left-0 h-3 bg-[#7B1F35] rounded-full transition-all duration-700"
+                      style={{ width: loadingData ? '0%' : `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
+                    />
+                    <div className="relative flex justify-between z-10 text-[12px] font-bold">
+                      {STEPS.map((step, idx) => {
+                        const isDone    = idx < currentStep;
+                        const isCurrent = idx === currentStep;
+                        const isPending = idx > currentStep;
+                        return (
+                          <div
+                            key={step}
+                            className={`flex flex-col items-center gap-3 w-20 ${idx === 0 ? '-ml-4' : ''} ${idx === STEPS.length - 1 ? '-mr-4' : ''}`}
+                          >
+                            <div className={`w-[34px] h-[34px] rounded-full ring-[6px] ring-white flex items-center justify-center transition-all duration-500 ${
+                              isDone
+                                ? 'bg-[#7B1F35] text-white shadow-md'
+                                : isCurrent
+                                  ? 'bg-white border-[5px] border-[#7B1F35] shadow-md'
+                                  : 'bg-white border-[5px] border-stone-200'
+                            }`}>
+                              {isDone && (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className={isPending ? 'text-gray-400 font-medium' : 'text-[#1A1A1A]'}>
+                              {step}
                             </span>
                           </div>
-
-                          <div className="min-h-[140px] flex flex-col gap-3">
-                            {isCurrentCol ? (
-                              <div className="bg-white border-l-[4px] border-l-[#7B1F35] border border-stone-200 rounded-lg p-4 shadow-sm animate-fade-in-up cursor-pointer hover:shadow-md transition-all">
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className="bg-[#F4DEE5] text-[#7B1F35] text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                    Active Paper
-                                  </span>
-                                  {isReviewed && !isPublished && (
-                                     <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Dean's Queue</span>
-                                  )}
-                                </div>
-                                <h5 className="font-serif font-bold text-[15px] text-[#1A1A1A] leading-tight mb-2 line-clamp-2">
-                                  {researchTitle !== '—' ? researchTitle : 'Research Manuscript'}
-                                </h5>
-                                <p className="text-[12px] text-stone-500 mb-4 line-clamp-1">
-                                  {displayGroupName}
-                                </p>
-                                
-                                <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                                  <div className="flex -space-x-2">
-                                    <div className="w-7 h-7 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-stone-600">{initials || 'S'}</div>
-                                    <div className="w-7 h-7 rounded-full bg-[#7B1F35] border-2 border-white flex items-center justify-center text-[10px] font-bold text-white" title={displayAdviser}>{displayAdviser.charAt(0)}</div>
-                                  </div>
-                                  <span className="text-[11px] text-stone-400 font-medium flex items-center gap-1">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                               <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-stone-200 rounded-lg text-stone-400 bg-stone-50/30 min-h-[140px]">
-                                 {isPastCol ? (
-                                   <div className="flex flex-col items-center gap-1 text-[#1E8E3E]/60">
-                                     <svg className="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                     <span className="text-[11px] font-bold uppercase tracking-wider">Completed</span>
-                                   </div>
-                                 ) : (
-                                   <span className="text-[12px] font-medium text-stone-400/70">Awaiting step...</span>
-                                 )}
-                               </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </>
