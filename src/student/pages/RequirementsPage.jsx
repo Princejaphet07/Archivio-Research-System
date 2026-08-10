@@ -172,7 +172,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         ...(pageCount && { pageCount })
       };
 
-      await saveToFirestore(item.id, fileMeta, displayName);
+      const savedDocId = await saveToFirestore(item.id, fileMeta, displayName);
 
       await logActivity({
         user: displayName,
@@ -181,6 +181,35 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         details: `${item.title}: ${file.name}`,
         status: 'Success'
       });
+
+      // Background AI Abstract Extraction
+      if (item.id === 'Final Manuscript' && fileUrl && savedDocId) {
+        setTimeout(async () => {
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+            const res = await fetch(`${backendUrl}/api/ai/extract-abstract`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pdfUrl: fileUrl })
+            });
+            const data = await res.json();
+            if (res.ok && data.abstract) {
+              await updateDoc(doc(db, 'submissions', savedDocId), { abstract: data.abstract });
+              
+              Swal.fire({
+                toast: true,
+                position: 'bottom-end',
+                icon: 'success',
+                title: 'AI Auto-extracted abstract from PDF!',
+                showConfirmButton: false,
+                timer: 4000
+              });
+            }
+          } catch (aiErr) {
+            console.error('Background AI extraction failed:', aiErr);
+          }
+        }, 1000); // slight delay to let UI breathe
+      }
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -225,6 +254,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     const uid = studentUid || auth.currentUser?.uid;
     const subRef = collection(db, 'submissions');
 
+    let currentDocId = submissionDocId;
     if (submissionDocId) {
       // Update existing document
       const docRef = doc(db, 'submissions', submissionDocId);
@@ -251,6 +281,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       if (meta.pageCount) newSub.pageCount = meta.pageCount;
       const addedDoc = await addDoc(subRef, newSub);
       setSubmissionDocId(addedDoc.id);
+      currentDocId = addedDoc.id;
     }
 
     const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
@@ -265,6 +296,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     // Update local state
     if (!uploadedDocs.includes(itemId)) setUploadedDocs(prev => [...prev, itemId]);
     setDocumentsMeta(prev => ({ ...prev, [itemId]: meta }));
+    
+    return currentDocId;
   };
 
   const handleDelete = async (item) => {

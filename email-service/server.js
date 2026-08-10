@@ -1330,6 +1330,63 @@ app.post('/api/ai/precheck', async (req, res) => {
 });
 
 // ============================================
+// AI ABSTRACT AUTO-EXTRACTION FROM PDF
+// ============================================
+app.post('/api/ai/extract-abstract', async (req, res) => {
+  try {
+    const { pdfUrl } = req.body;
+    if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required for extraction' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+    console.log(`🤖 AI Auto-Extracting Abstract from: ${pdfUrl}`);
+
+    const pdfResponse = await fetch(pdfUrl);
+    if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
+    
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    const base64data = Buffer.from(arrayBuffer).toString('base64');
+    
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = `
+      You are an expert academic data extractor.
+      Read the attached academic research paper PDF and extract ONLY its Abstract.
+      Return exactly the abstract text, nothing else. Do not add "Abstract:" at the beginning.
+      If you cannot find an abstract, return exactly the word "NOT_FOUND".
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: [
+        { 
+          role: 'user', 
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                data: base64data,
+                mimeType: 'application/pdf'
+              }
+            }
+          ]
+        }
+      ],
+    });
+
+    let rawText = response.text || '';
+    rawText = rawText.trim();
+    
+    if (rawText === 'NOT_FOUND' || rawText === '') {
+      return res.status(404).json({ error: 'Abstract not found in the document' });
+    }
+
+    res.json({ abstract: rawText });
+  } catch (error) {
+    console.error('AI Extraction Error:', error);
+    res.status(500).json({ error: 'Failed to extract abstract', details: error.message });
+  }
+});
+
+// ============================================
 // GLOBAL AI SEMANTIC SEARCH
 // ============================================
 app.post('/api/ai/global-search', async (req, res) => {
