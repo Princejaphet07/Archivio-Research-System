@@ -176,7 +176,18 @@ function ArchiveHome() {
 
     const counts = {};
     publishedPapers.forEach(p => {
-      const cat = p.category || p.program || 'Uncategorized';
+      let cat = p.category || p.program || 'Uncategorized';
+      
+      // Normalize common names
+      const lowerCat = cat.toLowerCase();
+      if (lowerCat.includes('information technology') || lowerCat === 'bsit') cat = 'Information Technology';
+      else if (lowerCat.includes('information system') || lowerCat === 'bsis') cat = 'Information Systems';
+      else if (lowerCat.includes('computer science') || lowerCat === 'bscs') cat = 'Computer Science';
+      else if (lowerCat.includes('nursing')) cat = 'Nursing';
+      else if (lowerCat.includes('business') || lowerCat.includes('management')) cat = 'Business Administration';
+      else if (lowerCat.includes('education') || lowerCat.includes('teaching')) cat = 'Education';
+      else cat = cat.replace(/^BS\s+/i, ''); // Just strip 'BS ' prefix if any
+
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
