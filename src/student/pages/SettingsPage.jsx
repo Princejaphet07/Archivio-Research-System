@@ -323,7 +323,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   ];
 
   return (
-    <div className="flex w-full min-h-screen bg-gradient-to-br from-[#fcfbf9] via-[#f5f0e6] to-[#efe5d5] font-sans overflow-hidden selection:bg-[#F4DEE5]">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar 
@@ -338,10 +338,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       />
 
       {/* MAIN CONTENT CONTAINER */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 right-0 -mr-32 -mt-32 w-[500px] h-[500px] bg-[#7B1F35]/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-32 -mb-32 w-[400px] h-[400px] bg-[#D4AF37]/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         
         {/* ACTION HEADER */}
         <PortalHeader 
@@ -362,8 +359,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           <div className="max-w-[1200px] flex flex-col md:flex-row gap-6">
             
             {/* Settings Sidebar */}
-            <div className="w-full md:w-[260px] shrink-0 bg-white/70 backdrop-blur-xl rounded-2xl p-4 h-fit border border-white/80 shadow-[0_4px_20px_rgb(123,31,53,0.05)] z-10">
-              <div className="flex flex-col gap-1.5">
+            <div className="w-full md:w-[260px] shrink-0 bg-white rounded-xl p-3 h-fit border border-stone-200/80 shadow-sm">
+              <div className="flex flex-col gap-1">
                 {settingsTabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -374,18 +371,18 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         setActiveSettingsTab(tab.id);
                       }
                     }}
-                    className={`flex items-center justify-between text-left px-5 py-4 rounded-xl font-medium text-[14.5px] transition-all duration-300 ${
+                    className={`flex items-center justify-between text-left px-4 py-3.5 rounded-lg font-medium text-[14px] transition-all ${
                       activeSettingsTab === tab.id
-                        ? 'bg-gradient-to-r from-[#7B1F35] to-[#9c2844] text-white shadow-md shadow-[#7B1F35]/20'
-                        : 'text-stone-600 hover:bg-white hover:shadow-sm hover:text-stone-900'
+                        ? 'bg-[#f8eef1] text-[#7B1F35]'
+                        : 'text-gray-700 hover:bg-stone-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`text-[18px] transition-all ${activeSettingsTab === tab.id ? 'opacity-100 scale-110 drop-shadow-md' : 'grayscale opacity-60'}`}>{tab.icon}</span>
+                      <span className="text-[16px] grayscale opacity-70">{tab.icon}</span>
                       {tab.id}
                     </div>
                     {activeSettingsTab === tab.id && (
-                      <svg className="w-4 h-4 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     )}
@@ -395,8 +392,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             </div>
 
             {/* Settings Content Area */}
-            <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-3xl p-8 lg:p-10 border border-white/80 min-h-[600px] shadow-[0_8px_30px_rgb(123,31,53,0.04)] hover:shadow-[0_8px_30px_rgb(123,31,53,0.08)] transition-all duration-500 z-10 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#D4AF37] via-[#7B1F35] to-[#D4AF37] opacity-80" />
+            <div className="flex-1 bg-white rounded-xl p-8 border border-stone-200/80 min-h-[600px] shadow-sm hover:shadow-md transition-shadow">
               
               {/* === PROFILE TAB === */}
               {activeSettingsTab === 'Profile' && (
@@ -452,7 +448,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={firstName} 
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className="w-full bg-[#fcfbf9] border border-stone-200 text-[14px] text-gray-900 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35]/50 transition-all shadow-sm hover:border-stone-300" 
+                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -462,7 +458,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={lastName} 
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className="w-full bg-[#fcfbf9] border border-stone-200 text-[14px] text-gray-900 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:border-[#7B1F35]/50 transition-all shadow-sm hover:border-stone-300" 
+                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -493,18 +489,13 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <p className="text-[12px] text-gray-500 font-medium">Fields marked are managed by your institution and cannot be edited.</p>
                   </div>
 
-                  <div className="flex justify-end items-center gap-4 mt-8 pt-6 border-t border-stone-100">
+                  <div className="flex justify-end items-center gap-4 mt-8 pt-4">
                     <button 
                       onClick={handleSaveProfile} 
                       disabled={isSaving}
-                      className="px-8 py-3 bg-gradient-to-r from-[#7B1F35] to-[#9c2844] text-white text-[14.5px] font-bold rounded-full hover:shadow-[0_4px_15px_rgb(123,31,53,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 shadow-sm"
+                      className="px-6 py-2.5 bg-[#7B1F35] text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50"
                     >
-                      {isSaving ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="w-4 h-4 animate-spin text-white/80" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          Saving...
-                        </span>
-                      ) : 'Save Changes'}
+                      {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </div>
