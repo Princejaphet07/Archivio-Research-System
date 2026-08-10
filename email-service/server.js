@@ -1335,7 +1335,9 @@ app.post('/api/ai/precheck', async (req, res) => {
 app.post('/api/ai/extract-abstract', async (req, res) => {
   try {
     const { pdfUrl } = req.body;
-    if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required for extraction' });
+    if (!pdfUrl || pdfUrl === '#' || !pdfUrl.startsWith('http')) {
+      return res.status(400).json({ error: 'Valid pdfUrl is required for extraction' });
+    }
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 
     console.log(`🤖 AI Auto-Extracting Abstract from: ${pdfUrl}`);

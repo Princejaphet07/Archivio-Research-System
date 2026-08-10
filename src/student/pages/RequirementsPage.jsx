@@ -183,7 +183,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       });
 
       // Background AI Abstract Extraction
-      if (item.id === 'Final Manuscript' && fileUrl && savedDocId) {
+      if (item.id === 'Final Manuscript' && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http') && savedDocId) {
         setTimeout(async () => {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
