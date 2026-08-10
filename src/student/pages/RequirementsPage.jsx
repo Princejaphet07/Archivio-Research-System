@@ -192,6 +192,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
       // Background AI Abstract Extraction
       if (item.title === 'Final Manuscript' && savedDocId && (base64Pdf || (fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')))) {
+        Swal.fire({
+          toast: true,
+          position: 'bottom-end',
+          title: 'AI is reading your PDF...',
+          text: 'Extracting abstract, please wait.',
+          showConfirmButton: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+
         setTimeout(async () => {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
