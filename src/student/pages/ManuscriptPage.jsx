@@ -118,6 +118,57 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     }
   };
 
+  const handleAIPreCheck = async () => {
+    if (!abstract || abstract.includes('No abstract')) {
+      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'Please add your abstract first before running the AI Scanner.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Running AI Scanner...',
+      html: 'Evaluating grammar, tone, and readability...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const res = await fetch(`${backendUrl}/api/ai/precheck`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ abstract })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Failed to scan');
+
+      let color = '#1E8E3E'; // Green
+      if (data.score < 80) color = '#D97706'; // Orange
+      if (data.score < 60) color = '#DC2626'; // Red
+
+      const suggestionsHtml = data.suggestions && data.suggestions.length > 0 
+        ? `<ul style="text-align: left; margin-top: 15px; font-size: 13px; color: #555;">${data.suggestions.map(s => `<li>• ${s}</li>`).join('')}</ul>`
+        : '<p style="text-align: left; margin-top: 15px; font-size: 13px; color: #555;">No major suggestions. Looks great!</p>';
+
+      Swal.fire({
+        title: 'AI Scanner Result',
+        html: `
+          <div style="font-size: 48px; font-weight: bold; color: ${color}; margin-bottom: 10px;">${data.score}/100</div>
+          <p style="font-size: 14px; font-weight: bold; color: #333;">${data.feedback}</p>
+          <hr style="margin: 15px 0;">
+          <div style="text-align: left; font-weight: bold; font-size: 14px;">Suggestions:</div>
+          ${suggestionsHtml}
+        `,
+        confirmButtonColor: '#7B1F35',
+        confirmButtonText: 'Got it!'
+      });
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Scan Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#7B1F35' });
+    }
+  };
+
   return (
     <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
       
@@ -260,7 +311,13 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Abstract</p>
+                  <div className="flex justify-between items-end mb-1">
+                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Abstract</p>
+                    <button onClick={handleAIPreCheck} className="text-[#1A1A1A] hover:text-[#7B1F35] hover:bg-stone-200 text-[10px] font-bold tracking-widest uppercase bg-stone-100 px-2 py-1.5 rounded shadow-sm border border-stone-200 transition-colors flex items-center gap-1">
+                      <svg className="w-3 h-3 text-[#7B1F35]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      AI Pre-Check
+                    </button>
+                  </div>
                   <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 italic' : 'text-gray-600'}`}>
                     {abstract}
                   </p>

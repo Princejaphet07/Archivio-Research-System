@@ -1279,6 +1279,57 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // ============================================
+// AI PRE-CHECK SCANNER (GRAMMAR & AUTO-SUGGESTIONS)
+// ============================================
+app.post('/api/ai/precheck', async (req, res) => {
+  try {
+    const { abstract } = req.body;
+    if (!abstract) return res.status(400).json({ error: 'Abstract is required for pre-check' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = `
+      You are an expert academic editor and proofreader.
+      Read the following abstract and evaluate it for grammar, readability, and academic tone.
+      Return the result in JSON format ONLY, matching this structure:
+      {
+        "score": 85,
+        "feedback": "Overall good, but some sentences are too long.",
+        "suggestions": [
+          "Change 'is going to' to 'will'",
+          "Break the second sentence into two shorter sentences."
+        ]
+      }
+      Do NOT include markdown formatting like \`\`\`json. Just the raw JSON object.
+      
+      Abstract to evaluate:
+      "${abstract}"
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    let rawText = response.text || '';
+    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      console.error("Failed to parse JSON from AI:", rawText);
+      result = { score: 75, feedback: "Failed to parse detailed AI feedback.", suggestions: [] };
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('AI Pre-Check Error:', error);
+    res.status(500).json({ error: 'Failed to run AI Pre-Check', details: error.message });
+  }
+});
+
+// ============================================
 // GLOBAL AI SEMANTIC SEARCH
 // ============================================
 app.post('/api/ai/global-search', async (req, res) => {
