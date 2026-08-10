@@ -71,6 +71,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         '<div class="flex flex-col gap-3 text-left">' +
         '  <label class="text-xs font-semibold text-gray-700">Full Name</label>' +
         '  <input id="swal-input-name" class="swal2-input !m-0 !w-full" placeholder="e.g. Juan Dela Cruz" style="width: 100%; box-sizing: border-box; margin: 0;">' +
+        '  <label class="text-xs font-semibold text-gray-700 mt-2">Student ID Number</label>' +
+        '  <input id="swal-input-id" class="swal2-input !m-0 !w-full" placeholder="e.g. 03-1234-56789" style="width: 100%; box-sizing: border-box; margin: 0;">' +
         '  <label class="text-xs font-semibold text-gray-700 mt-2">Email Address</label>' +
         '  <input id="swal-input-email" type="email" class="swal2-input !m-0 !w-full" placeholder="member@phinmaed.com" style="width: 100%; box-sizing: border-box; margin: 0;">' +
         '</div>',
@@ -80,22 +82,23 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       confirmButtonText: 'Add Member',
       preConfirm: () => {
         const name = document.getElementById('swal-input-name').value.trim();
+        const studentId = document.getElementById('swal-input-id').value.trim();
         const email = document.getElementById('swal-input-email').value.trim().toLowerCase();
-        if (!name || !email) {
-          Swal.showValidationMessage('Please provide both name and email');
+        if (!name || !email || !studentId) {
+          Swal.showValidationMessage('Please provide name, ID number, and email');
           return false;
         }
         if (!email.endsWith('@phinmaed.com')) {
           Swal.showValidationMessage('Email must use @phinmaed.com domain');
           return false;
         }
-        return { name, email };
+        return { name, studentId, email };
       }
     });
 
     if (!formValues) return;
     
-    const { name: newName, email: newEmail } = formValues;
+    const { name: newName, studentId: newStudentId, email: newEmail } = formValues;
     
     // Check if already in group
     const currentMembers = studentData.groupMembers || [];
@@ -109,7 +112,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       setLoading(true);
       
       // Update the leader's student document
-      const newGroupMembers = [...currentMembers, { email: newEmail, name: newName }];
+      const newGroupMembers = [...currentMembers, { email: newEmail, name: newName, studentId: newStudentId }];
       await updateDoc(doc(db, 'students', studentData.uid), {
         groupMembers: newGroupMembers
       });
@@ -121,7 +124,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         const groupData = groupSnap.docs[0].data();
         const existingGroupMembers = groupData.members || [];
         await updateDoc(doc(db, 'groups', groupId), {
-          members: [...existingGroupMembers, { email: newEmail, name: newName }],
+          members: [...existingGroupMembers, { email: newEmail, name: newName, studentId: newStudentId }],
           updatedAt: new Date().toISOString()
         });
       }
@@ -140,7 +143,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           status: 'pending',
           invitationSentAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
-          invitedByLeader: studentData.email // Track who added them
+          invitedByLeader: studentData.email, // Track who added them
+          studentNumber: newStudentId // Pass the ID number so they can see it when they sign up
         });
       }
 
@@ -233,7 +237,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     name:      m.name || m.email.split('@')[0],
     role:      'Member (Pending)',
     email:     m.email,
-    studentId: '—',
+    studentId: m.studentId || '—',
     isYou:     false,
     initials:  getInitials(m.name || m.email.split('@')[0]),
     color:     'bg-stone-400',
