@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp, deleteDoc, where } from 'firebase/firestore';
 import logo from '../assets/logo.png';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -80,6 +80,34 @@ export default function HomepageChatbot() {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const [systemData, setSystemData] = useState('');
+
+  useEffect(() => {
+    const fetchSystemData = async () => {
+      try {
+        const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
+        const snapshot = await getDocs(qSubs);
+        
+        let papers = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return `- "${data.title || data.researchTitle}" by ${data.authors ? data.authors.join(', ') : 'Unknown'} (${data.program || 'N/A'}). Abstract: ${data.abstract ? data.abstract.substring(0, 150) + '...' : 'N/A'}`;
+        });
+        
+        // Limit to 50 latest to avoid huge context payloads for now
+        papers = papers.slice(0, 50);
+
+        if (papers.length > 0) {
+          setSystemData(`\n\nCURRENT AVAILABLE RESEARCH PAPERS IN THE SYSTEM:\n${papers.join('\n')}\n\nYou can use the above list to answer questions about what researches are currently stored in the system. Use it as your knowledge base. If they ask about papers not in this list, say you can't find it.`);
+        } else {
+          setSystemData('\n\nCurrently, there are no published research papers in the system.');
+        }
+      } catch (err) {
+        console.error("Failed to fetch system data for AI context", err);
+      }
+    };
+    fetchSystemData();
+  }, []);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -343,6 +371,7 @@ export default function HomepageChatbot() {
         - If the user speaks in English, reply in natural English.
         - If the user speaks in Tagalog, reply in natural, conversational Tagalog. Avoid awkward or overly formal translations.
         - If the user speaks in Cebuano/Bisaya, reply in pure, natural, and conversational Bisaya (Cebuano). Do not use awkward slang or Tagalog-Bisaya mix unless the user does. Your Bisaya must be extremely fluent and authentic.
+        ${systemData}
       `;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
