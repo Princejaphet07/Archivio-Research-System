@@ -26,7 +26,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const [newResearchTitle, setNewResearchTitle] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const PREDEFINED_CATEGORIES = ['Computer Science', 'Information Technology', 'Information Systems', 'Engineering', 'Business', 'Education'];
+  const [categoriesList, setCategoriesList] = useState([]);
   const [isSubmittingNewResearch, setIsSubmittingNewResearch] = useState(false);
 
   // ── Real data state ────────────────────────────────────────────────────────
@@ -39,6 +39,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) { setLoading(false); return; }
+
+    // Fetch dynamic categories
+    const unsubCats = onSnapshot(collection(db, 'categories'), (snap) => {
+      setCategoriesList(snap.docs.map(d => d.data().name));
+    });
 
     // 1. Student doc
     const studentQ = query(collection(db, 'students'), where('uid', '==', uid));
@@ -681,7 +686,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   className="w-full border border-[#E8DFCB] bg-[#FDFAF5] rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition appearance-none"
                 >
                   <option value="" disabled>Select a Category...</option>
-                  {PREDEFINED_CATEGORIES.map(cat => (
+                  {categoriesList.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>

@@ -19,8 +19,20 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
 
-  const categories = ['Computer Science', 'Information Technology', 'Information Systems', 'Engineering', 'Business', 'Education'];
+  const [categoriesList, setCategoriesList] = useState([]);
 
+  React.useEffect(() => {
+    // We need to import collection and onSnapshot at the top, or just use them if imported.
+    // Wait, let's just dynamically import them if they are missing or add the imports.
+    import('firebase/firestore').then(({ collection, onSnapshot }) => {
+      import('../../firebase/config').then(({ db }) => {
+        const unsub = onSnapshot(collection(db, 'categories'), (snap) => {
+          setCategoriesList(snap.docs.map(d => d.data().name));
+        });
+        return () => unsub();
+      });
+    });
+  }, []);
   const displayName = studentName || 'STUDENT';
   const displayInitials = initials || 'JZ';
 
@@ -239,7 +251,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 }`}
               >
                 <option value="">Select a category</option>
-                {categories.map(cat => (
+                {categoriesList.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
