@@ -230,7 +230,7 @@ export default function ResearchRecords() {
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                     placeholder="Search title, group, adviser..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070]"
                   />
                 </div>
 
@@ -245,7 +245,7 @@ export default function ResearchRecords() {
                     <select
                       value={value}
                       onChange={handleFilterChange(setter)}
-                      className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-300 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
+                      className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] cursor-pointer"
                     >
                       {options.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
                     </select>
