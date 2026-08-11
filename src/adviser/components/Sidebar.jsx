@@ -75,7 +75,6 @@ function Sidebar() {
       unsub3(); 
       if (unsubSub) unsubSub();
     };
-    };
   }, [path]);
 
   useEffect(() => {
