@@ -94,7 +94,7 @@ const NAV_ITEMS_MANAGEMENT = [
 export default function Sidebar({ onNavigate }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const activePage = location.pathname.slice(1) || 'dashboard';
+  const activePage = location.pathname.split('/').pop() || 'dashboard';
   const { deanData } = useUser();
   const [counts, setCounts] = useState({ researchRecordsNew: 0, researchRecordsTotal: 0, publishQueue: 0, userManagement: 0 });
 
