@@ -1156,6 +1156,68 @@ app.post('/api/delete-cloudinary', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete' });
   }
 });
+// ============================================
+// AI KEYWORD EXTRACTION FROM ABSTRACT
+// ============================================
+app.post('/api/ai/extract-keywords', async (req, res) => {
+  try {
+    const { abstract } = req.body;
+
+    if (!abstract || abstract.trim().length < 20) {
+      return res.status(400).json({ error: 'Abstract text is too short. Please provide a longer abstract.' });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: 'Missing GROQ_API_KEY in backend environment variables.' });
+    }
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an academic research keyword extractor. Given an abstract, extract 5-8 highly relevant academic keywords or key phrases that best represent the research topic, methodology, and domain.
+
+Rules:
+- Return ONLY a JSON array of strings, nothing else.
+- Each keyword should be 1-3 words maximum.
+- Keywords should be specific and academic (not generic words like "study" or "research").
+- Prioritize domain-specific terms, technologies, methodologies, and key concepts.
+- Example output: ["Machine Learning", "Healthcare", "Neural Networks", "Patient Diagnosis", "Deep Learning"]`
+        },
+        {
+          role: 'user',
+          content: `Extract academic keywords from this abstract:\n\n${abstract}`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 300
+    });
+
+    const raw = response.choices[0]?.message?.content?.trim() || '[]';
+    
+    // Parse the JSON array from the AI response
+    let keywords = [];
+    try {
+      // Try to extract JSON array from the response (handles cases where AI wraps it in markdown)
+      const jsonMatch = raw.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        keywords = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseErr) {
+      // Fallback: split by comma if JSON parsing fails
+      keywords = raw.replace(/[\[\]"]/g, '').split(',').map(k => k.trim()).filter(k => k);
+    }
+
+    console.log(`🔑 AI Keywords extracted: ${keywords.join(', ')}`);
+    res.json({ keywords });
+  } catch (error) {
+    console.error('❌ AI Keyword Extraction Error:', error);
+    res.status(500).json({ error: 'Failed to extract keywords.' });
+  }
+});
 
 // ============================================
 // ARCHIVIO AI ASSISTANT CHAT
@@ -1561,5 +1623,6 @@ app.listen(PORT, () => {
   console.log('  POST /api/send-dean-invitation-email');
   console.log('  POST /api/send-student-message');
   console.log('  POST /api/ai/chat');
+  console.log('  POST /api/ai/extract-keywords');
   console.log('  GET  /api/health');
 });

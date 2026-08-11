@@ -13,6 +13,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const [submission, setSubmission] = useState(null);
   const [submissionId, setSubmissionId] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [extractingKeywords, setExtractingKeywords] = useState(false);
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -73,6 +74,42 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const pageCount = submission?.pageCount || '0';
   const keywords = submission?.keywords || [];
 
+  // AI Keyword Extraction
+  const handleExtractKeywords = async () => {
+    const currentAbstract = submission?.abstract;
+    if (!currentAbstract || currentAbstract === 'No abstract provided. Click Edit to add an abstract.' || currentAbstract.trim().length < 20) {
+      Swal.fire({ icon: 'info', title: 'No Abstract', text: 'Please add an abstract first before extracting keywords.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+    
+    setExtractingKeywords(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/ai/extract-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ abstract: currentAbstract })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to extract keywords');
+
+      if (data.keywords && data.keywords.length > 0) {
+        // Save to Firestore
+        await updateDoc(doc(db, 'submissions', submissionId), {
+          keywords: data.keywords
+        });
+        Swal.fire({ icon: 'success', title: 'Keywords Updated!', text: `AI extracted ${data.keywords.length} keywords from your abstract.`, confirmButtonColor: '#7B1F35', timer: 2500, showConfirmButton: false });
+      } else {
+        Swal.fire({ icon: 'warning', title: 'No Keywords Found', text: 'AI could not extract keywords. Try editing your abstract.', confirmButtonColor: '#7B1F35' });
+      }
+    } catch (err) {
+      console.error('Keyword extraction error:', err);
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'Failed to extract keywords.', confirmButtonColor: '#7B1F35' });
+    } finally {
+      setExtractingKeywords(false);
+    }
+  };
+
   const handleEditDetails = async () => {
     if (!submissionId) {
       Swal.fire({ icon: 'info', title: 'No Submission', text: 'Please upload a manuscript first in the Requirements tab.', confirmButtonColor: '#7B1F35' });
@@ -85,11 +122,49 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         `<input id="swal-pages" class="swal2-input" style="width: 100%; margin: 0 0 15px 0; box-sizing: border-box;" placeholder="e.g. 38" value="${pageCount}">` +
         `<div style="text-align: left; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #1A1A1A;">Abstract</div>` +
         `<textarea id="swal-abstract" class="swal2-textarea" style="width: 100%; margin: 0 0 15px 0; height: 120px; box-sizing: border-box;" placeholder="Abstract">${abstract === 'No abstract provided. Click Edit to add an abstract.' ? '' : abstract}</textarea>` +
-        `<div style="text-align: left; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #1A1A1A;">Keywords (comma separated)</div>` +
+        `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">` +
+        `<span style="font-size: 14px; font-weight: bold; color: #1A1A1A;">Keywords (comma separated)</span>` +
+        `<button type="button" id="ai-keywords-btn" style="background: linear-gradient(135deg, #7B1F35, #a32946); color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">✨ AI Extract</button>` +
+        `</div>` +
         `<input id="swal-keywords" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" placeholder="e.g. AI, Health, Tech" value="${keywords.join(', ')}">`,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonColor: '#7B1F35',
+      didOpen: () => {
+        // Attach click handler to AI Extract button inside modal
+        const aiBtn = document.getElementById('ai-keywords-btn');
+        if (aiBtn) {
+          aiBtn.addEventListener('click', async () => {
+            const abstractText = document.getElementById('swal-abstract').value;
+            if (!abstractText || abstractText.trim().length < 20) {
+              Swal.showValidationMessage('Please enter an abstract first (at least 20 characters).');
+              return;
+            }
+            aiBtn.disabled = true;
+            aiBtn.innerHTML = '⏳ Extracting...';
+            aiBtn.style.opacity = '0.7';
+            try {
+              const res = await fetch('http://localhost:3001/api/ai/extract-keywords', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ abstract: abstractText })
+              });
+              const data = await res.json();
+              if (data.keywords && data.keywords.length > 0) {
+                document.getElementById('swal-keywords').value = data.keywords.join(', ');
+                Swal.resetValidationMessage();
+              }
+            } catch (err) {
+              console.error('AI extract error:', err);
+              Swal.showValidationMessage('Failed to extract keywords. Try again.');
+            } finally {
+              aiBtn.disabled = false;
+              aiBtn.innerHTML = '✨ AI Extract';
+              aiBtn.style.opacity = '1';
+            }
+          });
+        }
+      },
       preConfirm: () => {
         return {
           pageCount: document.getElementById('swal-pages').value,
@@ -349,7 +424,22 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-2">Keywords</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Keywords</p>
+                    {submissionId && (
+                      <button
+                        onClick={handleExtractKeywords}
+                        disabled={extractingKeywords}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#7B1F35] to-[#a32946] text-white text-[11px] font-bold rounded-full hover:shadow-md transition-all disabled:opacity-60"
+                      >
+                        {extractingKeywords ? (
+                          <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Extracting...</>
+                        ) : (
+                          <>✨ AI Generate</>  
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {keywords.length > 0 ? keywords.map((tag, idx) => (
                       <span key={idx} className="border border-[#DDA3B6] text-[#7B1F35] bg-[#F9EBF0] px-3 py-1 rounded-full text-[12px] font-bold">
