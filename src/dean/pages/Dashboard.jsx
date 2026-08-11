@@ -585,9 +585,9 @@ function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warn
 
 function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   return (
-    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${active ? 'border-[#7a1f3d] bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5 ring-1 ring-[#7a1f3d]' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
-      <span className="text-xs font-bold text-stone-800 dark:text-stone-200">{year}</span>
-      <span className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 my-0.5">{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
+    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${active ? 'border-[#7a1f3d] dark:border-[#f8d070]/50 bg-[#7a1f3d]/10 dark:bg-[#f8d070]/10 ring-1 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/30' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
+      <span className={`text-xs font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-800 dark:text-stone-200'}`}>{year}</span>
+      <span className={`text-lg font-serif font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-900 dark:text-stone-100'} my-0.5`}>{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
       {badge && <span className="text-[9px] text-stone-400 font-bold tracking-tight uppercase">{badge}</span>}
       {growth && <span className={`text-[10px] font-extrabold ${textGreen ? 'text-emerald-600' : 'text-stone-500 dark:text-stone-400'}`}>{growth}</span>}
     </div>
