@@ -375,7 +375,6 @@ export default function Dashboard({ activePage }) {
             <div className="bg-white dark:bg-stone-800 p-6 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Yearly Summary</h3>
-                <p className="text-xs text-stone-400 mt-0.5">Click a year to view its records</p>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 flex-1 justify-center content-center">
                 {chartData.map((d, i) => {
@@ -391,7 +390,7 @@ export default function Dashboard({ activePage }) {
                   else { growthText = "0%"; }
                   
                   return (
-                    <YearMetricBox key={d.label || i} year={d.label} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={d.label === currentYear.toString()} />
+                    <YearMetricBox key={d.label || i} year={d.label} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={false} />
                   );
                 })}
               </div>
