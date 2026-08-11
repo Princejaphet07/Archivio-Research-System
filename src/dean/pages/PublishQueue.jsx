@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import { useUser } from '../context/UserContext';
@@ -202,6 +202,15 @@ export default function PublishQueue({ activePage, onNavigate }) {
           action: 'Bulk published research to public archive',
           details: `Published ${eligibleCount} researches`,
           status: 'Success'
+        });
+
+        // Notify Dean themselves for the UI Toast and Record
+        await addDoc(collection(db, 'notifications'), {
+          userId: auth.currentUser?.uid,
+          title: "✅ Publishing Success",
+          message: `Successfully published ${eligibleCount} research manuscript(s) to the Public Archive.`,
+          isRead: false,
+          createdAt: serverTimestamp()
         });
 
         // Send automated publication emails

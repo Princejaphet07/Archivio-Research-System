@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
@@ -177,6 +177,24 @@ function ReviewSubmissions() {
             isRead: false,
             createdAt: serverTimestamp()
           });
+          
+          // Notify the Dean(s)
+          try {
+            const deansQuery = query(collection(db, 'users'), where('role', '==', 'dean'));
+            const deansSnap = await getDocs(deansQuery);
+            const batchPromises = deansSnap.docs.map(deanDoc => 
+              addDoc(collection(db, 'notifications'), {
+                userId: deanDoc.id, // Usually the UID is the doc ID for users collection
+                title: "📄 Manuscript Ready for Publishing",
+                message: `Adviser ${auth.currentUser?.email} has approved "${sub.researchTitle}". It is now in your Publish Queue.`,
+                isRead: false,
+                createdAt: serverTimestamp()
+              })
+            );
+            await Promise.all(batchPromises);
+          } catch (notifyErr) {
+            console.error("Failed to notify Dean:", notifyErr);
+          }
           
           if (sub.leaderEmail) {
             try {
