@@ -349,7 +349,7 @@ export default function Settings({ activePage, onNavigate }) {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 text-left font-medium text-sm px-4 py-3 rounded-lg transition-all 
                     ${activeTab === tab.id
-                      ? 'bg-[#f8ebef] text-[#7a1f3d] dark:text-[#f8d070] font-bold' 
+                      ? 'bg-[#f8ebef] dark:bg-[#f8d070]/10 text-[#7a1f3d] dark:text-[#f8d070] font-bold' 
                       : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                   >
                     <span className={`text-base ${activeTab === tab.id ? 'opacity-100' : 'opacity-60 grayscale'}`}>

@@ -256,7 +256,7 @@ Please click the button below to activate your account and set up your credentia
 
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Send Invitations</h1>
+            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#f8d070]">Send Invitations</h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Send invitation links to Research Advisers for account creation</p>
           </div>
 
@@ -294,7 +294,7 @@ Please click the button below to activate your account and set up your credentia
                       value={formData.firstName}
                       onChange={handleInputChange}
                       placeholder="e.g. Maria"
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
                       disabled={loading}
                     />
                   </div>
@@ -307,7 +307,7 @@ Please click the button below to activate your account and set up your credentia
                       value={formData.lastName}
                       onChange={handleInputChange}
                       placeholder="e.g. Reyes"
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
                       disabled={loading}
                     />
                   </div>
@@ -320,7 +320,7 @@ Please click the button below to activate your account and set up your credentia
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="adviser@phinmaed.com"
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
@@ -343,7 +343,7 @@ Please click the button below to activate your account and set up your credentia
                       onChange={handleInputChange}
                       placeholder={defaultMessage}
                       rows={5}
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-900/50 text-stone-600 dark:text-stone-300 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] resize-none disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
