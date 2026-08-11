@@ -137,28 +137,28 @@ function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-gray-300">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{activeGroupCount}</h3>}
-            <p className="text-xs text-gray-500 mt-1">Active this semester</p>
+          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-300 dark:border-t-stone-700">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{activeGroupCount}</h3>}
+            <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Active this semester</p>
           </div>
           
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-yellow-400">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{pendingReviewCount}</h3>}
-            <p className="text-xs text-yellow-600 font-medium bg-yellow-50 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
+          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-yellow-400 dark:border-t-yellow-500">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{pendingReviewCount}</h3>}
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/30 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
           </div>
 
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-blue-500">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{approvedPapersCount}</h3>}
-            <p className="text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
+          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-blue-500 dark:border-t-blue-600">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{approvedPapersCount}</h3>}
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
           </div>
 
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm border-t-4 border-t-gray-200">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800">{avgCompletion}%</h3>}
-            <p className="text-xs text-gray-500 mt-1">Across all groups</p>
+          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-200 dark:border-t-stone-700">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
+            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{avgCompletion}%</h3>}
+            <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Across all groups</p>
           </div>
         </div>
 
@@ -166,15 +166,15 @@ function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Left Column: My Submissions */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="lg:col-span-2 bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="font-serif font-bold text-lg text-gray-900">My Submissions Dashboard</h3>
-                <p className="text-xs text-gray-500">Recent activity from your groups</p>
+                <h3 className="font-serif font-bold text-lg text-gray-900 dark:text-stone-100">My Submissions Dashboard</h3>
+                <p className="text-xs text-gray-500 dark:text-stone-400">Recent activity from your groups</p>
               </div>
               <button 
                 onClick={() => navigate('/adviser/review-submissions')}
-                className="text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+                className="text-xs font-semibold text-gray-600 dark:text-stone-300 border border-gray-200 dark:border-stone-700 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-stone-800 transition"
               >
                 Review All →
               </button>
@@ -183,11 +183,11 @@ function Dashboard() {
             <div className="space-y-6">
               {loading ? (
                 <div className="animate-pulse space-y-4">
-                  <div className="h-20 bg-gray-100 rounded-xl"></div>
-                  <div className="h-20 bg-gray-100 rounded-xl"></div>
+                  <div className="h-20 bg-gray-100 dark:bg-stone-800 rounded-xl"></div>
+                  <div className="h-20 bg-gray-100 dark:bg-stone-800 rounded-xl"></div>
                 </div>
               ) : enrichedSubmissions.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4">No submissions yet.</p>
+                <p className="text-sm text-gray-500 dark:text-stone-400 py-4">No submissions yet.</p>
               ) : (
                 enrichedSubmissions.slice(0, 5).map((sub, idx) => {
                   const isApproved = sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
@@ -217,34 +217,34 @@ function Dashboard() {
                   }
 
                   return (
-                    <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 pb-5">
-                      <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 text-sm`}>
+                    <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 dark:border-stone-800 pb-5">
+                      <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 dark:text-stone-200 text-sm`}>
                         {pct}%
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                            <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 flex items-center gap-2">
                               {sub.groupName} <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold`}>{badgeText}</span>
                             </h4>
-                            <p className="text-xs text-gray-500 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+                            <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
                           </div>
                           <button 
                             onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
-                            className="border border-gray-200 text-xs font-semibold text-gray-600 px-3 py-1 rounded hover:bg-gray-50"
+                            className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded hover:bg-gray-50 dark:hover:bg-stone-800"
                           >
                             Details
                           </button>
                         </div>
-                        <div className="mt-2 text-[11px] text-gray-500 mb-1 flex justify-between">
+                        <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1 flex justify-between">
                           <span>
                             {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
                           </span>
-                          <span className={`font-bold ${isApproved ? 'text-[#5a1831]' : (sub.missingDocs.length > 0 ? 'text-blue-600' : 'text-yellow-600')}`}>
+                          <span className={`font-bold ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
                             {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
                           </span>
                         </div>
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full">
+                        <div className="w-full bg-gray-100 dark:bg-stone-800 h-1.5 rounded-full">
                           <div className={`${barColor} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
                         </div>
                       </div>
@@ -259,29 +259,29 @@ function Dashboard() {
           <div className="space-y-6">
             
             {/* Pending Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
               <div className="flex justify-between items-center mb-5">
-                <h3 className="font-bold text-sm text-gray-900">Pending Actions</h3>
-                <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded-full">• {pendingReviewCount} reviews</span>
+                <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100">Pending Actions</h3>
+                <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full">• {pendingReviewCount} reviews</span>
               </div>
               
               <div className="space-y-3">
                 {pendingReviewSubs.slice(0, 3).map((sub, idx) => (
-                  <div key={sub.id || idx} className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <div key={sub.id || idx} className="flex justify-between items-center border-b border-gray-50 dark:border-stone-800 pb-3">
                     <div>
-                      <h4 className="text-xs font-bold text-gray-800">{sub.researchTitle}</h4>
-                      <p className="text-[10px] text-gray-500">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
+                      <h4 className="text-xs font-bold text-gray-800 dark:text-stone-200">{sub.researchTitle}</h4>
+                      <p className="text-[10px] text-gray-500 dark:text-stone-400">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
                     </div>
-                    <span className="bg-yellow-50 text-yellow-600 text-[9px] font-bold border border-yellow-200 px-2 py-1 rounded">• Review</span>
+                    <span className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold border border-yellow-200 dark:border-yellow-700/50 px-2 py-1 rounded">• Review</span>
                   </div>
                 ))}
                 
                 <div className="flex justify-between items-center pb-2">
                   <div>
-                    <h4 className="text-xs font-bold text-gray-800">{pendingGroupsCount} group registrations</h4>
-                    <p className="text-[10px] text-gray-500">Waiting for approval</p>
+                    <h4 className="text-xs font-bold text-gray-800 dark:text-stone-200">{pendingGroupsCount} group registrations</h4>
+                    <p className="text-[10px] text-gray-500 dark:text-stone-400">Waiting for approval</p>
                   </div>
-                  <span className="bg-purple-50 text-purple-600 text-[9px] font-bold border border-purple-200 px-2 py-1 rounded">• Pending</span>
+                  <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-bold border border-purple-200 dark:border-purple-700/50 px-2 py-1 rounded">• Pending</span>
                 </div>
               </div>
               
@@ -294,8 +294,8 @@ function Dashboard() {
             </div>
 
             {/* Group Progress Chart */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-sm text-gray-900 mb-4">Group Progress</h3>
+            <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
+              <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 mb-4">Group Progress</h3>
               <div className="h-48">
                 {enrichedSubmissions.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -314,42 +314,42 @@ function Dashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-10">No progress data yet.</p>
+                  <p className="text-xs text-gray-400 dark:text-stone-500 text-center py-10">No progress data yet.</p>
                 )}
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className="bg-transparent">
-              <h3 className="font-bold text-sm text-gray-900 mb-3 ml-1">Quick Actions</h3>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 mb-3 ml-1">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => navigate('/adviser/group-registrations')}
-                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
                 >
                   <span className="text-green-500 text-lg">✅</span>
-                  <span className="text-[10px] font-bold text-gray-600">Approve Registrations</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Approve Registrations</span>
                 </button>
                 <button 
                   onClick={() => navigate('/adviser/send-invitations')}
-                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
                 >
                   <span className="text-blue-500 text-lg">📩</span>
-                  <span className="text-[10px] font-bold text-gray-600">Send Invite Link</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Send Invite Link</span>
                 </button>
                 <button 
                   onClick={() => navigate('/adviser/research-categories')}
-                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
                 >
                   <span className="text-yellow-500 text-lg">📁</span>
-                  <span className="text-[10px] font-bold text-gray-600">Manage Categories</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Manage Categories</span>
                 </button>
                 <button 
                   onClick={() => navigate('/adviser/submission-requirements')}
-                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
                 >
                   <span className="text-purple-500 text-lg">⚙️</span>
-                  <span className="text-[10px] font-bold text-gray-600">My Requirements</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">My Requirements</span>
                 </button>
               </div>
             </div>

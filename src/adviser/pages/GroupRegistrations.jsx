@@ -141,8 +141,8 @@ function GroupRegistrations() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Group Registrations</h1>
-            <p className="text-sm text-gray-500">Approve or decline student group registration requests</p>
+            <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Group Registrations</h1>
+            <p className="text-sm text-gray-500 dark:text-stone-400">Approve or decline student group registration requests</p>
           </div>
           <div className="relative w-full sm:w-80">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -155,7 +155,7 @@ function GroupRegistrations() {
               placeholder="Search groups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#7a1f3d] focus:border-[#7a1f3d] w-full text-sm"
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100 rounded-lg focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] w-full text-sm"
             />
           </div>
         </div>
@@ -169,25 +169,25 @@ function GroupRegistrations() {
               <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requests...</p>
             </div>
           ) : pendingGroups.filter(filterGroup).length === 0 ? (
-            <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+            <div className="bg-white dark:bg-stone-900 border border-dashed border-gray-300 dark:border-stone-700 rounded-xl p-8 text-center text-gray-500 dark:text-stone-400">
               No pending group registrations found.
             </div>
           ) : (
             pendingGroups.filter(filterGroup).map((req) => (
-              <div key={req.id} className="bg-white border border-[#fed7aa] rounded-xl p-5 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+              <div key={req.id} className="bg-white dark:bg-stone-900 border border-[#fed7aa] dark:border-stone-800 rounded-xl p-5 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 bg-[#fff7ed] rounded-lg border border-[#fed7aa] flex items-center justify-center text-xl">📋</div>
+                  <div className="w-12 h-12 bg-[#fff7ed] dark:bg-stone-800 rounded-lg border border-[#fed7aa] dark:border-stone-700 flex items-center justify-center text-xl">📋</div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                      {req.groupName} <span className="bg-[#fff7ed] text-[#c2410c] text-[10px] px-2 py-0.5 rounded-full border border-[#fed7aa] uppercase tracking-wider font-bold">• Pending Approval</span>
+                    <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg flex items-center gap-2">
+                      {req.groupName} <span className="bg-[#fff7ed] dark:bg-orange-900/30 text-[#c2410c] dark:text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-[#fed7aa] dark:border-orange-800/50 uppercase tracking-wider font-bold">• Pending Approval</span>
                     </h3>
-                    <p className="text-sm text-gray-800 mt-1">Research Title: <strong>{req.researchTitle}</strong></p>
+                    <p className="text-sm text-gray-800 dark:text-stone-300 mt-1">Research Title: <strong>{req.researchTitle}</strong></p>
                   </div>
                 </div>
                 <div className="flex lg:flex-col gap-2 w-full lg:w-32">
                   <button
                     onClick={() => setSelectedGroup(req)}
-                    className="flex-1 lg:flex-none bg-[#7a1f3d] text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-[#5a162d] flex justify-center items-center gap-2 shadow-sm transition"
+                    className="flex-1 lg:flex-none bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 font-semibold text-sm py-2 px-4 rounded-lg hover:bg-[#5a162d] dark:hover:bg-[#ffe090] flex justify-center items-center gap-2 shadow-sm transition"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
@@ -202,14 +202,14 @@ function GroupRegistrations() {
         </div>
 
         {/* History Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-8">
-          <div className="p-5 border-b border-gray-200">
-            <h3 className="font-bold text-gray-900 text-lg">Registration History</h3>
-            <p className="text-xs text-gray-500">Previously processed</p>
+        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 mt-8">
+          <div className="p-5 border-b border-gray-200 dark:border-stone-800">
+            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Registration History</h3>
+            <p className="text-xs text-gray-500 dark:text-stone-400">Previously processed</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#faf5f6] text-[#7a2e46] text-xs uppercase tracking-wider font-bold">
+              <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
                 <tr>
                   <th className="py-3 px-5">Group</th>
                   <th className="py-3 px-5">Leader</th>
@@ -219,25 +219,25 @@ function GroupRegistrations() {
                   <th className="py-3 px-5">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
                 {historyGroups.filter(filterGroup).length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="py-6 text-center text-gray-500">No registration history yet.</td>
+                    <td colSpan="6" className="py-6 text-center text-gray-500 dark:text-stone-400">No registration history yet.</td>
                   </tr>
                 ) : (
                   historyGroups.filter(filterGroup).map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-5 font-bold text-gray-900">{item.groupName}</td>
-                      <td className="py-3 px-5 text-gray-600">{item.leaderName}</td>
-                      <td className="py-3 px-5 text-gray-600">{item.researchTitle}</td>
-                      <td className="py-3 px-5 text-gray-600">{item.program}</td>
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50">
+                      <td className="py-3 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
+                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.leaderName}</td>
+                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.researchTitle}</td>
+                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.program}</td>
                       <td className="py-3 px-5">
-                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
                           }`}>
                           • {item.status === 'approved' ? 'Approved' : 'Declined'}
                         </span>
                       </td>
-                      <td className="py-3 px-5 text-gray-500">{new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3 px-5 text-gray-500 dark:text-stone-400">{new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))
                 )}
@@ -250,60 +250,60 @@ function GroupRegistrations() {
       {/* View Modal */}
       {selectedGroup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-scale-in">
-            <div className="bg-[#7a1f3d] px-6 py-4 flex justify-between items-center text-white">
+          <div className="bg-white dark:bg-stone-950 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-scale-in">
+            <div className="bg-[#7a1f3d] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-6 py-4 flex justify-between items-center text-white dark:text-stone-100">
               <h2 className="font-bold text-xl font-serif">Group Registration Details</h2>
-              <button onClick={() => setSelectedGroup(null)} className="text-white hover:text-gray-200 text-3xl font-light leading-none">&times;</button>
+              <button onClick={() => setSelectedGroup(null)} className="text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-3xl font-light leading-none">&times;</button>
             </div>
 
             <div className="p-6 space-y-5">
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Group Name</h3>
-                <p className="font-bold text-2xl text-gray-900">{selectedGroup.groupName}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Group Name</h3>
+                <p className="font-bold text-2xl text-gray-900 dark:text-stone-100">{selectedGroup.groupName}</p>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Research Title</h3>
-                <p className="text-gray-800 text-lg font-medium">{selectedGroup.researchTitle}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Research Title</h3>
+                <p className="text-gray-800 dark:text-stone-300 text-lg font-medium">{selectedGroup.researchTitle}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                  <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Program</h3>
-                  <p className="text-gray-800 font-medium">{selectedGroup.program}</p>
+                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-lg border border-gray-100 dark:border-stone-800">
+                  <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Program</h3>
+                  <p className="text-gray-800 dark:text-stone-300 font-medium">{selectedGroup.program}</p>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                  <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Applied Date</h3>
-                  <p className="text-gray-800 font-medium">{new Date(selectedGroup.createdAt).toLocaleDateString()}</p>
+                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-lg border border-gray-100 dark:border-stone-800">
+                  <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Applied Date</h3>
+                  <p className="text-gray-800 dark:text-stone-300 font-medium">{new Date(selectedGroup.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
                 <ul className="space-y-2 mt-2">
-                  <li className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                  <li className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-stone-800 shadow-sm">
+                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 flex items-center justify-center text-sm font-bold shadow-sm">
                       {selectedGroup.leaderName?.substring(0, 2).toUpperCase() || 'L'}
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <p className="text-sm font-bold text-gray-900 dark:text-stone-100 flex items-center gap-2">
                         {selectedGroup.leaderName}
-                        <span className="text-[9px] bg-[#fff7ed] text-[#c2410c] px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] shadow-sm">Leader</span>
+                        <span className="text-[9px] bg-[#fff7ed] dark:bg-orange-900/30 text-[#c2410c] dark:text-orange-400 px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] dark:border-orange-800/50 shadow-sm">Leader</span>
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{selectedGroup.leaderEmail}</p>
+                      <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{selectedGroup.leaderEmail}</p>
                     </div>
                   </li>
                   {selectedGroup.members?.map((m, idx) => {
                     const memberName = typeof m === 'object' ? (m.name || m.email.split('@')[0]) : m.split('@')[0];
                     const memberEmail = typeof m === 'object' ? m.email : m;
                     return (
-                      <li key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                        <span className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-sm font-bold border border-gray-300">
+                      <li key={idx} className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-stone-800 shadow-sm">
+                        <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-stone-800 text-gray-700 dark:text-stone-300 flex items-center justify-center text-sm font-bold border border-gray-300 dark:border-stone-700">
                           {memberName.substring(0, 2).toUpperCase()}
                         </span>
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{memberName}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{memberEmail}</p>
+                          <p className="text-sm font-semibold text-gray-800 dark:text-stone-200">{memberName}</p>
+                          <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{memberEmail}</p>
                         </div>
                       </li>
                     );
@@ -312,10 +312,10 @@ function GroupRegistrations() {
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+            <div className="bg-gray-50 dark:bg-stone-900 px-6 py-4 flex justify-end gap-3 border-t border-gray-200 dark:border-stone-800">
               <button
                 onClick={() => setSelectedGroup(null)}
-                className="px-5 py-2.5 rounded-lg font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 transition shadow-sm"
+                className="px-5 py-2.5 rounded-lg font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition shadow-sm"
               >
                 Cancel
               </button>

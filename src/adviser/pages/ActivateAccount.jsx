@@ -224,18 +224,18 @@ export default function ActivateAccount() {
       className="min-h-screen w-full flex items-center justify-center font-sans p-6 bg-cover bg-center"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+      <div className="max-w-md w-full rounded-2xl border border-white/50 dark:border-stone-800 bg-white/95 dark:bg-stone-950/95 p-8 shadow-2xl backdrop-blur-md relative overflow-hidden transition-colors">
         
         {/* Top Accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7a1f3d]"></div>
 
         <div className="mb-6">
-          <h2 className="font-serif text-3xl font-bold text-stone-900">Activate Account</h2>
+          <h2 className="font-serif text-3xl font-bold text-stone-900 dark:text-stone-100">Activate Account</h2>
           <div className="mt-2 flex flex-col items-start gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] dark:text-[#f8d070] bg-red-50 dark:bg-[#7a1f3d]/20 border border-red-100 dark:border-[#f8d070]/30 px-2 py-0.5 rounded-md">
               Research Adviser
             </span>
-            <p className="text-xs text-stone-500 font-medium">Create your password to get started</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">Create your password to get started</p>
           </div>
         </div>
 
@@ -256,15 +256,15 @@ export default function ActivateAccount() {
         {adviserData ? (
           <form onSubmit={handleActivateAccount} className="space-y-5">
             {/* Adviser Info Read Only */}
-            <div className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 mb-2">
-              <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">Account Details</p>
-              <p className="font-serif text-lg font-bold text-[#7a1f3d]">{adviserData.displayName}</p>
-              <p className="text-xs text-stone-500">{adviserData.email}</p>
+            <div className="bg-stone-50 dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 rounded-xl p-4 mb-2">
+              <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest mb-1">Account Details</p>
+              <p className="font-serif text-lg font-bold text-[#7a1f3d] dark:text-[#f8d070]">{adviserData.displayName}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400">{adviserData.email}</p>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-2">New Password <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">New Password <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
                   type={showPassword ? 'text' : 'password'}
@@ -272,7 +272,7 @@ export default function ActivateAccount() {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Create a strong password" 
-                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
+                  className="w-full bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50" 
                   disabled={loading}
                 />
                 <button 
@@ -290,8 +290,8 @@ export default function ActivateAccount() {
 
               {/* Password Requirements */}
               {formData.password && (
-                <div className="mt-3 bg-stone-50 border border-stone-100 rounded-lg p-3 space-y-1.5">
-                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Password Requirements</p>
+                <div className="mt-3 bg-stone-50 dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-lg p-3 space-y-1.5">
+                  <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest mb-2">Password Requirements</p>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.minLength ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
                     <span>{passwordValidation.minLength ? '✅' : '○'}</span> At least 8 characters
                   </div>
@@ -313,7 +313,7 @@ export default function ActivateAccount() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-2">Confirm Password <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">Confirm Password <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -321,7 +321,7 @@ export default function ActivateAccount() {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="Confirm your password" 
-                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
+                  className="w-full bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50" 
                   disabled={loading}
                 />
                 <button 
@@ -344,17 +344,17 @@ export default function ActivateAccount() {
             </div>
 
             {/* Terms & Conditions */}
-            <div className="flex items-start gap-3 mt-4 bg-stone-50/50 p-3 rounded-lg border border-stone-100">
+            <div className="flex items-start gap-3 mt-4 bg-stone-50/50 dark:bg-stone-900/50 p-3 rounded-lg border border-stone-100 dark:border-stone-800">
               <input 
                 type="checkbox" 
                 name="agreeTerms"
                 checked={formData.agreeTerms}
                 onChange={handleInputChange}
                 disabled={loading}
-                className="w-4 h-4 text-[#7a1f3d] border-stone-300 rounded focus:ring-[#7a1f3d] mt-0.5" 
+                className="w-4 h-4 text-[#7a1f3d] dark:text-[#f8d070] border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-950 rounded focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] mt-0.5" 
               />
-              <label className="text-xs text-stone-600 leading-relaxed">
-                I agree to the <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
+              <label className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                I agree to the <span className="font-bold text-[#7a1f3d] dark:text-[#f8d070] cursor-pointer hover:underline">Terms of Service</span> and <span className="font-bold text-[#7a1f3d] dark:text-[#f8d070] cursor-pointer hover:underline">Privacy Policy</span>.
               </label>
             </div>
 
@@ -377,24 +377,24 @@ export default function ActivateAccount() {
               )}
             </button>
 
-            <div className="text-center pt-4 border-t border-stone-100 mt-6">
-              <p className="text-xs font-medium text-stone-500">
-                Already activated? <Link to="/" className="text-[#7a1f3d] font-bold hover:underline ml-1">Sign in here</Link>
+            <div className="text-center pt-4 border-t border-stone-100 dark:border-stone-800 mt-6">
+              <p className="text-xs font-medium text-stone-500 dark:text-stone-400">
+                Already activated? <Link to="/" className="text-[#7a1f3d] dark:text-[#f8d070] font-bold hover:underline ml-1">Sign in here</Link>
               </p>
             </div>
           </form>
         ) : (
           <div className="text-center py-10">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900">
               <span className="text-2xl">❌</span>
             </div>
-            <p className="text-stone-900 font-bold text-lg mb-2">Invalid Activation Link</p>
-            <p className="text-stone-500 text-sm mb-8 px-4 leading-relaxed">
+            <p className="text-stone-900 dark:text-stone-100 font-bold text-lg mb-2">Invalid Activation Link</p>
+            <p className="text-stone-500 dark:text-stone-400 text-sm mb-8 px-4 leading-relaxed">
               This link is invalid, expired, or the account has already been activated.
             </p>
             <Link 
               to="/" 
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold rounded-xl transition-colors shadow-sm w-full sm:w-auto"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-stone-900 dark:bg-stone-800 hover:bg-stone-800 dark:hover:bg-stone-700 text-white font-bold rounded-xl transition-colors shadow-sm w-full sm:w-auto"
             >
               Back to Login
             </Link>

@@ -179,78 +179,78 @@ function SendInvitations() {
     <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={true}>
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Send Student Invitations</h1>
-          <p className="text-sm text-gray-500">Invite students to your research group — type their email and send</p>
+          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Send Student Invitations</h1>
+          <p className="text-sm text-gray-500 dark:text-stone-400">Invite students to your research group — type their email and send</p>
         </div>
 
         {/* Error/Success Messages */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
             <span className="text-red-500 text-lg">⚠️</span>
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4 flex items-start gap-3">
             <span className="text-green-500 text-lg">✅</span>
-            <p className="text-sm text-green-700">{success}</p>
+            <p className="text-sm text-green-700 dark:text-green-400">{success}</p>
           </div>
         )}
 
         {/* Adviser Email Check */}
         {adviserData?.email && !adviserData.email.toLowerCase().endsWith('@phinmaed.com') && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4 flex items-start gap-3">
             <span className="text-yellow-600 text-lg">⚠️</span>
-            <p className="text-sm text-yellow-700">Your email ({adviserData.email}) is not a @phinmaed.com email. You cannot send invitations.</p>
+            <p className="text-sm text-yellow-700 dark:text-yellow-400">Your email ({adviserData.email}) is not a @phinmaed.com email. You cannot send invitations.</p>
           </div>
         )}
 
         {/* Action Card */}
-        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
-          <div className="text-4xl text-[#7a2e46] mb-3">✉️</div>
-          <h2 className="text-2xl font-serif font-bold text-[#7a2e46] mb-2">Send Student Registration Link</h2>
-          <p className="text-gray-500 text-sm max-w-lg mb-6">
+        <div className="bg-white dark:bg-stone-900 border-2 border-dashed border-gray-200 dark:border-stone-800 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
+          <div className="text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-3">✉️</div>
+          <h2 className="text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
+          <p className="text-gray-500 dark:text-stone-400 text-sm max-w-lg mb-6">
             Type the student's email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
           </p>
           <form onSubmit={handleSendInvitation} className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
             <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46]">M</span>
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">M</span>
               <input 
                 type="email" 
                 value={studentEmail}
                 onChange={(e) => setStudentEmail(e.target.value.trim())}
                 placeholder="e.g. student@phinmaed.com" 
-                className="w-full bg-white border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] disabled:opacity-50"
+                className="w-full bg-white dark:bg-stone-950 border border-gray-300 dark:border-stone-700 text-gray-900 dark:text-stone-100 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] disabled:opacity-50"
                 disabled={loading}
               />
             </div>
             <button 
               type="submit"
               disabled={loading}
-              className="bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-lg transition whitespace-nowrap"
+              className="bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] dark:hover:bg-[#ffe090] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-stone-900 font-bold px-6 py-3 rounded-lg transition whitespace-nowrap"
             >
               {loading ? 'Sending...' : 'Send Link'}
             </button>
           </form>
-          <p className="text-xs text-gray-400 mt-4">💡 Only @phinmaed.com emails can receive invitations.</p>
+          <p className="text-xs text-gray-400 dark:text-stone-500 mt-4">💡 Only @phinmaed.com emails can receive invitations.</p>
         </div>
 
         {/* History Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-5 border-b border-gray-200">
-            <h3 className="font-bold text-gray-900 text-lg">Sent Invitations</h3>
-            <p className="text-xs text-gray-500">Track invitations you've sent to students</p>
+        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800">
+          <div className="p-5 border-b border-gray-200 dark:border-stone-800">
+            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Sent Invitations</h3>
+            <p className="text-xs text-gray-500 dark:text-stone-400">Track invitations you've sent to students</p>
           </div>
           
           {invitations.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-gray-400 dark:text-stone-500">
               <p className="text-sm">No invitations sent yet. Send your first one above!</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-[#faf5f6] text-[#7a2e46] text-xs uppercase tracking-wider font-bold">
+                <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
                   <tr>
                     <th className="py-3 px-6">Student Email</th>
                     <th className="py-3 px-6">Sent</th>
@@ -258,18 +258,18 @@ function SendInvitations() {
                     <th className="py-3 px-6">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
                   {invitations.map((invitation) => (
-                    <tr key={invitation.id} className="hover:bg-gray-50">
-                      <td className="py-4 px-6 text-gray-700 font-medium">{invitation.studentEmail}</td>
-                      <td className="py-4 px-6 text-gray-500">
+                    <tr key={invitation.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50">
+                      <td className="py-4 px-6 text-gray-700 dark:text-stone-300 font-medium">{invitation.studentEmail}</td>
+                      <td className="py-4 px-6 text-gray-500 dark:text-stone-400">
                         {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${
                           invitation.status === 'active' 
-                            ? 'text-green-700 bg-green-50' 
-                            : 'text-yellow-700 bg-yellow-50'
+                            ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+                            : 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
                         }`}>
                           • {invitation.status === 'active' ? 'Registered' : 'Pending'}
                         </span>
@@ -279,7 +279,7 @@ function SendInvitations() {
                           <button 
                             onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                             disabled={loading}
-                            className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded text-xs font-semibold hover:bg-gray-50 disabled:opacity-50"
+                            className="border border-gray-300 dark:border-stone-700 text-gray-600 dark:text-stone-300 px-3 py-1.5 rounded text-xs font-semibold hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50"
                           >
                             🔄 Resend
                           </button>

@@ -166,10 +166,10 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
   };
 
   return (
-    <div className="w-full min-h-screen font-serif bg-[#F5F5F0]">
+    <div className="w-full min-h-screen font-serif bg-[#F5F5F0] dark:bg-stone-950 transition-colors">
       {/* Top Header Bar */}
       <div 
-        className="w-full flex items-center justify-between px-7 py-3 border-b border-[#b4a078]/30"
+        className="w-full flex items-center justify-between px-7 py-3 border-b border-[#b4a078]/30 dark:border-stone-800 transition-colors"
         style={{ 
           backgroundImage: `url(${parchmentBg})`, 
           backgroundSize: 'cover', 
@@ -178,13 +178,13 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
       >
         <div className="flex items-center gap-4">
           <img src={swuLogoSeal} alt="SWU Logo" className="w-[52px] h-[52px] object-contain" />
-          <span className="text-[17px] font-bold text-[#3a1a1a] tracking-[0.18em]">
+          <span className="text-[17px] font-bold text-[#3a1a1a] dark:text-white tracking-[0.18em]">
             WELCOME {displayName.toUpperCase()}
           </span>
         </div>
         <button 
           onClick={onBackToResearch}
-          className="text-[#6B0F1A] hover:text-[#8B2F3A] transition-colors text-sm font-serif"
+          className="text-[#6B0F1A] dark:text-stone-300 hover:text-[#8B2F3A] dark:hover:text-stone-100 transition-colors text-sm font-serif"
         >
           ← Back to Research
         </button>
@@ -192,18 +192,18 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
       {/* Upload Form Content */}
       <div className="px-6 py-8 max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-stone-900 rounded-lg shadow-lg overflow-hidden transition-colors">
           {/* Form Header */}
-          <div className="bg-gradient-to-r from-[#6B0F1A] to-[#8B2F3A] px-8 py-6">
-            <h1 className="text-2xl font-bold text-white">Upload a Research</h1>
-            <p className="text-white/80 text-sm mt-1">Submit your research paper to the archive</p>
+          <div className="bg-gradient-to-r from-[#6B0F1A] to-[#8B2F3A] dark:from-stone-900 dark:to-stone-800 px-8 py-6">
+            <h1 className="text-2xl font-bold text-white dark:text-stone-100">Upload a Research</h1>
+            <p className="text-white/80 dark:text-stone-400 text-sm mt-1">Submit your research paper to the archive</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             {/* Research Title */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Research Title <span className="text-red-500">*</span>
               </label>
               <input
@@ -212,8 +212,8 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 value={formData.title}
                 onChange={handleInputChange}
                 placeholder="Enter the title of your research"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all ${
+                  errors.title ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               />
               {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
@@ -221,7 +221,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Author(s) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Author(s) <span className="text-red-500">*</span>
               </label>
               <input
@@ -230,8 +230,8 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 value={formData.authors}
                 onChange={handleInputChange}
                 placeholder="Enter author names (separated by commas)"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all ${
-                  errors.authors ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all ${
+                  errors.authors ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               />
               {errors.authors && <p className="text-red-500 text-xs mt-1">{errors.authors}</p>}
@@ -239,15 +239,15 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Category <span className="text-red-500">*</span>
               </label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all ${
-                  errors.category ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all ${
+                  errors.category ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               >
                 <option value="">Select a category</option>
@@ -260,7 +260,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Publication Date */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Publication Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -269,8 +269,8 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 value={formData.publicationDate}
                 onChange={handleInputChange}
                 placeholder="dd/mm/yyyy"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all ${
-                  errors.publicationDate ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all ${
+                  errors.publicationDate ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               />
               {errors.publicationDate && <p className="text-red-500 text-xs mt-1">{errors.publicationDate}</p>}
@@ -278,7 +278,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Keywords */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Keywords <span className="text-red-500">*</span>
               </label>
               <input
@@ -287,8 +287,8 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 value={formData.keywords}
                 onChange={handleInputChange}
                 placeholder="Enter keywords (separated by commas)"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all ${
-                  errors.keywords ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all ${
+                  errors.keywords ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               />
               {errors.keywords && <p className="text-red-500 text-xs mt-1">{errors.keywords}</p>}
@@ -296,7 +296,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Abstract */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Abstract <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -305,8 +305,8 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 onChange={handleInputChange}
                 rows="6"
                 placeholder="Enter a brief abstract of your research (minimum 50 characters)..."
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] transition-all resize-none ${
-                  errors.abstract ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B0F1A] dark:focus:ring-[#7B1F35] bg-white dark:bg-stone-800 text-[#333] dark:text-stone-200 transition-all resize-none ${
+                  errors.abstract ? 'border-red-500' : 'border-gray-300 dark:border-stone-700'
                 }`}
               />
               {errors.abstract && <p className="text-red-500 text-xs mt-1">{errors.abstract}</p>}
@@ -317,16 +317,16 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
             {/* Research Document Upload */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-stone-300 mb-2">
                 Research Document <span className="text-red-500">*</span>
               </label>
               <div
                 className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                   dragActive 
-                    ? 'border-[#6B0F1A] bg-[#FFF5F0]' 
+                    ? 'border-[#6B0F1A] dark:border-[#7B1F35] bg-[#FFF5F0] dark:bg-[#7B1F35]/10' 
                     : errors.document 
-                      ? 'border-red-500 bg-red-50' 
-                      : 'border-gray-300 hover:border-[#6B0F1A]'
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950' 
+                      : 'border-gray-300 dark:border-stone-700 hover:border-[#6B0F1A] dark:hover:border-[#7B1F35]'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -344,39 +344,39 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
                 <label htmlFor="document" className="cursor-pointer block">
                   <div className="text-4xl mb-3">📄</div>
                   {fileName ? (
-                    <div className="text-green-600 font-medium mb-2">{fileName}</div>
+                    <div className="text-green-600 dark:text-green-400 font-medium mb-2">{fileName}</div>
                   ) : (
                     <>
-                      <p className="text-gray-600 mb-2">Drag and drop your research document here</p>
-                      <p className="text-gray-400 text-sm">or</p>
+                      <p className="text-gray-600 dark:text-stone-400 mb-2">Drag and drop your research document here</p>
+                      <p className="text-gray-400 dark:text-stone-500 text-sm">or</p>
                     </>
                   )}
                   <button
                     type="button"
                     onClick={() => document.getElementById('document').click()}
-                    className="mt-3 px-4 py-2 bg-[#6B0F1A] text-white rounded-lg hover:bg-[#8B2F3A] transition-colors text-sm"
+                    className="mt-3 px-4 py-2 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white rounded-lg hover:bg-[#8B2F3A] dark:hover:bg-[#5a1831] transition-colors text-sm"
                   >
                     Browse Files
                   </button>
-                  <p className="text-gray-400 text-xs mt-3">Supported formats: PDF, DOC, DOCX, XLSX, SAVI (Max 50MB)</p>
+                  <p className="text-gray-400 dark:text-stone-500 text-xs mt-3">Supported formats: PDF, DOC, DOCX, XLSX, SAVI (Max 50MB)</p>
                 </label>
               </div>
               {errors.document && <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
             </div>
 
             {/* Form Actions */}
-            <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-stone-700">
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-6 py-2 border border-gray-300 dark:border-stone-600 text-gray-700 dark:text-stone-300 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-2 bg-[#6B0F1A] text-white rounded-lg hover:bg-[#8B2F3A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-2 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white rounded-lg hover:bg-[#8B2F3A] dark:hover:bg-[#5a1831] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Uploading...' : 'Upload Research'}
               </button>

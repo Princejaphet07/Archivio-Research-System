@@ -10,6 +10,7 @@ import ActivateAccount from './pages/ActivateAccount';
 import ForgotPassword from './pages/ForgotPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdviserProvider } from './context/AdviserContext';
+import { DarkModeProvider } from './context/DarkModeContext';
 
 // Main App Pages
 import Dashboard from './pages/Dashboard';
@@ -49,6 +50,7 @@ function App() {
   }
 
   return (
+    <DarkModeProvider>
       <Routes>
         <Route path="/" element={<Navigate to="/adviser/dashboard" replace />} />
         
@@ -76,6 +78,7 @@ function App() {
           </AdviserProvider>
         } />
       </Routes>
+    </DarkModeProvider>
   );
 }
 

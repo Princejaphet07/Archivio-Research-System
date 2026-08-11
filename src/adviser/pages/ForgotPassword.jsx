@@ -132,14 +132,14 @@ function ForgotPassword() {
   return (
     <div className="min-h-screen flex font-sans text-gray-800 bg-cover bg-center" style={{ backgroundImage: `url(${loginBg})` }}>
       <div className="w-full flex justify-center items-center p-6">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 relative">
+        <div className="bg-white dark:bg-stone-950/95 border border-transparent dark:border-stone-800 rounded-xl shadow-2xl w-full max-w-md p-8 relative transition-colors">
           
           <div className="flex flex-col items-center mb-6">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md border border-gray-100">
+            <div className="w-20 h-20 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center mb-6 shadow-md border border-gray-100 dark:border-stone-800">
               <img src={newIcon} alt="ARCHIVIO Logo" className="w-[60px] h-[60px] object-contain" />
             </div>
-            <h1 className="text-2xl font-serif font-bold text-gray-900">Forgot Password</h1>
-            <p className="text-xs text-gray-500 mt-1 text-center">
+            <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-stone-100">Forgot Password</h1>
+            <p className="text-xs text-gray-500 dark:text-stone-400 mt-1 text-center">
               {step === 1 && "Enter your email to receive a verification code."}
               {step === 2 && "Check your email for the 6-digit code."}
               {step === 3 && "Create a new secure password."}
@@ -163,13 +163,13 @@ function ForgotPassword() {
           {step === 1 && (
             <form onSubmit={handleSendOTP}>
               <div className="mb-5">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. adviser@phinmaed.com"
-                  className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] transition"
+                  className="w-full bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg px-4 py-3 text-sm text-gray-800 dark:text-stone-200 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition"
                   required
                   disabled={loading}
                 />
@@ -187,7 +187,7 @@ function ForgotPassword() {
           {step === 2 && (
             <form onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
               <div className="mb-6">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">6-Digit Code</label>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-3">6-Digit Code</label>
                 <div className="flex justify-between gap-2">
                   {otp.map((data, index) => (
                     <input
@@ -199,7 +199,7 @@ function ForgotPassword() {
                       onChange={(e) => handleChangeOtp(e.target, index)}
                       onKeyDown={(e) => handleKeyDownOtp(e, index)}
                       onFocus={(e) => e.target.select()}
-                      className="w-12 h-14 bg-[#faf7f5] border border-gray-200 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a2e46] transition shadow-sm"
+                      className="w-12 h-14 bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg text-center text-2xl text-gray-800 dark:text-stone-200 font-semibold focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition shadow-sm"
                       required
                     />
                   ))}
@@ -212,7 +212,7 @@ function ForgotPassword() {
                 Verify Code
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a2e46] hover:underline">
+                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a2e46] dark:text-[#f8d070] hover:underline">
                   Resend Code
                 </button>
               </div>
@@ -222,18 +222,18 @@ function ForgotPassword() {
           {step === 3 && (
             <form onSubmit={handleVerifyAndReset}>
               <div className="mb-4">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">New Password</label>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">New Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition mb-3"
+                    className="w-full bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 dark:text-stone-200 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition mb-3"
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a2e46] dark:text-[#f8d070] hover:text-[#5f2135] dark:hover:text-[#ffe090]">
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
@@ -253,18 +253,18 @@ function ForgotPassword() {
                 )}
               </div>
               <div className="mb-6">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Confirm Password</label>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Confirm Password</label>
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition"
+                    className="w-full bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 dark:text-stone-200 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition"
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a2e46] dark:text-[#f8d070] hover:text-[#5f2135] dark:hover:text-[#ffe090]">
                     {showConfirmPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
@@ -279,8 +279,8 @@ function ForgotPassword() {
             </form>
           )}
 
-          <div className="text-center mt-6 pt-4 border-t border-gray-100">
-            <Link to="/" className="text-xs font-semibold text-gray-500 hover:text-[#7a2e46] transition">
+          <div className="text-center mt-6 pt-4 border-t border-gray-100 dark:border-stone-800">
+            <Link to="/" className="text-xs font-semibold text-gray-500 dark:text-stone-400 hover:text-[#7a2e46] dark:hover:text-[#f8d070] transition">
               ← Back to Login
             </Link>
           </div>

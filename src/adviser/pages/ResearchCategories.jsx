@@ -145,12 +145,12 @@ function ResearchCategories() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Research Categories</h1>
-            <p className="text-sm text-gray-500">Create and manage research paper categories for your submissions</p>
+            <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Research Categories</h1>
+            <p className="text-sm text-gray-500 dark:text-stone-400">Create and manage research paper categories for your submissions</p>
           </div>
           <button 
             onClick={openAddModal}
-            className="bg-[#7a2e46] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] transition"
+            className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
           >
             + New Category
           </button>
@@ -158,22 +158,22 @@ function ResearchCategories() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredCategories.map((cat, i) => (
-            <div key={cat.id || i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
+            <div key={cat.id || i} className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
               <div>
                 <div className="text-2xl mb-1">{cat.icon || '🔗'}</div>
-                <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{cat.name}</h3>
-                <p className="text-xs text-gray-500">Global Category</p>
+                <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
+                <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
               </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => openEditModal(cat)}
-                  className="border border-gray-200 rounded px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                  className="border border-gray-200 dark:border-stone-700 rounded px-3 py-1 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1"
                 >
                   ✏️ Edit
                 </button>
                 <button 
                   onClick={() => handleDelete(cat.id, cat.name)}
-                  className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                  className="border border-gray-200 dark:border-stone-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition"
                 >
                   🗑️
                 </button>
@@ -184,7 +184,7 @@ function ResearchCategories() {
           {/* Add New Category Card */}
           <button 
             onClick={openAddModal}
-            className="bg-transparent border-2 border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center h-40 text-gray-400 hover:text-[#7a2e46] hover:border-[#7a2e46] hover:bg-white transition group"
+            className="bg-transparent border-2 border-dashed border-gray-300 dark:border-stone-700 rounded-xl p-5 flex flex-col items-center justify-center h-40 text-gray-400 dark:text-stone-500 hover:text-[#7a2e46] dark:hover:text-[#f8d070] hover:border-[#7a2e46] dark:hover:border-[#f8d070] hover:bg-white dark:hover:bg-stone-900 transition group"
           >
             <span className="text-3xl font-light mb-2 group-hover:scale-110 transition">+</span>
             <span className="text-sm font-semibold">Add New Category</span>
@@ -194,13 +194,13 @@ function ResearchCategories() {
         {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="bg-white dark:bg-stone-950 rounded-xl shadow-2xl max-w-md w-full">
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-serif font-bold text-gray-900">{editingId ? 'Edit Category' : 'New Research Category'}</h2>
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-stone-800">
+                <h2 className="text-xl font-serif font-bold text-gray-900 dark:text-stone-100">{editingId ? 'Edit Category' : 'New Research Category'}</h2>
                 <button 
                   onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                  className="text-gray-400 dark:text-stone-500 hover:text-gray-600 dark:hover:text-stone-300 text-2xl leading-none"
                 >
                   ×
                 </button>
@@ -210,7 +210,7 @@ function ResearchCategories() {
               <div className="p-6 space-y-5">
                 {/* Category Name */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">
                     Category Name <span className="text-red-500">*</span>
                   </label>
                   <input 
@@ -219,7 +219,7 @@ function ResearchCategories() {
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="e.g. Blockchain Technology" 
                     list="standard-categories"
-                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900"
+                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100"
                   />
                   <datalist id="standard-categories">
                     <option value="Computer Science" />
@@ -240,17 +240,17 @@ function ResearchCategories() {
 
                 {/* Icon / Emoji */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">
                     Icon / Emoji
                   </label>
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900 flex justify-between items-center transition"
+                      className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 flex justify-between items-center transition"
                     >
                       <span className="text-xl leading-none">{categoryIcon}</span>
-                      <span className="text-gray-400">
+                      <span className="text-gray-400 dark:text-stone-500">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 11a5 5 0 110-10 5 5 0 010 10z"/>
                         </svg>
@@ -259,8 +259,8 @@ function ResearchCategories() {
                     
                     {/* Emoji Dropdown / Grid */}
                     {showEmojiPicker && (
-                      <div className="absolute z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-full animate-fade-in-down">
-                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Select an Icon</div>
+                      <div className="absolute z-10 mt-1 bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg shadow-lg p-3 w-full animate-fade-in-down">
+                        <div className="text-[10px] text-gray-400 dark:text-stone-500 font-bold uppercase tracking-wider mb-2">Select an Icon</div>
                         <div className="grid grid-cols-7 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
                           {emojiOptions.map((emoji, index) => (
                             <button
@@ -270,7 +270,7 @@ function ResearchCategories() {
                                 setCategoryIcon(emoji);
                                 setShowEmojiPicker(false);
                               }}
-                              className={`text-xl hover:bg-gray-100 rounded-lg p-1 transition ${categoryIcon === emoji ? 'bg-gray-100 ring-1 ring-gray-300' : ''}`}
+                              className={`text-xl hover:bg-gray-100 dark:hover:bg-stone-800 rounded-lg p-1 transition ${categoryIcon === emoji ? 'bg-gray-100 dark:bg-stone-800 ring-1 ring-gray-300 dark:ring-stone-700' : ''}`}
                             >
                               {emoji}
                             </button>
@@ -283,7 +283,7 @@ function ResearchCategories() {
 
                 {/* Color Tag */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">
                     Color Tag
                   </label>
                   <div className="flex gap-2 flex-wrap">
@@ -305,7 +305,7 @@ function ResearchCategories() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">
                     Description (Optional)
                   </label>
                   <textarea 
@@ -313,22 +313,22 @@ function ResearchCategories() {
                     onChange={(e) => setCategoryDescription(e.target.value)}
                     placeholder="Brief description of this research category..." 
                     rows="3"
-                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900 resize-none"
+                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 resize-none"
                   />
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-stone-800">
                 <button 
                   onClick={resetForm}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-50 dark:hover:bg-stone-800 transition"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleSaveCategory}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#7a2e46] hover:bg-[#5f2135] transition"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white dark:text-stone-900 bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
                 >
                   {editingId ? 'Save Changes' : 'Create Category'}
                 </button>

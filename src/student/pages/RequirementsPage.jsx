@@ -411,7 +411,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const displayInitials = initials || (studentName ? studentName.substring(0, 2).toUpperCase() : 'ST');
 
   return (
-    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] dark:bg-stone-950 font-sans overflow-hidden transition-colors">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -441,42 +441,42 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
             {/* PAGE TITLE */}
             <div>
-              <h2 className="font-serif font-bold text-[28px] text-[#1A1A1A] mb-1">Supporting Documents</h2>
-              <p className="text-gray-500 text-[14px]">Submit all required documents for your research</p>
+              <h2 className="font-serif font-bold text-[28px] text-[#1A1A1A] dark:text-stone-100 mb-1">Supporting Documents</h2>
+              <p className="text-gray-500 dark:text-stone-400 text-[14px]">Submit all required documents for your research</p>
             </div>
 
             {/* PROGRESS BAR CARD */}
-            <div className="w-full bg-white rounded-2xl p-6 flex items-center justify-between shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
+            <div className="w-full bg-white dark:bg-stone-900 rounded-2xl p-6 flex items-center justify-between shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
               <div className="w-48">
                 {loadingData ? (
-                  <div className="h-6 w-24 bg-stone-200 animate-pulse rounded mb-1" />
+                  <div className="h-6 w-24 bg-stone-200 dark:bg-stone-800 animate-pulse rounded mb-1" />
                 ) : (
-                  <h3 className="text-[22px] font-serif font-bold text-[#7B1F35]">{uploadedCount} of {totalCount}</h3>
+                  <h3 className="text-[22px] font-serif font-bold text-[#7B1F35] dark:text-[#D05353]">{uploadedCount} of {totalCount}</h3>
                 )}
-                <p className="text-[13px] text-gray-500">documents submitted</p>
+                <p className="text-[13px] text-gray-500 dark:text-stone-400">documents submitted</p>
               </div>
 
               <div className="flex-1 px-8">
-                <div className="w-full bg-stone-100 h-3 rounded-full overflow-hidden mb-2">
+                <div className="w-full bg-stone-100 dark:bg-stone-900 h-3 rounded-full overflow-hidden mb-2">
                   <div
-                    className="bg-[#7B1F35] h-full rounded-full transition-all duration-700"
+                    className="bg-[#7B1F35] dark:bg-[#7B1F35] h-full rounded-full transition-all duration-700"
                     style={{ width: `${loadingData ? 0 : progressPercent}%` }}
                   />
                 </div>
                 {loadingData ? (
-                  <div className="h-3 w-20 bg-stone-200 animate-pulse rounded" />
+                  <div className="h-3 w-20 bg-stone-200 dark:bg-stone-800 animate-pulse rounded" />
                 ) : (
-                  <p className="text-[12px] font-bold text-[#7B1F35]">{progressPercent}% complete</p>
+                  <p className="text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">{progressPercent}% complete</p>
                 )}
               </div>
 
               <div className="w-48 flex justify-end">
                 {missingCount === 0 && !loadingData ? (
-                  <span className="bg-[#E6F4EA] text-[#1E8E3E] text-[13px] font-bold px-4 py-2 rounded-full border border-[#CEEAD6]">
+                  <span className="bg-[#E6F4EA] dark:bg-green-900/30 text-[#1E8E3E] dark:text-green-400 text-[13px] font-bold px-4 py-2 rounded-full border border-[#CEEAD6] dark:border-green-900/50">
                     ✓ Complete
                   </span>
                 ) : (
-                  <span className="bg-[#FCE8EB] text-[#CF3645] text-[13px] font-bold px-4 py-2 rounded-full flex items-center gap-2 border border-[#F5C2C7]">
+                  <span className="bg-[#FCE8EB] dark:bg-red-900/30 text-[#CF3645] dark:text-red-400 text-[13px] font-bold px-4 py-2 rounded-full flex items-center gap-2 border border-[#F5C2C7] dark:border-red-900/50">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     {missingCount} missing
                   </span>
@@ -495,39 +495,39 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
                   return (
-                    <div key={item.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200/80 border-t-4 border-t-[#7B1F35] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
+                    <div key={item.id} className="bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 border-t-4 border-t-[#7B1F35] dark:border-t-[#7B1F35] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
+                        <div className="w-10 h-10 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
                           {item.icon}
                         </div>
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] text-[15px]">{item.title}</h4>
-                          <span className="text-[9px] font-bold text-[#7B1F35] tracking-widest uppercase bg-[#F4DEE5] px-2 py-0.5 rounded">Required</span>
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
+                          <span className="text-[9px] font-bold text-[#7B1F35] dark:text-white tracking-widest uppercase bg-[#F4DEE5] dark:bg-[#7B1F35] px-2 py-0.5 rounded">Required</span>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-[13px] mb-6 flex-1">{item.desc}</p>
+                      <p className="text-gray-600 dark:text-stone-400 text-[13px] mb-6 flex-1">{item.desc}</p>
 
-                      <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-4 mb-4 relative group">
+                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700 rounded-xl p-4 mb-4 relative group">
                         <div className="flex items-start gap-2">
-                          <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                          <svg className="w-4 h-4 text-gray-400 dark:text-stone-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                           <div className="min-w-0 flex-1">
                             {meta.url && meta.url !== '#' ? (
-                              <a href={meta.url} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-[#7B1F35] hover:underline truncate block w-full">
+                              <a href={meta.url} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-[#7B1F35] dark:text-[#D05353] hover:underline truncate block w-full">
                                 {meta.name}
                               </a>
                             ) : (
-                              <p className="text-[13px] font-bold text-[#1A1A1A] truncate w-full">{meta.name}</p>
+                              <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate w-full">{meta.name}</p>
                             )}
-                            <p className="text-[11px] text-gray-500">{meta.size} · {meta.date}</p>
+                            <p className="text-[11px] text-gray-500 dark:text-stone-400">{meta.size} · {meta.date}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between mt-auto">
-                        <span className="flex items-center gap-1.5 text-[12px] font-bold text-[#1E8E3E]">
-                          <span className="w-2 h-2 bg-[#1E8E3E] rounded-full"></span> Submitted
+                        <span className="flex items-center gap-1.5 text-[12px] font-bold text-[#1E8E3E] dark:text-green-400">
+                          <span className="w-2 h-2 bg-[#1E8E3E] dark:bg-green-400 rounded-full"></span> Submitted
                         </span>
-                        <div className="flex items-center gap-3 text-[12px] font-bold text-[#7B1F35]">
+                        <div className="flex items-center gap-3 text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">
                           <button
                             className="hover:underline"
                             onClick={() => {
@@ -537,8 +537,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                           >
                             Replace
                           </button>
-                          <span className="text-gray-300">·</span>
-                          <button className="hover:underline text-gray-500" onClick={() => handleDelete(item)}>Delete</button>
+                          <span className="text-gray-300 dark:text-stone-600">·</span>
+                          <button className="hover:underline text-gray-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
                         </div>
                       </div>
 
@@ -556,20 +556,20 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 // ── MISSING CARD ──
                 return (
-                  <div key={item.id} className={`bg-white rounded-2xl p-6 shadow-sm border border-stone-200/80 border-t-4 border-t-[#CF3645] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
+                  <div key={item.id} className={`bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 border-t-4 border-t-[#CF3645] dark:border-t-red-500 flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
                     <div className="flex items-start gap-3 mb-4">
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
+                      <div className="w-10 h-10 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
                         {item.icon}
                       </div>
                       <div>
-                        <h4 className="font-bold text-[#1A1A1A] text-[15px]">{item.title}</h4>
-                        <span className="text-[9px] font-bold text-[#CF3645] tracking-widest uppercase bg-[#FCE8EB] px-2 py-0.5 rounded">Required</span>
+                        <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
+                        <span className="text-[9px] font-bold text-[#CF3645] dark:text-red-400 tracking-widest uppercase bg-[#FCE8EB] dark:bg-red-950/50 px-2 py-0.5 rounded">Required</span>
                       </div>
                     </div>
-                    <p className="text-gray-600 text-[13px] mb-6 flex-1">{item.desc}</p>
+                    <p className="text-gray-600 dark:text-stone-400 text-[13px] mb-6 flex-1">{item.desc}</p>
 
                     <div
-                      className="border-2 border-dashed border-[#CF3645]/40 bg-[#FCE8EB]/30 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#FCE8EB]/60 transition-colors mt-auto relative overflow-hidden"
+                      className="border-2 border-dashed border-[#CF3645]/40 dark:border-red-900/50 bg-[#FCE8EB]/30 dark:bg-red-950/30 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#FCE8EB]/60 dark:hover:bg-red-900/20 transition-colors mt-auto relative overflow-hidden"
                       onClick={() => {
                         if (item.type === 'url') handleUploadUrl(item);
                         else fileInputRefs.current[item.id]?.click();
@@ -577,22 +577,22 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                     >
                       {isUploadingThis ? (
                         <div className="flex flex-col items-center gap-2">
-                          <div className="w-6 h-6 border-2 border-[#CF3645]/30 border-t-[#CF3645] rounded-full animate-spin" />
-                          <span className="text-[#CF3645] font-bold text-[12px]">Uploading...</span>
+                          <div className="w-6 h-6 border-2 border-[#CF3645]/30 dark:border-red-900/50 border-t-[#CF3645] dark:border-t-red-500 rounded-full animate-spin" />
+                          <span className="text-[#CF3645] dark:text-red-400 font-bold text-[12px]">Uploading...</span>
                         </div>
                       ) : (
                         <>
-                          <div className="w-8 h-8 bg-[#8C9BB4] rounded text-white flex items-center justify-center mb-2 shadow-sm">
+                          <div className="w-8 h-8 bg-[#8C9BB4] dark:bg-stone-700 rounded text-white dark:text-stone-200 flex items-center justify-center mb-2 shadow-sm">
                             {item.type === 'url' ? (
                               <span className="font-bold text-sm">URL</span>
                             ) : (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                             )}
                           </div>
-                          <p className="text-[#CF3645] font-bold text-[13px]">
+                          <p className="text-[#CF3645] dark:text-red-400 font-bold text-[13px]">
                             {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
                           </p>
-                          <p className="text-[#CF3645]/60 text-[11px] mt-1">
+                          <p className="text-[#CF3645]/60 dark:text-red-400/60 text-[11px] mt-1">
                             {item.type === 'url' ? 'GitHub or Publisher Link' : (isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB')}
                           </p>
                         </>

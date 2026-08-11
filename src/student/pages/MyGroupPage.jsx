@@ -200,8 +200,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     isYou:    true,
     initials: getInitials(displayName),
     color:    'bg-[#7B1F35]',
-    cardBg:   'bg-stone-50',
-    cardBorder: 'border-stone-200/80',
+    cardBg:   'bg-stone-50 dark:bg-stone-800/50',
+    cardBorder: 'border-stone-200/80 dark:border-stone-700',
   };
 
   // Map emails to the names provided by the leader during group creation
@@ -222,8 +222,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       isYou:     false,
       initials:  getInitials(assignedName),
       color:     AVATAR_COLORS[(idx + 1) % AVATAR_COLORS.length],
-      cardBg:    'bg-white',
-      cardBorder: 'border-stone-200/80 hover:border-stone-300',
+      cardBg:    'bg-white dark:bg-stone-900',
+      cardBorder: 'border-stone-200/80 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600',
     };
   });
 
@@ -241,8 +241,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     isYou:     false,
     initials:  getInitials(m.name || m.email.split('@')[0]),
     color:     'bg-stone-400',
-    cardBg:    'bg-stone-50',
-    cardBorder: 'border-stone-200',
+    cardBg:    'bg-stone-50 dark:bg-stone-800/50',
+    cardBorder: 'border-stone-200 dark:border-stone-700',
     pending:   true,
   }));
 
@@ -254,18 +254,18 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
   // Skeleton card
   const SkeletonCard = () => (
-    <div className="bg-white border border-stone-100 rounded-2xl p-6 flex items-start gap-4 animate-pulse">
-      <div className="w-14 h-14 rounded-full bg-stone-200 shrink-0" />
+    <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl p-6 flex items-start gap-4 animate-pulse">
+      <div className="w-14 h-14 rounded-full bg-stone-200 dark:bg-stone-800 shrink-0" />
       <div className="flex-1 space-y-2 mt-1">
-        <div className="h-4 bg-stone-200 rounded w-40" />
-        <div className="h-3 bg-stone-100 rounded w-24" />
-        <div className="h-3 bg-stone-100 rounded w-36 mt-3" />
+        <div className="h-4 bg-stone-200 dark:bg-stone-800 rounded w-40" />
+        <div className="h-3 bg-stone-100 dark:bg-stone-800/50 rounded w-24" />
+        <div className="h-3 bg-stone-100 dark:bg-stone-800/50 rounded w-36 mt-3" />
       </div>
     </div>
   );
 
   return (
-    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] dark:bg-stone-950 font-sans overflow-hidden transition-colors">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -296,8 +296,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6">
 
             <div>
-              <h2 className="text-[28px] font-bold text-[#1A1A1A] font-serif tracking-tight mb-1">My Research Group</h2>
-              <p className="text-[14px] text-gray-500 font-medium">Your team members and group information</p>
+              <h2 className="text-[28px] font-bold text-[#1A1A1A] dark:text-stone-100 font-serif tracking-tight mb-1">My Research Group</h2>
+              <p className="text-[14px] text-gray-500 dark:text-stone-400 font-medium">Your team members and group information</p>
             </div>
 
             {/* ── GROUP BANNER ────────────────────────────────────────── */}
@@ -340,7 +340,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                 <div className="relative z-10 mt-6 md:mt-0 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-5 min-w-[240px]">
                   <span className="text-[10px] font-bold tracking-wider text-white/60 uppercase block mb-3">Your Adviser</span>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-white text-[#7B1F35] flex items-center justify-center font-bold text-lg shadow-sm">
+                    <div className="w-12 h-12 rounded-full bg-white dark:bg-stone-900 text-[#7B1F35] dark:text-[#D05353] flex items-center justify-center font-bold text-lg shadow-sm">
                       {adviserInitials}
                     </div>
                     <div>
@@ -353,11 +353,11 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
             )}
 
             {/* ── TEAM MEMBERS SECTION ────────────────────────────────── */}
-            <div className="mt-2 bg-white p-8 rounded-2xl shadow-sm border border-stone-200/80 hover:shadow-md transition-shadow">
+            <div className="mt-2 bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] mb-1">Team Members</h3>
-                  <p className="text-[14px] text-gray-500">
+                  <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] dark:text-stone-100 mb-1">Team Members</h3>
+                  <p className="text-[14px] text-gray-500 dark:text-stone-400">
                     {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
                   </p>
                 </div>
@@ -365,7 +365,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                 {leaderCard.isYou && (
                   <button 
                     onClick={handleAddMember}
-                    className="px-4 py-2 bg-[#7B1F35] text-white rounded-lg text-sm font-semibold hover:bg-[#5E1627] transition flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white rounded-lg text-sm font-semibold hover:bg-[#5E1627] dark:hover:bg-[#5a1831] transition flex items-center gap-2 shadow-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -395,38 +395,38 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h4 className="text-[16px] font-bold text-[#1A1A1A] truncate">{member.name}</h4>
+                          <h4 className="text-[16px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{member.name}</h4>
                           {member.isYou && (
-                            <span className="bg-[#7B1F35] text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
+                            <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
                           )}
                             <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                               member.isYou
-                                ? 'bg-[#7B1F35]/10 text-[#7B1F35]'
+                                ? 'bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#D05353]'
                                 : member.pending
                                   ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-stone-100 text-gray-600'
+                                  : 'bg-stone-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'
                             }`}>
                             {member.role}
                           </span>
                         </div>
 
-                        <div className="text-[13px] text-gray-500 flex flex-col gap-1.5 mt-3 font-medium">
+                        <div className="text-[13px] text-gray-500 dark:text-stone-400 flex flex-col gap-1.5 mt-3 font-medium">
                           {member.studentId && member.studentId !== '—' && (
                             <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <svg className="w-4 h-4 text-gray-400 dark:text-stone-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5" />
                               </svg>
                               <span>{member.studentId}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 min-w-0">
-                            <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <svg className="w-4 h-4 text-gray-400 dark:text-stone-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                             <span className="truncate">{member.email}</span>
                           </div>
                           {member.pending && (
-                            <p className="text-[11px] text-amber-600 font-semibold mt-1">⏳ Hasn't created their account yet</p>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-500 font-semibold mt-1">⏳ Hasn't created their account yet</p>
                           )}
                         </div>
                       </div>

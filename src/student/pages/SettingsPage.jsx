@@ -323,7 +323,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   ];
 
   return (
-    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] dark:bg-stone-950 font-sans overflow-hidden transition-colors">
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar 
@@ -351,7 +351,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
         {/* SUBTITLE */}
         <div className="px-6 lg:px-10 pb-6">
-          <p className="text-[15px] text-gray-500 font-medium">Manage your account and preferences</p>
+          <p className="text-[15px] text-gray-500 dark:text-stone-400 font-medium">Manage your account and preferences</p>
         </div>
 
         {/* SCROLLABLE ROUTE BODY */}
@@ -359,7 +359,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           <div className="max-w-[1200px] flex flex-col md:flex-row gap-6">
             
             {/* Settings Sidebar */}
-            <div className="w-full md:w-[260px] shrink-0 bg-white rounded-xl p-3 h-fit border border-stone-200/80 shadow-sm">
+            <div className="w-full md:w-[260px] shrink-0 bg-white dark:bg-stone-900 rounded-xl p-3 h-fit border border-stone-200/80 dark:border-stone-800 shadow-sm transition-colors">
               <div className="flex flex-col gap-1">
                 {settingsTabs.map((tab) => (
                   <button
@@ -373,8 +373,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     }}
                     className={`flex items-center justify-between text-left px-4 py-3.5 rounded-lg font-medium text-[14px] transition-all ${
                       activeSettingsTab === tab.id
-                        ? 'bg-[#f8eef1] text-[#7B1F35]'
-                        : 'text-gray-700 hover:bg-stone-50'
+                        ? 'bg-[#f8eef1] dark:bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#D05353]'
+                        : 'text-gray-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -392,19 +392,19 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             </div>
 
             {/* Settings Content Area */}
-            <div className="flex-1 bg-white rounded-xl p-8 border border-stone-200/80 min-h-[600px] shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex-1 bg-white dark:bg-stone-900 rounded-xl p-8 border border-stone-200/80 dark:border-stone-800 min-h-[600px] shadow-sm hover:shadow-md transition-all">
               
               {/* === PROFILE TAB === */}
               {activeSettingsTab === 'Profile' && (
                 <div className="animate-fade-in flex flex-col h-full">
                   <div className="mb-6">
-                    <h2 className="text-[24px] font-bold text-black font-serif mb-1">Profile Information</h2>
-                    <p className="text-[14px] text-gray-500">Update your personal information</p>
+                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Profile Information</h2>
+                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Update your personal information</p>
                   </div>
-                  <hr className="border-stone-100 mb-8" />
+                  <hr className="border-stone-100 dark:border-stone-800 mb-8" />
                   
                   <div className="flex items-center gap-6 mb-10">
-                    <div className="w-[84px] h-[84px] rounded-full bg-[#7B1F35] text-white flex items-center justify-center font-semibold text-[28px] shadow-sm tracking-wide overflow-hidden relative">
+                    <div className="w-[84px] h-[84px] rounded-full bg-[#7B1F35] dark:bg-stone-800 text-white dark:text-stone-100 flex items-center justify-center font-semibold text-[28px] shadow-sm tracking-wide overflow-hidden relative transition-colors">
                       {studentData?.profilePhotoUrl ? (
                         <img src={studentData.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
@@ -413,8 +413,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     </div>
                     <div className="flex flex-col items-start gap-2">
                       <div>
-                        <h4 className="text-[14px] font-bold text-black">Profile Photo</h4>
-                        <p className="text-[12px] text-gray-500">JPG or PNG. Max 2MB.</p>
+                        <h4 className="text-[14px] font-bold text-black dark:text-stone-100">Profile Photo</h4>
+                        <p className="text-[12px] text-gray-500 dark:text-stone-400">JPG or PNG. Max 2MB.</p>
                       </div>
                       <input 
                         type="file" 
@@ -433,7 +433,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                       />
                       <button 
                         onClick={handleChangePhotoClick}
-                        className="px-5 py-1.5 bg-[#7B1F35] text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] transition-colors mt-1"
+                        className="px-5 py-1.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors mt-1"
                       >
                         Change Photo
                       </button>
@@ -442,58 +442,58 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-6">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[13px] font-bold text-gray-800 ml-1">First Name</label>
+                      <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">First Name</label>
                       <input 
                         type="text" 
                         value={firstName} 
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[13px] font-bold text-gray-800 ml-1">Last Name</label>
+                      <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Last Name</label>
                       <input 
                         type="text" 
                         value={lastName} 
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[13px] font-bold text-gray-800 ml-1">Student Number</label>
+                      <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Student Number</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
-                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[13px] font-bold text-gray-800 ml-1">Course</label>
+                      <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Course</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
-                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5 md:col-span-2">
-                      <label className="text-[13px] font-bold text-gray-800 ml-1">School Email</label>
+                      <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">School Email</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full bg-stone-100 border border-stone-200 text-[14px] text-gray-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
-                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 mt-4 mb-auto">
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                    <p className="text-[12px] text-gray-500 font-medium">Fields marked are managed by your institution and cannot be edited.</p>
+                    <svg className="w-3.5 h-3.5 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    <p className="text-[12px] text-gray-500 dark:text-stone-400 font-medium">Fields marked are managed by your institution and cannot be edited.</p>
                   </div>
 
                   <div className="flex justify-end items-center gap-4 mt-8 pt-4">
                     <button 
                       onClick={handleSaveProfile} 
                       disabled={isSaving}
-                      className="px-6 py-2.5 bg-[#7B1F35] text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50"
+                      className="px-6 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50"
                     >
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -505,20 +505,20 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
               {activeSettingsTab === 'Password' && (
                 <div className="animate-fade-in flex flex-col h-full max-w-[800px]">
                   <div className="mb-6">
-                    <h2 className="text-[24px] font-bold text-black font-serif mb-1">Change Password</h2>
-                    <p className="text-[14px] text-gray-500">Keep your account secure with a strong password</p>
+                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Change Password</h2>
+                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Keep your account secure with a strong password</p>
                   </div>
-                  <hr className="border-stone-100 mb-6" />
+                  <hr className="border-stone-100 dark:border-stone-800 mb-6" />
                   
                   <div className="flex flex-col gap-1.5 mb-6">
-                    <label className="text-[13px] font-bold text-gray-800 ml-1">Current Password</label>
+                    <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Current Password</label>
                     <div className="relative">
                       <input 
                         type={showCurrent ? "text" : "password"}
                         value={currentPassword}
                         onChange={e => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password" 
-                        className="w-full bg-stone-50 border border-stone-200 text-[14px] text-black rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                       <button onClick={() => setShowCurrent(!showCurrent)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showCurrent ? (
@@ -531,14 +531,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
 
                   <div className="flex flex-col gap-1.5 mb-1.5">
-                    <label className="text-[13px] font-bold text-gray-800 ml-1">New Password</label>
+                    <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">New Password</label>
                     <div className="relative">
                       <input 
                         type={showNew ? "text" : "password"}
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
                         placeholder="Enter a new password" 
-                        className="w-full bg-[#FCFBF8] border border-[#E3DAC4] text-[14px] text-black placeholder:italic placeholder:text-gray-400 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
                       />
                       <button onClick={() => setShowNew(!showNew)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showNew ? (
@@ -551,7 +551,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
 
                   <div className="flex justify-between items-center px-1 mb-1.5">
-                    <span className="text-[11px] text-gray-400 font-medium">Password Strength</span>
+                    <span className="text-[11px] text-gray-400 dark:text-stone-500 font-medium">Password Strength</span>
                     <span className="text-[11px] font-bold" style={{ color: strengthColor }}>{strengthText}</span>
                   </div>
                   <div className="flex gap-1 mb-6">
@@ -561,9 +561,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
 
                   <div className="mb-6 ml-1">
-                    <p className="text-[12px] font-bold text-gray-800 mb-2.5">Requirements</p>
+                    <p className="text-[12px] font-bold text-gray-800 dark:text-stone-300 mb-2.5">Requirements</p>
                     <div className="grid grid-cols-2 gap-y-2.5 text-[12px]">
-                      <div className={`flex items-center gap-2 ${reqLength ? 'text-gray-700' : 'text-gray-400'}`}>
+                      <div className={`flex items-center gap-2 ${reqLength ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqLength ? (
                           <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
@@ -571,7 +571,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         )}
                         At least 8 characters
                       </div>
-                      <div className={`flex items-center gap-2 ${reqUpper ? 'text-gray-700' : 'text-gray-400'}`}>
+                      <div className={`flex items-center gap-2 ${reqUpper ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqUpper ? (
                           <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
@@ -579,7 +579,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         )}
                         Contains uppercase letter
                       </div>
-                      <div className={`flex items-center gap-2 ${reqNumber ? 'text-gray-700' : 'text-gray-400'}`}>
+                      <div className={`flex items-center gap-2 ${reqNumber ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqNumber ? (
                           <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
@@ -587,7 +587,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         )}
                         Contains a number
                       </div>
-                      <div className={`flex items-center gap-2 ${reqSpecial ? 'text-gray-700' : 'text-gray-400'}`}>
+                      <div className={`flex items-center gap-2 ${reqSpecial ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqSpecial ? (
                           <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
@@ -599,14 +599,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
 
                   <div className="flex flex-col gap-1.5 mb-6">
-                    <label className="text-[13px] font-bold text-gray-800 ml-1">Confirm New Password</label>
+                    <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Confirm New Password</label>
                     <div className="relative">
                       <input 
                         type={showConfirm ? "text" : "password"}
                         value={confirmNewPassword}
                         onChange={e => setConfirmNewPassword(e.target.value)}
                         placeholder="Re-enter your new password" 
-                        className="w-full bg-[#FCFBF8] border border-[#E3DAC4] text-[14px] text-black placeholder:italic placeholder:text-gray-400 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
                       />
                       <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showConfirm ? (
@@ -618,17 +618,17 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-4 rounded-xl bg-[#FDF9F1] border border-[#E3DAC4] mb-auto shadow-sm">
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-[#FDF9F1] dark:bg-yellow-600/10 border border-[#E3DAC4] dark:border-yellow-600/50 mb-auto shadow-sm transition-colors">
                     <svg className="w-6 h-6 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.496 1.509 1.333 1.509 2.316V18" /></svg>
                     <div>
-                      <p className="text-[13px] text-gray-900 font-bold mb-0.5">Use a unique password you don't use anywhere else.</p>
-                      <p className="text-[13px] text-gray-500">Consider using a password manager to keep track.</p>
+                      <p className="text-[13px] text-gray-900 dark:text-stone-200 font-bold mb-0.5">Use a unique password you don't use anywhere else.</p>
+                      <p className="text-[13px] text-gray-500 dark:text-stone-400">Consider using a password manager to keep track.</p>
                     </div>
                   </div>
 
                   <div className="flex justify-end items-center gap-4 mt-8 pt-4">
-                    <button onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="px-7 py-2.5 bg-white border border-[#DFD5BE] text-gray-700 text-[14px] font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm">Cancel</button>
-                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="px-7 py-2.5 bg-[#6B0F1A] text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] transition-colors shadow-md disabled:opacity-50">
+                    <button onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="px-7 py-2.5 bg-white dark:bg-stone-900 border border-[#DFD5BE] dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-gray-50 dark:hover:bg-stone-800 transition-colors shadow-sm">Cancel</button>
+                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="px-7 py-2.5 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50">
                       {isChangingPassword ? 'Updating...' : 'Update Password'}
                     </button>
                   </div>
@@ -641,13 +641,13 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   
                   {/* Header */}
                   <div className="mb-8">
-                    <h2 className="text-[24px] font-bold text-black font-serif mb-1">Notification Preferences</h2>
-                    <p className="text-[14px] text-gray-500">Choose how you want to be notified about updates</p>
+                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Notification Preferences</h2>
+                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Choose how you want to be notified about updates</p>
                   </div>
 
                   {/* Email Notifications Section */}
                   <div className="mb-8">
-                    <h3 className="text-[11px] font-bold text-[#7B1F35] tracking-widest uppercase mb-4 ml-1">Email Notifications</h3>
+                    <h3 className="text-[11px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-4 ml-1">Email Notifications</h3>
                     
                     <div className="flex flex-col gap-6">
                       {emailNotifications.map((item) => (
@@ -657,8 +657,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               {item.icon}
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[14px] font-bold text-gray-900">{item.title}</span>
-                              <span className="text-[13px] text-gray-500">{item.desc}</span>
+                              <span className="text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
+                              <span className="text-[13px] text-gray-500 dark:text-stone-400">{item.desc}</span>
                             </div>
                           </div>
                           
@@ -670,18 +670,18 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35]"></div>
+                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <hr className="border-stone-100 mb-6" />
+                  <hr className="border-stone-100 dark:border-stone-800 mb-6" />
 
                   {/* In-App Notifications Section */}
                   <div className="mb-auto">
-                    <h3 className="text-[11px] font-bold text-[#7B1F35] tracking-widest uppercase mb-4 ml-1">In-App Notifications</h3>
+                    <h3 className="text-[11px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-4 ml-1">In-App Notifications</h3>
                     
                     <div className="flex flex-col gap-6">
                       {inAppNotifications.map((item) => (
@@ -691,8 +691,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               {item.icon}
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[14px] font-bold text-gray-900">{item.title}</span>
-                              <span className="text-[13px] text-gray-500">{item.desc}</span>
+                              <span className="text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
+                              <span className="text-[13px] text-gray-500 dark:text-stone-400">{item.desc}</span>
                             </div>
                           </div>
                           
@@ -704,7 +704,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35]"></div>
+                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
@@ -717,10 +717,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                       if (studentData?.notificationPrefs) {
                         setNotificationPrefs(studentData.notificationPrefs);
                       }
-                    }} className="px-7 py-2.5 bg-white border border-stone-200 text-gray-700 text-[14px] font-semibold rounded-full hover:bg-stone-50 transition-colors shadow-sm cursor-pointer">
+                    }} className="px-7 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors shadow-sm cursor-pointer">
                       Cancel
                     </button>
-                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#7B1F35] text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
+                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
                       {isSaving ? 'Saving...' : 'Save Preferences'}
                     </button>
                   </div>
@@ -736,14 +736,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       {/* CAMERA MODAL */}
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-[500px] w-full shadow-2xl">
-            <h3 className="text-[20px] font-bold text-gray-900 mb-4 font-serif">Take a Photo</h3>
+          <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 max-w-[500px] w-full shadow-2xl transition-colors">
+            <h3 className="text-[20px] font-bold text-gray-900 dark:text-stone-100 mb-4 font-serif">Take a Photo</h3>
             <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeCamera} className="px-5 py-2 text-gray-700 bg-gray-100 rounded-full font-semibold text-[13px] hover:bg-gray-200 transition-colors">Cancel</button>
-              <button onClick={capturePhoto} className="px-5 py-2 text-white bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] transition-colors flex items-center gap-2">
+              <button onClick={closeCamera} className="px-5 py-2 text-gray-700 dark:text-stone-300 bg-gray-100 dark:bg-stone-800 rounded-full font-semibold text-[13px] hover:bg-gray-200 dark:hover:bg-stone-700 transition-colors">Cancel</button>
+              <button onClick={capturePhoto} className="px-5 py-2 text-white dark:text-white bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Capture Photo
               </button>

@@ -27,7 +27,7 @@ function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, o
     return () => clearInterval(interval);
   }, []);
   return (
-    <div className="flex h-screen bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#f5f0e6] dark:bg-stone-950 font-sans overflow-hidden">
       <Sidebar />
       <div className="flex flex-col flex-1 w-full overflow-hidden">
         <Header 

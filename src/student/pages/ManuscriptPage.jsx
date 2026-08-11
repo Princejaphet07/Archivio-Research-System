@@ -255,7 +255,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   };
 
   return (
-    <div className="flex w-full min-h-screen bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex w-full min-h-screen bg-[#f5f0e6] dark:bg-stone-950 font-sans overflow-hidden transition-colors">
       
       {/* SIDEBAR */}
       <Sidebar 
@@ -286,7 +286,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           <div className="max-w-[1200px] mx-auto animate-fade-in flex flex-col gap-6 pt-2">
             
             {/* BANNER */}
-            <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-2xl p-8 flex items-center justify-between relative overflow-hidden shadow-md border border-[#7B1F35]/20">
+            <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-2xl p-8 flex items-center justify-between relative overflow-hidden shadow-md border border-[#7B1F35]/20 transition-colors">
               <div className="absolute right-0 top-0 h-full w-[30%] bg-white/5 rounded-l-[100px] pointer-events-none transform -skew-x-12" />
               <div className="relative z-10">
                 <h2 className="text-white text-[24px] font-serif font-bold mb-1">Your Research Manuscript</h2>
@@ -311,35 +311,35 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* LEFT COLUMN: Current File */}
-              <div className="lg:col-span-5 bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-6">Current File</p>
+              <div className="lg:col-span-5 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-all">
+                <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-6">Current File</p>
                 
                 {/* PDF Thumbnail Mockup */}
-                <div className="bg-stone-50 border border-stone-200/60 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative">
-                  <div className="w-full bg-[#7B1F35] rounded-t-lg absolute top-0 left-0 h-12 flex items-center justify-center">
+                <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative">
+                  <div className="w-full bg-[#7B1F35] dark:bg-stone-950/50 rounded-t-lg absolute top-0 left-0 h-12 flex items-center justify-center">
                     <p className="text-white/80 text-[8px] tracking-widest uppercase">Southwestern University</p>
                   </div>
                   <div className="mt-12 w-full">
-                    <h4 className="font-serif font-bold text-[#7B1F35] text-[16px] mb-2 leading-tight uppercase px-4 truncate">{researchTitle}</h4>
-                    <p className="text-gray-400 text-[10px] mb-1">A Capstone Research</p>
-                    <p className="text-[#CF3645] text-[11px] font-bold mb-6">{groupName}</p>
+                    <h4 className="font-serif font-bold text-[#7B1F35] dark:text-[#D05353] text-[16px] mb-2 leading-tight uppercase px-4 truncate">{researchTitle}</h4>
+                    <p className="text-gray-400 dark:text-stone-500 text-[10px] mb-1">A Capstone Research</p>
+                    <p className="text-[#CF3645] dark:text-red-400 text-[11px] font-bold mb-6">{groupName}</p>
                     {/* Mock text lines */}
                     <div className="flex flex-col gap-1.5 w-[80%] mx-auto mb-4">
-                      <div className="h-1 bg-[#E8DFCB] rounded-full w-full"></div>
-                      <div className="h-1 bg-[#E8DFCB] rounded-full w-[90%] mx-auto"></div>
-                      <div className="h-1 bg-[#E8DFCB] rounded-full w-[95%] mx-auto"></div>
-                      <div className="h-1 bg-[#E8DFCB] rounded-full w-[85%] mx-auto"></div>
+                      <div className="h-1 bg-[#E8DFCB] dark:bg-stone-700 rounded-full w-full"></div>
+                      <div className="h-1 bg-[#E8DFCB] dark:bg-stone-700 rounded-full w-[90%] mx-auto"></div>
+                      <div className="h-1 bg-[#E8DFCB] dark:bg-stone-700 rounded-full w-[95%] mx-auto"></div>
+                      <div className="h-1 bg-[#E8DFCB] dark:bg-stone-700 rounded-full w-[85%] mx-auto"></div>
                     </div>
-                    <p className="text-gray-400 text-[8px]">Page 1 of {pageCount}</p>
+                    <p className="text-gray-400 dark:text-stone-500 text-[8px]">Page 1 of {pageCount}</p>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="font-bold text-[#1A1A1A] text-[16px] truncate">{manuscript?.name || 'No file uploaded yet'}</h3>
+                  <h3 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[16px] truncate">{manuscript?.name || 'No file uploaded yet'}</h3>
                   {hasManuscript ? (
-                    <p className="text-gray-500 text-[13px]">{manuscript.size} · {pageCount} pages · Updated {manuscript.date}</p>
+                    <p className="text-gray-500 dark:text-stone-400 text-[13px]">{manuscript.size} · {pageCount} pages · Updated {manuscript.date}</p>
                   ) : (
-                    <p className="text-gray-500 text-[13px]">Upload your manuscript in the Requirements tab.</p>
+                    <p className="text-gray-500 dark:text-stone-400 text-[13px]">Upload your manuscript in the Requirements tab.</p>
                   )}
                 </div>
 
@@ -347,7 +347,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   <button 
                     onClick={() => hasManuscript && window.open(manuscript.url, '_blank')}
                     disabled={!hasManuscript}
-                    className={`flex-1 border border-stone-300 text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50' : 'opacity-50 cursor-not-allowed'}`}
+                    className={`flex-1 border border-stone-300 dark:border-stone-700 text-[#1A1A1A] dark:text-stone-200 text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50 dark:hover:bg-stone-800' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     Preview
@@ -364,73 +364,73 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       document.body.removeChild(a);
                     }}
                     disabled={!hasManuscript}
-                    className={`flex-1 border border-stone-300 text-[#1A1A1A] text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50' : 'opacity-50 cursor-not-allowed'}`}
+                    className={`flex-1 border border-stone-300 dark:border-stone-700 text-[#1A1A1A] dark:text-stone-200 text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50 dark:hover:bg-stone-800' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     Download
                   </button>
                 </div>
                 
-                <button onClick={() => setActiveTab('Requirements')} className="w-full bg-[#7B1F35] hover:bg-[#63182a] text-white text-[14px] font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => setActiveTab('Requirements')} className="w-full bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#63182a] dark:hover:bg-[#5a1831] text-white dark:text-white text-[14px] font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                   {hasManuscript ? 'Replace Manuscript' : 'Upload Manuscript'}
                 </button>
               </div>
 
               {/* RIGHT COLUMN: Research Details */}
-              <div className="lg:col-span-7 bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start border-b border-stone-100 pb-4 mb-6">
+              <div className="lg:col-span-7 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-all">
+                <div className="flex justify-between items-start border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
                   <div>
-                    <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Research Details</p>
-                    <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A]">Manuscript Information</h3>
+                    <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Research Details</p>
+                    <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100">Manuscript Information</h3>
                   </div>
-                  <button onClick={handleEditDetails} className="border border-stone-300 hover:bg-stone-50 text-[#1A1A1A] text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                  <button onClick={handleEditDetails} className="border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-200 text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     Edit
                   </button>
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Research Title</p>
-                  <h4 className="font-serif font-bold text-[18px] text-[#1A1A1A]">{researchTitle}</h4>
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Research Title</p>
+                  <h4 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-[#D05353]">{researchTitle}</h4>
                 </div>
 
                 <div className="mb-6">
                   <div className="flex justify-between items-end mb-1">
-                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Abstract</p>
-                    <button onClick={handleAIPreCheck} className="text-[#1A1A1A] hover:text-[#7B1F35] hover:bg-stone-200 text-[10px] font-bold tracking-widest uppercase bg-stone-100 px-2 py-1.5 rounded shadow-sm border border-stone-200 transition-colors flex items-center gap-1">
-                      <svg className="w-3 h-3 text-[#7B1F35]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase">Abstract</p>
+                    <button onClick={handleAIPreCheck} className="text-[#1A1A1A] dark:text-stone-200 hover:text-[#7B1F35] dark:hover:text-[#7B1F35] hover:bg-stone-200 dark:hover:bg-stone-700 text-[10px] font-bold tracking-widest uppercase bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1">
+                      <svg className="w-3 h-3 text-[#7B1F35] dark:text-[#D05353]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                       AI Pre-Check
                     </button>
                   </div>
-                  <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 italic' : 'text-gray-600'}`}>
+                  <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 dark:text-stone-500 italic' : 'text-gray-600 dark:text-stone-300'}`}>
                     {abstract}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mb-8">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Authors</p>
-                    <p className="text-[#1A1A1A] font-bold text-[14px]">{members.length + 1} group member{members.length + 1 !== 1 ? 's' : ''}</p>
-                    <p className="text-gray-500 text-[12px] mt-0.5 truncate">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Authors</p>
+                    <p className="text-[#1A1A1A] dark:text-stone-200 font-bold text-[14px]">{members.length + 1} group member{members.length + 1 !== 1 ? 's' : ''}</p>
+                    <p className="text-gray-500 dark:text-stone-400 text-[12px] mt-0.5 truncate">
                       {[studentData?.firstName?.charAt(0) + '. ' + studentData?.lastName, ...members.map(m => typeof m === 'object' ? m.name : m.split('@')[0])].join(' · ')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Pages</p>
-                    <p className="text-[#1A1A1A] font-bold text-[14px]">{pageCount} pages</p>
-                    <p className="text-gray-500 text-[12px] mt-0.5">Including references & appendices</p>
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Pages</p>
+                    <p className="text-[#1A1A1A] dark:text-stone-200 font-bold text-[14px]">{pageCount} pages</p>
+                    <p className="text-gray-500 dark:text-stone-400 text-[12px] mt-0.5">Including references & appendices</p>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Keywords</p>
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase">Keywords</p>
                     {submissionId && (
                       <button
                         onClick={handleExtractKeywords}
                         disabled={extractingKeywords}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#7B1F35] to-[#a32946] text-white text-[11px] font-bold rounded-full hover:shadow-md transition-all disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#7B1F35] dark:from-[#f8d070] to-[#a32946] dark:to-yellow-500 text-white dark:text-white text-[11px] font-bold rounded-full hover:shadow-md transition-all disabled:opacity-60"
                       >
                         {extractingKeywords ? (
                           <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Extracting...</>
@@ -442,11 +442,11 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {keywords.length > 0 ? keywords.map((tag, idx) => (
-                      <span key={idx} className="border border-[#DDA3B6] text-[#7B1F35] bg-[#F9EBF0] px-3 py-1 rounded-full text-[12px] font-bold">
+                      <span key={idx} className="border border-[#DDA3B6] dark:border-yellow-600/50 text-[#7B1F35] dark:text-yellow-600 bg-[#F9EBF0] dark:bg-yellow-600/10 px-3 py-1 rounded-full text-[12px] font-bold">
                         {tag}
                       </span>
                     )) : (
-                      <span className="text-gray-400 text-[12px] italic">No keywords added</span>
+                      <span className="text-gray-400 dark:text-stone-500 text-[12px] italic">No keywords added</span>
                     )}
                   </div>
                 </div>
@@ -454,32 +454,32 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             </div>
 
             {/* VERSION HISTORY */}
-            <div className="bg-white border border-stone-200/80 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all">
               <div className="flex justify-between items-end mb-6">
                 <div>
-                  <p className="text-[11px] font-bold text-gray-500 tracking-widest uppercase mb-1">Version History</p>
-                  <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A]">Previous Uploads</h3>
+                  <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Version History</p>
+                  <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100">Previous Uploads</h3>
                 </div>
-                <p className="text-gray-500 text-[13px]">Older versions are kept for adviser reference</p>
+                <p className="text-gray-500 dark:text-stone-400 text-[13px]">Older versions are kept for adviser reference</p>
               </div>
 
               <div className="flex flex-col gap-3">
                 {hasManuscript ? (
-                  <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-4 flex items-center justify-between">
+                  <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <span className="bg-[#7B1F35] text-white text-[12px] font-bold px-3 py-1 rounded-full">v1.0</span>
-                      <span className="text-[#7B1F35] font-bold text-[13px] flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-[#7B1F35] rounded-full"></span>
+                      <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[12px] font-bold px-3 py-1 rounded-full">v1.0</span>
+                      <span className="text-[#7B1F35] dark:text-[#D05353] font-bold text-[13px] flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full"></span>
                         Current
                       </span>
-                      <span className="text-gray-600 text-[13px] w-24">{manuscript.date}</span>
-                      <span className="text-gray-500 text-[13px] w-16">{manuscript.size}</span>
-                      <span className="text-gray-600 text-[13px] truncate flex-1">Initial upload</span>
+                      <span className="text-gray-600 dark:text-stone-400 text-[13px] w-24">{manuscript.date}</span>
+                      <span className="text-gray-500 dark:text-stone-400 text-[13px] w-16">{manuscript.size}</span>
+                      <span className="text-gray-600 dark:text-stone-300 text-[13px] truncate flex-1">Initial upload</span>
                     </div>
-                    <span className="text-gray-500 text-[12px] font-bold shrink-0">In use</span>
+                    <span className="text-gray-500 dark:text-stone-400 text-[12px] font-bold shrink-0">In use</span>
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-[13px] italic">No versions uploaded yet.</p>
+                  <p className="text-gray-500 dark:text-stone-400 text-[13px] italic">No versions uploaded yet.</p>
                 )}
 
               </div>

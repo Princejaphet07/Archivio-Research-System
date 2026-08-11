@@ -95,11 +95,11 @@ function Sidebar() {
     }
   };
 
-  const activeClass = "bg-[#6b253e]/80 text-white border border-[#d0a36e]/30";
-  const inactiveClass = "text-gray-300 hover:bg-[#6b253e]/40 hover:text-white border border-transparent";
+  const activeClass = "bg-[#6b253e]/80 dark:bg-white/10 text-white border border-[#d0a36e]/30 dark:border-white/5 shadow-sm";
+  const inactiveClass = "text-gray-300 dark:text-stone-300 hover:bg-[#6b253e]/40 dark:hover:bg-white/5 hover:text-white border border-transparent";
 
   return (
-    <div className="w-64 bg-[#541b2f] text-white flex flex-col h-full shadow-xl hidden md:flex z-20">
+    <div className="w-64 bg-[#541b2f] dark:bg-stone-950 text-white flex flex-col h-full shadow-xl hidden md:flex z-20 transition-colors">
       {/* Brand & Logo */}
       <div className="p-6 flex items-center gap-3">
         <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50">
@@ -113,12 +113,12 @@ function Sidebar() {
 
       {/* Adviser Mode Toggle */}
       <div className="px-5 mb-6">
-        <div className="bg-[#3e1322] rounded-full p-1 flex items-center justify-between border border-[#6b253e]">
+        <div className="bg-[#3e1322] dark:bg-black/20 rounded-full p-1 flex items-center justify-between border border-[#6b253e] dark:border-white/5 shadow-inner">
           <div className="flex items-center gap-2 pl-2">
             <div className="w-2 h-2 rounded-full bg-[#d0a36e]"></div>
             <span className="text-[10px] font-semibold tracking-wider text-gray-200">ADVISER MODE</span>
           </div>
-          <div className="bg-[#6b253e] text-[9px] px-3 py-1 rounded-full text-white font-medium">
+          <div className="bg-[#6b253e] dark:bg-[#f8d070]/20 text-[9px] px-3 py-1 rounded-full text-white dark:text-[#f8d070] font-medium">
             Active
           </div>
         </div>
@@ -128,7 +128,7 @@ function Sidebar() {
       <div className="flex-1 overflow-y-auto px-4 custom-scrollbar">
         {/* Main Section */}
         <div className="mb-4">
-          <p className="text-[9px] text-gray-400 font-bold tracking-wider mb-2 px-2">MAIN</p>
+          <p className="text-[9px] text-gray-400 dark:text-stone-500 font-bold tracking-wider mb-2 px-2">MAIN</p>
           
           <Link to="/adviser/dashboard" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/dashboard' ? activeClass : inactiveClass}`}>
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -168,7 +168,7 @@ function Sidebar() {
 
         {/* Students Section */}
         <div className="mb-4">
-          <p className="text-[9px] text-gray-400 font-bold tracking-wider mb-2 px-2">STUDENTS</p>
+          <p className="text-[9px] text-gray-400 dark:text-stone-500 font-bold tracking-wider mb-2 px-2">STUDENTS</p>
           <Link to="/adviser/group-registrations" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/group-registrations' ? activeClass : inactiveClass}`}>
             <div className="flex items-center gap-3">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -189,7 +189,7 @@ function Sidebar() {
 
         {/* Settings Section */}
         <div className="mb-4">
-          <p className="text-[9px] text-gray-400 font-bold tracking-wider mb-2 px-2">SETTINGS</p>
+          <p className="text-[9px] text-gray-400 dark:text-stone-500 font-bold tracking-wider mb-2 px-2">SETTINGS</p>
           <Link to="/adviser/submission-requirements" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/submission-requirements' ? activeClass : inactiveClass}`}>
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
@@ -206,8 +206,8 @@ function Sidebar() {
       </div>
 
       {/* User Profile Footer */}
-      <div className="p-4 border-t border-[#6b253e]">
-        <div className="bg-[#6b253e]/50 flex items-center justify-between p-3 rounded-xl border border-[#6b253e]">
+      <div className="p-4 border-t border-[#6b253e] dark:border-stone-800">
+        <div className="bg-[#6b253e]/50 dark:bg-white/5 flex items-center justify-between p-3 rounded-xl border border-[#6b253e] dark:border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#d0a36e] flex items-center justify-center text-[#541b2f] font-bold text-xs">
               {adviserData?.firstName?.charAt(0)}{adviserData?.lastName?.charAt(0)}
@@ -217,7 +217,7 @@ function Sidebar() {
               <p className="text-[10px] text-[#d0a36e]">💡 Adviser</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-gray-300 hover:text-white bg-[#541b2f] hover:bg-[#7a2e46] p-1.5 rounded-lg transition" title="Log Out">
+          <button onClick={handleLogout} className="text-gray-300 hover:text-white bg-[#541b2f] dark:bg-black/20 hover:bg-[#7a2e46] dark:hover:bg-white/10 p-1.5 rounded-lg transition" title="Log Out">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>

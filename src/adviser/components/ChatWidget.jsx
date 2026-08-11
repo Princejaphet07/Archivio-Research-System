@@ -248,7 +248,7 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-[350px] h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 overflow-hidden">
+    <div className="fixed bottom-6 right-6 w-[350px] h-[500px] bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 dark:border-stone-800 overflow-hidden transition-colors">
       {/* Header */}
       <div className="bg-[#7B1F35] p-4 flex items-center justify-between text-white shadow-md z-10">
         <div className="flex items-center gap-2">
@@ -284,22 +284,22 @@ export default function ChatWidget() {
 
       {!selectedGroup ? (
         /* Group List Screen */
-        <div className="flex-1 bg-[#FDF9ED] p-3 overflow-y-auto flex flex-col gap-2">
+        <div className="flex-1 bg-[#FDF9ED] dark:bg-stone-950 p-3 overflow-y-auto flex flex-col gap-2">
           {groups.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-              <p className="text-sm font-semibold text-stone-700">No Groups Found</p>
-              <p className="text-xs text-stone-500 mt-1">You aren't advising any approved groups yet.</p>
+              <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">No Groups Found</p>
+              <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">You aren't advising any approved groups yet.</p>
             </div>
           ) : (
             groups.map(group => (
               <button
                 key={group.id}
                 onClick={() => setSelectedGroup(group)}
-                className="w-full text-left bg-white p-3 rounded-xl border border-stone-200 hover:border-[#7B1F35]/30 hover:shadow-sm transition-all flex items-center justify-between group"
+                className="w-full text-left bg-white dark:bg-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800 hover:border-[#7B1F35]/30 dark:hover:border-[#f8d070]/30 hover:shadow-sm transition-all flex items-center justify-between group"
               >
                 <div>
-                  <h4 className="font-bold text-stone-800 text-sm">{group.groupName}</h4>
-                  <p className="text-xs text-stone-500 mt-0.5 truncate w-[220px]">{group.researchTitle || 'Untitled Research'}</p>
+                  <h4 className="font-bold text-stone-800 dark:text-stone-200 text-sm">{group.groupName}</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-500 mt-0.5 truncate w-[220px]">{group.researchTitle || 'Untitled Research'}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-[#7B1F35] group-hover:text-white transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -313,7 +313,7 @@ export default function ChatWidget() {
       ) : (
         /* Chat Screen */
         <>
-          <div className="flex-1 bg-[#FDF9ED] p-4 overflow-y-auto flex flex-col gap-3">
+          <div className="flex-1 bg-[#FDF9ED] dark:bg-stone-950 p-4 overflow-y-auto flex flex-col gap-3">
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
                 <div className="w-12 h-12 bg-[#7B1F35]/10 rounded-full flex items-center justify-center mb-3">
@@ -321,7 +321,7 @@ export default function ChatWidget() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-stone-700">Start the conversation</p>
+                <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Start the conversation</p>
                 <p className="text-xs text-stone-500 mt-1">Send a message to your students in {selectedGroup.groupName}.</p>
               </div>
             ) : (
@@ -346,7 +346,7 @@ export default function ChatWidget() {
                   >
                     {/* Messenger-style Multi-Emoji Toolbar (Moved here to avoid clipping) */}
                     {hoveredMsgId === msg.id && (
-                      <div className={`absolute z-30 -top-10 ${isMe ? 'right-0' : 'left-0'} bg-white shadow-lg border border-stone-100 rounded-full flex items-center gap-1 p-1.5 animate-fade-in-up`}>
+                      <div className={`absolute z-30 -top-10 ${isMe ? 'right-0' : 'left-0'} bg-white dark:bg-stone-800 shadow-lg border border-stone-100 dark:border-stone-700 rounded-full flex items-center gap-1 p-1.5 animate-fade-in-up`}>
                         {EMOJIS.map(emoji => (
                           <button
                             key={emoji}
@@ -366,7 +366,7 @@ export default function ChatWidget() {
                       <div className={`px-4 py-2.5 rounded-2xl max-w-[240px] text-sm shadow-sm relative ${
                         isMe 
                           ? 'bg-[#7B1F35] text-white rounded-br-sm' 
-                          : 'bg-white border border-stone-200 text-stone-800 rounded-bl-sm'
+                          : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 rounded-bl-sm'
                       }`}>
                         {msg.mediaUrl && (
                           <div className="mb-1 rounded-xl overflow-hidden bg-black/10">
@@ -484,7 +484,7 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSend} className="p-3 bg-white border-t border-stone-200 flex gap-2 items-center relative">
+          <form onSubmit={handleSend} className="p-3 bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 flex gap-2 items-center relative transition-colors">
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -496,7 +496,7 @@ export default function ChatWidget() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={!selectedGroup || isUploading}
-              className="w-10 h-10 shrink-0 text-stone-400 hover:text-[#7B1F35] bg-stone-100 hover:bg-[#7B1F35]/10 rounded-full flex items-center justify-center transition disabled:opacity-50"
+              className="w-10 h-10 shrink-0 text-stone-400 dark:text-stone-500 hover:text-[#7B1F35] dark:hover:text-[#f8d070] bg-stone-100 dark:bg-stone-800 hover:bg-[#7B1F35]/10 dark:hover:bg-stone-700 rounded-full flex items-center justify-center transition disabled:opacity-50"
               title="Attach Photo or Video"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -509,12 +509,12 @@ export default function ChatWidget() {
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
               disabled={isUploading}
-              className="flex-1 bg-stone-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 focus:bg-white transition-all"
+              className="flex-1 bg-stone-100 dark:bg-stone-800 dark:text-stone-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/30 dark:focus:ring-[#f8d070]/30 focus:bg-white dark:focus:bg-stone-950 transition-all placeholder-gray-400 dark:placeholder-stone-500"
             />
             <button 
               type="submit" 
               disabled={(!newMessage.trim() && !isUploading)}
-              className="w-10 h-10 shrink-0 bg-[#7B1F35] text-white rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-[#5a1626] transition transform active:scale-95 disabled:active:scale-100"
+              className="w-10 h-10 shrink-0 bg-[#7B1F35] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-[#5a1626] dark:hover:bg-yellow-500 transition transform active:scale-95 disabled:active:scale-100"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transform rotate-90 ml-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />

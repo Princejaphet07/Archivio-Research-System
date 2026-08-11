@@ -58,10 +58,10 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
   });
 
   return (
-    <div className="w-full min-h-screen font-serif flex flex-col bg-[#F5F5F0]">
+    <div className="w-full min-h-screen font-serif flex flex-col bg-[#F5F5F0] dark:bg-stone-950 transition-colors">
       {/* Top Header Bar */}
       <div 
-        className="w-full flex items-center gap-4 px-7 py-3 border-b border-[#b4a078]/30 z-[1000]"
+        className="w-full flex items-center gap-4 px-7 py-3 border-b border-[#b4a078]/30 dark:border-stone-800 z-[1000] transition-colors"
         style={{ 
           backgroundImage: `url(${parchmentBg})`, 
           backgroundSize: 'cover', 
@@ -69,7 +69,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
         }}
       >
         <img src={swuLogoSeal} alt="SWU Logo" className="w-[52px] h-[52px] object-contain" />
-        <span className="text-[17px] font-bold text-[#3a1a1a] tracking-[0.18em]">
+        <span className="text-[17px] font-bold text-[#3a1a1a] dark:text-white tracking-[0.18em]">
           WELCOME {displayName.toUpperCase()}
         </span>
       </div>
@@ -92,7 +92,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
         <div className="flex-1 flex flex-col overflow-y-auto w-full">
           
           {/* Maroon Nav Bar */}
-          <div className="w-full bg-[#6B0F1A] flex items-center justify-between px-6 h-12 shrink-0 relative z-30">
+          <div className="w-full bg-[#6B0F1A] dark:bg-stone-900 flex items-center justify-between px-6 h-12 shrink-0 relative z-30 transition-colors">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setSidebarOpen(true)} 
@@ -103,7 +103,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
               <span className="text-white text-[16px] tracking-wider">Research Archive</span>
             </div>
 
-            <div className="w-[34px] h-[34px] rounded-full border-2 border-white/60 bg-white/15 flex items-center justify-center text-white text-[13px] font-bold cursor-pointer tracking-wider overflow-hidden">
+            <div className="w-[34px] h-[34px] rounded-full border-2 border-white/60 dark:border-stone-700 bg-white/15 dark:bg-stone-800 flex items-center justify-center text-white dark:text-stone-300 text-[13px] font-bold cursor-pointer tracking-wider overflow-hidden">
               {profilePhotoUrl ? (
                 <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -127,33 +127,33 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
 
               {/* Search Bar */}
               <div className="flex items-center w-full max-w-xl">
-                <div className="flex-1 flex items-center bg-white rounded-l-3xl px-4 h-11 shadow-md">
-                  <span className="text-[#999] text-base mr-2.5">🔍</span>
+                <div className="flex-1 flex items-center bg-white dark:bg-stone-800 rounded-l-3xl px-4 h-11 shadow-md transition-colors">
+                  <span className="text-[#999] dark:text-stone-400 text-base mr-2.5">🔍</span>
                   <input
                     type="text"
                     placeholder="Search by title or author..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="flex-1 border-none outline-none text-sm font-serif text-[#333] bg-transparent"
+                    className="flex-1 border-none outline-none text-sm font-serif text-[#333] dark:text-stone-200 bg-transparent"
                   />
                 </div>
 
                 <div className="relative">
                   <button
                     onClick={() => setCategoryOpen(!categoryOpen)}
-                    className="h-11 px-4 bg-[#6B0F1A] text-white rounded-r-3xl text-sm font-serif flex items-center gap-2 shadow-md whitespace-nowrap"
+                    className="h-11 px-4 bg-[#6B0F1A] dark:bg-stone-700 text-white dark:text-stone-200 rounded-r-3xl text-sm font-serif flex items-center gap-2 shadow-md whitespace-nowrap transition-colors"
                   >
                     ▾ {category}
                   </button>
                   
                   {categoryOpen && (
-                    <div className="absolute top-12 right-0 bg-white border border-[#e0d0b0] rounded-lg shadow-lg z-50 min-w-[180px] overflow-hidden">
+                    <div className="absolute top-12 right-0 bg-white dark:bg-stone-800 border border-[#e0d0b0] dark:border-stone-700 rounded-lg shadow-lg z-50 min-w-[180px] overflow-hidden transition-colors">
                       {categories.map(cat => (
                         <button 
                           key={cat} 
                           onClick={() => { setCategory(cat); setCategoryOpen(false); }}
                           className={`block w-full text-left px-4 py-2.5 text-[13px] font-serif transition-colors ${
-                            cat === category ? 'bg-[#f5ece0] text-[#333]' : 'bg-white text-[#333] hover:bg-[#f5ece0]'
+                            cat === category ? 'bg-[#f5ece0] dark:bg-stone-700 text-[#333] dark:text-stone-200' : 'bg-white dark:bg-stone-800 text-[#333] dark:text-stone-300 hover:bg-[#f5ece0] dark:hover:bg-stone-700'
                           }`}
                         >
                           {cat}
@@ -171,7 +171,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
             <div className="flex justify-end mb-6">
               <button 
                 onClick={onUploadClick}
-                className="text-[#6B0F1A] text-[15px] font-serif hover:underline flex items-center gap-1.5 transition-all"
+                className="text-[#6B0F1A] dark:text-stone-300 text-[15px] font-serif hover:underline flex items-center gap-1.5 transition-all"
               >
                 <span className="text-lg font-light no-underline">+</span>
                 Upload a Research
@@ -185,28 +185,28 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
             ) : (
               <div className="space-y-6">
                 {filteredPapers.map(paper => (
-                  <div key={paper.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                  <div key={paper.id} className="bg-white dark:bg-stone-900 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                     <div className="p-6">
                       {/* Title */}
-                      <h3 className="text-xl font-bold text-[#3a1a1a] mb-2">
+                      <h3 className="text-xl font-bold text-[#3a1a1a] dark:text-stone-100 mb-2">
                         {paper.title}
                       </h3>
                       
                       {/* Advisor */}
-                      <div className="text-md font-semibold text-[#6B0F1A] mb-1">
+                      <div className="text-md font-semibold text-[#6B0F1A] dark:text-[#D05353] mb-1">
                         {paper.advisor}
                       </div>
                       
                       {/* Authors and Year */}
-                      <div className="text-sm text-gray-600 mb-3">
+                      <div className="text-sm text-gray-600 dark:text-stone-400 mb-3">
                         Authors: {paper.authors}
                       </div>
-                      <div className="text-sm text-gray-600 mb-4">
+                      <div className="text-sm text-gray-600 dark:text-stone-400 mb-4">
                         Year: {paper.year}
                       </div>
                       
                       {/* Abstract */}
-                      <p className="text-gray-700 leading-relaxed mb-4">
+                      <p className="text-gray-700 dark:text-stone-300 leading-relaxed mb-4">
                         {expandedPaper === paper.id ? paper.abstract : `${paper.abstract.substring(0, 300)}...`}
                       </p>
                       
@@ -214,11 +214,11 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
                       <div className="flex items-center gap-6">
                         <button 
                           onClick={() => toggleReadMore(paper.id)}
-                          className="text-[#6B0F1A] hover:text-[#8B2F3A] font-medium text-sm transition-colors"
+                          className="text-[#6B0F1A] dark:text-[#D05353] hover:text-[#8B2F3A] dark:hover:text-[#D05353] font-medium text-sm transition-colors"
                         >
                           {expandedPaper === paper.id ? 'Read Less' : 'Read More'}
                         </button>
-                        <button className="text-[#6B0F1A] hover:text-[#8B2F3A] font-medium text-sm transition-colors">
+                        <button className="text-[#6B0F1A] dark:text-[#D05353] hover:text-[#8B2F3A] dark:hover:text-[#D05353] font-medium text-sm transition-colors">
                           View Full Paper
                         </button>
                       </div>

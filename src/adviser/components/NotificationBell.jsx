@@ -219,7 +219,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-[#541b2f] hover:bg-gray-100 transition-all cursor-pointer"
+        className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-[#541b2f] dark:text-stone-500 dark:hover:text-[#f8d070] hover:bg-gray-100 dark:hover:bg-white/5 transition-all cursor-pointer"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -233,7 +233,7 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden z-50 transform origin-top-right transition-all">
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-stone-900 rounded-xl shadow-lg border border-stone-200 dark:border-stone-800 overflow-hidden z-50 transform origin-top-right transition-all">
           <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center">
             <h3 className="font-bold text-[14px]">Notifications</h3>
             {notifications.length > 0 && (
@@ -253,24 +253,24 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="p-8 flex flex-col items-center justify-center text-center">
                 <span className="text-4xl mb-3 opacity-50">📭</span>
-                <p className="text-sm font-bold text-gray-500">All caught up!</p>
-                <p className="text-xs text-gray-400 mt-1">No new notifications</p>
+                <p className="text-sm font-bold text-gray-500 dark:text-stone-400">All caught up!</p>
+                <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">No new notifications</p>
               </div>
             ) : (
               notifications.map(n => (
                 <div 
                   key={n.id} 
                   onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50' : 'bg-white opacity-75'}`}
+                  className={`p-4 border-b border-stone-100 dark:border-stone-800 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-[#f8d070]/5 cursor-pointer hover:bg-stone-50 dark:hover:bg-[#f8d070]/10' : 'bg-white dark:bg-transparent opacity-75'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">
                       <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
                       <div className="flex flex-col">
-                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35]' : 'text-gray-700'}`}>
+                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#f8d070]' : 'text-gray-700 dark:text-stone-300'}`}>
                           {n.title}
                         </span>
-                        <p className="text-[12px] text-gray-600 leading-snug mt-0.5">{n.message}</p>
+                        <p className="text-[12px] text-gray-600 dark:text-stone-400 leading-snug mt-0.5">{n.message}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
@@ -288,7 +288,7 @@ export default function NotificationBell() {
                     </div>
                   </div>
                   {n.createdAt && (
-                    <span className="text-[10px] text-gray-400 font-medium self-end -mt-1">
+                    <span className="text-[10px] text-gray-400 dark:text-stone-500 font-medium self-end -mt-1">
                       {getRelativeTime(n.createdAt)}
                     </span>
                   )}

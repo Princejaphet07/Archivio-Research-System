@@ -390,8 +390,8 @@ function ReviewSubmissions() {
     <Layout title="Review Submissions & Tracking" breadcrumb="ARCHIVIO › Review Submissions & Tracking" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">Review Submissions & Tracking</h1>
-          <p className="text-sm text-gray-500">Review, approve, or decline your student groups' research submissions</p>
+          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Review Submissions & Tracking</h1>
+          <p className="text-sm text-gray-500 dark:text-stone-400">Review, approve, or decline your student groups' research submissions</p>
         </div>
 
         {/* Filters */}
@@ -400,7 +400,7 @@ function ReviewSubmissions() {
           <select
             value={filterYear}
             onChange={(e) => setFilterYear(e.target.value)}
-            className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none w-full md:w-48 text-gray-600"
+            className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none w-full md:w-48 text-gray-600 dark:text-stone-300"
           >
             <option>All Year</option>
             {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
@@ -408,7 +408,7 @@ function ReviewSubmissions() {
           <select
             value={filterGroup}
             onChange={(e) => setFilterGroup(e.target.value)}
-            className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none w-full md:w-48 text-gray-600"
+            className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none w-full md:w-48 text-gray-600 dark:text-stone-300"
           >
             <option>All Groups</option>
             {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
@@ -416,33 +416,33 @@ function ReviewSubmissions() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 flex gap-8">
+        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-8">
           <button
             onClick={() => setActiveTab('pending')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] text-[#7a2e46]' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ⏳ Pending Review <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{pendingCount}</span>
+            ⏳ Pending Review <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{pendingCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('reviewed')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'reviewed' ? 'border-b-2 border-[#7a2e46] text-[#7a2e46]' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'reviewed' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ✅ Reviewed <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'reviewed' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{reviewedCount}</span>
+            ✅ Reviewed <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'reviewed' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{reviewedCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('approved')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] text-[#7a2e46]' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🎓 Approved <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{approvedCount}</span>
+            🎓 Approved <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
           </button>
         </div>
 
         {/* Submissions Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-6">
+        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 overflow-hidden mt-6">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#7a2e46] text-white font-bold uppercase tracking-wider text-[10px]">
+                <tr className="bg-[#7a2e46] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3.5 px-4 text-center w-12">No.</th>
                   <th className="py-3.5 px-4">Research Title</th>
                   <th className="py-3.5 px-4">Group</th>
@@ -460,7 +460,7 @@ function ReviewSubmissions() {
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 font-medium">
+              <tbody className="divide-y divide-gray-100 dark:divide-stone-800 font-medium">
                 {loading ? (
                   <tr>
                     <td colSpan="8" className="py-12">
@@ -472,26 +472,26 @@ function ReviewSubmissions() {
                   </tr>
                 ) : finalFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                    <td colSpan="8" className="py-8 text-center text-gray-500 dark:text-stone-400">
                       No matching {activeTab} submissions found.
                     </td>
                   </tr>
                 ) : (
                   finalFiltered.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="py-4 px-4 text-center text-gray-400 font-normal">
+                    <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-stone-800/50 transition-colors">
+                      <td className="py-4 px-4 text-center text-gray-400 dark:text-stone-500 font-normal">
                         {String(index + 1).padStart(2, '0')}
                       </td>
-                      <td className="py-4 px-4 font-bold text-gray-800 max-w-xs truncate">
+                      <td className="py-4 px-4 font-bold text-gray-800 dark:text-stone-100 max-w-xs truncate">
                         {item.researchTitle}
                       </td>
-                      <td className="py-4 px-4 text-gray-600">
+                      <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
                         {item.groupName}
                       </td>
 
                       {activeTab === 'approved' ? (
                         <>
-                          <td className="py-4 px-4 text-gray-600">
+                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
                             {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
                           </td>
                           <td className="py-4 px-4">
@@ -508,7 +508,7 @@ function ReviewSubmissions() {
                         </>
                       ) : activeTab === 'reviewed' ? (
                         <>
-                          <td className="py-4 px-4 text-gray-600">
+                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
                             {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
                           </td>
                           <td className="py-4 px-4 text-center">
@@ -519,7 +519,7 @@ function ReviewSubmissions() {
                         </>
                       ) : (
                         <>
-                          <td className="py-4 px-4 text-gray-600">
+                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
                             {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
                           </td>
                           <td className="py-4 px-4 text-center">
@@ -539,7 +539,7 @@ function ReviewSubmissions() {
                         <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => handleFullReview(item)}
-                            className="px-4 py-1.5 border border-[#7a2e46] text-[#7a2e46] rounded-lg font-bold hover:bg-[#7a2e46] hover:text-white transition-colors"
+                            className="px-4 py-1.5 border border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070] rounded-lg font-bold hover:bg-[#7a2e46] hover:text-white dark:hover:bg-[#f8d070] dark:hover:text-stone-900 transition-colors"
                           >
                             View
                           </button>
@@ -568,12 +568,12 @@ function ReviewSubmissions() {
             </table>
           </div>
           
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <div className="p-4 border-t border-gray-100 dark:border-stone-800 flex items-center justify-between text-xs text-gray-500 dark:text-stone-400">
             <span>Showing 1–{finalFiltered.length} of {finalFiltered.length} {activeTab}</span>
             <div className="flex items-center gap-1">
-              <button className="px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">‹</button>
-              <button className="px-2.5 py-1 bg-[#7a2e46] text-white rounded font-bold">1</button>
-              <button className="px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">›</button>
+              <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">‹</button>
+              <button className="px-2.5 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded font-bold">1</button>
+              <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">›</button>
             </div>
           </div>
         </div>
@@ -582,18 +582,18 @@ function ReviewSubmissions() {
       {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
       {showReviewModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-stone-950 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="bg-[#7a2e46] text-white p-6 rounded-t-2xl relative">
+            <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-lg"
               >
                 ✕
               </button>
-              <p className="text-white/70 text-xs tracking-widest uppercase font-bold mb-1">Full Review</p>
+              <p className="text-white/70 dark:text-stone-400 text-xs tracking-widest uppercase font-bold mb-1">Full Review</p>
               <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
-              <p className="text-white/80 text-sm mt-1">
+              <p className="text-white/80 dark:text-stone-300 text-sm mt-1">
                 Group: {selectedSubmission.groupName} · Leader: {selectedSubmission.leaderName}
               </p>
             </div>
@@ -603,25 +603,25 @@ function ReviewSubmissions() {
 
               {/* Overview Stats */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-[#f8eff2] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
-                  <p className="text-xs text-gray-500 mt-1">Documents</p>
+                <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
+                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
-                <div className="bg-[#f8eff2] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46]">{selectedSubmission.completionPercent}%</p>
-                  <p className="text-xs text-gray-500 mt-1">Complete</p>
+                <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
+                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
-                <div className="bg-[#f8eff2] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46]">{selectedSubmission.pageCount || '—'}</p>
-                  <p className="text-xs text-gray-500 mt-1">Pages</p>
+                <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
+                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
 
               {/* Abstract */}
               {selectedSubmission.abstract && (
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm mb-2">Abstract</h4>
-                  <p className="text-gray-600 text-sm leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
+                  <p className="text-gray-600 dark:text-stone-300 text-sm leading-relaxed bg-gray-50 dark:bg-stone-900 rounded-lg p-4 border border-gray-100 dark:border-stone-800">
                     {selectedSubmission.abstract}
                   </p>
                 </div>
@@ -629,13 +629,13 @@ function ReviewSubmissions() {
 
               {/* Group Members */}
               <div>
-                <h4 className="font-bold text-gray-900 text-sm mb-2">Group Members</h4>
+                <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
                 <div className="flex flex-wrap gap-2">
-                  <span className="bg-[#7a2e46] text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                  <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
                     👤 {selectedSubmission.leaderName} (Leader)
                   </span>
                   {selectedSubmission.members?.map((m, i) => (
-                    <span key={i} className="bg-gray-100 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full">
+                    <span key={i} className="bg-gray-100 dark:bg-stone-800 text-gray-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full">
                       {m.name || m.email}
                     </span>
                   ))}
@@ -644,7 +644,7 @@ function ReviewSubmissions() {
 
               {/* Documents Checklist */}
               <div>
-                <h4 className="font-bold text-gray-900 text-sm mb-3">Submitted Documents</h4>
+                <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
                 <div className="space-y-3">
                   {requirements.map((req) => {
                     const docMeta = selectedSubmission.documents?.[req.id];
@@ -655,18 +655,18 @@ function ReviewSubmissions() {
                         key={req.id}
                         className={`flex items-center justify-between rounded-lg p-3 border transition ${
                           isUploaded
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-red-50 border-red-200'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <span className="text-xl shrink-0">{req.icon}</span>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-bold ${isUploaded ? 'text-green-800' : 'text-red-700'}`}>
+                            <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                               {req.id}
                             </p>
                             {isUploaded && docMeta && (
-                              <p className="text-xs text-gray-500 truncate">
+                              <p className="text-xs text-gray-500 dark:text-stone-400 truncate">
                                 {docMeta.name} · {docMeta.size} · {docMeta.date}
                               </p>
                             )}
@@ -675,20 +675,20 @@ function ReviewSubmissions() {
                         <div className="flex items-center gap-2 shrink-0">
                           {isUploaded ? (
                             <>
-                              <span className="text-green-700 font-bold text-xs">✓ Submitted</span>
+                              <span className="text-green-700 dark:text-green-500 font-bold text-xs">✓ Submitted</span>
                               {docMeta?.url && docMeta.url !== '#' && (
                                 <a
                                   href={docMeta.url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="bg-[#7a2e46] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] transition"
+                                  className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
                                 >
                                   View
                                 </a>
                               )}
                             </>
                           ) : (
-                            <span className="text-red-600 font-bold text-xs">✕ Missing</span>
+                            <span className="text-red-600 dark:text-red-500 font-bold text-xs">✕ Missing</span>
                           )}
                         </div>
                       </div>
@@ -700,10 +700,10 @@ function ReviewSubmissions() {
               {/* Keywords */}
               {selectedSubmission.keywords?.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm mb-2">Keywords</h4>
+                  <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Keywords</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedSubmission.keywords.map((kw, i) => (
-                      <span key={i} className="border border-[#DDA3B6] text-[#7a2e46] bg-[#F9EBF0] px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
+                      <span key={i} className="border border-[#DDA3B6] dark:border-stone-700 text-[#7a2e46] dark:text-[#f8d070] bg-[#F9EBF0] dark:bg-stone-800 px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
                     ))}
                   </div>
                 </div>
@@ -711,10 +711,10 @@ function ReviewSubmissions() {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 p-4 flex justify-between items-center bg-gray-50 rounded-b-2xl">
+            <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex justify-between items-center bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="border border-gray-300 text-gray-700 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition"
+                className="border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition"
               >
                 Close
               </button>
@@ -739,7 +739,7 @@ function ReviewSubmissions() {
                         setShowReviewModal(false);
                         handleApprove(selectedSubmission);
                       }}
-                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 dark:bg-stone-800 text-gray-500 dark:text-stone-500 cursor-not-allowed'}`}
                       title={selectedSubmission.completionPercent < 100 ? 'Student must submit all documents first' : ''}
                     >
                       Approve
@@ -751,7 +751,7 @@ function ReviewSubmissions() {
                     setShowReviewModal(false);
                     handleDeleteSubmission(selectedSubmission);
                   }}
-                  className="bg-red-50 text-red-600 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 transition border border-red-200"
+                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50"
                 >
                   Delete
                 </button>
