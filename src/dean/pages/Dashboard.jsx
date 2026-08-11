@@ -183,7 +183,35 @@ export default function Dashboard({ activePage }) {
     const aScore = topPapersSort === 'likes' ? (a.likes?.length || 0) : (a.views || 0);
     const bScore = topPapersSort === 'likes' ? (b.likes?.length || 0) : (b.views || 0);
     return bScore - aScore;
-  }).slice(0, 5); // Get first name for greeting
+  }).slice(0, 5);
+
+  const handleExportCSV = () => {
+    if (!allPapers || allPapers.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    const headers = ["Title", "Adviser", "Department", "Status", "Date Submitted"];
+    const rows = allPapers.map(paper => {
+      const date = paper.createdAt ? new Date(paper.createdAt).toLocaleDateString() : 'N/A';
+      return [
+        `"${(paper.title || '').replace(/"/g, '""')}"`,
+        `"${(paper.adviserName || '').replace(/"/g, '""')}"`,
+        `"${(paper.department || '').replace(/"/g, '""')}"`,
+        `"${(paper.status || '').replace(/"/g, '""')}"`,
+        date
+      ].join(',');
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Dean_Dashboard_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
@@ -209,7 +237,10 @@ export default function Dashboard({ activePage }) {
               </p>
             </div>
             <div className="flex gap-2.5">
-              <button className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors flex items-center gap-1.5">
+              <button 
+                onClick={handleExportCSV}
+                className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors flex items-center gap-1.5"
+              >
                 <span>📤</span> Export
               </button>
               <button
