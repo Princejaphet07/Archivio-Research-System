@@ -176,7 +176,7 @@ export default function Reports() {
   const currentReportObj = REPORT_TYPES.find(r => r.id === selectedReport);
 
   return (
-    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <style>
         {`
           @media print {
@@ -210,12 +210,12 @@ export default function Reports() {
 
           <div className="no-print">
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Generate Reports</h1>
-            <p className="text-xs text-stone-500 mt-0.5">Select a report type, apply filters, and export</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Select a report type, apply filters, and export</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 p-6 space-y-6 print-container">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 p-6 space-y-6 print-container">
             <div className="no-print">
-              <h3 className="text-sm font-bold text-stone-800 mb-4">Report Type</h3>
+              <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200 mb-4">Report Type</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {REPORT_TYPES.map((type) => {
                   const isActive = selectedReport === type.id;
@@ -223,13 +223,13 @@ export default function Reports() {
                     <div 
                       key={type.id} 
                       onClick={() => setSelectedReport(type.id)}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200/70 hover:bg-stone-50'}`}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200 dark:border-stone-700/70 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}
                     >
                       <div className="flex items-start justify-between">
-                        <span className="text-xl bg-stone-50 p-1.5 rounded-lg border border-stone-100">{type.icon}</span>
+                        <span className="text-xl bg-stone-50 dark:bg-stone-800/50 p-1.5 rounded-lg border border-stone-100">{type.icon}</span>
                         {isActive && <span className="text-emerald-600 bg-emerald-100/60 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✓</span>}
                       </div>
-                      <h4 className="font-bold text-stone-800 text-xs mt-3">{type.title}</h4>
+                      <h4 className="font-bold text-stone-800 dark:text-stone-200 text-xs mt-3">{type.title}</h4>
                       <p className="text-[10px] text-stone-400 mt-0.5">{type.desc}</p>
                     </div>
                   );
@@ -241,24 +241,24 @@ export default function Reports() {
 
             <div className="space-y-4 no-print">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-sm font-bold text-stone-800">Filters & Export</h3>
+                <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Filters & Export</h3>
                 <div className="flex items-center gap-2 font-bold text-[11px]">
-                  <button onClick={() => window.print()} className="px-4 py-2 border border-stone-200 hover:bg-stone-50 rounded-xl shadow-sm text-stone-600 flex items-center gap-1.5">🖨️ Print / PDF</button>
-                  <button onClick={handleExportCSV} className="px-5 py-2 bg-[#4a1024] hover:bg-[#6b1834] text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">📊 Export Excel (CSV)</button>
+                  <button onClick={() => window.print()} className="px-4 py-2 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 rounded-xl shadow-sm text-stone-600 dark:text-stone-400 flex items-center gap-1.5">🖨️ Print / PDF</button>
+                  <button onClick={handleExportCSV} className="px-5 py-2 bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">📊 Export Excel (CSV)</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">School Year</label>
-                  <select value={filterSY} onChange={(e) => setFilterSY(e.target.value)} className="w-full text-xs p-2 border border-stone-200/80 rounded-xl bg-stone-50 outline-none text-stone-700 font-medium">
+                  <select value={filterSY} onChange={(e) => setFilterSY(e.target.value)} className="w-full text-xs p-2 border border-stone-200 dark:border-stone-700/80 rounded-xl bg-stone-50 dark:bg-stone-800/50 outline-none text-stone-700 dark:text-stone-300 font-medium">
                     <option value="All">All Years</option>
                     {allYears.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Adviser</label>
-                  <select value={filterAdviser} onChange={(e) => setFilterAdviser(e.target.value)} className="w-full text-xs p-2 border border-stone-200/80 rounded-xl bg-stone-50 outline-none text-stone-700 font-medium">
+                  <select value={filterAdviser} onChange={(e) => setFilterAdviser(e.target.value)} className="w-full text-xs p-2 border border-stone-200 dark:border-stone-700/80 rounded-xl bg-stone-50 dark:bg-stone-800/50 outline-none text-stone-700 dark:text-stone-300 font-medium">
                     <option value="All">All Advisers</option>
                     {allAdvisers.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
@@ -267,23 +267,23 @@ export default function Reports() {
             </div>
 
             <div className="mt-8">
-              <h4 className="font-bold text-stone-700 text-sm mb-4 no-print">Report Preview: {currentReportObj?.title}</h4>
+              <h4 className="font-bold text-stone-700 dark:text-stone-300 text-sm mb-4 no-print">Report Preview: {currentReportObj?.title}</h4>
               
               {reportData.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-stone-200 print-container">
+                <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-700 print-container">
                   <table className="w-full text-left border-collapse text-xs print-table">
                     <thead>
-                      <tr className="bg-[#4a1024] text-white font-bold uppercase tracking-wider text-[10px]">
+                      <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
                         {Object.keys(reportData[0]).map((header, idx) => (
                           <th key={idx} className="py-3 px-4">{header}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-100 bg-white">
+                    <tbody className="divide-y divide-stone-100 bg-white dark:bg-stone-800">
                       {reportData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-stone-50">
+                        <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50">
                           {Object.values(row).map((val, i) => (
-                            <td key={i} className="py-2.5 px-4 text-stone-700 font-medium">{val}</td>
+                            <td key={i} className="py-2.5 px-4 text-stone-700 dark:text-stone-300 font-medium">{val}</td>
                           ))}
                         </tr>
                       ))}
@@ -291,9 +291,9 @@ export default function Reports() {
                   </table>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-stone-200 rounded-2xl bg-stone-50/50 p-12 text-center flex flex-col items-center justify-center no-print">
+                <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl bg-stone-50 dark:bg-stone-800/50/50 p-12 text-center flex flex-col items-center justify-center no-print">
                   <span className="text-3xl mb-2">📄</span>
-                  <h4 className="font-bold text-stone-700 text-xs">No Data Found</h4>
+                  <h4 className="font-bold text-stone-700 dark:text-stone-300 text-xs">No Data Found</h4>
                   <p className="text-[10px] text-stone-400 max-w-xs mt-1">Try adjusting your filters or select a different report type.</p>
                 </div>
               )}

@@ -242,18 +242,18 @@ export default function PublishQueue({ activePage, onNavigate }) {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <Sidebar activePage="publish-queue" onNavigate={onNavigate} />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="publish-queue" />
 
-        <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6]">
+        <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6] dark:bg-stone-900 transition-colors">
 
           {/* ===== PAGE HEADER ===== */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-stone-900 tracking-tight">Publish Queue</h1>
+              <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Publish Queue</h1>
               <p className="text-xs text-stone-400 mt-1 font-medium">
                 Approved manuscripts ready for publication. 100% requirements completion required.
               </p>
@@ -271,12 +271,12 @@ export default function PublishQueue({ activePage, onNavigate }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* ===== LEFT: AWAITING PUBLICATION LIST ===== */}
-            <div className="col-span-2 bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden flex flex-col">
+            <div className="col-span-2 bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden flex flex-col">
 
               {/* Card Header */}
-              <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white z-10 sticky top-0">
+              <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white dark:bg-stone-800 z-10 sticky top-0">
                 <div>
-                  <h2 className="text-sm font-bold text-stone-900">Awaiting Publication</h2>
+                  <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100">Awaiting Publication</h2>
                   <p className="text-[11px] text-stone-400 mt-0.5">Approved → Ready to Publish</p>
                 </div>
                 {/* Adviser Filter */}
@@ -284,7 +284,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   <select
                     value={adviserFilter}
                     onChange={(e) => setAdviserFilter(e.target.value)}
-                    className="appearance-none bg-stone-50 border border-stone-200 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
+                    className="appearance-none bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-300 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
                   >
                     {uniqueAdvisers.map((f) => <option key={f} value={f}>{f}</option>)}
                   </select>
@@ -297,7 +297,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                 {loading ? (
                   <div className="py-12 flex flex-col items-center justify-center">
                     <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                    <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Submissions...</p>
+                    <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Submissions...</p>
                   </div>
                 ) : filteredQueue.length === 0 ? (
                   <div className="p-8 text-center text-stone-400 text-sm">No eligible submissions awaiting publication.</div>
@@ -305,11 +305,11 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   filteredQueue.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 transition-colors hover:bg-stone-50/60
+                      className={`flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/60
                         ${item.isSelf ? 'border-l-4 border-l-[#f8d070] bg-amber-50/20' : ''}`}
                     >
                       {/* File Icon */}
-                      <div className="hidden sm:flex w-10 h-12 bg-stone-100 rounded-lg items-center justify-center shrink-0 border border-stone-200">
+                      <div className="hidden sm:flex w-10 h-12 bg-stone-100 dark:bg-stone-800/80 rounded-lg items-center justify-center shrink-0 border border-stone-200 dark:border-stone-700">
                         <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h4m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -317,8 +317,8 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-stone-900 truncate">{item.researchTitle}</h3>
-                        <p className={`text-[11px] font-medium mt-0.5 ${item.isSelf ? 'text-[#7a1f3d]' : 'text-stone-400'}`}>
+                        <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 truncate">{item.researchTitle}</h3>
+                        <p className={`text-[11px] font-medium mt-0.5 ${item.isSelf ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-400'}`}>
                           {item.groupName} · {item.adviserName}{item.isSelf && ' (You)'} · Approved {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -341,13 +341,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
                         <button 
                           onClick={() => handlePreview(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
+                          className="px-4 py-1.5 text-xs font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-colors"
                         >
                           Preview
                         </button>
                         <button
                           onClick={() => handlePublish(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-white bg-[#7a1f3d] rounded-lg hover:bg-[#5a162d] transition-colors flex items-center gap-1.5 shadow-sm"
+                          className="px-4 py-1.5 text-xs font-bold text-white bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] rounded-lg hover:bg-[#5a162d] dark:hover:bg-[#b09230] transition-colors flex items-center gap-1.5 shadow-sm"
                         >
                           🌐 Publish
                         </button>
@@ -362,21 +362,21 @@ export default function PublishQueue({ activePage, onNavigate }) {
             <div className="flex flex-col gap-5">
 
               {/* Status Flow Card */}
-              <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6">
-                <h2 className="text-sm font-bold text-stone-900 tracking-tight">Status Flow</h2>
+              <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm p-6">
+                <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Status Flow</h2>
                 <p className="text-[11px] text-stone-400 mt-0.5 mb-5">Workflow stages</p>
 
                 <div className="space-y-1">
 
                   {/* Pending */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
                     <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-stone-800">Pending</p>
+                      <p className="text-xs font-bold text-stone-800 dark:text-stone-200">Pending</p>
                       <p className="text-[10px] text-stone-400">Reviewed by Adviser</p>
                     </div>
                     <span className="text-sm font-extrabold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">{pendingCount}</span>
@@ -392,14 +392,14 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   </div>
 
                   {/* Approved */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-stone-800">Approved</p>
+                      <p className="text-xs font-bold text-stone-800 dark:text-stone-200">Approved</p>
                       <p className="text-[10px] text-stone-400">Approved by Adviser</p>
                     </div>
                     <span className="text-sm font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">{approvedCount}</span>
@@ -415,7 +415,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   </div>
 
                   {/* Published */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="9" />
@@ -423,7 +423,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-stone-800">Published <span className="font-normal text-stone-400">(Live in Archive)</span></p>
+                      <p className="text-xs font-bold text-stone-800 dark:text-stone-200">Published <span className="font-normal text-stone-400">(Live in Archive)</span></p>
                       <p className="text-[10px] text-stone-400">Reviewed &amp; Approved by Dean</p>
                     </div>
                     <span className="text-sm font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">{publishedCount}</span>
@@ -438,17 +438,17 @@ export default function PublishQueue({ activePage, onNavigate }) {
               </div>
 
               {/* Publish Summary Card */}
-              <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6">
-                <h2 className="text-sm font-bold text-stone-900 tracking-tight mb-4">Publish Summary</h2>
+              <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm p-6">
+                <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight mb-4">Publish Summary</h2>
 
                 <div className="space-y-3 mb-5">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-stone-500 font-medium">Eligible (100% complete)</span>
-                    <span className="text-sm font-extrabold text-stone-900">{eligibleCount}</span>
+                    <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">Eligible (100% complete)</span>
+                    <span className="text-sm font-extrabold text-stone-900 dark:text-stone-100">{eligibleCount}</span>
                   </div>
-                  <div className="h-px bg-stone-100"></div>
+                  <div className="h-px bg-stone-100 dark:bg-stone-800/80"></div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-stone-500 font-medium">Blocked (incomplete)</span>
+                    <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">Blocked (incomplete)</span>
                     <span className="text-sm font-extrabold text-red-600">{blockedCount}</span>
                   </div>
                 </div>

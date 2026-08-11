@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUser } from '../context/UserContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import NotificationBell from './NotificationBell';
 
 const PAGE_TITLES = {
@@ -15,6 +16,7 @@ const PAGE_TITLES = {
 
 export default function Header({ activePage, onMenuClick }) {
   const { deanData } = useUser();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const currentView = PAGE_TITLES[activePage] || { title: 'Dashboard', breadcrumb: '' };
 
   const handleSwitchToAdviser = () => {
@@ -22,7 +24,7 @@ export default function Header({ activePage, onMenuClick }) {
   };
 
   return (
-    <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10">
+    <header className="bg-white dark:bg-[#121212] border-b border-stone-200 dark:border-stone-800 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10 transition-colors">
 
       {/* Left side: Mobile Toggle, Title, and Search */}
       <div className="flex items-center gap-4 lg:gap-6">
@@ -77,6 +79,15 @@ export default function Header({ activePage, onMenuClick }) {
         <div className="text-xs font-bold text-[#7a1f3d] bg-red-50 border border-red-100/60 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-red-100/40 transition-colors whitespace-nowrap flex items-center gap-1">
           🎓 S.Y. 2026–2027 <span className="text-[10px]">▼</span>
         </div>
+
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className="p-2 rounded-xl text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
+          title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
 
         {/* Notification Bell */}
         <NotificationBell />

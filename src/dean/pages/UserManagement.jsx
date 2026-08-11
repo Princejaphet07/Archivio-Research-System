@@ -105,7 +105,7 @@ export default function UserManagement() {
   const totalGroupsSupervised = enrichedAdvisers.reduce((sum, a) => sum + a.groupsCount, 0);
 
   const stats = [
-    { label: 'Total Advisers (incl. you)', value: enrichedAdvisers.length.toString(), color: 'border-stone-200' },
+    { label: 'Total Advisers (incl. you)', value: enrichedAdvisers.length.toString(), color: 'border-stone-200 dark:border-stone-700' },
     { label: 'Active Accounts', value: activeAdvisersCount.toString(), color: 'border-emerald-500' },
     { label: 'Groups Supervised', value: totalGroupsSupervised.toString(), color: 'border-amber-500' },
   ];
@@ -157,7 +157,7 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <Sidebar activePage="user-management" />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="user-management" />
@@ -166,9 +166,9 @@ export default function UserManagement() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Users / Advisers</h1>
-              <p className="text-xs text-stone-500 mt-0.5">Manage research adviser and student accounts under your supervision</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Manage research adviser and student accounts under your supervision</p>
             </div>
-            <button onClick={() => navigate('/dean/invitations')} className="bg-[#4a1024] hover:bg-[#6b1834] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">
+            <button onClick={() => navigate('/dean/invitations')} className="bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">
               ✉️ Invite New Adviser
             </button>
           </div>
@@ -176,28 +176,28 @@ export default function UserManagement() {
           {/* Cards metrics summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {stats.map((card, i) => (
-              <div key={i} className={`bg-white border-t-2 ${card.color} rounded-xl shadow-sm p-4`}>
-                <p className="text-2xl font-bold text-stone-800">{card.value}</p>
+              <div key={i} className={`bg-white dark:bg-stone-800 border-t-2 ${card.color} rounded-xl shadow-sm p-4`}>
+                <p className="text-2xl font-bold text-stone-800 dark:text-stone-200">{card.value}</p>
                 <p className="text-[11px] font-medium text-stone-400 mt-0.5">{card.label}</p>
               </div>
             ))}
           </div>
 
           {/* Table Container Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
             {/* View Switching Tabs */}
-            <div className="bg-stone-50/60 border-b border-stone-100 px-4 flex gap-6 text-xs font-bold text-stone-400">
+            <div className="bg-stone-50 dark:bg-stone-800/50/60 border-b border-stone-100 px-4 flex gap-6 text-xs font-bold text-stone-400">
               <button 
                 onClick={() => setActiveTab('advisers')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600 dark:text-stone-400'}`}
               >
-                🧑‍🏫 Research Advisers <span className={`${activeTab === 'advisers' ? 'bg-[#4a1024]/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
+                🧑‍🏫 Research Advisers <span className={`${activeTab === 'advisers' ? 'bg-[#4a1024] dark:bg-stone-950/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
               </button>
               <button 
                 onClick={() => setActiveTab('students')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600 dark:text-stone-400'}`}
               >
-                🎓 Students <span className={`${activeTab === 'students' ? 'bg-[#4a1024]/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
+                🎓 Students <span className={`${activeTab === 'students' ? 'bg-[#4a1024] dark:bg-stone-950/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
               </button>
             </div>
 
@@ -231,39 +231,39 @@ export default function UserManagement() {
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-50 text-stone-700">
+                  <tbody className="divide-y divide-stone-50 text-stone-700 dark:text-stone-300">
                     {loading ? (
                       <tr>
                         <td colSpan="6" className="py-12">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                            <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Users...</p>
+                            <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Users...</p>
                           </div>
                         </td>
                       </tr>
                     ) : activeTab === 'advisers' ? (
                       enrichedAdvisers.length === 0 ? (
-                         <tr><td colSpan="6" className="py-8 text-center text-stone-500">No advisers found.</td></tr>
+                         <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No advisers found.</td></tr>
                       ) : (
                         enrichedAdvisers.map((row, idx) => (
-                          <tr key={row.id} className={`hover:bg-stone-50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
+                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
                             <td className="py-4 flex items-center gap-3">
                               <div className={`w-9 h-9 ${getAvatarColor(idx)} rounded-full flex items-center justify-center font-bold text-xs border shadow-inner`}>
                                 {(row.displayName || 'U').split(' ').filter(n=>!n.includes('.')).map(n=>n[0]).join('').substring(0, 2)}
                               </div>
                               <div>
-                                <p className={`font-bold ${row.status === 'inactive' ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{row.displayName || 'Unnamed User'}</p>
+                                <p className={`font-bold ${row.status === 'inactive' ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-200'}`}>{row.displayName || 'Unnamed User'}</p>
                                 <div className="flex gap-1 mt-1">
                                   {row.tags.map((tag) => (
-                                    <span key={tag} className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wide uppercase ${tag === 'YOU' ? 'bg-amber-500 text-white' : tag === 'DEAN' ? 'bg-stone-100 text-stone-700' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                    <span key={tag} className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wide uppercase ${tag === 'YOU' ? 'bg-amber-500 text-white' : tag === 'DEAN' ? 'bg-stone-100 dark:bg-stone-800/80 text-stone-700 dark:text-stone-300' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
                                       {tag}
                                     </span>
                                   ))}
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 text-stone-500 font-normal">{row.email}</td>
-                            <td className="py-4 text-center font-bold text-stone-800">{row.groupsCount}</td>
+                            <td className="py-4 text-stone-500 dark:text-stone-400 font-normal">{row.email}</td>
+                            <td className="py-4 text-center font-bold text-stone-800 dark:text-stone-200">{row.groupsCount}</td>
                             <td className="py-4 text-center">
                               <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">
                                 {row.publishedCount}
@@ -283,7 +283,7 @@ export default function UserManagement() {
                             <td className="py-4 text-right space-x-2">
                               <button 
                                 onClick={() => handleView(row, 'adviser')}
-                                className="px-3 py-1 border border-stone-200 text-stone-600 font-bold rounded-lg text-[11px] bg-white hover:bg-stone-50 shadow-sm transition-colors"
+                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 shadow-sm transition-colors"
                               >
                                 👁️ View
                               </button>
@@ -301,20 +301,20 @@ export default function UserManagement() {
                       )
                     ) : (
                       enrichedStudents.length === 0 ? (
-                         <tr><td colSpan="6" className="py-8 text-center text-stone-500">No students found.</td></tr>
+                         <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No students found.</td></tr>
                       ) : (
                         enrichedStudents.map((row, idx) => (
-                          <tr key={row.id} className={`hover:bg-stone-50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
+                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
                             <td className="py-4 flex items-center gap-3">
                               <div className={`w-9 h-9 ${getAvatarColor(idx + 3)} rounded-full flex items-center justify-center font-bold text-xs border shadow-inner`}>
                                 {(row.displayName || 'S').split(' ').map(n=>n[0]).join('').substring(0, 2)}
                               </div>
-                              <p className={`font-bold ${row.status === 'inactive' ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{row.displayName || 'Unnamed Student'}</p>
+                              <p className={`font-bold ${row.status === 'inactive' ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-200'}`}>{row.displayName || 'Unnamed Student'}</p>
                             </td>
-                            <td className="py-4 text-stone-500 font-normal">{row.email}</td>
-                            <td className="py-4 font-bold text-stone-600">{row.program}</td>
+                            <td className="py-4 text-stone-500 dark:text-stone-400 font-normal">{row.email}</td>
+                            <td className="py-4 font-bold text-stone-600 dark:text-stone-400">{row.program}</td>
                             <td className="py-4">
-                              <span className="bg-stone-100 text-stone-700 font-bold px-2 py-0.5 rounded text-[10px]">
+                              <span className="bg-stone-100 dark:bg-stone-800/80 text-stone-700 dark:text-stone-300 font-bold px-2 py-0.5 rounded text-[10px]">
                                 {row.groupName}
                               </span>
                             </td>
@@ -332,7 +332,7 @@ export default function UserManagement() {
                             <td className="py-4 text-right space-x-2">
                               <button 
                                 onClick={() => handleView(row, 'student')}
-                                className="px-3 py-1 border border-stone-200 text-stone-600 font-bold rounded-lg text-[11px] bg-white hover:bg-stone-50 shadow-sm transition-colors mr-2"
+                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 shadow-sm transition-colors mr-2"
                               >
                                 👁️ View
                               </button>
@@ -358,15 +358,15 @@ export default function UserManagement() {
       {/* ─── USER VIEW MODAL ─────────────────────────────────────────── */}
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowUserModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#4a1024] text-white p-6 relative flex items-center gap-4">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 relative flex items-center gap-4">
               <button
                 onClick={() => setShowUserModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white dark:bg-stone-800/20 rounded-full flex items-center justify-center hover:bg-white dark:bg-stone-800/30 transition text-lg"
               >
                 ✕
               </button>
-              <div className={`w-16 h-16 ${selectedUser.type === 'adviser' ? 'bg-amber-100 text-amber-800' : 'bg-stone-200 text-stone-800'} rounded-full flex items-center justify-center font-bold text-2xl border-4 border-white/20 shadow-inner shrink-0`}>
+              <div className={`w-16 h-16 ${selectedUser.type === 'adviser' ? 'bg-amber-100 text-amber-800' : 'bg-stone-200 text-stone-800 dark:text-stone-200'} rounded-full flex items-center justify-center font-bold text-2xl border-4 border-white/20 shadow-inner shrink-0`}>
                 {(selectedUser.displayName || 'U').split(' ').filter(n=>!n.includes('.')).map(n=>n[0]).join('').substring(0, 2)}
               </div>
               <div>
@@ -376,7 +376,7 @@ export default function UserManagement() {
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedUser.status === 'inactive' ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'} uppercase tracking-wider`}>
                     {selectedUser.status || 'active'}
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white border border-white/20 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-stone-800/10 text-white border border-white/20 uppercase tracking-wider">
                     {selectedUser.type}
                   </span>
                 </div>
@@ -387,20 +387,20 @@ export default function UserManagement() {
               {selectedUser.type === 'adviser' ? (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Groups Supervised</p>
-                      <p className="text-2xl font-bold text-stone-800">{selectedUser.groupsCount}</p>
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Groups Supervised</p>
+                      <p className="text-2xl font-bold text-stone-800 dark:text-stone-200">{selectedUser.groupsCount}</p>
                     </div>
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Published</p>
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Published</p>
                       <p className="text-2xl font-bold text-[#4a1024]">{selectedUser.publishedCount}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Roles / Permissions</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Roles / Permissions</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {selectedUser.tags?.map((tag) => (
-                        <span key={tag} className="text-[10px] font-bold px-2 py-1 rounded bg-stone-100 text-stone-700 tracking-wide uppercase border border-stone-200">
+                        <span key={tag} className="text-[10px] font-bold px-2 py-1 rounded bg-stone-100 dark:bg-stone-800/80 text-stone-700 dark:text-stone-300 tracking-wide uppercase border border-stone-200 dark:border-stone-700">
                           {tag}
                         </span>
                       ))}
@@ -411,17 +411,17 @@ export default function UserManagement() {
                 <>
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Program</p>
-                      <p className="text-sm font-bold text-stone-800 bg-stone-50 p-3 rounded-lg border border-stone-100">{selectedUser.program}</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Program</p>
+                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.program}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Research Group</p>
-                      <p className="text-sm font-bold text-stone-800 bg-stone-50 p-3 rounded-lg border border-stone-100">{selectedUser.groupName}</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Research Group</p>
+                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.groupName}</p>
                     </div>
                     {selectedUser.studentNumber && (
                       <div>
-                        <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Student Number</p>
-                        <p className="text-sm font-bold text-stone-800 bg-stone-50 p-3 rounded-lg border border-stone-100">{selectedUser.studentNumber}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Student Number</p>
+                        <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.studentNumber}</p>
                       </div>
                     )}
                   </div>

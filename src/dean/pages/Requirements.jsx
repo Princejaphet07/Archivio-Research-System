@@ -82,10 +82,10 @@ export default function Requirements({ activePage, onNavigate }) {
   const missingCountTotal = enrichedRows.filter(r => r.missingValue > 0).length;
 
   const stats = [
-    { title: 'TOTAL GROUPS', value: totalGroups.toString(), sub: 'Across all advisers', bg: 'bg-white border-l-4 border-stone-300' },
-    { title: '100% COMPLETE', value: completeCount.toString(), sub: 'Ready / Published', bg: 'bg-white border-l-4 border-emerald-600' },
-    { title: 'IN PROGRESS', value: inProgressCount.toString(), sub: 'Partial completion', bg: 'bg-white border-l-4 border-amber-500' },
-    { title: 'HAS MISSING', value: missingCountTotal.toString(), sub: 'Action needed', bg: 'bg-white border-l-4 border-red-500' },
+    { title: 'TOTAL GROUPS', value: totalGroups.toString(), sub: 'Across all advisers', bg: 'bg-white dark:bg-stone-800 border-l-4 border-stone-300 dark:border-stone-600' },
+    { title: '100% COMPLETE', value: completeCount.toString(), sub: 'Ready / Published', bg: 'bg-white dark:bg-stone-800 border-l-4 border-emerald-600' },
+    { title: 'IN PROGRESS', value: inProgressCount.toString(), sub: 'Partial completion', bg: 'bg-white dark:bg-stone-800 border-l-4 border-amber-500' },
+    { title: 'HAS MISSING', value: missingCountTotal.toString(), sub: 'Action needed', bg: 'bg-white dark:bg-stone-800 border-l-4 border-red-500' },
   ];
 
   const handleView = (row) => {
@@ -109,7 +109,7 @@ export default function Requirements({ activePage, onNavigate }) {
   };
 
   return (
-    <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-stone-50 dark:bg-stone-800/50 overflow-hidden font-sans">
       <Sidebar activePage="requirements" onNavigate={onNavigate} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="requirements" onMenuClick={() => {}} />
@@ -117,26 +117,26 @@ export default function Requirements({ activePage, onNavigate }) {
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Requirements Tracking</h1>
-            <p className="text-xs text-stone-500 mt-0.5">Monitor completion status across all research groups under your supervision</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Monitor completion status across all research groups under your supervision</p>
           </div>
 
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((card, idx) => (
-              <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200/60 ${card.bg}`}>
+              <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 ${card.bg}`}>
                 <p className="text-[10px] font-bold tracking-wider text-stone-400 uppercase">{card.title}</p>
-                <p className="text-2xl font-bold text-stone-800 my-1">{card.value}</p>
-                <p className="text-xs text-stone-500">{card.sub}</p>
+                <p className="text-2xl font-bold text-stone-800 dark:text-stone-200 my-1">{card.value}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">{card.sub}</p>
               </div>
             ))}
           </div>
 
           {/* Table Area */}
-          <div className="bg-white rounded-xl shadow-sm border border-stone-200/60 overflow-hidden">
+          <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[#4a1024] text-white font-bold uppercase tracking-wider text-[10px]">
+                  <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 px-4 text-center w-12">No.</th>
                     <th className="py-3.5 px-4">Group</th>
                     <th className="py-3.5 px-4">Research Title</th>
@@ -153,36 +153,36 @@ export default function Requirements({ activePage, onNavigate }) {
                       <td colSpan="8" className="py-12">
                         <div className="flex flex-col items-center justify-center">
                           <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                          <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Tracking Data...</p>
+                          <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Tracking Data...</p>
                         </div>
                       </td>
                     </tr>
                   ) : enrichedRows.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="py-8 text-center text-stone-500">No approved groups found.</td>
+                      <td colSpan="8" className="py-8 text-center text-stone-500 dark:text-stone-400">No approved groups found.</td>
                     </tr>
                   ) : (
                     enrichedRows.map((row) => (
-                      <tr key={row.no} className={`hover:bg-stone-50/80 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30' : row.progressValue === 100 ? 'bg-emerald-50/10' : ''}`}>
+                      <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/80 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30' : row.progressValue === 100 ? 'bg-emerald-50/10' : ''}`}>
                         <td className="py-4 px-4 text-center text-stone-400 font-normal">{row.no}</td>
-                        <td className="py-4 px-4 font-bold text-stone-800">{row.name}</td>
-                        <td className="py-4 px-4 text-stone-600 max-w-xs truncate">{row.title}</td>
-                        <td className="py-4 px-4 text-stone-700">{row.adviser}</td>
+                        <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">{row.name}</td>
+                        <td className="py-4 px-4 text-stone-600 dark:text-stone-400 max-w-xs truncate">{row.title}</td>
+                        <td className="py-4 px-4 text-stone-700 dark:text-stone-300">{row.adviser}</td>
                         <td className="py-4 px-4">
                           <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 text-[10px] font-bold">
                             {row.subText}
                           </span>
                         </td>
                         <td className="py-4 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${row.missingValue === 0 ? 'bg-stone-50 text-stone-500 border-stone-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${row.missingValue === 0 ? 'bg-stone-50 dark:bg-stone-800/50 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700' : 'bg-red-50 text-red-600 border-red-200'}`}>
                             {row.missText}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-center font-bold text-stone-800">{row.progress}</td>
+                        <td className="py-4 px-4 text-center font-bold text-stone-800 dark:text-stone-200">{row.progress}</td>
                         <td className="py-4 px-4 text-center">
                           <button 
                             onClick={() => handleView(row)}
-                            className="px-4 py-1.5 text-[#4a1024] border border-[#4a1024] rounded-lg text-xs font-bold hover:bg-[#4a1024] hover:text-white transition-all shadow-sm"
+                            className="px-4 py-1.5 text-[#4a1024] border border-[#4a1024] rounded-lg text-xs font-bold hover:bg-[#4a1024] dark:bg-stone-950 hover:text-white transition-all shadow-sm"
                           >
                             View
                           </button>
@@ -194,12 +194,12 @@ export default function Requirements({ activePage, onNavigate }) {
               </table>
             </div>
             
-            <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 font-medium">
+            <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 font-medium">
               <span>Showing 1–{enrichedRows.length} of {enrichedRows.length} groups</span>
               <div className="flex items-center gap-1">
-                <button className="px-2 py-1 border border-stone-200 rounded hover:bg-stone-50 text-stone-400">‹</button>
-                <button className="px-2.5 py-1 bg-[#4a1024] text-white rounded font-bold">1</button>
-                <button className="px-2 py-1 border border-stone-200 rounded hover:bg-stone-50">›</button>
+                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 text-stone-400">‹</button>
+                <button className="px-2.5 py-1 bg-[#4a1024] dark:bg-stone-950 text-white rounded font-bold">1</button>
+                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50">›</button>
               </div>
             </div>
           </div>
@@ -209,11 +209,11 @@ export default function Requirements({ activePage, onNavigate }) {
       {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
       {showReviewModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#4a1024] text-white p-6 rounded-t-2xl relative">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white dark:bg-stone-800/20 rounded-full flex items-center justify-center hover:bg-white dark:bg-stone-800/30 transition text-lg"
               >
                 ✕
               </button>
@@ -228,29 +228,29 @@ export default function Requirements({ activePage, onNavigate }) {
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
-                  <p className="text-xs text-stone-500 mt-1">Documents</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.completionPercent}%</p>
-                  <p className="text-xs text-stone-500 mt-1">Complete</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.pageCount || '—'}</p>
-                  <p className="text-xs text-stone-500 mt-1">Pages</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
 
               {selectedSubmission.abstract && (
                 <div>
-                  <h4 className="font-bold text-stone-900 text-sm mb-2">Abstract</h4>
-                  <p className="text-stone-600 text-sm leading-relaxed bg-stone-50 rounded-lg p-4 border border-stone-100">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
+                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100">
                     {selectedSubmission.abstract}
                   </p>
                 </div>
               )}
 
               <div>
-                <h4 className="font-bold text-stone-900 text-sm mb-3">Submitted Documents</h4>
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
                 <div className="space-y-3">
                   {selectedSubmission.applicableReqs.map((req) => {
                     const docMeta = selectedSubmission.documents?.[req.id];
@@ -268,9 +268,9 @@ export default function Requirements({ activePage, onNavigate }) {
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{req.icon}</span>
                           <div>
-                            <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800' : 'text-stone-500'}`}>{req.title}</p>
+                            <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800 dark:text-stone-200' : 'text-stone-500 dark:text-stone-400'}`}>{req.title}</p>
                             {isUploaded && docMeta ? (
-                              <p className="text-xs text-stone-500">{docMeta.name} · {docMeta.size}</p>
+                              <p className="text-xs text-stone-500 dark:text-stone-400">{docMeta.name} · {docMeta.size}</p>
                             ) : (
                               <p className="text-xs text-red-500 font-medium">Missing Document</p>
                             )}
@@ -281,7 +281,7 @@ export default function Requirements({ activePage, onNavigate }) {
                             href={docMeta.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs font-bold text-[#4a1024] bg-white border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] hover:text-white transition"
+                            className="text-xs font-bold text-[#4a1024] bg-white dark:bg-stone-800 border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:bg-stone-950 hover:text-white transition"
                           >
                             View File
                           </a>

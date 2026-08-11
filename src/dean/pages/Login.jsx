@@ -257,7 +257,7 @@ export default function Login() {
 
         {/* Content */}
         <div className="relative z-20 flex flex-col items-center text-center px-12">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/10 p-2 shadow-inner border border-white/20">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white dark:bg-stone-800/10 p-2 shadow-inner border border-white/20">
             <img src={logo} alt="SWU Logo" className="h-full w-full object-contain" />
           </div>
 
@@ -307,19 +307,19 @@ export default function Login() {
             <>
               {/* Welcome Text */}
               <div className="mb-8">
-                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900">Welcome Back!</h2>
+                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-stone-100">Welcome Back!</h2>
                 <div className="mt-2 flex flex-col items-start gap-2">
-                  <p className="text-sm text-stone-600">Sign in to your ARCHIVIO account</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Sign in to your ARCHIVIO account</p>
                   <div className="h-0.5 w-12 bg-[#d4af37]"></div>
                 </div>
               </div>
 
               {/* Login Form Card */}
-              <div className="rounded-2xl border border-white/50 bg-white/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
+              <div className="rounded-2xl border border-white/50 bg-white dark:bg-stone-800/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-stone-900">Dean Portal Sign In</h3>
-                  <p className="text-xs text-stone-500 mt-1">Enter your institutional email and password</p>
-                  <div className="mt-4 border-b border-stone-200"></div>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Dean Portal Sign In</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Enter your institutional email and password</p>
+                  <div className="mt-4 border-b border-stone-200 dark:border-stone-700"></div>
                 </div>
 
                 {/* Error Message */}
@@ -334,7 +334,7 @@ export default function Login() {
 
                   {/* Email Input */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -350,15 +350,15 @@ export default function Login() {
                         placeholder="your.name@phinmaed.com"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 pl-10 pr-4 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-4 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                     </div>
-                    <p className="text-xs text-stone-500 mt-1">Use your @phinmaed.com email</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Use your @phinmaed.com email</p>
                   </div>
 
                   {/* Password Input */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -374,12 +374,12 @@ export default function Login() {
                         placeholder="Enter your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 pl-10 pr-16 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -393,11 +393,11 @@ export default function Login() {
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-stone-300 text-[#7a1f3d] focus:ring-[#7a1f3d]"
+                        className="h-3.5 w-3.5 rounded border-stone-300 dark:border-stone-600 text-[#7a1f3d] dark:text-[#f8d070] focus:ring-[#7a1f3d]"
                       />
-                      <span className="text-xs font-medium text-stone-600">Remember me</span>
+                      <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Remember me</span>
                     </label>
-                    <Link to="/dean/forgot-password" className="text-xs font-semibold text-[#7a1f3d] hover:underline">
+                    <Link to="/dean/forgot-password" className="text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -406,7 +406,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="mt-4 w-full rounded-lg bg-[#7a1f3d] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-4 w-full rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Signing In...' : 'Sign In'}
                   </button>
@@ -420,19 +420,19 @@ export default function Login() {
             <>
               {/* Welcome Text */}
               <div className="mb-8">
-                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900">Activate Account</h2>
+                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-stone-100">Activate Account</h2>
                 <div className="mt-2 flex flex-col items-start gap-2">
-                  <p className="text-sm text-stone-600">Set up your Dean portal password</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Set up your Dean portal password</p>
                   <div className="h-0.5 w-12 bg-[#d4af37]"></div>
                 </div>
               </div>
 
               {/* Activation Form Card */}
-              <div className="rounded-2xl border border-white/50 bg-white/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
+              <div className="rounded-2xl border border-white/50 bg-white dark:bg-stone-800/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-stone-900">Create Your Password</h3>
-                  <p className="text-xs text-stone-500 mt-1">You can login after setting your password</p>
-                  <div className="mt-4 border-b border-stone-200"></div>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Create Your Password</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">You can login after setting your password</p>
+                  <div className="mt-4 border-b border-stone-200 dark:border-stone-700"></div>
                 </div>
 
                 {/* Error Message */}
@@ -447,7 +447,7 @@ export default function Login() {
 
                   {/* Email Input */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Your Email <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -457,13 +457,13 @@ export default function Login() {
                       placeholder="your.name@phinmaed.com"
                       required
                       disabled={loading}
-                      className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 px-4 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                      className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                     />
                   </div>
 
                   {/* New Password */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       New Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -474,12 +474,12 @@ export default function Login() {
                         placeholder="Create a strong password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -488,7 +488,7 @@ export default function Login() {
 
                   {/* Confirm Password */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -499,12 +499,12 @@ export default function Login() {
                         placeholder="Confirm your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
                       >
                         {showConfirmPassword ? "Hide" : "Show"}
                       </button>
@@ -513,31 +513,31 @@ export default function Login() {
 
                   {/* Password Requirements */}
                   {newPassword && (
-                    <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
-                      <p className="text-xs font-bold text-stone-700 mb-2">Password Requirements:</p>
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-lg p-3 space-y-1.5">
+                      <p className="text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">Password Requirements:</p>
                       <div className="flex items-center gap-2">
                         <span className={hasEightChars ? 'text-green-600' : 'text-stone-400'}>
                           {hasEightChars ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">At least 8 characters</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">At least 8 characters</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasNumber ? 'text-green-600' : 'text-stone-400'}>
                           {hasNumber ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains a number</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains a number</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasUpper ? 'text-green-600' : 'text-stone-400'}>
                           {hasUpper ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains uppercase letter</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains uppercase letter</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasSpecial ? 'text-green-600' : 'text-stone-400'}>
                           {hasSpecial ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains special character</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains special character</span>
                       </div>
                     </div>
                   )}
@@ -548,14 +548,14 @@ export default function Login() {
                       type="button"
                       onClick={() => setView('login')}
                       disabled={loading}
-                      className="flex-1 rounded-lg border border-stone-300 bg-white py-3 text-sm font-bold text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
+                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50"
                     >
                       Back to Login
                     </button>
                     <button
                       type="submit"
                       disabled={loading || strengthCount < 4}
-                      className="flex-1 rounded-lg bg-[#7a1f3d] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? 'Activating...' : 'Activate Account'}
                     </button>
@@ -570,21 +570,21 @@ export default function Login() {
             <>
               {/* Welcome Text */}
               <div className="mb-8">
-                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900">Set Your Password</h2>
+                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-stone-100">Set Your Password</h2>
                 <div className="mt-2 flex flex-col items-start gap-2">
-                  <p className="text-sm text-stone-600">Create a permanent password to secure your account</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Create a permanent password to secure your account</p>
                   <div className="h-0.5 w-12 bg-[#d4af37]"></div>
                 </div>
               </div>
 
               {/* Change Password Form Card */}
-              <div className="rounded-2xl border border-white/50 bg-white/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
+              <div className="rounded-2xl border border-white/50 bg-white dark:bg-stone-800/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-stone-900">Create Your Permanent Password</h3>
-                  <p className="text-xs text-stone-500 mt-1">
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Create Your Permanent Password</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                     Welcome, {activationData?.displayName || 'Dean'}! Please set a new password to secure your account.
                   </p>
-                  <div className="mt-4 border-b border-stone-200"></div>
+                  <div className="mt-4 border-b border-stone-200 dark:border-stone-700"></div>
                 </div>
 
                 {/* Error Message */}
@@ -599,7 +599,7 @@ export default function Login() {
 
                   {/* New Password */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       New Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -610,12 +610,12 @@ export default function Login() {
                         placeholder="Create a strong password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -624,7 +624,7 @@ export default function Login() {
 
                   {/* Confirm Password */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -635,12 +635,12 @@ export default function Login() {
                         placeholder="Confirm your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
                       >
                         {showConfirmPassword ? "Hide" : "Show"}
                       </button>
@@ -649,31 +649,31 @@ export default function Login() {
 
                   {/* Password Requirements */}
                   {newPassword && (
-                    <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
-                      <p className="text-xs font-bold text-stone-700 mb-2">Password Requirements:</p>
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-lg p-3 space-y-1.5">
+                      <p className="text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">Password Requirements:</p>
                       <div className="flex items-center gap-2">
                         <span className={hasEightChars ? 'text-green-600' : 'text-stone-400'}>
                           {hasEightChars ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">At least 8 characters</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">At least 8 characters</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasNumber ? 'text-green-600' : 'text-stone-400'}>
                           {hasNumber ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains a number</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains a number</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasUpper ? 'text-green-600' : 'text-stone-400'}>
                           {hasUpper ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains uppercase letter</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains uppercase letter</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={hasSpecial ? 'text-green-600' : 'text-stone-400'}>
                           {hasSpecial ? '✓' : '○'}
                         </span>
-                        <span className="text-xs text-stone-600">Contains special character</span>
+                        <span className="text-xs text-stone-600 dark:text-stone-400">Contains special character</span>
                       </div>
                     </div>
                   )}
@@ -687,14 +687,14 @@ export default function Login() {
                         setError('');
                       }}
                       disabled={loading}
-                      className="flex-1 rounded-lg border border-stone-300 bg-white py-3 text-sm font-bold text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
+                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading || strengthCount < 4}
-                      className="flex-1 rounded-lg bg-[#7a1f3d] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? 'Updating...' : 'Set Permanent Password'}
                     </button>

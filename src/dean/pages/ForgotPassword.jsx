@@ -130,16 +130,16 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex font-sans text-stone-800 bg-cover bg-center" style={{ backgroundImage: `url(${loginBg})` }}>
+    <div className="min-h-screen flex font-sans text-stone-800 dark:text-stone-200 bg-cover bg-center" style={{ backgroundImage: `url(${loginBg})` }}>
       <div className="w-full flex justify-center items-center p-6">
-        <div className="bg-white/95 rounded-2xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#7a1f3d]">
+        <div className="bg-white dark:bg-stone-800/95 rounded-2xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#7a1f3d]">
           
           <div className="flex flex-col items-center mb-6">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md border border-gray-100">
+            <div className="w-20 h-20 bg-white dark:bg-stone-800 rounded-full flex items-center justify-center mb-6 shadow-md border border-gray-100">
               <img src={newIcon} alt="ARCHIVIO Logo" className="w-[60px] h-[60px] object-contain" />
             </div>
-            <h1 className="text-2xl font-serif font-bold text-stone-900">Forgot Password</h1>
-            <p className="text-xs text-stone-500 mt-1 text-center">
+            <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">Forgot Password</h1>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 text-center">
               {step === 1 && "Enter your email to receive a verification code."}
               {step === 2 && "Check your email for the 6-digit code."}
               {step === 3 && "Create a new secure password."}
@@ -163,7 +163,7 @@ export default function ForgotPassword() {
           {step === 1 && (
             <form onSubmit={handleSendOTP}>
               <div className="mb-5">
-                <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">Email Address</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">✉️</span>
                   <input
@@ -171,7 +171,7 @@ export default function ForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. dean@phinmaed.com"
-                    className="w-full pl-10 pr-4 py-3 bg-[#faf9f6] border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all"
                     required
                     disabled={loading}
                   />
@@ -180,7 +180,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#b09230] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
               >
                 {loading ? 'Sending Code...' : 'Send Verification Code'}
               </button>
@@ -190,7 +190,7 @@ export default function ForgotPassword() {
           {step === 2 && (
             <form onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
               <div className="mb-6">
-                <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-3">6-Digit Code</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3">6-Digit Code</label>
                 <div className="flex justify-between gap-2">
                   {otp.map((data, index) => (
                     <input
@@ -202,7 +202,7 @@ export default function ForgotPassword() {
                       onChange={(e) => handleChangeOtp(e.target, index)}
                       onKeyDown={(e) => handleKeyDownOtp(e, index)}
                       onFocus={(e) => e.target.select()}
-                      className="w-12 h-14 bg-[#faf9f6] border border-stone-200 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all shadow-sm"
+                      className="w-12 h-14 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all shadow-sm"
                       required
                     />
                   ))}
@@ -210,12 +210,12 @@ export default function ForgotPassword() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#b09230] text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
               >
                 Verify Code
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a1f3d] font-bold hover:underline">
+                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a1f3d] dark:text-[#f8d070] font-bold hover:underline">
                   Resend Code
                 </button>
               </div>
@@ -225,7 +225,7 @@ export default function ForgotPassword() {
           {step === 3 && (
             <form onSubmit={handleVerifyAndReset}>
               <div className="mb-4">
-                <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">New Password</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">New Password</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔒</span>
                   <input
@@ -233,11 +233,11 @@ export default function ForgotPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full pl-10 pr-12 py-3 bg-[#faf9f6] border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all mb-3"
+                    className="w-full pl-10 pr-12 py-3 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all mb-3"
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a1f3d] hover:text-[#5a162d]">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]">
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
@@ -257,7 +257,7 @@ export default function ForgotPassword() {
                 )}
               </div>
               <div className="mb-6">
-                <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">Confirm Password</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">Confirm Password</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔒</span>
                   <input
@@ -265,11 +265,11 @@ export default function ForgotPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full pl-10 pr-12 py-3 bg-[#faf9f6] border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all"
+                    className="w-full pl-10 pr-12 py-3 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all"
                     required
                     disabled={loading}
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a1f3d] hover:text-[#5a162d]">
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]">
                     {showConfirmPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
@@ -277,7 +277,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#b09230] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>
@@ -285,7 +285,7 @@ export default function ForgotPassword() {
           )}
 
           <div className="text-center mt-6 pt-4 border-t border-stone-100">
-            <Link to="/" className="text-xs font-bold text-stone-500 hover:text-[#7a1f3d] transition-colors">
+            <Link to="/" className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-[#7a1f3d] dark:text-[#f8d070] transition-colors">
               ← Back to Login
             </Link>
           </div>

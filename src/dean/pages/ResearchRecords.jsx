@@ -25,9 +25,9 @@ const STATUS_STYLES = {
 };
 
 const ACTION_STYLES = {
-  View: 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50',
-  Publish: 'bg-[#7a1f3d] text-white hover:bg-[#5a162d]',
-  Review: 'bg-[#7a1f3d] text-white hover:bg-[#5a162d]',
+  View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50',
+  Publish: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
+  Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
 };
 
 const RECORDS_PER_PAGE = 10;
@@ -193,7 +193,7 @@ export default function ResearchRecords() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       {/* Sidebar */}
       <Sidebar activePage="research-records" />
 
@@ -201,26 +201,26 @@ export default function ResearchRecords() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Header activePage="research-records" onMenuClick={() => {}} />
 
-        <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6]">
+        <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6] dark:bg-stone-900 transition-colors">
 
           {/* ===== PAGE TITLE ===== */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-stone-900 tracking-tight">Research Records</h1>
+              <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Research Records</h1>
               <p className="text-xs text-stone-400 mt-1 font-medium">
                 All uploaded research within the College of IT &nbsp;·&nbsp; {records.length} total records
               </p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-colors">
               <span>📤</span> Export CSV
             </button>
           </div>
 
           {/* ===== TABLE CARD ===== */}
-          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden">
 
             {/* ---- Filter Bar ---- */}
-            <div className="p-4 border-b border-stone-100 bg-stone-50/50">
+            <div className="p-4 border-b border-stone-100 bg-stone-50 dark:bg-stone-800/50/50">
               <div className="flex flex-wrap gap-2.5 items-center">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
@@ -230,7 +230,7 @@ export default function ResearchRecords() {
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                     placeholder="Search title, group, adviser..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-stone-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d]"
                   />
                 </div>
 
@@ -245,7 +245,7 @@ export default function ResearchRecords() {
                     <select
                       value={value}
                       onChange={handleFilterChange(setter)}
-                      className="appearance-none bg-white border border-stone-200 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
+                      className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-300 outline-none focus:ring-1 focus:ring-[#7a1f3d] focus:border-[#7a1f3d] cursor-pointer"
                     >
                       {options.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
                     </select>
@@ -259,7 +259,7 @@ export default function ResearchRecords() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-stone-50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200">
+                  <tr className="bg-stone-50 dark:bg-stone-800/50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
                     <th className="py-3 px-4 w-12">#</th>
                     <th className="py-3 px-4">Title</th>
                     <th className="py-3 px-4">Group</th>
@@ -287,39 +287,39 @@ export default function ResearchRecords() {
                     paginated.map((record) => (
                       <tr
                         key={record.id}
-                        className={`transition-colors hover:bg-stone-50/80 ${record.adviserSelf ? 'border-l-2 border-l-[#f8d070]' : ''}`}
+                        className={`transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/80 ${record.adviserSelf ? 'border-l-2 border-l-[#f8d070]' : ''}`}
                       >
                         {/* # */}
                         <td className="py-3.5 px-4 text-stone-400 font-bold">{record.id}</td>
 
                         {/* Title */}
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-stone-900 text-[13px]">{record.title}</span>
+                          <span className="font-bold text-stone-900 dark:text-stone-100 text-[13px]">{record.title}</span>
                         </td>
 
                         {/* Group */}
-                        <td className="py-3.5 px-4 text-stone-500 font-medium">{record.group}</td>
+                        <td className="py-3.5 px-4 text-stone-500 dark:text-stone-400 font-medium">{record.group}</td>
 
                         {/* Adviser */}
                         <td className="py-3.5 px-4">
-                          <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d]' : 'text-stone-600 font-medium'}>
+                          <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-600 dark:text-stone-400 font-medium'}>
                             {record.adviser}
                           </span>
                         </td>
 
                         {/* Category */}
                         <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${CATEGORY_COLORS[record.category] || 'bg-stone-100 text-stone-600'}`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${CATEGORY_COLORS[record.category] || 'bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400'}`}>
                             {record.category}
                           </span>
                         </td>
 
                         {/* Year */}
-                        <td className="py-3.5 px-4 text-center text-stone-500 font-medium">{record.year}</td>
+                        <td className="py-3.5 px-4 text-center text-stone-500 dark:text-stone-400 font-medium">{record.year}</td>
 
                         {/* Status */}
                         <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_STYLES[record.status] || 'bg-stone-100 text-stone-600'}`}>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_STYLES[record.status] || 'bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400'}`}>
                             {formatStatus(record.status)}
                           </span>
                         </td>
@@ -347,7 +347,7 @@ export default function ResearchRecords() {
             </div>
 
             {/* ---- Pagination Footer ---- */}
-            <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50/30">
+            <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50 dark:bg-stone-800/50/30">
               <p className="text-[11px] text-stone-400 font-medium">
                 Showing {paginated.length} of {filtered.length} record{filtered.length !== 1 ? 's' : ''}
               </p>
@@ -357,7 +357,7 @@ export default function ResearchRecords() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-700 dark:bg-stone-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   ‹
                 </button>
@@ -369,8 +369,8 @@ export default function ResearchRecords() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors
                       ${currentPage === page
-                        ? 'bg-[#7a1f3d] text-white shadow-sm'
-                        : 'border border-stone-200 text-stone-600 hover:bg-stone-100'
+                        ? 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white shadow-sm'
+                        : 'border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 dark:bg-stone-800/80'
                       }`}
                   >
                     {page}
@@ -381,7 +381,7 @@ export default function ResearchRecords() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-700 dark:bg-stone-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   ›
                 </button>
@@ -394,11 +394,11 @@ export default function ResearchRecords() {
       {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
       {showReviewModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#4a1024] text-white p-6 rounded-t-2xl relative">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white dark:bg-stone-800/20 rounded-full flex items-center justify-center hover:bg-white dark:bg-stone-800/30 transition text-lg"
               >
                 ✕
               </button>
@@ -413,29 +413,29 @@ export default function ResearchRecords() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
-                  <p className="text-xs text-stone-500 mt-1">Documents</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.completionPercent}%</p>
-                  <p className="text-xs text-stone-500 mt-1">Complete</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
                 <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.pageCount || '—'}</p>
-                  <p className="text-xs text-stone-500 mt-1">Pages</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
 
               {selectedSubmission.abstract && (
                 <div>
-                  <h4 className="font-bold text-stone-900 text-sm mb-2">Abstract</h4>
-                  <p className="text-stone-600 text-sm leading-relaxed bg-stone-50 rounded-lg p-4 border border-stone-100">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
+                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100">
                     {selectedSubmission.abstract}
                   </p>
                 </div>
               )}
 
               <div>
-                <h4 className="font-bold text-stone-900 text-sm mb-3">Submitted Documents</h4>
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
                 <div className="space-y-3">
                   {selectedSubmission.applicableReqs.map((req) => {
                     const docMeta = selectedSubmission.documents?.[req.id];
@@ -453,9 +453,9 @@ export default function ResearchRecords() {
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{req.icon}</span>
                           <div>
-                            <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800' : 'text-stone-500'}`}>{req.title}</p>
+                            <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800 dark:text-stone-200' : 'text-stone-500 dark:text-stone-400'}`}>{req.title}</p>
                             {isUploaded && docMeta ? (
-                              <p className="text-xs text-stone-500">{docMeta.name} · {docMeta.size}</p>
+                              <p className="text-xs text-stone-500 dark:text-stone-400">{docMeta.name} · {docMeta.size}</p>
                             ) : (
                               <p className="text-xs text-red-500 font-medium">Missing Document</p>
                             )}
@@ -466,7 +466,7 @@ export default function ResearchRecords() {
                             href={docMeta.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs font-bold text-[#4a1024] bg-white border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] hover:text-white transition"
+                            className="text-xs font-bold text-[#4a1024] bg-white dark:bg-stone-800 border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:bg-stone-950 hover:text-white transition"
                           >
                             View File
                           </a>

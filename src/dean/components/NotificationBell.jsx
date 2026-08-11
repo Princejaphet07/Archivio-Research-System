@@ -233,7 +233,7 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden z-50 transform origin-top-right transition-all">
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden z-50 transform origin-top-right transition-all">
           <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center">
             <h3 className="font-bold text-[14px]">Notifications</h3>
             {notifications.length > 0 && (
@@ -261,7 +261,7 @@ export default function NotificationBell() {
                 <div 
                   key={n.id} 
                   onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50' : 'bg-white opacity-75'}`}
+                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50' : 'bg-white dark:bg-stone-800 opacity-75'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">

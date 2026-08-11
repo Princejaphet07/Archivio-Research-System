@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase/config';
 import { UserProvider } from './context/UserContext';
+import { DarkModeProvider } from './context/DarkModeContext';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
@@ -75,8 +76,9 @@ function App() {
           <Route
             path="/*"
             element={
-              <UserProvider>
-                <Routes>
+              <DarkModeProvider>
+                <UserProvider>
+                  <Routes>
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="research-records" element={<ResearchRecords />} />
                   <Route path="publish-queue" element={<PublishQueue />} />
@@ -88,7 +90,8 @@ function App() {
                   <Route path="/" element={<Navigate to="/dean/dashboard" replace />} />
                 </Routes>
               </UserProvider>
-            }
+            </DarkModeProvider>
+          }
           />
         ) : (
           <Route path="*" element={<Navigate to="/" replace />} />

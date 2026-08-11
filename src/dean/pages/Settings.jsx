@@ -325,7 +325,7 @@ export default function Settings({ activePage, onNavigate }) {
   const approvedProposals = requirements.filter(r => r.scope === 'adviser' && r.status === 'approved');
 
   return (
-    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <Sidebar activePage="settings" onNavigate={onNavigate} />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -335,13 +335,13 @@ export default function Settings({ activePage, onNavigate }) {
           {/* Page Title */}
           <div className="mb-6">
             <h1 className="text-3xl font-serif font-bold text-[#1a1a1a]">Settings</h1>
-            <p className="text-sm text-stone-500 mt-1">Configure system preferences and completion requirements</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Configure system preferences and completion requirements</p>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             
             {/* Left Column: Navigation Tabs */}
-            <div className="w-full lg:w-[300px] shrink-0 bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden py-2">
+            <div className="w-full lg:w-[300px] shrink-0 bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden py-2">
               <div className="space-y-0.5 px-2">
                 {settingsTabs.map((tab) => (
                   <button 
@@ -349,8 +349,8 @@ export default function Settings({ activePage, onNavigate }) {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 text-left font-medium text-sm px-4 py-3 rounded-lg transition-all 
                     ${activeTab === tab.id
-                      ? 'bg-[#f8ebef] text-[#7a1f3d] font-bold' 
-                      : 'text-stone-600 hover:bg-stone-50'}`}
+                      ? 'bg-[#f8ebef] text-[#7a1f3d] dark:text-[#f8d070] font-bold' 
+                      : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}
                   >
                     <span className={`text-base ${activeTab === tab.id ? 'opacity-100' : 'opacity-60 grayscale'}`}>
                       {tab.icon}
@@ -362,7 +362,7 @@ export default function Settings({ activePage, onNavigate }) {
             </div>
 
             {/* Right Column: Tab Content */}
-            <div className="flex-1 w-full bg-white rounded-xl shadow-sm border border-stone-200 p-6 lg:p-8">
+            <div className="flex-1 w-full bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 p-6 lg:p-8">
               
               {/* Completion Requirements Tab */}
               {activeTab === 'completion' && (
@@ -372,12 +372,12 @@ export default function Settings({ activePage, onNavigate }) {
                   <div>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900">Global Completion Requirements</h3>
-                        <p className="text-xs text-stone-500 mt-1">These apply to ALL research groups department-wide.</p>
+                        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Global Completion Requirements</h3>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">These apply to ALL research groups department-wide.</p>
                       </div>
                       <button 
                         onClick={() => setShowAddModal(true)}
-                        className="bg-[#7a1f3d] hover:bg-[#631932] text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-sm shrink-0"
+                        className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#631932] text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-sm shrink-0"
                       >
                         + Add Global Requirement
                       </button>
@@ -387,23 +387,23 @@ export default function Settings({ activePage, onNavigate }) {
                       {loading ? (
                         <div className="py-12 flex flex-col items-center justify-center">
                           <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                          <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requirements...</p>
+                          <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Requirements...</p>
                         </div>
                       ) : (
                         globalRequirements.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between p-4 border border-stone-200 rounded-xl bg-stone-50 opacity-90">
+                          <div key={item.id} className="flex items-center justify-between p-4 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50 opacity-90">
                             <div className="flex items-center gap-4">
                               <span className="text-xl">{item.icon}</span>
                               <div>
-                                <span className="text-sm text-stone-900 font-bold">{item.title}</span>
-                                <p className="text-xs text-stone-500">{item.desc}</p>
+                                <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
+                                <p className="text-xs text-stone-500 dark:text-stone-400">{item.desc}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider border border-blue-200">Global</span>
                               <button 
                                 onClick={() => handleDeleteGlobalRequirement(item.id)}
-                                className="border border-stone-200 rounded px-2.5 py-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center"
+                                className="border border-stone-200 dark:border-stone-700 rounded px-2.5 py-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center"
                                 title="Delete Requirement"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -417,32 +417,32 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
                   </div>
 
-                  <hr className="border-stone-200" />
+                  <hr className="border-stone-200 dark:border-stone-700" />
 
                   {/* Pending Adviser Proposals */}
                   <div>
                     <div className="mb-4 flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900">Pending Adviser Proposals</h3>
-                        <p className="text-xs text-stone-500 mt-1">Review requirements proposed by Research Advisers for their respective groups.</p>
+                        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Pending Adviser Proposals</h3>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Review requirements proposed by Research Advisers for their respective groups.</p>
                       </div>
                       <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">{pendingProposals.length} Pending</span>
                     </div>
 
                     <div className="space-y-3">
                       {pendingProposals.length === 0 ? (
-                        <div className="bg-stone-50 border border-dashed border-stone-300 rounded-xl p-8 text-center">
-                          <p className="text-stone-500 text-sm font-medium">No pending proposals at this time.</p>
+                        <div className="bg-stone-50 dark:bg-stone-800/50 border border-dashed border-stone-300 dark:border-stone-600 rounded-xl p-8 text-center">
+                          <p className="text-stone-500 dark:text-stone-400 text-sm font-medium">No pending proposals at this time.</p>
                         </div>
                       ) : (
                         pendingProposals.map((item) => (
-                          <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border-l-4 border-l-yellow-400 border-t border-b border-r border-stone-200 rounded-r-xl bg-white shadow-sm gap-4">
+                          <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border-l-4 border-l-yellow-400 border-t border-b border-r border-stone-200 dark:border-stone-700 rounded-r-xl bg-white dark:bg-stone-800 shadow-sm gap-4">
                             <div className="flex items-start gap-4">
                               <span className="text-2xl mt-1">{item.icon}</span>
                               <div>
-                                <span className="text-sm text-stone-900 font-bold">{item.title}</span>
-                                <p className="text-xs text-stone-500 mb-1">{item.desc}</p>
-                                <p className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded inline-block font-medium">
+                                <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
+                                <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">{item.desc}</p>
+                                <p className="text-[10px] bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded inline-block font-medium">
                                   Proposed by: {item.adviserUid}
                                 </p>
                               </div>
@@ -451,7 +451,7 @@ export default function Settings({ activePage, onNavigate }) {
                               <button onClick={() => handleUpdateStatus(item.id, 'approved')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">
                                 ✓ Approve
                               </button>
-                              <button onClick={() => handleUpdateStatus(item.id, 'declined')} className="border border-stone-300 text-stone-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
+                              <button onClick={() => handleUpdateStatus(item.id, 'declined')} className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
                                 ✕ Decline
                               </button>
                             </div>
@@ -467,10 +467,10 @@ export default function Settings({ activePage, onNavigate }) {
                       <h3 className="text-sm font-bold text-stone-400 uppercase tracking-wider mb-4">Approved Adviser Requirements</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {approvedProposals.map(item => (
-                          <div key={item.id} className="border border-stone-200 rounded-lg p-3 bg-white flex items-center gap-3">
+                          <div key={item.id} className="border border-stone-200 dark:border-stone-700 rounded-lg p-3 bg-white dark:bg-stone-800 flex items-center gap-3">
                             <span className="text-xl">{item.icon}</span>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-stone-800 truncate">{item.title}</p>
+                              <p className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate">{item.title}</p>
                               <p className="text-[10px] text-stone-400 truncate">For: {item.adviserUid}</p>
                             </div>
                             <span className="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded">APPROVED</span>
@@ -486,10 +486,10 @@ export default function Settings({ activePage, onNavigate }) {
               {/* Email Templates Tab */}
               {activeTab === 'email' && (
                 <div>
-                  <h3 className="text-xl font-bold text-stone-900 mb-6 font-serif">Email Template — Adviser Invitation</h3>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 mb-6 font-serif">Email Template — Adviser Invitation</h3>
                   <div className="mb-6">
-                    <p className="text-sm text-stone-600 mb-1">This is the default message sent to Research Advisers when you invite them.</p>
-                    <p className="text-sm text-stone-600">You can edit it here — changes will apply to all future invitations.</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-400 mb-1">This is the default message sent to Research Advisers when you invite them.</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-400">You can edit it here — changes will apply to all future invitations.</p>
                   </div>
                   <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-lg mb-8 flex items-center gap-2 border border-blue-100">
                     💡 Changes made here are automatically applied to the message box in Send Invitations.
@@ -499,21 +499,21 @@ export default function Settings({ activePage, onNavigate }) {
                   
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">SUBJECT LINE</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">SUBJECT LINE</label>
                       <input 
                         type="text" 
                         value={emailTemplate.subject}
                         onChange={(e) => setEmailTemplate({ ...emailTemplate, subject: e.target.value })}
-                        className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">MESSAGE BODY</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">MESSAGE BODY</label>
                       <textarea 
                         rows={12}
                         value={emailTemplate.body}
                         onChange={(e) => setEmailTemplate({ ...emailTemplate, body: e.target.value })}
-                        className="w-full bg-stone-50 border border-stone-200 rounded-lg p-4 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d] resize-none leading-relaxed"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d] resize-none leading-relaxed"
                       />
                     </div>
                   </div>
@@ -521,13 +521,13 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100">
                     <button 
                       onClick={handleResetEmailTemplate}
-                      className="px-6 py-2.5 rounded-lg border border-stone-200 text-stone-600 text-sm font-bold hover:bg-stone-50 transition"
+                      className="px-6 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition"
                     >
                       Reset to Default
                     </button>
                     <button 
                       onClick={handleSaveEmailTemplate}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
                     >
                       Save Template
                     </button>
@@ -538,57 +538,57 @@ export default function Settings({ activePage, onNavigate }) {
               {/* My Profile Tab */}
               {activeTab === 'profile' && (
                 <div>
-                  <h3 className="text-xl font-bold text-stone-900 mb-6 font-serif">My Profile</h3>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 mb-6 font-serif">My Profile</h3>
                   
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">FIRST NAME</label>
+                        <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">FIRST NAME</label>
                         <input 
                           type="text" 
                           value={profile.firstName}
                           onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                          className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">LAST NAME</label>
+                        <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">LAST NAME</label>
                         <input 
                           type="text" 
                           value={profile.lastName}
                           onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                          className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">INSTITUTIONAL EMAIL</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">INSTITUTIONAL EMAIL</label>
                       <input 
                         type="text" 
                         value={deanData?.email || ''}
                         disabled
-                        className="w-full bg-stone-100 border border-stone-200 rounded-lg p-3 text-sm text-stone-500 cursor-not-allowed"
+                        className="w-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-500 dark:text-stone-400 cursor-not-allowed"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">DEPARTMENT</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">DEPARTMENT</label>
                       <input 
                         type="text" 
                         value={deanData?.department || ''}
                         disabled
-                        className="w-full bg-stone-100 border border-stone-200 rounded-lg p-3 text-sm text-stone-500 cursor-not-allowed mb-1"
+                        className="w-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-500 dark:text-stone-400 cursor-not-allowed mb-1"
                       />
                       <p className="text-[10px] text-stone-400">Read-only · Managed by System Administrator</p>
                     </div>
 
                     <div className="w-48">
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">TITLE / HONORIFIC</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">TITLE / HONORIFIC</label>
                       <select 
                         value={profile.title}
                         onChange={(e) => setProfile({ ...profile, title: e.target.value })}
-                        className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                       >
                         <option value="Dr.">Dr.</option>
                         <option value="Prof.">Prof.</option>
@@ -602,15 +602,15 @@ export default function Settings({ activePage, onNavigate }) {
                     <div className="pt-6 border-t border-stone-100">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h4 className="text-sm font-bold text-stone-900 uppercase tracking-wider">ORGANIZATIONAL MEMBERSHIP</h4>
-                          <p className="text-[10px] text-stone-500 mt-0.5">Add your professional or academic organizational memberships.</p>
+                          <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">ORGANIZATIONAL MEMBERSHIP</h4>
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Add your professional or academic organizational memberships.</p>
                         </div>
-                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
+                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
                           +
                         </button>
                       </div>
-                      <div className="bg-stone-50 border border-stone-200 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                        <p className="text-sm font-medium text-stone-600">No organizational memberships added yet</p>
+                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No organizational memberships added yet</p>
                         <p className="text-xs text-stone-400 mt-1">Click the + button above to add your first membership</p>
                       </div>
                     </div>
@@ -619,15 +619,15 @@ export default function Settings({ activePage, onNavigate }) {
                     <div className="pt-6 border-t border-stone-100">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h4 className="text-sm font-bold text-stone-900 uppercase tracking-wider">RESEARCH PUBLICATIONS</h4>
-                          <p className="text-[10px] text-stone-500 mt-0.5">Add your published research papers with their publication links.</p>
+                          <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">RESEARCH PUBLICATIONS</h4>
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Add your published research papers with their publication links.</p>
                         </div>
-                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
+                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
                           +
                         </button>
                       </div>
-                      <div className="bg-stone-50 border border-stone-200 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                        <p className="text-sm font-medium text-stone-600">No research publications added yet</p>
+                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No research publications added yet</p>
                         <p className="text-xs text-stone-400 mt-1">Click the + button above to add your first publication</p>
                       </div>
                     </div>
@@ -637,7 +637,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100">
                     <button 
                       onClick={handleSaveProfile}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
                     >
                       Save Profile
                     </button>
@@ -650,12 +650,12 @@ export default function Settings({ activePage, onNavigate }) {
                 <div>
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <h3 className="text-xl font-bold text-stone-900 font-serif">School Year (SY) Management</h3>
-                      <p className="text-sm text-stone-500 mt-1">Manage and set the active school year for the department. Only one SY can be active at a time.</p>
+                      <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 font-serif">School Year (SY) Management</h3>
+                      <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Manage and set the active school year for the department. Only one SY can be active at a time.</p>
                     </div>
                     <button 
                       onClick={() => setShowSYModal(true)}
-                      className="px-4 py-2 border border-[#7a1f3d] text-[#7a1f3d] rounded-lg text-sm font-bold hover:bg-[#7a1f3d] hover:text-white transition"
+                      className="px-4 py-2 border border-[#7a1f3d] text-[#7a1f3d] dark:text-[#f8d070] rounded-lg text-sm font-bold hover:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:text-white transition"
                     >
                       + Add School Year
                     </button>
@@ -665,9 +665,9 @@ export default function Settings({ activePage, onNavigate }) {
                     ⚠️ Setting a new Active SY will archive the current one. This affects the dashboard and all submissions.
                   </div>
 
-                  <div className="border border-stone-200 rounded-xl overflow-hidden">
+                  <div className="border border-stone-200 dark:border-stone-700 rounded-xl overflow-hidden">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-[#7a1f3d] text-white">
+                      <thead className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white">
                         <tr>
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">SCHOOL YEAR</th>
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">STATUS</th>
@@ -676,31 +676,31 @@ export default function Settings({ activePage, onNavigate }) {
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">ACTIONS</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-stone-100 bg-white">
+                      <tbody className="divide-y divide-stone-100 bg-white dark:bg-stone-800">
                         {schoolYears.length === 0 ? (
                           <tr>
-                            <td colSpan="5" className="px-6 py-8 text-center text-stone-500">No school years added yet.</td>
+                            <td colSpan="5" className="px-6 py-8 text-center text-stone-500 dark:text-stone-400">No school years added yet.</td>
                           </tr>
                         ) : (
                           schoolYears.map(sy => (
-                            <tr key={sy.id} className="hover:bg-stone-50 transition group">
+                            <tr key={sy.id} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition group">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-3 h-3 rounded-full border-2 ${sy.status === 'Active' ? 'bg-green-500 border-green-200' : 'bg-transparent border-stone-300'}`}></div>
-                                  <span className={`font-bold ${sy.status === 'Active' ? 'text-stone-900' : 'text-stone-500'}`}>{sy.label}</span>
+                                  <div className={`w-3 h-3 rounded-full border-2 ${sy.status === 'Active' ? 'bg-green-500 border-green-200' : 'bg-transparent border-stone-300 dark:border-stone-600'}`}></div>
+                                  <span className={`font-bold ${sy.status === 'Active' ? 'text-stone-900 dark:text-stone-100' : 'text-stone-500 dark:text-stone-400'}`}>{sy.label}</span>
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                   sy.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                                  sy.status === 'Archive' ? 'bg-stone-200 text-stone-600' : 
-                                  'bg-stone-100 text-stone-500'
+                                  sy.status === 'Archive' ? 'bg-stone-200 text-stone-600 dark:text-stone-400' : 
+                                  'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'
                                 }`}>
                                   {sy.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-center text-stone-500">—</td>
-                              <td className="px-6 py-4 text-center text-stone-500">—</td>
+                              <td className="px-6 py-4 text-center text-stone-500 dark:text-stone-400">—</td>
+                              <td className="px-6 py-4 text-center text-stone-500 dark:text-stone-400">—</td>
                               <td className="px-6 py-4">
                                 <div className="flex items-center justify-center gap-2">
                                   {sy.status !== 'Active' && (
@@ -717,14 +717,14 @@ export default function Settings({ activePage, onNavigate }) {
                                         setCurrentSY(sy);
                                         setShowEditSYModal(true);
                                       }}
-                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 border border-stone-200 rounded hover:bg-stone-50 transition flex items-center gap-1"
+                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition flex items-center gap-1"
                                     >
                                       ✏️ Edit
                                     </button>
                                   )}
                                   <button 
                                     onClick={() => handleDeleteSY(sy.id)}
-                                    className="px-2 py-1.5 text-stone-400 border border-stone-200 rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                                    className="px-2 py-1.5 text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
                                     title="Delete"
                                   >
                                     🗑️
@@ -746,63 +746,63 @@ export default function Settings({ activePage, onNavigate }) {
               {/* Notifications Tab */}
               {activeTab === 'notifications' && (
                 <div>
-                  <h3 className="text-xl font-bold text-stone-900 font-serif mb-1">Notifications</h3>
-                  <p className="text-sm text-stone-500 mb-6 border-b border-stone-200 pb-4">Manage how and when you receive notifications from ARCHIVIO.</p>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 font-serif mb-1">Notifications</h3>
+                  <p className="text-sm text-stone-500 dark:text-stone-400 mb-6 border-b border-stone-200 dark:border-stone-700 pb-4">Manage how and when you receive notifications from ARCHIVIO.</p>
                   
                   <div className="space-y-6">
                     {/* Toggle Item */}
                     <div className="flex items-center justify-between pb-6 border-b border-stone-100">
                       <div>
-                        <h4 className="text-sm font-bold text-stone-900">Research Submission Updates</h4>
-                        <p className="text-xs text-stone-500 mt-0.5">Get notified when a group submits or updates their requirements.</p>
+                        <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Research Submission Updates</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Get notified when a group submits or updates their requirements.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.researchUpdates} onChange={() => setNotifications({...notifications, researchUpdates: !notifications.researchUpdates})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
                       </label>
                     </div>
 
                     <div className="flex items-center justify-between pb-6 border-b border-stone-100">
                       <div>
-                        <h4 className="text-sm font-bold text-stone-900">Adviser Activity Alerts</h4>
-                        <p className="text-xs text-stone-500 mt-0.5">Receive alerts when an adviser marks a submission as reviewed.</p>
+                        <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Adviser Activity Alerts</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Receive alerts when an adviser marks a submission as reviewed.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.adviserAlerts} onChange={() => setNotifications({...notifications, adviserAlerts: !notifications.adviserAlerts})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
                       </label>
                     </div>
 
                     <div className="flex items-center justify-between pb-6 border-b border-stone-100">
                       <div>
-                        <h4 className="text-sm font-bold text-stone-900">Publication Notifications</h4>
-                        <p className="text-xs text-stone-500 mt-0.5">Notify when a paper is published to the public archive.</p>
+                        <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Publication Notifications</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Notify when a paper is published to the public archive.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.publicationNotifs} onChange={() => setNotifications({...notifications, publicationNotifs: !notifications.publicationNotifs})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
                       </label>
                     </div>
 
                     <div className="flex items-center justify-between pb-6 border-b border-stone-100">
                       <div>
-                        <h4 className="text-sm font-bold text-stone-900">System Announcements</h4>
-                        <p className="text-xs text-stone-500 mt-0.5">Receive general announcements from the System Administrator.</p>
+                        <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">System Announcements</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Receive general announcements from the System Administrator.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.systemAnnouncements} onChange={() => setNotifications({...notifications, systemAnnouncements: !notifications.systemAnnouncements})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
                       </label>
                     </div>
 
                     <div className="flex items-center justify-between pb-6">
                       <div>
-                        <h4 className="text-sm font-bold text-stone-900">Email Notifications</h4>
-                        <p className="text-xs text-stone-500 mt-0.5">Send notification emails to your registered email address.</p>
+                        <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Email Notifications</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Send notification emails to your registered email address.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.emailNotifs} onChange={() => setNotifications({...notifications, emailNotifs: !notifications.emailNotifs})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
                       </label>
                     </div>
                   </div>
@@ -810,7 +810,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8">
                     <button 
                       onClick={handleSaveNotifications}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
                     >
                       Save Changes
                     </button>
@@ -821,24 +821,24 @@ export default function Settings({ activePage, onNavigate }) {
               {/* Security Tab */}
               {activeTab === 'security' && (
                 <div>
-                  <h3 className="text-xl font-bold text-stone-900 font-serif mb-1">Security & Password</h3>
-                  <p className="text-sm text-stone-500 mb-8 border-b border-stone-200 pb-4">Update your password to keep your account secure.</p>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 font-serif mb-1">Security & Password</h3>
+                  <p className="text-sm text-stone-500 dark:text-stone-400 mb-8 border-b border-stone-200 dark:border-stone-700 pb-4">Update your password to keep your account secure.</p>
                   
                   <form onSubmit={handleUpdatePassword} className="max-w-md space-y-6">
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">CURRENT PASSWORD</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">CURRENT PASSWORD</label>
                       <div className="relative">
                         <input 
                           type={showPasswords.current ? "text" : "password"} 
                           required
                           value={passwords.current}
                           onChange={(e) => setPasswords({...passwords, current: e.target.value})}
-                          className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 pr-12 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                         />
                         <button 
                           type="button"
                           onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})}
-                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 focus:outline-none"
+                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 dark:text-stone-400 focus:outline-none"
                         >
                           {showPasswords.current ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -858,7 +858,7 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
                     
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">NEW PASSWORD</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">NEW PASSWORD</label>
                       <div className="relative">
                         <input 
                           type={showPasswords.newPass ? "text" : "password"} 
@@ -866,12 +866,12 @@ export default function Settings({ activePage, onNavigate }) {
                           minLength={6}
                           value={passwords.newPass}
                           onChange={(e) => setPasswords({...passwords, newPass: e.target.value})}
-                          className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 pr-12 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                         />
                         <button 
                           type="button"
                           onClick={() => setShowPasswords({...showPasswords, newPass: !showPasswords.newPass})}
-                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 focus:outline-none"
+                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 dark:text-stone-400 focus:outline-none"
                         >
                           {showPasswords.newPass ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -891,7 +891,7 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">CONFIRM NEW PASSWORD</label>
+                      <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">CONFIRM NEW PASSWORD</label>
                       <div className="relative">
                         <input 
                           type={showPasswords.confirm ? "text" : "password"} 
@@ -899,12 +899,12 @@ export default function Settings({ activePage, onNavigate }) {
                           minLength={6}
                           value={passwords.confirm}
                           onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
-                          className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 pr-12 text-sm text-stone-900 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
                         />
                         <button 
                           type="button"
                           onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
-                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 focus:outline-none"
+                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-stone-400 hover:text-stone-600 dark:text-stone-400 focus:outline-none"
                         >
                           {showPasswords.confirm ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -927,7 +927,7 @@ export default function Settings({ activePage, onNavigate }) {
                       <button 
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg bg-[#7a1f3d] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm disabled:opacity-50"
+                        className="w-full py-3 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm disabled:opacity-50"
                       >
                         {loading ? 'Updating Password...' : 'Update Password'}
                       </button>
@@ -938,8 +938,8 @@ export default function Settings({ activePage, onNavigate }) {
 
               {/* Fallback for unhandled tabs */}
               {activeTab !== 'completion' && activeTab !== 'email' && activeTab !== 'profile' && activeTab !== 'schoolyear' && activeTab !== 'notifications' && activeTab !== 'security' && (
-                <div className="flex items-center justify-center h-64 bg-stone-50 rounded-xl border border-dashed border-stone-200">
-                  <p className="text-stone-500 font-medium">Select Completion Requirements tab to see the updates.</p>
+                <div className="flex items-center justify-center h-64 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-dashed border-stone-200 dark:border-stone-700">
+                  <p className="text-stone-500 dark:text-stone-400 font-medium">Select Completion Requirements tab to see the updates.</p>
                 </div>
               )}
             </div>
@@ -950,8 +950,8 @@ export default function Settings({ activePage, onNavigate }) {
       {/* Add Global Requirement Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
-            <div className="bg-[#7a1f3d] p-4 text-white">
+          <div className="bg-white dark:bg-stone-800 rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] p-4 text-white">
               <h2 className="font-bold text-lg">Add Global Requirement</h2>
             </div>
             <form onSubmit={handleAddGlobalRequirement} className="p-5 space-y-4">
@@ -1001,7 +1001,7 @@ export default function Settings({ activePage, onNavigate }) {
               </div>
               <div className="flex gap-3 pt-4 border-t border-gray-100">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm font-bold hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="flex-1 bg-[#7a1f3d] text-white rounded-lg py-2 text-sm font-bold hover:bg-[#631932]">Add Requirement</button>
+                <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2 text-sm font-bold hover:bg-[#631932]">Add Requirement</button>
               </div>
             </form>
           </div>
@@ -1011,33 +1011,33 @@ export default function Settings({ activePage, onNavigate }) {
       {/* Add School Year Modal */}
       {(showSYModal || showEditSYModal) && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
+          <div className="bg-white dark:bg-stone-800 rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center p-5 border-b border-stone-100">
-              <h2 className="font-bold text-xl font-serif text-stone-900">{showEditSYModal ? 'Edit School Year' : 'Add School Year'}</h2>
-              <button onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="text-stone-400 hover:text-stone-600">✕</button>
+              <h2 className="font-bold text-xl font-serif text-stone-900 dark:text-stone-100">{showEditSYModal ? 'Edit School Year' : 'Add School Year'}</h2>
+              <button onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="text-stone-400 hover:text-stone-600 dark:text-stone-400">✕</button>
             </div>
             <form onSubmit={showEditSYModal ? handleEditSY : handleAddSY} className="p-6 space-y-5">
-              <p className="text-xs text-stone-500 mb-4">{showEditSYModal ? 'Edit the school year label. Status can only be changed from the SY table.' : 'Add a new school year to track research submissions.'}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">{showEditSYModal ? 'Edit the school year label. Status can only be changed from the SY table.' : 'Add a new school year to track research submissions.'}</p>
               
               <div>
-                <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">SCHOOL YEAR</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">SCHOOL YEAR</label>
                 <input 
                   required
                   type="text" 
                   value={currentSY.label}
                   onChange={e => setCurrentSY({...currentSY, label: e.target.value})}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#7a1f3d]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm focus:outline-none focus:border-[#7a1f3d]" 
                   placeholder="e.g. 2026-2027"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-stone-500 mb-2 uppercase tracking-wider">CURRENT STATUS</label>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">CURRENT STATUS</label>
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                     currentSY.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                    currentSY.status === 'Archive' ? 'bg-stone-200 text-stone-600' : 
-                    'bg-stone-100 text-stone-500'
+                    currentSY.status === 'Archive' ? 'bg-stone-200 text-stone-600 dark:text-stone-400' : 
+                    'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'
                   }`}>
                     {currentSY.status === 'Active' ? '● ' : ''}{currentSY.status}
                   </span>
@@ -1048,8 +1048,8 @@ export default function Settings({ activePage, onNavigate }) {
               </div>
 
               <div className="flex gap-3 pt-6">
-                <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 text-stone-600 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 transition">Cancel</button>
-                <button type="submit" className="flex-1 bg-[#7a1f3d] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#631932] transition">Save Changes</button>
+                <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition">Cancel</button>
+                <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#631932] transition">Save Changes</button>
               </div>
             </form>
           </div>

@@ -249,7 +249,7 @@ Please click the button below to activate your account and set up your credentia
   };
 
   return (
-    <div className="flex h-screen bg-stone-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-stone-50 dark:bg-stone-800/50 overflow-hidden font-sans">
       <Sidebar activePage="invitations" />
       <div className="flex-1 flex flex-col overflow-y-auto">
         <Header activePage="invitations" />
@@ -257,14 +257,14 @@ Please click the button below to activate your account and set up your credentia
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Send Invitations</h1>
-            <p className="text-xs text-stone-500 mt-0.5">Send invitation links to Research Advisers for account creation</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Send invitation links to Research Advisers for account creation</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             {/* Left Column: Form Panel */}
-            <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden">
-              <div className="bg-[#4a1024] p-5 text-white relative">
+            <div className="lg:col-span-4 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
+              <div className="bg-[#4a1024] dark:bg-stone-950 p-5 text-white relative">
                 <span className="text-xl">✉️</span>
                 <h3 className="font-serif text-base font-bold mt-2">Invite a Research Adviser</h3>
                 <p className="text-[11px] text-stone-300">They'll receive a secure link to create their account</p>
@@ -287,47 +287,47 @@ Please click the button below to activate your account and set up your credentia
 
                 <form onSubmit={handleSendInvitation} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
                       placeholder="e.g. Maria"
-                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
                       placeholder="e.g. Reyes"
-                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="adviser@phinmaed.com"
-                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1 flex justify-between tracking-wide">
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1 flex justify-between tracking-wide">
                       <span>Invitation Message</span>
                       <button
                         type="button"
@@ -343,7 +343,7 @@ Please click the button below to activate your account and set up your credentia
                       onChange={handleInputChange}
                       placeholder={defaultMessage}
                       rows={5}
-                      className="w-full text-xs p-2.5 border border-stone-200 rounded-xl bg-stone-50/50 text-stone-600 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50/50 text-stone-600 dark:text-stone-400 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
@@ -352,7 +352,7 @@ Please click the button below to activate your account and set up your credentia
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#4a1024] hover:bg-[#6b1834] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
+                    className="w-full bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
                   >
                     <span>✉️</span> {loading ? 'Sending...' : 'Send Invitation Link'}
                   </button>
@@ -361,10 +361,10 @@ Please click the button below to activate your account and set up your credentia
             </div>
 
             {/* Right Column: Tracker Log Panel */}
-            <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-stone-200/60 p-5">
+            <div className="lg:col-span-8 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 p-5">
               <div className="flex justify-between items-center border-b border-stone-100 pb-4 mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-stone-800">Sent Invitations</h3>
+                  <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Sent Invitations</h3>
                   <p className="text-[11px] text-stone-400">Track invitation status and resend if needed</p>
                 </div>
               </div>
@@ -385,17 +385,17 @@ Please click the button below to activate your account and set up your credentia
                         <th className="pb-3 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50 font-medium text-stone-700">
+                    <tbody className="divide-y divide-stone-50 font-medium text-stone-700 dark:text-stone-300">
                       {advisers.map((adviser) => (
-                        <tr key={adviser.id} className="hover:bg-stone-50/50">
+                        <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50">
                           <td className="py-3.5 flex items-center gap-3">
                             <div className="w-7 h-7 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100">
                               {adviser.firstName[0]}{adviser.lastName[0]}
                             </div>
-                            <span className="font-bold text-stone-800">{adviser.displayName}</span>
+                            <span className="font-bold text-stone-800 dark:text-stone-200">{adviser.displayName}</span>
                           </td>
-                          <td className="py-3.5 text-stone-500 font-normal">{adviser.email}</td>
-                          <td className="py-3.5 text-stone-500 font-normal">
+                          <td className="py-3.5 text-stone-500 dark:text-stone-400 font-normal">{adviser.email}</td>
+                          <td className="py-3.5 text-stone-500 dark:text-stone-400 font-normal">
                             {adviser.invitationSentAt ? new Date(adviser.invitationSentAt).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="py-3.5">
@@ -408,7 +408,7 @@ Please click the button below to activate your account and set up your credentia
                               <button
                                 onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                 disabled={loading}
-                                className="px-2.5 py-1 border border-stone-200 rounded-lg text-[10px] font-bold text-stone-600 hover:bg-stone-50 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
+                                className="px-2.5 py-1 border border-stone-200 dark:border-stone-700 rounded-lg text-[10px] font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
                               >
                                 🔄 Resend
                               </button>

@@ -174,7 +174,7 @@ export default function Sidebar({ onNavigate }) {
     navigate(`/dean/${itemId}`);
   };
   return (
-    <aside className="w-[260px] bg-[#4a1024] flex flex-col h-screen text-stone-300 font-sans shrink-0">
+    <aside className="w-[260px] bg-[#4a1024] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0">
 
       {/* LOGO AREA */}
       <div className="p-6 flex items-center gap-3">
@@ -203,7 +203,7 @@ export default function Sidebar({ onNavigate }) {
 
         {/* MAIN SECTION */}
         <div>
-          <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Main</p>
+          <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2 px-3">Main</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MAIN.map((item) => {
               let currentBadge = item.badge;
@@ -216,8 +216,8 @@ export default function Sidebar({ onNavigate }) {
                     onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
                       ${activePage === item.id
-                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white/5 hover:text-white text-stone-300'
+                        ? 'bg-white dark:bg-stone-800/10 text-white font-medium border border-white/5 shadow-sm'
+                        : 'hover:bg-white dark:bg-stone-800/5 hover:text-white text-stone-300'
                       }`}
                   >
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
@@ -238,7 +238,7 @@ export default function Sidebar({ onNavigate }) {
 
         {/* MANAGEMENT SECTION */}
         <div>
-          <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">Management</p>
+          <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2 px-3">Management</p>
           <ul className="space-y-1">
             {NAV_ITEMS_MANAGEMENT.map((item) => {
               let currentBadge = item.badge;
@@ -250,8 +250,8 @@ export default function Sidebar({ onNavigate }) {
                     onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
                       ${activePage === item.id
-                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white/5 hover:text-white text-stone-300'
+                        ? 'bg-white dark:bg-stone-800/10 text-white font-medium border border-white/5 shadow-sm'
+                        : 'hover:bg-white dark:bg-stone-800/5 hover:text-white text-stone-300'
                       }`}
                   >
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
