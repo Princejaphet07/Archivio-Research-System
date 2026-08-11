@@ -23,10 +23,16 @@ export default function Dashboard({ activePage }) {
   const [adviserStats, setAdviserStats] = useState([]);
   const [allPapers, setAllPapers] = useState([]);
   const [allGroups, setAllGroups] = useState([]);
-  const [topPapersSort, setTopPapersSort] = useState('likes');
-  const [topCategories, setTopCategories] = useState([]);
-  const [yearlyStats, setYearlyStats] = useState([]);
   const [allRawSubmissions, setAllRawSubmissions] = useState([]);
+  const [yearlyStats, setYearlyStats] = useState([]);
+  const [topCategories, setTopCategories] = useState([]);
+  const [topPapersSort, setTopPapersSort] = useState('views'); // 'views' | 'likes'
+  const [chartFilter, setChartFilter] = useState('year'); // 'year' | 'month'
+  const [adviserTableYear, setAdviserTableYear] = useState('All');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Derive available years from data
+  const availableYears = ['All', ...Array.from(new Set(allPapers.map(p => new Date(p.createdAt || Date.now()).getFullYear().toString())))].sort().reverse();
 
   useEffect(() => {
     // Wait for deanData to load so we know the Dean's department
@@ -107,22 +113,41 @@ export default function Dashboard({ activePage }) {
       }
       if (status === 'pending' || status === 'revision') pendingCount++;
       
-      const year = new Date(data.createdAt || Date.now()).getFullYear().toString();
-      if (!yearMap[year]) yearMap[year] = { count: 0, approved: 0, published: 0 };
-      yearMap[year].count++;
-      if (status === 'approved' || status === 'endorsed' || status === 'published') yearMap[year].approved++;
-      if (status === 'published') yearMap[year].published++;
+      const dateObj = new Date(data.createdAt || Date.now());
+      
+      let label = '';
+      if (chartFilter === 'year') {
+        label = dateObj.getFullYear().toString();
+      } else {
+        // By month: 'Jan', 'Feb', etc for the current year, or just format
+        const currentYear = new Date().getFullYear();
+        if (dateObj.getFullYear() === currentYear) {
+          label = dateObj.toLocaleString('default', { month: 'short' });
+        } else {
+          // If past year, maybe 'Jan 2025'
+          label = `${dateObj.toLocaleString('default', { month: 'short' })} '${dateObj.getFullYear().toString().slice(2)}`;
+        }
+      }
+
+      if (!yearMap[label]) yearMap[label] = { count: 0, approved: 0, published: 0 };
+      yearMap[label].count++;
+      if (status === 'approved' || status === 'endorsed' || status === 'published') yearMap[label].approved++;
+      if (status === 'published') yearMap[label].published++;
       
       const adviserUid = group.adviserUid || data.adviserUid;
       if (adviserUid) {
-        const advName = group.adviserName || data.adviserName || 'Unknown Adviser';
-        if (!advMap[adviserUid]) {
-          advMap[adviserUid] = { uid: adviserUid, name: advName, uploads: 0, approved: 0, published: 0, pending: 0 };
+        const pubYear = new Date(data.createdAt || Date.now()).getFullYear().toString();
+        
+        if (adviserTableYear === 'All' || pubYear === adviserTableYear) {
+          const advName = group.adviserName || data.adviserName || 'Unknown Adviser';
+          if (!advMap[adviserUid]) {
+            advMap[adviserUid] = { uid: adviserUid, name: advName, uploads: 0, approved: 0, published: 0, pending: 0 };
+          }
+          advMap[adviserUid].uploads++;
+          if (status === 'approved') advMap[adviserUid].approved++;
+          if (status === 'published') advMap[adviserUid].published++;
+          if (status === 'pending' || status === 'revision') advMap[adviserUid].pending++;
         }
-        advMap[adviserUid].uploads++;
-        if (status === 'approved') advMap[adviserUid].approved++;
-        if (status === 'published') advMap[adviserUid].published++;
-        if (status === 'pending' || status === 'revision') advMap[adviserUid].pending++;
       }
     });
 
@@ -141,11 +166,23 @@ export default function Dashboard({ activePage }) {
     catArray.sort((a, b) => b.count - a.count);
     setTopCategories(catArray.slice(0, 7));
     
-    const yearArray = Object.keys(yearMap).map(y => ({ year: y, count: yearMap[y].count, approved: yearMap[y].approved, published: yearMap[y].published }));
-    yearArray.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+    const yearArray = Object.keys(yearMap).map(l => ({ label: l, count: yearMap[l].count, approved: yearMap[l].approved, published: yearMap[l].published }));
+    if (chartFilter === 'year') {
+      yearArray.sort((a, b) => parseInt(a.label) - parseInt(b.label));
+    } else {
+      // Month sorting is tricky if we mix years, but if it's mostly chronological we rely on it, or sort by parsed date.
+      // Easiest is to parse back or assume chronological if we just map. But for now, rely on chronological map keys or sort by parsed string.
+      // Let's sort by Date parsed from label
+      yearArray.sort((a, b) => new Date(a.label + (a.label.includes("'") ? "" : ` ${new Date().getFullYear()}`)) - new Date(b.label + (b.label.includes("'") ? "" : ` ${new Date().getFullYear()}`)));
+    }
     setYearlyStats(yearArray);
 
-  }, [allRawSubmissions, allGroups]);
+  }, [allRawSubmissions, allGroups, chartFilter, adviserTableYear]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
 
   if (loading) {
     return (
@@ -168,11 +205,20 @@ export default function Dashboard({ activePage }) {
   
   const currentYear = new Date().getFullYear();
   let chartData = [...yearlyStats].slice(-4);
-  if (chartData.length < 4) {
+  
+  if (chartFilter === 'year' && chartData.length < 4) {
     const padCount = 4 - chartData.length;
-    const startYear = chartData.length > 0 ? parseInt(chartData[0].year) - padCount : currentYear - 3;
-    const padding = Array.from({length: padCount}, (_, i) => ({ year: (startYear + i).toString(), count: 0, approved: 0, published: 0 }));
+    const startYear = chartData.length > 0 ? parseInt(chartData[0].label) - padCount : currentYear - 3;
+    const padding = Array.from({length: padCount}, (_, i) => ({ label: (startYear + i).toString(), count: 0, approved: 0, published: 0 }));
     chartData = [...padding, ...chartData];
+  } else if (chartFilter === 'month' && chartData.length === 0) {
+    // If no data for month, pad with generic months
+    chartData = [
+      { label: 'Jan', count: 0, approved: 0, published: 0 },
+      { label: 'Feb', count: 0, approved: 0, published: 0 },
+      { label: 'Mar', count: 0, approved: 0, published: 0 },
+      { label: 'Apr', count: 0, approved: 0, published: 0 }
+    ];
   }
   const maxCount = Math.max(...chartData.map(d => d.count), 10);
   
@@ -273,8 +319,18 @@ export default function Dashboard({ activePage }) {
                   <p className="text-xs text-stone-400 mt-0.5">Dynamic — adjust filters below</p>
                 </div>
                 <div className="flex bg-stone-100 rounded-lg p-0.5 border border-stone-200 text-[11px] font-bold">
-                  <button className="bg-[#7a1f3d] text-white px-3 py-1 rounded-md shadow-sm">By Year</button>
-                  <button className="text-stone-500 px-3 py-1 hover:text-stone-800">Custom</button>
+                  <button 
+                    onClick={() => setChartFilter('year')}
+                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'year' ? 'bg-[#7a1f3d] text-white' : 'text-stone-500 hover:text-stone-800'}`}
+                  >
+                    By Year
+                  </button>
+                  <button 
+                    onClick={() => setChartFilter('month')}
+                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'month' ? 'bg-[#7a1f3d] text-white' : 'text-stone-500 hover:text-stone-800'}`}
+                  >
+                    By Month
+                  </button>
                 </div>
               </div>
 
@@ -282,7 +338,7 @@ export default function Dashboard({ activePage }) {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
-                    <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
                     <Tooltip 
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                       labelStyle={{ fontWeight: 'bold', color: '#1c1917' }}
@@ -428,10 +484,21 @@ export default function Dashboard({ activePage }) {
                 <p className="text-xs text-amber-600 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
               </div>
               <div className="flex gap-2">
-                <select className="text-xs bg-white border border-stone-200 rounded-md px-2.5 py-1 font-semibold text-stone-600 outline-none">
-                  <option>2026-2027</option>
+                <select 
+                  value={adviserTableYear}
+                  onChange={(e) => setAdviserTableYear(e.target.value)}
+                  className="text-xs bg-white border border-stone-200 rounded-md px-2.5 py-1 font-semibold text-stone-600 outline-none"
+                >
+                  {availableYears.map(yr => (
+                    <option key={yr} value={yr}>{yr === 'All' ? 'All Time' : yr}</option>
+                  ))}
                 </select>
-                <button className="p-1.5 bg-white border border-stone-200 rounded-md text-xs hover:bg-stone-50">🔄</button>
+                <button 
+                  onClick={handleRefresh}
+                  className={`p-1.5 bg-white border border-stone-200 rounded-md text-xs hover:bg-stone-50 transition-all ${isRefreshing ? 'animate-spin opacity-50' : ''}`}
+                >
+                  🔄
+                </button>
               </div>
             </div>
             <div className="overflow-x-auto">
