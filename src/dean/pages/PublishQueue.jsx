@@ -253,7 +253,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
           {/* ===== PAGE HEADER ===== */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Publish Queue</h1>
+              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight">Publish Queue</h1>
               <p className="text-xs text-stone-400 mt-1 font-medium">
                 Approved manuscripts ready for publication. 100% requirements completion required.
               </p>

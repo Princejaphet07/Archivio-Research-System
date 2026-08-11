@@ -275,7 +275,7 @@ export default function Dashboard({ activePage }) {
           {/* ================= WELCOME HEADER SECTION ================= */}
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+              <h1 className="text-3xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight flex items-center gap-2">
                 {getGreeting()}, {firstName} 👋
               </h1>
               <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-1 uppercase tracking-wider">

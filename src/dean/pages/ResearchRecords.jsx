@@ -206,7 +206,7 @@ export default function ResearchRecords() {
           {/* ===== PAGE TITLE ===== */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Research Records</h1>
+              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight">Research Records</h1>
               <p className="text-xs text-stone-400 mt-1 font-medium">
                 All uploaded research within the College of IT &nbsp;·&nbsp; {records.length} total records
               </p>
