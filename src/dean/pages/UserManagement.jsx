@@ -157,7 +157,7 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="flex h-screen bg-[#fcfbfa] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
       <Sidebar activePage="user-management" />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="user-management" />

@@ -176,7 +176,7 @@ export default function Reports() {
   const currentReportObj = REPORT_TYPES.find(r => r.id === selectedReport);
 
   return (
-    <div className="flex h-screen bg-[#fcfbfa] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
       <style>
         {`
           @media print {

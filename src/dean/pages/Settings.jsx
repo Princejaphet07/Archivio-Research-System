@@ -325,7 +325,7 @@ export default function Settings({ activePage, onNavigate }) {
   const approvedProposals = requirements.filter(r => r.scope === 'adviser' && r.status === 'approved');
 
   return (
-    <div className="flex h-screen bg-[#fcfbfa] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen bg-[#f5f0e6] overflow-hidden font-sans antialiased">
       <Sidebar activePage="settings" onNavigate={onNavigate} />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

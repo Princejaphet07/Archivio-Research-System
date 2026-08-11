@@ -186,7 +186,7 @@ export default function Dashboard({ activePage }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#fcfbfa]">
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#f5f0e6]">
         <div className="w-12 h-12 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-4"></div>
         <p className="text-sm font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Dashboard</p>
       </div>
@@ -260,7 +260,7 @@ export default function Dashboard({ activePage }) {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#fcfbfa] overflow-hidden font-sans antialiased">
+    <div className="flex h-screen w-full bg-[#f5f0e6] overflow-hidden font-sans antialiased">
       {/* Left Sidebar */}
       <Sidebar activePage="dashboard" />
 
@@ -270,7 +270,7 @@ export default function Dashboard({ activePage }) {
         <Header activePage="dashboard" />
 
         {/* Main Workspace Panel */}
-        <main className="flex-1 overflow-y-auto p-8 bg-[#fbf9f6]">
+        <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6]">
 
           {/* ================= WELCOME HEADER SECTION ================= */}
           <div className="flex justify-between items-end mb-6">
