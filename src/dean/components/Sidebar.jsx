@@ -20,8 +20,6 @@ const NAV_ITEMS_MAIN = [
   {
     id: 'research-records',
     label: 'Research Records',
-    badge: '36',
-    badgeStyle: 'bg-[#f8d070] text-[#4a1024]',
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h4m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -105,9 +103,7 @@ export default function Sidebar({ onNavigate }) {
     const deanDept = deanData.department;
 
     const unsubGroups = onSnapshot(query(collection(db, 'groups'), where('status', '==', 'approved')), (snap) => {
-      // DEPARTMENT FILTER
-      const deptGroups = snap.docs.filter(doc => doc.data().department === deanDept);
-      setCounts(prev => ({ ...prev, researchRecords: deptGroups.length }));
+      // Not tracking research records badge anymore
     });
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snap) => {
       // DEPARTMENT FILTER
@@ -190,7 +186,6 @@ export default function Sidebar({ onNavigate }) {
           <ul className="space-y-1">
             {NAV_ITEMS_MAIN.map((item) => {
               let currentBadge = item.badge;
-              if (item.id === 'research-records') currentBadge = counts.researchRecords > 0 ? counts.researchRecords.toString() : null;
               if (item.id === 'publish-queue') currentBadge = counts.publishQueue > 0 ? counts.publishQueue.toString() : null;
 
               return (
