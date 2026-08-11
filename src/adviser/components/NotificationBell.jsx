@@ -1,12 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import Swal from 'sweetalert2';
+
+// 1. Helper function for relative time
+const getRelativeTime = (timestamp) => {
+  if (!timestamp) return 'Just now';
+  const now = new Date();
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hr ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  return date.toLocaleDateString();
+};
+
+// 2. Helper function for category icons
+const getIcon = (title, message) => {
+  const lowerTitle = (title || '').toLowerCase();
+  const lowerMsg = (message || '').toLowerCase();
+  if (lowerTitle.includes('manuscript') || lowerMsg.includes('document') || lowerTitle.includes('publish')) return '📄';
+  if (lowerTitle.includes('message') || lowerTitle.includes('invite') || lowerTitle.includes('welcome')) return '✉️';
+  if (lowerTitle.includes('task') || lowerTitle.includes('progress') || lowerTitle.includes('report')) return '📊';
+  if (lowerTitle.includes('group') || lowerTitle.includes('user') || lowerTitle.includes('adviser')) return '👥';
+  if (lowerTitle.includes('approved') || lowerTitle.includes('success')) return '✅';
+  return '🔔';
+};
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [prefs, setPrefs] = useState(null);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+  const prevNotifsRef = useRef(new Set()); // To track seen notifs for toasts
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -58,11 +86,24 @@ export default function NotificationBell() {
     return () => unsub();
   }, []);
 
-  // Handle sounds for new notifications
+  // Handle sounds and TOASTS for new notifications
   useEffect(() => {
     const currentUnread = notifications.filter(n => !n.isRead).length;
     
-    if (currentUnread > prevUnreadCount && prefs && prefs['inapp-2'] !== false) {
+    // Check for entirely new unread notifications (not just total count change)
+    const currentNotifIds = new Set(notifications.map(n => n.id));
+    
+    // Skip toast on initial load (when prev is empty but current has items)
+    if (prevNotifsRef.current.size === 0 && notifications.length > 0) {
+      prevNotifsRef.current = currentNotifIds;
+      setPrevUnreadCount(currentUnread);
+      return;
+    }
+
+    const hasNewUnread = notifications.some(n => !n.isRead && !prevNotifsRef.current.has(n.id));
+
+    if (hasNewUnread && prefs && prefs['inapp-2'] !== false) {
+      // PLAY SOUND
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioCtx.createOscillator();
@@ -83,8 +124,27 @@ export default function NotificationBell() {
       } catch (e) {
         console.error("Audio play failed:", e);
       }
+
+      // SHOW TOAST
+      const newNotif = notifications.find(n => !n.isRead && !prevNotifsRef.current.has(n.id));
+      if (newNotif) {
+        Swal.fire({
+          toast: true,
+          position: 'bottom-end',
+          icon: 'info',
+          title: newNotif.title,
+          text: newNotif.message,
+          showConfirmButton: false,
+          timer: 4000,
+          background: '#7B1F35',
+          color: '#fff',
+          iconColor: '#fff',
+          customClass: { popup: 'rounded-xl shadow-xl' }
+        });
+      }
     }
     
+    prevNotifsRef.current = currentNotifIds;
     setPrevUnreadCount(currentUnread);
   }, [notifications, prefs, prevUnreadCount]);
 
@@ -118,6 +178,37 @@ export default function NotificationBell() {
       await deleteDoc(doc(db, 'notifications', id));
     } catch (error) {
       console.error("Error deleting notification", error);
+      alert("Failed to delete notification: " + error.message);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unreadNotifs = notifications.filter(n => !n.isRead);
+    if (unreadNotifs.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      unreadNotifs.forEach(n => {
+        batch.update(doc(db, 'notifications', n.id), { isRead: true });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error marking all as read", error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (notifications.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      notifications.forEach(n => {
+        batch.delete(doc(db, 'notifications', n.id));
+      });
+      await batch.commit();
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error clearing notifications", error);
     }
   };
 
@@ -142,44 +233,63 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 transform origin-top-right transition-all">
-          <div className="bg-[#541b2f] text-white px-4 py-3 flex justify-between items-center">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden z-50 transform origin-top-right transition-all">
+          <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center">
             <h3 className="font-bold text-[14px]">Notifications</h3>
+            {notifications.length > 0 && (
+              <div className="flex gap-3">
+                {unreadCount > 0 && (
+                  <button onClick={markAllAsRead} className="text-[11px] font-medium text-[#E8DFCB] hover:text-white transition-colors" title="Mark all as read">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                  </button>
+                )}
+                <button onClick={clearAllNotifications} className="text-[11px] font-medium text-[#E8DFCB] hover:text-white transition-colors" title="Clear all">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            )}
           </div>
           <div className="max-h-[400px] overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500">
-                No notifications yet.
+              <div className="p-8 flex flex-col items-center justify-center text-center">
+                <span className="text-4xl mb-3 opacity-50">📭</span>
+                <p className="text-sm font-bold text-gray-500">All caught up!</p>
+                <p className="text-xs text-gray-400 mt-1">No new notifications</p>
               </div>
             ) : (
               notifications.map(n => (
                 <div 
                   key={n.id} 
                   onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-gray-50 last:border-none flex flex-col gap-1 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-gray-50' : 'bg-white opacity-80 hover:bg-gray-50'}`}
+                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50' : 'bg-white opacity-75'}`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex gap-2 items-center">
-                      <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#541b2f]' : 'text-gray-700'}`}>
-                        {n.title}
-                      </span>
-                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#CF3645] shrink-0"></span>}
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex gap-2.5 items-start">
+                      <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
+                      <div className="flex flex-col">
+                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35]' : 'text-gray-700'}`}>
+                          {n.title}
+                        </span>
+                        <p className="text-[12px] text-gray-600 leading-snug mt-0.5">{n.message}</p>
+                      </div>
                     </div>
-                    <button 
-                      type="button"
-                      onClick={(e) => deleteNotification(n.id, e)}
-                      className="relative z-10 text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 -m-1 rounded-full transition-colors shrink-0 cursor-pointer"
-                      title="Remove notification"
-                    >
-                      <svg className="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#CF3645]"></span>}
+                      <button 
+                        type="button"
+                        onClick={(e) => deleteNotification(n.id, e)}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        title="Remove"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[12px] text-gray-600 leading-tight pr-4">{n.message}</p>
                   {n.createdAt && (
-                    <span className="text-[10px] text-gray-400 mt-1">
-                      {n.createdAt.toDate ? n.createdAt.toDate().toLocaleString() : 'Just now'}
+                    <span className="text-[10px] text-gray-400 font-medium self-end -mt-1">
+                      {getRelativeTime(n.createdAt)}
                     </span>
                   )}
                 </div>

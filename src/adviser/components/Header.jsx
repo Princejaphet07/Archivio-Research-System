@@ -1,9 +1,11 @@
 import React from 'react';
 import { useAdviser } from '../context/AdviserContext';
 import NotificationBell from './NotificationBell';
+import { useNavigate } from 'react-router-dom';
 
 function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", showSearch = true, searchQuery, onSearchChange }) {
-  const { userRole } = useAdviser();
+  const { userRole, adviserName, profilePhotoUrl } = useAdviser();
+  const navigate = useNavigate();
 
   const handleSwitchToDean = () => {
     window.location.href = '/dean/dashboard';
@@ -61,7 +63,19 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
         </button>
-        <button className="text-gray-400 hover:text-[#541b2f] transition">👤</button>
+        <button 
+          onClick={() => navigate('/adviser/my-profile')}
+          className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden hover:ring-2 hover:ring-[#7a2e46] transition-all cursor-pointer"
+          title="Go to Profile/Settings"
+        >
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#f4e6eb] flex items-center justify-center text-[#7a2e46] font-bold text-[10px]">
+              {adviserName ? adviserName.charAt(0).toUpperCase() : 'A'}
+            </div>
+          )}
+        </button>
       </div>
     </header>
   );
