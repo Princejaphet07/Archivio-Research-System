@@ -249,7 +249,7 @@ Please click the button below to activate your account and set up your credentia
   };
 
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-stone-800/50 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <Sidebar activePage="invitations" />
       <div className="flex-1 flex flex-col overflow-y-auto">
         <Header activePage="invitations" />
@@ -263,7 +263,7 @@ Please click the button below to activate your account and set up your credentia
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             {/* Left Column: Form Panel */}
-            <div className="lg:col-span-4 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
+            <div className="lg:col-span-4 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden">
               <div className="bg-[#4a1024] dark:bg-stone-950 p-5 text-white relative">
                 <span className="text-xl">✉️</span>
                 <h3 className="font-serif text-base font-bold mt-2">Invite a Research Adviser</h3>
@@ -361,7 +361,7 @@ Please click the button below to activate your account and set up your credentia
             </div>
 
             {/* Right Column: Tracker Log Panel */}
-            <div className="lg:col-span-8 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 p-5">
+            <div className="lg:col-span-8 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 p-5">
               <div className="flex justify-between items-center border-b border-stone-100 pb-4 mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Sent Invitations</h3>
@@ -389,7 +389,7 @@ Please click the button below to activate your account and set up your credentia
                       {advisers.map((adviser) => (
                         <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700">
                           <td className="py-3.5 flex items-center gap-3">
-                            <div className="w-7 h-7 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100">
+                            <div className="w-7 h-7 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100 dark:border-purple-800/50">
                               {adviser.firstName[0]}{adviser.lastName[0]}
                             </div>
                             <span className="font-bold text-stone-800 dark:text-stone-200">{adviser.displayName}</span>
