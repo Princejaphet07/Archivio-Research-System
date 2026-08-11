@@ -11,6 +11,11 @@ function ResearchCategories() {
   const [categoryIcon, setCategoryIcon] = useState('🔗');
   const [categoryDescription, setCategoryDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const emojiOptions = [
+    '🤖', '📡', '🌐', '📱', '📊', '🔒', '🔗', '⚙️', '💡', '🎓', '🏥', '🔬', '🌿', '🌱', '🌍', '🛠️', '💻', '📈', '🧠', '⚡', '📝', '📚', '🚀', '🎨', '💼'
+  ];
 
   const [categories, setCategories] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -44,6 +49,7 @@ function ResearchCategories() {
     setCategoryDescription('');
     setEditingId(null);
     setIsModalOpen(false);
+    setShowEmojiPicker(false);
   };
 
   const openAddModal = () => {
@@ -211,19 +217,40 @@ function ResearchCategories() {
                     Icon / Emoji
                   </label>
                   <div className="relative">
-                    <input 
-                      type="text" 
-                      value={categoryIcon}
-                      onChange={(e) => setCategoryIcon(e.target.value)}
-                      placeholder="🔗" 
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900"
-                      maxLength="2"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 11a5 5 0 110-10 5 5 0 010 10z"/>
-                      </svg>
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900 flex justify-between items-center transition"
+                    >
+                      <span className="text-xl leading-none">{categoryIcon}</span>
+                      <span className="text-gray-400">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 11a5 5 0 110-10 5 5 0 010 10z"/>
+                        </svg>
+                      </span>
+                    </button>
+                    
+                    {/* Emoji Dropdown / Grid */}
+                    {showEmojiPicker && (
+                      <div className="absolute z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-full animate-fade-in-down">
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Select an Icon</div>
+                        <div className="grid grid-cols-7 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
+                          {emojiOptions.map((emoji, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => {
+                                setCategoryIcon(emoji);
+                                setShowEmojiPicker(false);
+                              }}
+                              className={`text-xl hover:bg-gray-100 rounded-lg p-1 transition ${categoryIcon === emoji ? 'bg-gray-100 ring-1 ring-gray-300' : ''}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
