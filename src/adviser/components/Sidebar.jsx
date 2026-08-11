@@ -12,7 +12,8 @@ function Sidebar() {
   const navigate = useNavigate();
   const { adviserData } = useAdviser();
 
-  const [groupCount, setGroupCount] = useState(0);
+  const [groupCountNew, setGroupCountNew] = useState(0);
+  const [groupCountTotal, setGroupCountTotal] = useState(0);
   const [pendingRegCount, setPendingRegCount] = useState(0);
   const [pendingSubCount, setPendingSubCount] = useState(0);
 
@@ -22,7 +23,20 @@ function Sidebar() {
 
     // Approved groups count
     const gq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
-    const unsub1 = onSnapshot(gq, (snap) => setGroupCount(snap.size));
+    const unsub1 = onSnapshot(gq, (snap) => {
+      const currentCount = snap.size;
+      const storageKey = `adviser_seen_groups_${email}`;
+      let lastSeen = parseInt(localStorage.getItem(storageKey) || '0');
+      
+      if (path === '/adviser/my-groups') {
+        localStorage.setItem(storageKey, currentCount.toString());
+        lastSeen = currentCount;
+      }
+      
+      const newCount = Math.max(0, currentCount - lastSeen);
+      setGroupCountNew(newCount);
+      setGroupCountTotal(currentCount);
+    });
 
     // Pending registrations count
     const pq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'pending'));
@@ -61,7 +75,17 @@ function Sidebar() {
       unsub3(); 
       if (unsubSub) unsubSub();
     };
-  }, []);
+    };
+  }, [path]);
+
+  useEffect(() => {
+    const email = auth.currentUser?.email;
+    if (path === '/adviser/my-groups' && groupCountTotal > 0 && email) {
+      const storageKey = `adviser_seen_groups_${email}`;
+      localStorage.setItem(storageKey, groupCountTotal.toString());
+      setGroupCountNew(0);
+    }
+  }, [path, groupCountTotal]);
 
   const handleLogout = async () => {
     try {
@@ -114,11 +138,14 @@ function Sidebar() {
             <span className="text-xs font-semibold">Dashboard</span>
           </Link>
           
-          <Link to="/adviser/my-groups" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/my-groups' ? activeClass : inactiveClass}`}>
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-            </svg>
-            <span className="text-xs font-medium">My Groups</span>
+          <Link to="/adviser/my-groups" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/my-groups' ? activeClass : inactiveClass}`}>
+            <div className="flex items-center gap-3">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+              </svg>
+              <span className="text-xs font-medium">My Groups</span>
+            </div>
+            {groupCountNew > 0 && <span className="bg-[#d0a36e] text-[#541b2f] text-[10px] font-bold px-2 py-0.5 rounded-full">+{groupCountNew}</span>}
           </Link>
 
           <Link to="/adviser/review-submissions" className={`flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 transition ${path === '/adviser/review-submissions' ? activeClass : inactiveClass}`}>
