@@ -138,7 +138,7 @@ export default function ActivityLogs() {
     .reduce((acc, p, i, arr) => { if (i > 0 && p - arr[i - 1] > 1) acc.push('...'); acc.push(p); return acc; }, []);
 
   return (
-    <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">

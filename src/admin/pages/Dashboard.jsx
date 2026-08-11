@@ -201,7 +201,7 @@ function Dashboard() {
   }, [filteredSubmissions]);
 
   return (
-    <div className="min-h-screen w-full flex bg-[#faf9f6] font-sans overflow-hidden">
+    <div className="min-h-screen w-full flex bg-[#f5f0e6] font-sans overflow-hidden">
       
       <Sidebar />
 

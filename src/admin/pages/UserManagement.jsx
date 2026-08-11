@@ -828,7 +828,7 @@ Please login with these credentials and set up your account.`
   const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="flex h-screen w-full bg-[#fbfaf8] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
 
       <Sidebar />
 
