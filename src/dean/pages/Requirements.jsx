@@ -109,21 +109,21 @@ export default function Requirements({ activePage, onNavigate }) {
   };
 
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-stone-800/50 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       <Sidebar activePage="requirements" onNavigate={onNavigate} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="requirements" onMenuClick={() => {}} />
         
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Requirements Tracking</h1>
+            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#f8d070]">Requirements Tracking</h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Monitor completion status across all research groups under your supervision</p>
           </div>
 
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((card, idx) => (
-              <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 ${card.bg}`}>
+              <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 ${card.bg}`}>
                 <p className="text-[10px] font-bold tracking-wider text-stone-400 uppercase">{card.title}</p>
                 <p className="text-2xl font-bold text-stone-800 dark:text-stone-200 my-1">{card.value}</p>
                 <p className="text-xs text-stone-500 dark:text-stone-400">{card.sub}</p>
@@ -163,18 +163,18 @@ export default function Requirements({ activePage, onNavigate }) {
                     </tr>
                   ) : (
                     enrichedRows.map((row) => (
-                      <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30' : row.progressValue === 100 ? 'bg-emerald-50/10' : ''}`}>
+                      <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30 dark:bg-amber-900/10' : row.progressValue === 100 ? 'bg-emerald-50/10 dark:bg-emerald-900/10' : ''}`}>
                         <td className="py-4 px-4 text-center text-stone-400 font-normal">{row.no}</td>
                         <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">{row.name}</td>
                         <td className="py-4 px-4 text-stone-600 dark:text-stone-400 max-w-xs truncate">{row.title}</td>
                         <td className="py-4 px-4 text-stone-700 dark:text-stone-300">{row.adviser}</td>
                         <td className="py-4 px-4">
-                          <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 text-[10px] font-bold">
+                          <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-800 text-[10px] font-bold">
                             {row.subText}
                           </span>
                         </td>
                         <td className="py-4 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${row.missingValue === 0 ? 'bg-stone-50 dark:bg-stone-800/50 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${row.missingValue === 0 ? 'bg-stone-50 dark:bg-stone-800/50 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'}`}>
                             {row.missText}
                           </span>
                         </td>
@@ -182,7 +182,7 @@ export default function Requirements({ activePage, onNavigate }) {
                         <td className="py-4 px-4 text-center">
                           <button 
                             onClick={() => handleView(row)}
-                            className="px-4 py-1.5 text-[#4a1024] border border-[#4a1024] rounded-lg text-xs font-bold hover:bg-[#4a1024] dark:bg-stone-950 hover:text-white transition-all shadow-sm"
+                            className="px-4 py-1.5 text-[#4a1024] dark:text-[#f8d070] border border-[#4a1024] dark:border-[#f8d070]/30 rounded-lg text-xs font-bold hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition-all shadow-sm"
                           >
                             View
                           </button>
