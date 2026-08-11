@@ -116,7 +116,7 @@ export default function Requirements({ activePage, onNavigate }) {
         
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#f8d070]">Requirements Tracking</h1>
+            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Requirements Tracking</h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Monitor completion status across all research groups under your supervision</p>
           </div>
 

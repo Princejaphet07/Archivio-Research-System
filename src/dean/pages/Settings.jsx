@@ -334,7 +334,7 @@ export default function Settings({ activePage, onNavigate }) {
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 w-full max-w-[1400px] mx-auto">
           {/* Page Title */}
           <div className="mb-6">
-            <h1 className="text-3xl font-serif font-bold text-[#1a1a1a]">Settings</h1>
+            <h1 className="text-3xl font-serif font-bold text-[#1a1a1a] dark:text-[#9e2752]">Settings</h1>
             <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Configure system preferences and completion requirements</p>
           </div>
 

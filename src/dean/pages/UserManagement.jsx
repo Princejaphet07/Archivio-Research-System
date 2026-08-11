@@ -165,7 +165,7 @@ export default function UserManagement() {
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Users / Advisers</h1>
+              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Users / Advisers</h1>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Manage research adviser and student accounts under your supervision</p>
             </div>
             <button onClick={() => navigate('/dean/invitations')} className="bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">

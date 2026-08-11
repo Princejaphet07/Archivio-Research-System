@@ -256,7 +256,7 @@ Please click the button below to activate your account and set up your credentia
 
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#f8d070]">Send Invitations</h1>
+            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Send Invitations</h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Send invitation links to Research Advisers for account creation</p>
           </div>
 
