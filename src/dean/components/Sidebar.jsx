@@ -216,8 +216,8 @@ export default function Sidebar({ onNavigate }) {
                     onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
                       ${activePage === item.id
-                        ? 'bg-white dark:bg-stone-800/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white dark:bg-stone-800/5 hover:text-white text-stone-300'
+                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
+                        : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
@@ -250,8 +250,8 @@ export default function Sidebar({ onNavigate }) {
                     onClick={() => handleNavigate(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
                       ${activePage === item.id
-                        ? 'bg-white dark:bg-stone-800/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white dark:bg-stone-800/5 hover:text-white text-stone-300'
+                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
+                        : 'hover:bg-white/5 hover:text-white text-stone-300'
                       }`}
                   >
                     <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
