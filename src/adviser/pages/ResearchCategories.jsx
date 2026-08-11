@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import { db, auth } from '../firebase/config';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 function ResearchCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -9,15 +12,19 @@ function ResearchCategories() {
   const [categoryDescription, setCategoryDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const categories = [
-    { name: 'Machine Learning', dept: '42 dept', mine: '3 mine', icon: '🤖', color: 'border-t-pink-800', bgColor: '#7a2e46' },
-    { name: 'IoT & Embedded', dept: '31 dept', mine: '2 mine', icon: '📡', color: 'border-t-blue-800', bgColor: '#1e40af' },
-    { name: 'Web Systems', dept: '28 dept', mine: '0 mine', icon: '🌐', color: 'border-t-green-600', bgColor: '#059669' },
-    { name: 'Mobile Apps', dept: '22 dept', mine: '0 mine', icon: '📱', color: 'border-t-yellow-500', bgColor: '#eab308' },
-    { name: 'Data Analytics', dept: '11 dept', mine: '0 mine', icon: '📊', color: 'border-t-teal-600', bgColor: '#0d9488' },
-    { name: 'Cybersecurity', dept: '14 dept', mine: '0 mine', icon: '🔒', color: 'border-t-red-700', bgColor: '#b91c1c' },
-    { name: 'Blockchain', dept: '5 dept', mine: '0 mine', icon: '🔗', color: 'border-t-purple-600', bgColor: '#9333ea' },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'categories'), (snap) => {
+      const fetched = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCategories(fetched);
+    });
+    return () => unsub();
+  }, []);
 
   const colorOptions = [
     '#7a2e46', // Maroon
@@ -30,20 +37,85 @@ function ResearchCategories() {
     '#475569', // Slate
   ];
 
-  const handleCreateCategory = () => {
-    // Handle category creation logic here
-    console.log({
-      name: categoryName,
-      icon: categoryIcon,
-      color: selectedColor,
-      description: categoryDescription
-    });
-    setIsModalOpen(false);
-    // Reset form
+  const resetForm = () => {
     setCategoryName('');
     setCategoryIcon('🔗');
     setSelectedColor('#7a2e46');
     setCategoryDescription('');
+    setEditingId(null);
+    setIsModalOpen(false);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (cat) => {
+    setCategoryName(cat.name);
+    setCategoryIcon(cat.icon || '🔗');
+    setSelectedColor(cat.bgColor || '#7a2e46');
+    setCategoryDescription(cat.description || '');
+    setEditingId(cat.id);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryName.trim()) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Category name is required' });
+      return;
+    }
+
+    try {
+      if (editingId) {
+        // Edit existing
+        await updateDoc(doc(db, 'categories', editingId), {
+          name: categoryName,
+          icon: categoryIcon,
+          bgColor: selectedColor,
+          description: categoryDescription,
+          updatedAt: serverTimestamp()
+        });
+        Swal.fire({ icon: 'success', title: 'Updated!', text: 'Category updated successfully.', timer: 1500, showConfirmButton: false });
+      } else {
+        // Create new
+        await addDoc(collection(db, 'categories'), {
+          name: categoryName,
+          icon: categoryIcon,
+          bgColor: selectedColor,
+          description: categoryDescription,
+          createdBy: auth.currentUser?.email || 'Admin',
+          createdAt: serverTimestamp()
+        });
+        Swal.fire({ icon: 'success', title: 'Created!', text: 'New category added.', timer: 1500, showConfirmButton: false });
+      }
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save category.' });
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    const res = await Swal.fire({
+      title: 'Delete Category?',
+      text: `Are you sure you want to delete "${name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#b91c1c',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'categories', id));
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Category deleted.', timer: 1500, showConfirmButton: false });
+      } catch (err) {
+        console.error(err);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete.' });
+      }
+    }
   };
 
   const filteredCategories = categories.filter(cat => {
@@ -60,7 +132,7 @@ function ResearchCategories() {
             <p className="text-sm text-gray-500">Create and manage research paper categories for your submissions</p>
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="bg-[#7a2e46] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] transition"
           >
             + New Category
@@ -69,17 +141,23 @@ function ResearchCategories() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredCategories.map((cat, i) => (
-            <div key={i} className={`bg-white rounded-xl shadow-sm border border-gray-200 border-t-4 ${cat.color} p-5 flex flex-col justify-between h-40`}>
+            <div key={cat.id || i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
               <div>
-                <div className="text-2xl mb-1">{cat.icon}</div>
-                <h3 className="font-bold text-gray-900 text-lg">{cat.name}</h3>
-                <p className="text-xs text-gray-500">{cat.dept} · {cat.mine}</p>
+                <div className="text-2xl mb-1">{cat.icon || '🔗'}</div>
+                <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{cat.name}</h3>
+                <p className="text-xs text-gray-500">Global Category</p>
               </div>
               <div className="flex gap-2">
-                <button className="border border-gray-200 rounded px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+                <button 
+                  onClick={() => openEditModal(cat)}
+                  className="border border-gray-200 rounded px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                >
                   ✏️ Edit
                 </button>
-                <button className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition">
+                <button 
+                  onClick={() => handleDelete(cat.id, cat.name)}
+                  className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                >
                   🗑️
                 </button>
               </div>
@@ -88,7 +166,7 @@ function ResearchCategories() {
           
           {/* Add New Category Card */}
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="bg-transparent border-2 border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center h-40 text-gray-400 hover:text-[#7a2e46] hover:border-[#7a2e46] hover:bg-white transition group"
           >
             <span className="text-3xl font-light mb-2 group-hover:scale-110 transition">+</span>
@@ -102,9 +180,9 @@ function ResearchCategories() {
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-serif font-bold text-gray-900">New Research Category</h2>
+                <h2 className="text-xl font-serif font-bold text-gray-900">{editingId ? 'Edit Category' : 'New Research Category'}</h2>
                 <button 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetForm}
                   className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
                 >
                   ×
@@ -189,16 +267,16 @@ function ResearchCategories() {
               {/* Modal Footer */}
               <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
                 <button 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetForm}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
                 <button 
-                  onClick={handleCreateCategory}
+                  onClick={handleSaveCategory}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#7a2e46] hover:bg-[#5f2135] transition"
                 >
-                  Create Category
+                  {editingId ? 'Save Changes' : 'Create Category'}
                 </button>
               </div>
             </div>
