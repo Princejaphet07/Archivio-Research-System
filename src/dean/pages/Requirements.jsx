@@ -226,16 +226,16 @@ export default function Requirements({ activePage, onNavigate }) {
 
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
+                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
-                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.completionPercent}%</p>
+                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
-                <div className="bg-[#f8ebef] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024]">{selectedSubmission.pageCount || '—'}</p>
+                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
@@ -243,7 +243,7 @@ export default function Requirements({ activePage, onNavigate }) {
               {selectedSubmission.abstract && (
                 <div>
                   <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
-                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100">
+                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100 dark:border-stone-700/50">
                     {selectedSubmission.abstract}
                   </p>
                 </div>
@@ -261,8 +261,8 @@ export default function Requirements({ activePage, onNavigate }) {
                         key={req.id}
                         className={`flex items-center justify-between rounded-lg p-3 border transition ${
                           isUploaded
-                            ? 'bg-emerald-50/50 border-emerald-200'
-                            : 'bg-red-50/50 border-red-200'
+                            ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-red-50/50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -281,7 +281,7 @@ export default function Requirements({ activePage, onNavigate }) {
                             href={docMeta.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs font-bold text-[#4a1024] bg-white dark:bg-stone-800 border border-[#4a1024]/20 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:bg-stone-950 hover:text-white transition"
+                            className="text-xs font-bold text-[#4a1024] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#4a1024]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition"
                           >
                             View File
                           </a>
