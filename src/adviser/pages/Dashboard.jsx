@@ -323,19 +323,31 @@ function Dashboard() {
             <div className="bg-transparent">
               <h3 className="font-bold text-sm text-gray-900 mb-3 ml-1">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-3">
-                <button className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5">
+                <button 
+                  onClick={() => navigate('/adviser/group-registrations')}
+                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                >
                   <span className="text-green-500 text-lg">✅</span>
                   <span className="text-[10px] font-bold text-gray-600">Approve Registrations</span>
                 </button>
-                <button className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5">
+                <button 
+                  onClick={() => navigate('/adviser/send-invitations')}
+                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                >
                   <span className="text-blue-500 text-lg">📩</span>
                   <span className="text-[10px] font-bold text-gray-600">Send Invite Link</span>
                 </button>
-                <button className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5">
+                <button 
+                  onClick={() => navigate('/adviser/research-categories')}
+                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                >
                   <span className="text-yellow-500 text-lg">📁</span>
                   <span className="text-[10px] font-bold text-gray-600">Manage Categories</span>
                 </button>
-                <button className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5">
+                <button 
+                  onClick={() => navigate('/adviser/submission-requirements')}
+                  className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md transition text-center gap-1.5 cursor-pointer"
+                >
                   <span className="text-purple-500 text-lg">⚙️</span>
                   <span className="text-[10px] font-bold text-gray-600">My Requirements</span>
                 </button>
