@@ -163,7 +163,7 @@ export default function Requirements({ activePage, onNavigate }) {
                     </tr>
                   ) : (
                     enrichedRows.map((row) => (
-                      <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/80 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30' : row.progressValue === 100 ? 'bg-emerald-50/10' : ''}`}>
+                      <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30' : row.progressValue === 100 ? 'bg-emerald-50/10' : ''}`}>
                         <td className="py-4 px-4 text-center text-stone-400 font-normal">{row.no}</td>
                         <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">{row.name}</td>
                         <td className="py-4 px-4 text-stone-600 dark:text-stone-400 max-w-xs truncate">{row.title}</td>
@@ -197,9 +197,9 @@ export default function Requirements({ activePage, onNavigate }) {
             <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 font-medium">
               <span>Showing 1–{enrichedRows.length} of {enrichedRows.length} groups</span>
               <div className="flex items-center gap-1">
-                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 text-stone-400">‹</button>
+                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-400">‹</button>
                 <button className="px-2.5 py-1 bg-[#4a1024] dark:bg-stone-950 text-white rounded font-bold">1</button>
-                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50">›</button>
+                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700">›</button>
               </div>
             </div>
           </div>

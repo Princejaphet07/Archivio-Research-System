@@ -25,7 +25,7 @@ const STATUS_STYLES = {
 };
 
 const ACTION_STYLES = {
-  View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50',
+  View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700',
   Publish: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
   Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
 };
@@ -211,7 +211,7 @@ export default function ResearchRecords() {
                 All uploaded research within the College of IT &nbsp;·&nbsp; {records.length} total records
               </p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors">
               <span>📤</span> Export CSV
             </button>
           </div>
@@ -220,7 +220,7 @@ export default function ResearchRecords() {
           <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden">
 
             {/* ---- Filter Bar ---- */}
-            <div className="p-4 border-b border-stone-100 bg-stone-50 dark:bg-stone-800/50/50">
+            <div className="p-4 border-b border-stone-100 bg-stone-50 dark:bg-stone-800/50">
               <div className="flex flex-wrap gap-2.5 items-center">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
@@ -287,7 +287,7 @@ export default function ResearchRecords() {
                     paginated.map((record) => (
                       <tr
                         key={record.id}
-                        className={`transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/80 ${record.adviserSelf ? 'border-l-2 border-l-[#f8d070]' : ''}`}
+                        className={`transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 ${record.adviserSelf ? 'border-l-2 border-l-[#f8d070]' : ''}`}
                       >
                         {/* # */}
                         <td className="py-3.5 px-4 text-stone-400 font-bold">{record.id}</td>
@@ -347,7 +347,7 @@ export default function ResearchRecords() {
             </div>
 
             {/* ---- Pagination Footer ---- */}
-            <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50 dark:bg-stone-800/50/30">
+            <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50 dark:bg-stone-800/30">
               <p className="text-[11px] text-stone-400 font-medium">
                 Showing {paginated.length} of {filtered.length} record{filtered.length !== 1 ? 's' : ''}
               </p>

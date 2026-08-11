@@ -548,7 +548,7 @@ export default function Login() {
                       type="button"
                       onClick={() => setView('login')}
                       disabled={loading}
-                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50"
+                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-50"
                     >
                       Back to Login
                     </button>
@@ -687,7 +687,7 @@ export default function Login() {
                         setError('');
                       }}
                       disabled={loading}
-                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50"
+                      className="flex-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 py-3 text-sm font-bold text-stone-700 dark:text-stone-300 shadow-sm transition hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-50"
                     >
                       Cancel
                     </button>

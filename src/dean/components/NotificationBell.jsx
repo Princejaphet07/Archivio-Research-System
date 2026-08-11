@@ -261,7 +261,7 @@ export default function NotificationBell() {
                 <div 
                   key={n.id} 
                   onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50' : 'bg-white dark:bg-stone-800 opacity-75'}`}
+                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700' : 'bg-white dark:bg-stone-800 opacity-75'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">

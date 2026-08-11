@@ -186,7 +186,7 @@ export default function UserManagement() {
           {/* Table Container Card */}
           <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
             {/* View Switching Tabs */}
-            <div className="bg-stone-50 dark:bg-stone-800/50/60 border-b border-stone-100 px-4 flex gap-6 text-xs font-bold text-stone-400">
+            <div className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-100 px-4 flex gap-6 text-xs font-bold text-stone-400">
               <button 
                 onClick={() => setActiveTab('advisers')}
                 className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600 dark:text-stone-400'}`}
@@ -246,7 +246,7 @@ export default function UserManagement() {
                          <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No advisers found.</td></tr>
                       ) : (
                         enrichedAdvisers.map((row, idx) => (
-                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
+                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
                             <td className="py-4 flex items-center gap-3">
                               <div className={`w-9 h-9 ${getAvatarColor(idx)} rounded-full flex items-center justify-center font-bold text-xs border shadow-inner`}>
                                 {(row.displayName || 'U').split(' ').filter(n=>!n.includes('.')).map(n=>n[0]).join('').substring(0, 2)}
@@ -283,7 +283,7 @@ export default function UserManagement() {
                             <td className="py-4 text-right space-x-2">
                               <button 
                                 onClick={() => handleView(row, 'adviser')}
-                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 shadow-sm transition-colors"
+                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 shadow-sm transition-colors"
                               >
                                 👁️ View
                               </button>
@@ -304,7 +304,7 @@ export default function UserManagement() {
                          <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No students found.</td></tr>
                       ) : (
                         enrichedStudents.map((row, idx) => (
-                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
+                          <tr key={row.id} className={`hover:bg-stone-50 dark:hover:bg-stone-700 ${row.status === 'inactive' ? 'opacity-70' : ''}`}>
                             <td className="py-4 flex items-center gap-3">
                               <div className={`w-9 h-9 ${getAvatarColor(idx + 3)} rounded-full flex items-center justify-center font-bold text-xs border shadow-inner`}>
                                 {(row.displayName || 'S').split(' ').map(n=>n[0]).join('').substring(0, 2)}
@@ -332,7 +332,7 @@ export default function UserManagement() {
                             <td className="py-4 text-right space-x-2">
                               <button 
                                 onClick={() => handleView(row, 'student')}
-                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 shadow-sm transition-colors mr-2"
+                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 shadow-sm transition-colors mr-2"
                               >
                                 👁️ View
                               </button>

@@ -285,7 +285,7 @@ export default function Dashboard({ activePage }) {
             <div className="flex gap-2.5">
               <button 
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-1.5"
               >
                 <span>📤</span> Export
               </button>
@@ -478,7 +478,7 @@ export default function Dashboard({ activePage }) {
 
           {/* ================= ADVISER UPLOAD STATISTICS ================= */}
           <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50/50">
+            <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Adviser Upload Statistics</h3>
                 <p className="text-xs text-amber-600 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
@@ -495,7 +495,7 @@ export default function Dashboard({ activePage }) {
                 </select>
                 <button 
                   onClick={handleRefresh}
-                  className={`p-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md text-xs hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-all ${isRefreshing ? 'animate-spin opacity-50' : ''}`}
+                  className={`p-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md text-xs hover:bg-stone-50 dark:hover:bg-stone-700 transition-all ${isRefreshing ? 'animate-spin opacity-50' : ''}`}
                 >
                   🔄
                 </button>
@@ -525,7 +525,7 @@ export default function Dashboard({ activePage }) {
                       const isYou = adv.uid === deanData?.uid;
                       const initials = adv.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
                       return (
-                        <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 hover:bg-amber-50/60' : 'hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/80'} transition-colors`}>
+                        <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 hover:bg-amber-50/60' : 'hover:bg-stone-50 dark:hover:bg-stone-700'} transition-colors`}>
                           <td className="py-3.5 px-5 flex items-center gap-3">
                             <div className={`w-7 h-7 rounded-full ${isYou ? 'bg-amber-500/20 text-amber-800' : 'bg-purple-100 text-purple-700'} font-bold flex items-center justify-center text-[11px]`}>{initials}</div>
                             <div>
@@ -585,7 +585,7 @@ function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warn
 
 function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   return (
-    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${active ? 'border-[#7a1f3d] bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5 ring-1 ring-[#7a1f3d]' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50/50 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}>
+    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${active ? 'border-[#7a1f3d] bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5 ring-1 ring-[#7a1f3d]' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
       <span className="text-xs font-bold text-stone-800 dark:text-stone-200">{year}</span>
       <span className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 my-0.5">{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
       {badge && <span className="text-[9px] text-stone-400 font-bold tracking-tight uppercase">{badge}</span>}
@@ -598,7 +598,7 @@ function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
 
 function PaperRow({ rank, title, author, count, icon, highlight }) {
   return (
-    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5' : 'border-stone-100 bg-stone-50 dark:bg-stone-800/50/30 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}>
+    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5' : 'border-stone-100 bg-stone-50 dark:bg-stone-800/30 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ${rank === 1 ? 'bg-amber-100 text-amber-700' : rank === 2 ? 'bg-stone-200 text-stone-700 dark:text-stone-300' : 'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'}`}>
           {rank}

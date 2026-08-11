@@ -305,7 +305,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   filteredQueue.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/60
+                      className={`flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700
                         ${item.isSelf ? 'border-l-4 border-l-[#f8d070] bg-amber-50/20' : ''}`}
                     >
                       {/* File Icon */}
@@ -341,7 +341,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
                         <button 
                           onClick={() => handlePreview(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition-colors"
+                          className="px-4 py-1.5 text-xs font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
                         >
                           Preview
                         </button>

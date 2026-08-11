@@ -343,7 +343,7 @@ Please click the button below to activate your account and set up your credentia
                       onChange={handleInputChange}
                       placeholder={defaultMessage}
                       rows={5}
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50/50 text-stone-600 dark:text-stone-400 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
+                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] resize-none disabled:opacity-50"
                       disabled={loading}
                     />
                     <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
@@ -387,7 +387,7 @@ Please click the button below to activate your account and set up your credentia
                     </thead>
                     <tbody className="divide-y divide-stone-50 font-medium text-stone-700 dark:text-stone-300">
                       {advisers.map((adviser) => (
-                        <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50/50">
+                        <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700">
                           <td className="py-3.5 flex items-center gap-3">
                             <div className="w-7 h-7 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100">
                               {adviser.firstName[0]}{adviser.lastName[0]}
@@ -408,7 +408,7 @@ Please click the button below to activate your account and set up your credentia
                               <button
                                 onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                 disabled={loading}
-                                className="px-2.5 py-1 border border-stone-200 dark:border-stone-700 rounded-lg text-[10px] font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
+                                className="px-2.5 py-1 border border-stone-200 dark:border-stone-700 rounded-lg text-[10px] font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
                               >
                                 🔄 Resend
                               </button>

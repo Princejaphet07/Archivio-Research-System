@@ -223,7 +223,7 @@ export default function Reports() {
                     <div 
                       key={type.id} 
                       onClick={() => setSelectedReport(type.id)}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200 dark:border-stone-700/70 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200 dark:border-stone-700/70 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                     >
                       <div className="flex items-start justify-between">
                         <span className="text-xl bg-stone-50 dark:bg-stone-800/50 p-1.5 rounded-lg border border-stone-100">{type.icon}</span>
@@ -243,7 +243,7 @@ export default function Reports() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Filters & Export</h3>
                 <div className="flex items-center gap-2 font-bold text-[11px]">
-                  <button onClick={() => window.print()} className="px-4 py-2 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 rounded-xl shadow-sm text-stone-600 dark:text-stone-400 flex items-center gap-1.5">🖨️ Print / PDF</button>
+                  <button onClick={() => window.print()} className="px-4 py-2 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 rounded-xl shadow-sm text-stone-600 dark:text-stone-400 flex items-center gap-1.5">🖨️ Print / PDF</button>
                   <button onClick={handleExportCSV} className="px-5 py-2 bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">📊 Export Excel (CSV)</button>
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function Reports() {
                     </thead>
                     <tbody className="divide-y divide-stone-100 bg-white dark:bg-stone-800">
                       {reportData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50">
+                        <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-stone-700">
                           {Object.values(row).map((val, i) => (
                             <td key={i} className="py-2.5 px-4 text-stone-700 dark:text-stone-300 font-medium">{val}</td>
                           ))}
@@ -291,7 +291,7 @@ export default function Reports() {
                   </table>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl bg-stone-50 dark:bg-stone-800/50/50 p-12 text-center flex flex-col items-center justify-center no-print">
+                <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl bg-stone-50 dark:bg-stone-800/50 p-12 text-center flex flex-col items-center justify-center no-print">
                   <span className="text-3xl mb-2">📄</span>
                   <h4 className="font-bold text-stone-700 dark:text-stone-300 text-xs">No Data Found</h4>
                   <p className="text-[10px] text-stone-400 max-w-xs mt-1">Try adjusting your filters or select a different report type.</p>

@@ -350,7 +350,7 @@ export default function Settings({ activePage, onNavigate }) {
                     className={`w-full flex items-center gap-3 text-left font-medium text-sm px-4 py-3 rounded-lg transition-all 
                     ${activeTab === tab.id
                       ? 'bg-[#f8ebef] text-[#7a1f3d] dark:text-[#f8d070] font-bold' 
-                      : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50'}`}
+                      : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                   >
                     <span className={`text-base ${activeTab === tab.id ? 'opacity-100' : 'opacity-60 grayscale'}`}>
                       {tab.icon}
@@ -521,7 +521,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100">
                     <button 
                       onClick={handleResetEmailTemplate}
-                      className="px-6 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition"
+                      className="px-6 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition"
                     >
                       Reset to Default
                     </button>
@@ -683,7 +683,7 @@ export default function Settings({ activePage, onNavigate }) {
                           </tr>
                         ) : (
                           schoolYears.map(sy => (
-                            <tr key={sy.id} className="hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition group">
+                            <tr key={sy.id} className="hover:bg-stone-50 dark:hover:bg-stone-700 transition group">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
                                   <div className={`w-3 h-3 rounded-full border-2 ${sy.status === 'Active' ? 'bg-green-500 border-green-200' : 'bg-transparent border-stone-300 dark:border-stone-600'}`}></div>
@@ -717,7 +717,7 @@ export default function Settings({ activePage, onNavigate }) {
                                         setCurrentSY(sy);
                                         setShowEditSYModal(true);
                                       }}
-                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition flex items-center gap-1"
+                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 transition flex items-center gap-1"
                                     >
                                       ✏️ Edit
                                     </button>
@@ -1048,7 +1048,7 @@ export default function Settings({ activePage, onNavigate }) {
               </div>
 
               <div className="flex gap-3 pt-6">
-                <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 dark:bg-stone-800/50 transition">Cancel</button>
+                <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition">Cancel</button>
                 <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#631932] transition">Save Changes</button>
               </div>
             </form>
