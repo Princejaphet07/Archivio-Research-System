@@ -391,7 +391,7 @@ export default function Dashboard({ activePage }) {
                   else { growthText = "0%"; }
                   
                   return (
-                    <YearMetricBox key={d.year} year={d.year} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={d.year === currentYear.toString()} />
+                    <YearMetricBox key={d.label || i} year={d.label} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={d.label === currentYear.toString()} />
                   );
                 })}
               </div>
