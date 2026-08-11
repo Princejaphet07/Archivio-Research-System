@@ -3,7 +3,11 @@ import NotificationBell from './NotificationBell';
 
 export default function PortalHeader({ title, initials, setSidebarOpen, setActiveTab, profilePhotoUrl }) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('student_dark_mode') === 'true';
+    const saved = localStorage.getItem('student_dark_mode');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {

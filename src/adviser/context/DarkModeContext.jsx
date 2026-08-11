@@ -8,7 +8,8 @@ export function DarkModeProvider({ children }) {
     if (saved !== null) {
       return saved === 'true';
     }
-    return false;
+    // Check system preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
