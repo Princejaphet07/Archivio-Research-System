@@ -218,8 +218,24 @@ function ResearchCategories() {
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="e.g. Blockchain Technology" 
+                    list="standard-categories"
                     className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] text-gray-900"
                   />
+                  <datalist id="standard-categories">
+                    <option value="Computer Science" />
+                    <option value="Information Technology" />
+                    <option value="Information Systems" />
+                    <option value="Software Engineering" />
+                    <option value="Data Science & Analytics" />
+                    <option value="Cybersecurity" />
+                    <option value="Artificial Intelligence" />
+                    <option value="Machine Learning" />
+                    <option value="IoT & Embedded Systems" />
+                    <option value="Business Administration" />
+                    <option value="Education" />
+                    <option value="Healthcare & Nursing" />
+                    <option value="Tourism & Hospitality" />
+                  </datalist>
                 </div>
 
                 {/* Icon / Emoji */}
