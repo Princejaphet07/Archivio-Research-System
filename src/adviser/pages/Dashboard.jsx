@@ -285,7 +285,10 @@ function Dashboard() {
                 </div>
               </div>
               
-              <button className="w-full mt-4 bg-[#6b253e] hover:bg-[#541b2f] text-white text-xs font-semibold py-2.5 rounded-lg transition">
+              <button 
+                onClick={() => navigate('/adviser/review-submissions')}
+                className="w-full mt-4 bg-[#6b253e] hover:bg-[#541b2f] text-white text-xs font-semibold py-2.5 rounded-lg transition cursor-pointer"
+              >
                 View All Pending →
               </button>
             </div>
