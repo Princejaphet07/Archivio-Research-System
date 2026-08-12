@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -57,9 +58,8 @@ export default function ResearchRecords() {
   const [allCategories, setAllCategories] = useState(['All Categories']);
 
   useEffect(() => {
-    // Wait for deanData to load so we know the Dean's department
-    if (!deanData?.department) return;
-    const deanDept = deanData.department;
+    if (!deanData) return;
+    const deanDept = deanData.department || '';
 
     // Listen to groups — filter by department
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
@@ -257,6 +257,11 @@ export default function ResearchRecords() {
 
             {/* ---- Table ---- */}
             <div className="overflow-x-auto">
+              {loading ? (
+                <div className="mt-2">
+                  <TableSkeleton rows={5} />
+                </div>
+              ) : (
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-stone-50 dark:bg-stone-800/50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
@@ -271,13 +276,7 @@ export default function ResearchRecords() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} className="py-16 text-center text-stone-400 text-sm font-medium">
-                        Loading records...
-                      </td>
-                    </tr>
-                  ) : paginated.length === 0 ? (
+                  {paginated.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-16 text-center text-stone-400 text-sm font-medium">
                         No records match your filters.
@@ -344,6 +343,7 @@ export default function ResearchRecords() {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
 
             {/* ---- Pagination Footer ---- */}

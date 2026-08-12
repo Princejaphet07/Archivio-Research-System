@@ -16,19 +16,39 @@ function UnifiedLogin() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
-        const subRef = collection(db, 'submissions');
-        
-        const publishedQuery = query(subRef, where('status', '==', 'published'));
-        const publishedSnap = await getCountFromServer(publishedQuery);
-        const publishedCount = publishedSnap.data().count;
+      let totalCount = 0;
+      let pendingCount = 0;
+      let publishedCount = 0;
+      const subRef = collection(db, 'submissions');
 
-        setStats(prev => ({ ...prev, published: publishedCount }));
+      try {
+        // Fetch Total Submissions (Might be blocked by rules for unauthenticated users)
+        const totalSnap = await getCountFromServer(subRef);
+        totalCount = totalSnap.data().count;
       } catch (err) {
-        console.error('Failed to load stats:', err);
-      } finally {
-        setLoadingStats(false);
+        console.warn('Could not fetch total count (requires auth rules update)');
       }
+
+      try {
+        // Fetch Pending Submissions (Might be blocked by rules)
+        const pendingQuery = query(subRef, where('reviewStatus', '==', 'pending'));
+        const pendingSnap = await getCountFromServer(pendingQuery);
+        pendingCount = pendingSnap.data().count;
+      } catch (err) {
+        console.warn('Could not fetch pending count (requires auth rules update)');
+      }
+
+      try {
+        // Fetch Published Submissions (Usually allowed for public)
+        const publishedQuery = query(subRef, where('reviewStatus', '==', 'published'));
+        const publishedSnap = await getCountFromServer(publishedQuery);
+        publishedCount = publishedSnap.data().count;
+      } catch (err) {
+        console.warn('Could not fetch published count');
+      }
+
+      setStats({ total: totalCount, pending: pendingCount, published: publishedCount });
+      setLoadingStats(false);
     };
     fetchStats();
   }, []);

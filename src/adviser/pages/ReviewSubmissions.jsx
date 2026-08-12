@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTim
 import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -462,14 +463,7 @@ function ReviewSubmissions() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-stone-800 font-medium">
                 {loading ? (
-                  <tr>
-                    <td colSpan="8" className="py-12">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                        <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Submissions...</p>
-                      </div>
-                    </td>
-                  </tr>
+                  <TableSkeleton columns={5} rows={5} />
                 ) : finalFiltered.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="py-8 text-center text-gray-500 dark:text-stone-400">

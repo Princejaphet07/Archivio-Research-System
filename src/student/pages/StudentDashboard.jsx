@@ -4,6 +4,7 @@ import { db, auth } from '../../firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
+import StudentDashboardSkeleton from '../components/skeletons/StudentDashboardSkeleton';
 
 // ── Progress step config ─────────────────────────────────────────────────────
 const STEPS = ['Account', 'Manuscript', 'Documents', 'Review', 'Published'];
@@ -201,7 +202,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
               <div className="p-8 flex justify-between items-start relative z-10">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2">
-                    {getGreeting()}, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-2xl">👋</span>
+                    {getGreeting()}, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-6xl animate-wave origin-bottom-right inline-block">👋</span>
                   </h1>
                   <p className="text-white/80 text-[15px]">Welcome back to your research portal</p>
                 </div>
@@ -238,8 +239,10 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
               </div>
             </div>
 
-            {/* ── PENDING APPROVAL LOCK ─────────────────────────── */}
-            {studentData?.groupStatus === 'pending' ? (
+            {/* ── CONTENT AREA ─────────────────────────── */}
+            {loadingData ? (
+              <StudentDashboardSkeleton />
+            ) : studentData?.groupStatus === 'pending' ? (
               <div className="bg-[#fff7ed] dark:bg-orange-950/30 border border-[#fed7aa] dark:border-orange-900/50 rounded-xl p-10 flex flex-col items-center justify-center text-center shadow-sm mt-4 transition-colors">
                 <div className="w-20 h-20 bg-[#ffedd5] dark:bg-orange-900/50 text-[#c2410c] dark:text-orange-400 rounded-full flex items-center justify-center mb-5">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -267,20 +270,11 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
 
                     <div className="flex-1">
                       <p className="text-[11px] font-bold text-[#D05353] dark:text-[#D05353] tracking-widest uppercase mb-1">What's Next</p>
-                      {loadingData ? (
-                        <>
-                          <div className="h-6 w-64 bg-stone-200 dark:bg-stone-800 rounded animate-pulse mb-2" />
-                          <div className="h-4 w-80 bg-stone-100 dark:bg-stone-800/50 rounded animate-pulse" />
-                        </>
-                      ) : (
-                        <>
-                          <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
-                          <p className="text-gray-600 dark:text-stone-400 text-[14px] mt-0.5">{whatsNextDesc}</p>
-                        </>
-                      )}
+                      <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
+                      <p className="text-gray-600 dark:text-stone-400 text-[14px] mt-0.5">{whatsNextDesc}</p>
                     </div>
 
-                    {showUploadButton && !loadingData && (
+                    {showUploadButton && (
                       <button
                         onClick={goToRequirements}
                         className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-6 py-3 rounded-full text-[14px] font-bold flex items-center gap-2 hover:bg-[#63182a] dark:hover:bg-[#5a1831] transition-colors shrink-0 shadow-sm"
@@ -298,18 +292,14 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                 <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-xl p-8 shadow-sm mt-6 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-end mb-8">
                     <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">Your Progress</h3>
-                    {loadingData ? (
-                      <div className="h-5 w-24 bg-stone-200 dark:bg-stone-800 rounded animate-pulse" />
-                    ) : (
-                      <span className="text-[#7B1F35] dark:text-[#D05353] font-bold text-[14px]">{progressPercent}% complete</span>
-                    )}
+                    <span className="text-[#7B1F35] dark:text-[#D05353] font-bold text-[14px]">{progressPercent}% complete</span>
                   </div>
 
                   <div className="relative pt-2 pb-6 px-4">
                     <div className="absolute top-5 left-0 w-full h-3 bg-stone-100 dark:bg-stone-800 rounded-full" />
                     <div
                       className="absolute top-5 left-0 h-3 bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full transition-all duration-700"
-                      style={{ width: loadingData ? '0%' : `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
+                      style={{ width: `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
                     />
                     <div className="relative flex justify-between z-10 text-[12px] font-bold">
                       {STEPS.map((step, idx) => {
@@ -358,9 +348,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                     </svg>
                     <h4 className="font-serif text-[18px] font-bold text-[#1A1A1A] dark:text-stone-100">Manuscript</h4>
                   </div>
-                  {loadingData ? (
-                    <div className="h-7 w-24 bg-stone-200 dark:bg-stone-800 rounded-full animate-pulse" />
-                  ) : isPublished ? (
+                  {isPublished ? (
                     <span className="bg-[#1E8E3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">✓ Published</span>
                   ) : hasManuscript ? (
                     <span className="bg-[#7B1F35] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">✓ Uploaded</span>
@@ -370,12 +358,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                 </div>
 
                 <div className="p-6 flex flex-col flex-1">
-                  {loadingData ? (
-                    <>
-                      <div className="h-5 w-48 bg-stone-200 dark:bg-stone-800 rounded animate-pulse mb-2" />
-                      <div className="h-4 w-64 bg-stone-100 dark:bg-stone-800/50 rounded animate-pulse mb-8" />
-                    </>
-                  ) : hasManuscript ? (
+                  {hasManuscript ? (
                     <>
                       <h5 className="text-[#1A1A1A] dark:text-stone-100 font-bold text-[16px] mb-1">{researchTitle}</h5>
                       <p className="text-gray-500 dark:text-stone-400 text-[13px] mb-8">

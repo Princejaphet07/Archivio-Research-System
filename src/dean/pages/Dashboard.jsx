@@ -7,9 +7,12 @@ import { ComposedChart, Line, Bar, CartesianGrid, Area, XAxis, Tooltip, Responsi
 import { db } from '../firebase/config';
 
 import { useNavigate } from 'react-router-dom';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 export default function Dashboard({ activePage }) {
-  const { deanData, loading } = useUser();
+  const { deanData } = useUser();
   const navigate = useNavigate();
   
   const [stats, setStats] = useState({
@@ -30,14 +33,15 @@ export default function Dashboard({ activePage }) {
   const [chartFilter, setChartFilter] = useState('year'); // 'year' | 'month'
   const [adviserTableYear, setAdviserTableYear] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Derive available years from data
   const availableYears = ['All', ...Array.from(new Set(allPapers.map(p => new Date(p.createdAt || Date.now()).getFullYear().toString())))].sort().reverse();
 
   useEffect(() => {
-    // Wait for deanData to load so we know the Dean's department
-    if (!deanData?.department) return;
-    const deanDept = deanData.department;
+    // Wait for deanData to load
+    if (!deanData) return;
+    const deanDept = deanData.department || ''; // Fallback to empty string if no department
 
     const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       setAllRawSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -64,9 +68,19 @@ export default function Dashboard({ activePage }) {
               });
             setStats(prev => ({ ...prev, totalGroups: deptGroups.length }));
             setAllGroups(deptGroups);
+            setLoading(false); // Make sure skeleton disappears even if empty
+         }, (error) => {
+            console.error("Error fetching groups:", error);
+            setLoading(false);
          });
          cleanupGroups = unsub;
+       }).catch((error) => {
+         console.error("Error fetching advisers:", error);
+         setLoading(false);
        });
+    }).catch((error) => {
+      console.error("Error importing firestore:", error);
+      setLoading(false);
     });
     
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
@@ -80,7 +94,6 @@ export default function Dashboard({ activePage }) {
 
   // Process stats safely once both groups and submissions are loaded
   useEffect(() => {
-    if (allGroups.length === 0 && allRawSubmissions.length === 0) return;
 
     let approvedCount = 0;
     let publishedCount = 0;
@@ -186,9 +199,35 @@ export default function Dashboard({ activePage }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors">
-        <div className="w-12 h-12 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-4"></div>
-        <p className="text-sm font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Dashboard</p>
+      <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
+        <Sidebar activePage="dashboard" />
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <Header activePage="dashboard" />
+          <main className="flex-1 overflow-y-auto p-8">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <div className="h-8 w-64 bg-stone-200 dark:bg-stone-800 rounded animate-pulse mb-2"></div>
+                <div className="h-4 w-48 bg-stone-200 dark:bg-stone-800 rounded animate-pulse"></div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-6 gap-4 mb-6">
+              {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+
+            <div className="grid grid-cols-3 gap-6 mb-6">
+              <div className="col-span-2">
+                 <div className="h-64 bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 p-6 animate-pulse">
+                   <div className="h-5 w-40 bg-stone-200 dark:bg-stone-700 rounded mb-4"></div>
+                   <div className="h-44 bg-stone-100 dark:bg-stone-900 rounded"></div>
+                 </div>
+              </div>
+              <div>
+                <ListSkeleton items={4} />
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
@@ -276,7 +315,7 @@ export default function Dashboard({ activePage }) {
           <div className="flex justify-between items-end mb-6">
             <div>
               <h1 className="text-3xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight flex items-center gap-2">
-                {getGreeting()}, {firstName} 👋
+                {getGreeting()}, {firstName} <span className="animate-wave origin-bottom-right inline-block">👋</span>
               </h1>
               <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-1 uppercase tracking-wider">
                 {deanData?.department || 'Department'} • S.Y. 2026–2027, 2nd Semester
@@ -300,12 +339,24 @@ export default function Dashboard({ activePage }) {
 
           {/* ================= KPI STATS HIGHLIGHT GRID ================= */}
           <div className="grid grid-cols-6 gap-4 mb-6">
-            <KpiCard title="TOTAL GROUP" value={stats.totalGroups} trend="Total registered" icon="📁" />
-            <KpiCard title="APPROVED" value={stats.approved} trend="Awaiting publish" icon="✅" highlight />
-            <KpiCard title="PUBLISHED" value={stats.published} trend="Live in archive" icon="🌐" />
-            <KpiCard title="PENDING REVIEW" value={stats.pending} trend="Needs attention" icon="⏳" warning />
-            <KpiCard title="TOTAL ADVISERS" value={stats.totalAdvisers} subtext="Registered advisers" icon="👥" />
-            <KpiCard title="COMPLETION RATE" value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} trend="Published / Total" icon="📈" />
+            {loading ? (
+              <>
+                <div className="col-span-2"><CardSkeleton borderTopColor="#3b82f6" /></div>
+                <div className="col-span-1"><CardSkeleton borderTopColor="#22c55e" /></div>
+                <div className="col-span-1"><CardSkeleton borderTopColor="#eab308" /></div>
+                <div className="col-span-1"><CardSkeleton borderTopColor="#ef4444" /></div>
+                <div className="col-span-1"><CardSkeleton borderTopColor="#64748b" /></div>
+              </>
+            ) : (
+              <>
+                <KpiCard title="TOTAL GROUP" value={stats.totalGroups} trend="Total registered" icon="📁" />
+                <KpiCard title="APPROVED" value={stats.approved} trend="Awaiting publish" icon="✅" highlight />
+                <KpiCard title="PUBLISHED" value={stats.published} trend="Live in archive" icon="🌐" />
+                <KpiCard title="PENDING REVIEW" value={stats.pending} trend="Needs attention" icon="⏳" warning />
+                <KpiCard title="TOTAL ADVISERS" value={stats.totalAdvisers} subtext="Registered advisers" icon="👥" />
+                <KpiCard title="COMPLETION RATE" value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} trend="Published / Total" icon="📈" />
+              </>
+            )}
           </div>
 
           {/* ================= CHARTS AND SUMMARIES GRID (ROW 2) ================= */}

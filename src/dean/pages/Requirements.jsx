@@ -4,6 +4,8 @@ import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 export default function Requirements({ activePage, onNavigate }) {
   const [submissions, setSubmissions] = useState([]);
@@ -121,19 +123,30 @@ export default function Requirements({ activePage, onNavigate }) {
           </div>
 
           {/* Stats Cards Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((card, idx) => (
-              <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 ${card.bg}`}>
-                <p className="text-[10px] font-bold tracking-wider text-stone-400 uppercase">{card.title}</p>
-                <p className="text-2xl font-bold text-stone-800 dark:text-stone-200 my-1">{card.value}</p>
-                <p className="text-xs text-stone-500 dark:text-stone-400">{card.sub}</p>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((card, idx) => (
+                <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 ${card.bg}`}>
+                  <p className="text-[10px] font-bold tracking-wider text-stone-400 uppercase">{card.title}</p>
+                  <p className="text-2xl font-bold text-stone-800 dark:text-stone-200 my-1">{card.value}</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">{card.sub}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Table Area */}
           <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
             <div className="overflow-x-auto">
+              {loading ? (
+                <div className="p-4">
+                  <TableSkeleton rows={6} />
+                </div>
+              ) : (
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
@@ -148,16 +161,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 font-medium">
-                  {loading ? (
-                    <tr>
-                      <td colSpan="8" className="py-12">
-                        <div className="flex flex-col items-center justify-center">
-                          <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                          <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Tracking Data...</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : enrichedRows.length === 0 ? (
+                  {enrichedRows.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="py-8 text-center text-stone-500 dark:text-stone-400">No approved groups found.</td>
                     </tr>
@@ -192,6 +196,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
             
             <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 font-medium">

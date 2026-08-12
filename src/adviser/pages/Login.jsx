@@ -115,26 +115,26 @@ function Login() {
 
       {/* Right Column: Form Area */}
       <div
-        className="hidden lg:flex flex-1 flex-col justify-center p-6 bg-[#f5f0e6] dark:bg-stone-900 transition-colors"
+        className="hidden lg:flex flex-1 flex-col justify-center p-6 bg-[#f5f0e6] transition-colors"
         style={{ backgroundImage: `url("${bgTexture}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <div className="w-full max-w-lg mx-auto relative z-10 pl-4">
 
           {/* Welcome Text Area */}
           <div className="mb-6">
-            <h1 className="text-4xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-2">Welcome Back!</h1>
-            <p className="text-sm text-gray-600 dark:text-stone-400 mb-3">Sign in to your ARCHIVIO account</p>
+            <h1 className="text-4xl font-serif font-bold text-gray-900 mb-2">Welcome Back!</h1>
+            <p className="text-sm text-gray-600 mb-3">Sign in to your ARCHIVIO account</p>
             <div className="w-12 h-[2px] bg-[#d0a36e]"></div>
           </div>
 
           {/* Login Form Card */}
-          <div className="bg-white dark:bg-stone-950/80 rounded-xl shadow-2xl w-full p-8 border border-transparent dark:border-stone-800 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full p-8 border border-transparent backdrop-blur-sm">
             <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-stone-100 mb-1">Sign In</h2>
-              <p className="text-[11px] text-gray-400 dark:text-stone-500">Enter your institutional email and password</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Sign In</h2>
+              <p className="text-[11px] text-gray-400">Enter your institutional email and password</p>
             </div>
 
-            <hr className="border-gray-100 dark:border-stone-800 mb-5" />
+            <hr className="border-gray-100 mb-5" />
 
             <form onSubmit={handleLogin}>
               {error && (
@@ -154,7 +154,7 @@ function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value.trim())}
                     placeholder="Enter your @phinmaed.com email"
-                    className="w-full bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-gray-800 dark:text-stone-200 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition disabled:opacity-50"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#7a2e46] transition disabled:opacity-50"
                     disabled={loading}
                   />
                 </div>
@@ -170,14 +170,14 @@ function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-[#faf7f5] dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg pl-9 pr-12 py-2.5 text-xs text-gray-800 dark:text-stone-200 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition disabled:opacity-50"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-12 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#7a2e46] transition disabled:opacity-50"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={loading}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[10px] font-bold text-[#7a2e46] dark:text-[#f8d070] hover:text-[#5f2135] dark:hover:text-[#ffe090]"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]"
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
@@ -194,9 +194,9 @@ function Login() {
                     disabled={loading}
                     className="w-3.5 h-3.5 text-[#7a2e46] bg-gray-100 border-gray-300 rounded focus:ring-[#7a2e46]"
                   />
-                  <label className="ml-2 text-[11px] text-gray-600 dark:text-stone-400">Remember me</label>
+                  <label className="ml-2 text-[11px] text-gray-600">Remember me</label>
                 </div>
-                <Link to="/adviser/forgot-password" className="text-[11px] font-semibold text-[#7a2e46] dark:text-[#f8d070] hover:underline">
+                <Link to="/adviser/forgot-password" className="text-[11px] font-semibold text-[#7a2e46] hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -210,14 +210,14 @@ function Login() {
                 {loading ? 'Signing In...' : 'Sign In to ARCHIVIO'}
               </button>
 
-              <div className="mt-5 text-center text-xs text-gray-500 dark:text-stone-400">
-                Don't have an account? <Link to="/adviser/signup" className="text-[#7a2e46] dark:text-[#f8d070] font-semibold hover:underline">Sign Up here</Link>
+              <div className="mt-5 text-center text-xs text-gray-500">
+                Don't have an account? <Link to="/adviser/signup" className="text-[#7a2e46] font-semibold hover:underline">Sign Up here</Link>
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg text-[11px] text-blue-800 dark:text-blue-200">
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-800">
                 <p className="font-semibold mb-1">📧 Invited via Email?</p>
                 <p className="mb-2">If you received an invitation email from your Dean, click the activation link in the email to create your account.</p>
-                <p className="text-[10px] text-blue-700 dark:text-blue-300">The activation link looks like: <span className="font-mono">http://localhost:5176/adviser-activate?token=...</span></p>
+                <p className="text-[10px] text-blue-700">The activation link looks like: <span className="font-mono">http://localhost:5176/adviser-activate?token=...</span></p>
               </div>
             </form>
 

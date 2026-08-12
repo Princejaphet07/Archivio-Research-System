@@ -1,6 +1,35 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  *, ::before, ::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+}
+
+@layer utilities {
+  .animate-wave {
+    animation-name: wave-animation;
+    animation-duration: 2.5s;
+    animation-iteration-count: 1; /* Only wave once on load/refresh */
+    transform-origin: 70% 70%;
+    display: inline-block;
+  }
+}
+
+@keyframes wave-animation {
+  0% { transform: rotate(0.0deg) }
+  10% { transform: rotate(14.0deg) }
+  20% { transform: rotate(-8.0deg) }
+  30% { transform: rotate(14.0deg) }
+  40% { transform: rotate(-4.0deg) }
+  50% { transform: rotate(10.0deg) }
+  60% { transform: rotate(0.0deg) }
+  100% { transform: rotate(0.0deg) }
+}
+
 /* ---------------------------------------------------- */
 /* CUSTOM THEME DEFINITIONS */
 /* ---------------------------------------------------- */

@@ -6,6 +6,10 @@ import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
 import Swal from 'sweetalert2';
 
+const Shimmer = () => (
+  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-white/[0.06] to-transparent" />
+);
+
 // Generate initials from a name string
 const getInitials = (name = '') => {
   const parts = name.trim().split(' ').filter(Boolean);
@@ -254,9 +258,10 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
   // Skeleton card
   const SkeletonCard = () => (
-    <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl p-6 flex items-start gap-4 animate-pulse">
-      <div className="w-14 h-14 rounded-full bg-stone-200 dark:bg-stone-800 shrink-0" />
-      <div className="flex-1 space-y-2 mt-1">
+    <div className="relative overflow-hidden bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl p-6 flex items-start gap-4">
+      <Shimmer />
+      <div className="w-14 h-14 rounded-full bg-stone-200 dark:bg-stone-800 shrink-0 relative z-10" />
+      <div className="flex-1 space-y-2 mt-1 relative z-10">
         <div className="h-4 bg-stone-200 dark:bg-stone-800 rounded w-40" />
         <div className="h-3 bg-stone-100 dark:bg-stone-800/50 rounded w-24" />
         <div className="h-3 bg-stone-100 dark:bg-stone-800/50 rounded w-36 mt-3" />
@@ -302,7 +307,9 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
             {/* ── GROUP BANNER ────────────────────────────────────────── */}
             {loading ? (
-              <div className="w-full bg-[#7B1F35]/20 rounded-[24px] h-[180px] animate-pulse" />
+              <div className="w-full bg-[#7B1F35]/10 dark:bg-stone-800 rounded-[24px] h-[180px] relative overflow-hidden">
+                <Shimmer />
+              </div>
             ) : (
               <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[24px] p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-md border border-[#7B1F35]/20 relative overflow-hidden">
                 <div className="absolute right-0 top-0 h-full w-[40%] bg-white/5 rounded-l-[100px] pointer-events-none" />

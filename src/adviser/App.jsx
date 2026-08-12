@@ -50,18 +50,18 @@ function App() {
   }
 
   return (
-    <DarkModeProvider>
-      <Routes>
-        <Route path="/" element={<Navigate to="/adviser/dashboard" replace />} />
-        
-        {/* Auth Pages */}
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/adviser-activate" element={<ActivateAccount />} />
-        
-        {/* Protected Dashboard Routes */}
-        <Route path="/*" element={
+    <Routes>
+      <Route path="/" element={<Navigate to="/adviser/dashboard" replace />} />
+      
+      {/* Auth Pages */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/adviser-activate" element={<ActivateAccount />} />
+      
+      {/* Protected Dashboard Routes */}
+      <Route path="/*" element={
+        <DarkModeProvider>
           <AdviserProvider>
             <ProtectedRoute>
               <Routes>
@@ -76,9 +76,9 @@ function App() {
               </Routes>
             </ProtectedRoute>
           </AdviserProvider>
-        } />
-      </Routes>
-    </DarkModeProvider>
+        </DarkModeProvider>
+      } />
+    </Routes>
   );
 }
 

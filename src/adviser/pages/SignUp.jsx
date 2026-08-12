@@ -155,18 +155,18 @@ function SignUp() {
       className="min-h-screen w-full flex items-center justify-center font-sans p-6 bg-cover bg-center overflow-x-hidden"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="max-w-md w-full rounded-2xl border border-white/50 dark:border-stone-800 bg-white/95 dark:bg-stone-950/95 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden transition-colors">
+      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden transition-colors">
         
         {/* Top Accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7a1f3d]"></div>
 
         <div className="mb-4">
-          <h2 className="font-serif text-3xl font-bold text-stone-900 dark:text-stone-100">Create Account</h2>
+          <h2 className="font-serif text-3xl font-bold text-stone-900">Create Account</h2>
           <div className="mt-2 flex flex-col items-start gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] dark:text-[#f8d070] bg-red-50 dark:bg-[#7a1f3d]/20 border border-red-100 dark:border-[#f8d070]/30 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
               Research Adviser
             </span>
-            <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">Register for your Adviser account</p>
+            <p className="text-xs text-stone-500 font-medium">Register for your Adviser account</p>
           </div>
         </div>
 
@@ -188,34 +188,34 @@ function SignUp() {
           
           <div className="grid grid-cols-2 gap-3 mb-2">
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">First Name <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-stone-700 mb-1">First Name <span className="text-red-500">*</span></label>
               <input name="firstName" value={formData.firstName} onChange={handleChange} type="text" placeholder="e.g. Maria" 
-                className={`w-full border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 dark:bg-stone-900 text-stone-500 dark:text-stone-400 cursor-not-allowed' : 'bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200'}`} 
+                className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
                 readOnly={isPrefilled} required disabled={loading} />
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">Last Name <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-stone-700 mb-1">Last Name <span className="text-red-500">*</span></label>
               <input name="lastName" value={formData.lastName} onChange={handleChange} type="text" placeholder="e.g. Cendana" 
-                className={`w-full border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 dark:bg-stone-900 text-stone-500 dark:text-stone-400 cursor-not-allowed' : 'bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200'}`} 
+                className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
                 readOnly={isPrefilled} required disabled={loading} />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">Email Address <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">Email Address <span className="text-red-500">*</span></label>
             <input name="email" value={formData.email} onChange={handleChange} type="email" placeholder="e.g. adviser.cendana@phinmaed.com" 
-              className={`w-full border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 dark:bg-stone-900 text-stone-500 dark:text-stone-400 cursor-not-allowed' : 'bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200'}`} 
+              className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
               readOnly={isPrefilled} required disabled={loading} />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">Password <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">Password <span className="text-red-500">*</span></label>
             <div className="relative">
               <input 
                 name="password" value={formData.password} onChange={handleChange}
                 type={showPassword ? "text" : "password"} 
                 placeholder="Create a strong password" 
-                className="w-full bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50" 
+                className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
                 required disabled={loading}
               />
               <button 
@@ -246,13 +246,13 @@ function SignUp() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">Confirm Password <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">Confirm Password <span className="text-red-500">*</span></label>
             <div className="relative">
               <input 
                 name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
                 type={showConfirmPassword ? "text" : "password"} 
                 placeholder="Confirm your password" 
-                className="w-full bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 dark:focus:ring-[#f8d070]/20 focus:border-[#7a1f3d] dark:focus:border-[#f8d070] transition-all disabled:opacity-50" 
+                className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
                 required disabled={loading}
               />
               <button 
@@ -274,15 +274,15 @@ function SignUp() {
             )}
           </div>
 
-          <div className="flex items-start gap-3 mt-2 bg-stone-50/50 dark:bg-stone-900/50 p-2 rounded-lg border border-stone-100 dark:border-stone-800">
+          <div className="flex items-start gap-3 mt-2 bg-stone-50/50 p-2 rounded-lg border border-stone-100">
             <input 
               name="agreeTerms" checked={formData.agreeTerms} onChange={handleChange} 
               type="checkbox" 
-              className="w-4 h-4 text-[#7a1f3d] dark:text-[#f8d070] border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-950 rounded focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] mt-0.5" 
+              className="w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5" 
               disabled={loading}
             />
-            <label className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-              I agree to the <span onClick={() => setShowTerms(true)} className="font-bold text-[#7a1f3d] dark:text-[#f8d070] cursor-pointer hover:underline">Terms of Service</span> and <span onClick={() => setShowPrivacy(true)} className="font-bold text-[#7a1f3d] dark:text-[#f8d070] cursor-pointer hover:underline">Privacy Policy</span>.
+            <label className="text-xs text-stone-600 leading-relaxed">
+              I agree to the <span onClick={() => setShowTerms(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span onClick={() => setShowPrivacy(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
             </label>
           </div>
 
@@ -304,9 +304,9 @@ function SignUp() {
             )}
           </button>
 
-          <div className="text-center pt-3 border-t border-stone-100 dark:border-stone-800 mt-4">
-            <p className="text-xs font-medium text-stone-500 dark:text-stone-400">
-              Already have an account? <Link to="/" className="text-[#7a1f3d] dark:text-[#f8d070] font-bold hover:underline ml-1">Sign in here</Link>
+          <div className="text-center pt-3 border-t border-stone-100 mt-4">
+            <p className="text-xs font-medium text-stone-500">
+              Already have an account? <Link to="/" className="text-[#7a1f3d] font-bold hover:underline ml-1">Sign in here</Link>
             </p>
           </div>
         </form>

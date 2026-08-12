@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 function MyGroups() {
   const [groups, setGroups] = useState([]);
@@ -127,17 +128,7 @@ function MyGroups() {
               </thead>
               <tbody className="text-sm text-gray-700 dark:text-stone-300">
                 {loading ? (
-                  // Loading skeleton rows
-                  [1, 2, 3, 4].map(i => (
-                    <tr key={i} className="border-b border-gray-100 dark:border-stone-800">
-                      <td className="py-4 px-6"><div className="h-4 w-6 bg-gray-200 dark:bg-stone-800 rounded animate-pulse"></div></td>
-                      <td className="py-4 px-6"><div className="h-4 w-32 bg-gray-200 dark:bg-stone-800 rounded animate-pulse"></div></td>
-                      <td className="py-4 px-6"><div className="h-4 w-20 bg-gray-200 dark:bg-stone-800 rounded animate-pulse"></div></td>
-                      <td className="py-4 px-6"><div className="h-4 w-24 bg-gray-200 dark:bg-stone-800 rounded animate-pulse"></div></td>
-                      <td className="py-4 px-6"><div className="h-4 w-36 bg-gray-200 dark:bg-stone-800 rounded animate-pulse"></div></td>
-                      <td className="py-4 px-6"><div className="h-7 w-14 bg-gray-200 dark:bg-stone-800 rounded animate-pulse mx-auto"></div></td>
-                    </tr>
-                  ))
+                  <TableSkeleton columns={6} rows={4} />
                 ) : filteredGroups.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="py-12 text-center">

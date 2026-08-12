@@ -4,6 +4,8 @@ import { db, auth } from '../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot } from 'firebase/firestore';
 import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
+import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
 
 function GroupRegistrations() {
   const { adviserData, user } = useAdviser();
@@ -164,10 +166,7 @@ function GroupRegistrations() {
         {/* Pending Requests */}
         <div className="space-y-4">
           {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center">
-              <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-              <p className="text-xs font-bold text-[#7a1f3d] tracking-widest uppercase">Loading Requests...</p>
-            </div>
+            <HorizontalCardSkeleton count={3} />
           ) : pendingGroups.filter(filterGroup).length === 0 ? (
             <div className="bg-white dark:bg-stone-900 border border-dashed border-gray-300 dark:border-stone-700 rounded-xl p-8 text-center text-gray-500 dark:text-stone-400">
               No pending group registrations found.

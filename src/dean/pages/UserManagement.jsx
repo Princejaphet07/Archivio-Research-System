@@ -6,6 +6,7 @@ import { db, auth } from '../firebase/config';
 import { collection, query, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -22,9 +23,8 @@ export default function UserManagement() {
   const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
-    // Wait for deanData to load so we know the Dean's department
-    if (!deanData?.department) return;
-    const deanDept = deanData.department;
+    if (!deanData) return;
+    const deanDept = deanData.department || '';
 
     // Fetch Advisers — filter by this Dean's department
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
@@ -207,6 +207,11 @@ export default function UserManagement() {
               </p>
               
               <div className="overflow-x-auto">
+                {loading ? (
+                  <div className="mt-2">
+                    <TableSkeleton rows={5} />
+                  </div>
+                ) : (
                 <table className="w-full text-left text-xs border-collapse font-medium">
                   <thead>
                     <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100">
@@ -232,16 +237,7 @@ export default function UserManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-50 text-stone-700 dark:text-stone-300">
-                    {loading ? (
-                      <tr>
-                        <td colSpan="6" className="py-12">
-                          <div className="flex flex-col items-center justify-center">
-                            <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                            <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Users...</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : activeTab === 'advisers' ? (
+                    {activeTab === 'advisers' ? (
                       enrichedAdvisers.length === 0 ? (
                          <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No advisers found.</td></tr>
                       ) : (
@@ -349,6 +345,7 @@ export default function UserManagement() {
                     )}
                   </tbody>
                 </table>
+                )}
               </div>
             </div>
           </div>

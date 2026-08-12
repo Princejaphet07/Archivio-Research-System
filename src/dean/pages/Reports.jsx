@@ -29,8 +29,8 @@ export default function Reports() {
   const [allAdvisers, setAllAdvisers] = useState([]);
   
   useEffect(() => {
-    if (!deanData?.department) return;
-    const deanDept = deanData.department;
+    if (!deanData) return;
+    const deanDept = deanData.department || '';
 
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {

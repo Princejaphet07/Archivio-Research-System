@@ -19,6 +19,11 @@ export function DarkModeProvider({ children }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    return () => {
+      // Remove dark class when context is unmounted (e.g. going to auth pages)
+      document.documentElement.classList.remove('dark');
+    };
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);

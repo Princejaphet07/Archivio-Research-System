@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
 
 function ResearchCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +30,7 @@ function ResearchCategories() {
   ];
 
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ function ResearchCategories() {
         ...doc.data()
       }));
       setCategories(fetched);
+      setLoading(false);
     });
     return () => unsub();
   }, []);
@@ -157,29 +160,38 @@ function ResearchCategories() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {filteredCategories.map((cat, i) => (
-            <div key={cat.id || i} className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
-              <div>
-                <div className="text-2xl mb-1">{cat.icon || '🔗'}</div>
-                <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
-                <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
+          {loading ? (
+            <>
+              <CardSkeleton borderTopColor="#7a2e46" />
+              <CardSkeleton borderTopColor="#1e40af" />
+              <CardSkeleton borderTopColor="#b91c1c" />
+              <CardSkeleton borderTopColor="#eab308" />
+            </>
+          ) : (
+            filteredCategories.map((cat, i) => (
+              <div key={cat.id || i} className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
+                <div>
+                  <div className="text-2xl mb-1">{cat.icon || '🔗'}</div>
+                  <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => openEditModal(cat)}
+                    className="border border-gray-200 dark:border-stone-700 rounded px-3 py-1 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(cat.id, cat.name)}
+                    className="border border-gray-200 dark:border-stone-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => openEditModal(cat)}
-                  className="border border-gray-200 dark:border-stone-700 rounded px-3 py-1 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1"
-                >
-                  ✏️ Edit
-                </button>
-                <button 
-                  onClick={() => handleDelete(cat.id, cat.name)}
-                  className="border border-gray-200 dark:border-stone-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
           
           {/* Add New Category Card */}
           <button 

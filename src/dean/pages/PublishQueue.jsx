@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTim
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import { useUser } from '../context/UserContext';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const { deanData } = useUser();
@@ -16,9 +17,8 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Wait for deanData to load so we know the Dean's department
-    if (!deanData?.department) return;
-    const deanDept = deanData.department;
+    if (!deanData) return;
+    const deanDept = deanData.department || '';
 
     // 1. Fetch Submissions
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
@@ -295,9 +295,8 @@ export default function PublishQueue({ activePage, onNavigate }) {
               {/* Items */}
               <div className="divide-y divide-stone-100 overflow-y-auto flex-1">
                 {loading ? (
-                  <div className="py-12 flex flex-col items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                    <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Submissions...</p>
+                  <div className="p-4">
+                    <ListSkeleton items={4} />
                   </div>
                 ) : filteredQueue.length === 0 ? (
                   <div className="p-8 text-center text-stone-400 text-sm">No eligible submissions awaiting publication.</div>

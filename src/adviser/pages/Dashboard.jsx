@@ -6,6 +6,9 @@ import { db } from '../firebase/config';
 import Layout from '../components/Layout';
 import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
+import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -130,36 +133,47 @@ function Dashboard() {
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-2">Research Adviser Portal</p>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">{getGreeting()}, {adviserData?.displayName || 'Research Adviser'} 👋</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">{getGreeting()}, {adviserData?.displayName || 'Research Adviser'} <span className="animate-wave origin-bottom-right inline-block">👋</span></h1>
             <p className="text-sm text-gray-200">{activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending your review</p>
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-300 dark:border-t-stone-700">
-            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{activeGroupCount}</h3>}
-            <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Active this semester</p>
-          </div>
-          
-          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-yellow-400 dark:border-t-yellow-500">
-            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{pendingReviewCount}</h3>}
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/30 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
-          </div>
+          {loading ? (
+            <>
+              <CardSkeleton borderTopColor="#d1d5db" />
+              <CardSkeleton borderTopColor="#facc15" />
+              <CardSkeleton borderTopColor="#3b82f6" />
+              <CardSkeleton borderTopColor="#e5e7eb" />
+            </>
+          ) : (
+            <>
+              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-300 dark:border-t-stone-700">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
+                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{activeGroupCount}</h3>
+                <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Active this semester</p>
+              </div>
+              
+              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-yellow-400 dark:border-t-yellow-500">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
+                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{pendingReviewCount}</h3>
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/30 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
+              </div>
 
-          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-blue-500 dark:border-t-blue-600">
-            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{approvedPapersCount}</h3>}
-            <p className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
-          </div>
+              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-blue-500 dark:border-t-blue-600">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
+                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{approvedPapersCount}</h3>
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
+              </div>
 
-          <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-200 dark:border-t-stone-700">
-            <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
-            {loading ? <div className="h-9 w-12 bg-gray-200 dark:bg-stone-800 animate-pulse rounded mb-1"></div> : <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{avgCompletion}%</h3>}
-            <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Across all groups</p>
-          </div>
+              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-200 dark:border-t-stone-700">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
+                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{avgCompletion}%</h3>
+                <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Across all groups</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Bottom Content Area */}
@@ -182,10 +196,7 @@ function Dashboard() {
 
             <div className="space-y-6">
               {loading ? (
-                <div className="animate-pulse space-y-4">
-                  <div className="h-20 bg-gray-100 dark:bg-stone-800 rounded-xl"></div>
-                  <div className="h-20 bg-gray-100 dark:bg-stone-800 rounded-xl"></div>
-                </div>
+                <HorizontalCardSkeleton count={2} />
               ) : enrichedSubmissions.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-stone-400 py-4">No submissions yet.</p>
               ) : (

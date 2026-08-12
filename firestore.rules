@@ -102,8 +102,8 @@ service cloud.firestore {
     }
     
     match /submissions/{docId} {
-      // Public can read published papers. Logged in users can read all.
-      allow read: if (resource.data.reviewStatus == 'published' || resource.data.status == 'published') || isAuthenticated();
+      // Public can read all submissions for accurate count stats on login page
+      allow read: if true;
       // To create/update/delete, must be admin, dean, adviser, or the student owner
       allow create: if isAuthenticated() && (isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid);
       allow update, delete: if isSystemAdmin() || isDean() || isAdviser() || resource.data.studentUid == request.auth.uid;
