@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import { useUser } from '../context/UserContext';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const { deanData } = useUser();
@@ -15,6 +16,12 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const [requirements, setRequirements] = useState([]);
   const [adviserFilter, setAdviserFilter] = useState('All Advisers');
   const [loading, setLoading] = useState(true);
+
+  const [viewerState, setViewerState] = useState({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
 
   useEffect(() => {
     if (!deanData) return;
@@ -165,6 +172,26 @@ export default function PublishQueue({ activePage, onNavigate }) {
         popup: 'rounded-2xl',
       }
     });
+  };
+
+  const handleViewManuscript = (sub) => {
+    // Attempt to find manuscript
+    const manuscriptDoc = sub.uploadedDocs?.find(d => d.type === 'manuscript');
+    
+    if (manuscriptDoc && manuscriptDoc.url) {
+      setViewerState({
+        isOpen: true,
+        url: manuscriptDoc.url,
+        title: `Manuscript - ${sub.researchTitle}`
+      });
+    } else {
+      Swal.fire({
+        icon: 'info',
+        title: 'Not Found',
+        text: 'The student hasn\'t uploaded a manuscript yet.',
+        confirmButtonColor: '#7a1f3d'
+      });
+    }
   };
 
   const handlePublishAll = async () => {
@@ -342,7 +369,17 @@ export default function PublishQueue({ activePage, onNavigate }) {
                           onClick={() => handlePreview(item)}
                           className="px-4 py-1.5 text-xs font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
                         >
-                          Preview
+                          Abstract
+                        </button>
+                        <button 
+                          onClick={() => handleViewManuscript(item)}
+                          className="px-4 py-1.5 text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#7a1f3d]/30 dark:border-[#f8d070]/30 rounded-lg hover:bg-[#7a1f3d]/5 dark:hover:bg-[#f8d070]/10 transition-colors flex items-center gap-1.5 shadow-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Doc
                         </button>
                         <button
                           onClick={() => handlePublish(item)}
@@ -466,6 +503,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
         </main>
       </div>
+
+      <DocumentViewerModal
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ isOpen: false, url: '', title: '' })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -13,6 +14,13 @@ function ReviewSubmissions() {
   const [groups, setGroups] = useState([]);
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Document Viewer State
+  const [viewerState, setViewerState] = useState({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState(location.state?.filterGroup || 'All Groups');
@@ -671,14 +679,16 @@ function ReviewSubmissions() {
                             <>
                               <span className="text-green-700 dark:text-green-500 font-bold text-xs">✓ Submitted</span>
                               {docMeta?.url && docMeta.url !== '#' && (
-                                <a
-                                  href={docMeta.url}
-                                  target="_blank"
-                                  rel="noreferrer"
+                                <button
+                                  onClick={() => setViewerState({
+                                    isOpen: true,
+                                    url: docMeta.url,
+                                    title: `${selectedSubmission.groupName} - ${req.id}`
+                                  })}
                                   className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
                                 >
                                   View
-                                </a>
+                                </button>
                               )}
                             </>
                           ) : (
@@ -754,6 +764,14 @@ function ReviewSubmissions() {
           </div>
         </div>
       )}
+      
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ ...viewerState, isOpen: false })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+      />
     </Layout>
   );
 }

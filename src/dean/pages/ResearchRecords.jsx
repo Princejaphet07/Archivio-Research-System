@@ -7,6 +7,7 @@ import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -50,6 +51,12 @@ export default function ResearchRecords() {
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  const [viewerState, setViewerState] = useState({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
 
   // Unique filter options based on dynamic data
   const [allYears, setAllYears] = useState(['All Years']);
@@ -462,14 +469,20 @@ export default function ResearchRecords() {
                           </div>
                         </div>
                         {isUploaded && docMeta?.url && docMeta.url !== '#' && (
-                          <a
-                            href={docMeta.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-bold text-[#4a1024] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#4a1024]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition"
+                          <button
+                            onClick={() => setViewerState({
+                              isOpen: true,
+                              url: docMeta.url,
+                              title: docMeta.name || req.title
+                            })}
+                            className="text-xs font-bold text-[#4a1024] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#4a1024]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition flex items-center gap-1.5"
                           >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View File
-                          </a>
+                          </button>
                         )}
                       </div>
                     );
@@ -480,6 +493,14 @@ export default function ResearchRecords() {
           </div>
         </div>
       )}
+
+      <DocumentViewerModal
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ isOpen: false, url: '', title: '' })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+      />
+
     </div>
   );
 }

@@ -1174,7 +1174,7 @@ app.post('/api/ai/extract-keywords', async (req, res) => {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.6-27b',
       messages: [
         {
           role: 'system',
@@ -1302,7 +1302,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const response = await groq.chat.completions.create({
       messages: messages,
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.6-27b',
     });
 
     res.json({ success: true, text: response.choices[0]?.message?.content || "" });
@@ -1348,7 +1348,7 @@ app.post('/api/ai/precheck', async (req, res) => {
     `;
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.6-27b',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: "json_object" }
     });
@@ -1421,7 +1421,7 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     `;
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.6-27b',
       messages: [{ role: 'user', content: prompt }]
     });
 
@@ -1488,7 +1488,7 @@ app.post('/api/ai/global-search', async (req, res) => {
     `;
     
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.6-27b',
       messages: [
         { role: 'system', content: developerPrompt },
         { role: 'user', content: query }
