@@ -58,9 +58,9 @@ service cloud.firestore {
     }
     
     match /activity_logs/{docId} {
-      // Anyone logged in can insert a log (for auditing), but no one can delete them
+      // Anyone can insert a log (to capture failed logins), but only admins/deans can read, and only admins can update/delete
       allow read: if isSystemAdmin() || isDean();
-      allow create: if isAuthenticated();
+      allow create: if true;
       allow update, delete: if isSystemAdmin();
     }
     
@@ -133,6 +133,11 @@ service cloud.firestore {
     
     match /activity_logs_backup/{docId} {
       allow read: if isSystemAdmin();
+    }
+
+    match /categories/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
 
     // 5. Fallback Default Deny

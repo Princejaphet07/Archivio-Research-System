@@ -5,6 +5,7 @@ import { useAdviser } from '../context/AdviserContext';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { logActivity } from '../../firebase/logActivity';
 
 function Sidebar() {
   const location = useLocation();
@@ -88,6 +89,15 @@ function Sidebar() {
 
   const handleLogout = async () => {
     try {
+      const email = auth.currentUser?.email;
+      if (email) {
+        await logActivity({
+          user: adviserInfo?.displayName || email,
+          role: 'Adviser',
+          action: 'Log out',
+          status: 'Success'
+        });
+      }
       await signOut(auth);
       navigate('/');
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc, deleteField, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc, deleteField, deleteDoc, increment as fbIncrement } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
 export default function ChatWidget() {
@@ -36,7 +36,7 @@ export default function ChatWidget() {
       const q = query(
         collection(db, 'groups'),
         where('adviserUid', '==', email),
-        where('status', '==', 'approved')
+        where('status', 'in', ['approved', 'published'])
       );
       
       const unsub = onSnapshot(q, (snapshot) => {
@@ -53,9 +53,11 @@ export default function ChatWidget() {
   // Fetch messages when a group is selected
   useEffect(() => {
     if (!selectedGroup) return;
+    console.log('[Adviser ChatWidget] Listening for messages in group:', selectedGroup.id, selectedGroup.groupName);
     const q = query(collection(db, `chats/${selectedGroup.id}/messages`), orderBy('timestamp', 'asc'));
     const unsub = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log('[Adviser ChatWidget] Messages count:', msgs.length);
       setMessages(msgs);
     });
     return unsub;
@@ -113,6 +115,11 @@ export default function ChatWidget() {
       timestamp: serverTimestamp(),
       reactions: {} // Object instead of array
     });
+
+    // Increment student unread count so student sees the new message notification
+    await updateDoc(doc(db, 'groups', selectedGroup.id), {
+      studentUnreadCount: fbIncrement(1)
+    });
   };
 
   const handleFileSelect = async (e) => {
@@ -160,6 +167,11 @@ export default function ChatWidget() {
       });
       
       setUploadProgress(100);
+
+      // Increment student unread count
+      await updateDoc(doc(db, 'groups', selectedGroup.id), {
+        studentUnreadCount: fbIncrement(1)
+      });
     } catch (error) {
       console.error("Upload error:", error);
       Swal.fire('Error', 'Failed to upload media.', 'error');
@@ -294,7 +306,13 @@ export default function ChatWidget() {
             groups.map(group => (
               <button
                 key={group.id}
-                onClick={() => setSelectedGroup(group)}
+                onClick={async () => {
+                  setSelectedGroup(group);
+                  // Clear adviser unread count when selecting/opening a group chat
+                  await updateDoc(doc(db, 'groups', group.id), {
+                    adviserUnreadCount: 0
+                  });
+                }}
                 className="w-full text-left bg-white dark:bg-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800 hover:border-[#7B1F35]/30 dark:hover:border-[#f8d070]/30 hover:shadow-sm transition-all flex items-center justify-between group"
               >
                 <div>

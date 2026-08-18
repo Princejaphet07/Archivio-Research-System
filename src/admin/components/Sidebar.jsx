@@ -5,6 +5,7 @@ import { useUser } from '../context/UserContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { BookOpen } from 'lucide-react';
+import { logActivity } from '../firebase/logActivity';
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -22,6 +23,15 @@ function Sidebar() {
 
   const handleLogout = async () => {
     try {
+      const email = auth.currentUser?.email;
+      if (email) {
+        await logActivity({
+          user: currentUser?.displayName || email,
+          role: currentUser?.role || 'Admin',
+          action: 'Log out',
+          status: 'Success'
+        });
+      }
       await signOut(auth);
       window.location.href = '/';
     } catch (err) {

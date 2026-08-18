@@ -58,7 +58,7 @@ function MyGroups() {
 
   // Get submission status for a group
   const getGroupStatus = (group) => {
-    const sub = submissions.find(s => s.studentUid === group.leaderUid);
+    const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.researchTitle || s.title) === group.researchTitle));
     if (!sub) return { label: 'Pending Requirements', color: 'bg-orange-500', textColor: 'text-orange-700' };
 
     const uploaded = sub.uploadedDocs?.length || 0;
@@ -75,7 +75,7 @@ function MyGroups() {
 
   // Get submission data for a group
   const getGroupSubmission = (group) => {
-    return submissions.find(s => s.studentUid === group.leaderUid) || null;
+    return submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.researchTitle || s.title) === group.researchTitle)) || null;
   };
 
   // Filter by search

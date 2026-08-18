@@ -131,6 +131,17 @@ function SignUp() {
         activatedAt: new Date().toISOString()
       });
 
+      // 4. Create the global user document so firestore rules (like chat) grant access
+      await setDoc(doc(db, 'users', newUser.uid), {
+        uid: newUser.uid,
+        email: trimmedEmail,
+        displayName: `${(formData.firstName.trim() || invitationData.firstName)} ${(formData.lastName.trim() || invitationData.lastName)}`,
+        role: 'adviser',
+        department: invitationData.department || '',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      });
+
       setSuccess('✅ Account created successfully! Redirecting to login...');
       setTimeout(() => {
         navigate('/');

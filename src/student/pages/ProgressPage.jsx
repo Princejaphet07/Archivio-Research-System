@@ -241,6 +241,17 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       };
       await addDoc(collection(db, 'submissions'), blankSubmission);
       
+      // 4. Log the activity
+      if (studentData?.displayName) {
+        await logActivity({
+          user: studentData.displayName,
+          role: 'Student',
+          action: 'Start New Research',
+          status: 'Success',
+          details: `Created new group: ${newGroupName.trim()}`
+        });
+      }
+      
       setShowNewResearchModal(false);
       setNewResearchTitle('');
       setNewGroupName('');

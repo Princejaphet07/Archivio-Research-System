@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { logActivity } from '../../firebase/logActivity';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 
 function ResearchCategories() {
@@ -107,6 +108,15 @@ function ResearchCategories() {
           createdBy: auth.currentUser?.email || 'Admin',
           createdAt: serverTimestamp()
         });
+        
+        await logActivity({
+          user: auth.currentUser?.email || 'Adviser',
+          role: 'Adviser',
+          action: 'Created new category',
+          status: 'Success',
+          details: `Category: ${categoryName}`
+        });
+        
         Swal.fire({ icon: 'success', title: 'Created!', text: 'New category added.', timer: 1500, showConfirmButton: false });
       }
       resetForm();
@@ -130,6 +140,15 @@ function ResearchCategories() {
     if (res.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'categories', id));
+        
+        await logActivity({
+          user: auth.currentUser?.email || 'Adviser',
+          role: 'Adviser',
+          action: 'Deleted category',
+          status: 'Success',
+          details: `Category: ${name}`
+        });
+        
         Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Category deleted.', timer: 1500, showConfirmButton: false });
       } catch (err) {
         console.error(err);

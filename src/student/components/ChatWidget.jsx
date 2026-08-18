@@ -25,12 +25,22 @@ export default function ChatWidget({ role, leaderUid }) {
       const uid = auth.currentUser?.uid;
       if (!uid) return;
       const lookupUid = (role === 'member' && leaderUid) ? leaderUid : uid;
-      // Find the group where the student is the leader
-      const q = query(collection(db, 'groups'), where('leaderUid', '==', lookupUid));
+      // Find the APPROVED group where the student is the leader
+      // This must match the adviser's query (which also filters by status=='approved')
+      const q = query(
+        collection(db, 'groups'),
+        where('leaderUid', '==', lookupUid),
+        where('status', 'in', ['approved', 'published'])
+      );
       const unsubscribe = onSnapshot(q, (snap) => {
         if (!snap.empty) {
+          console.log('[ChatWidget] Found approved group:', snap.docs[0].id);
           setGroupId(snap.docs[0].id);
           setGroupData(snap.docs[0].data());
+        } else {
+          console.log('[ChatWidget] No approved group found for uid:', lookupUid);
+          setGroupId(null);
+          setGroupData(null);
         }
       });
       return unsubscribe;

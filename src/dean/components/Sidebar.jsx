@@ -6,6 +6,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import logo from '../../assets/logo.png';
 import Swal from 'sweetalert2';
+import { logActivity } from '../../firebase/logActivity';
 
 const NAV_ITEMS_MAIN = [
   {
@@ -161,6 +162,15 @@ export default function Sidebar({ onNavigate }) {
 
   const handleLogout = async () => {
     try {
+      const email = auth.currentUser?.email;
+      if (email) {
+        await logActivity({
+          user: deanData?.displayName || email,
+          role: 'Dean',
+          action: 'Log out',
+          status: 'Success'
+        });
+      }
       await signOut(auth);
       window.location.href = '/';
     } catch (error) {

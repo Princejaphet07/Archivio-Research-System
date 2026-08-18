@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { logActivity } from '../../firebase/logActivity';
 
 // Import assets
 import leftBg from '../../assets/Frame (1).png';
@@ -115,6 +116,13 @@ export default function Login() {
         localStorage.removeItem('dean_remembered_email');
       }
 
+      await logActivity({
+        user: trimmedEmail,
+        role: 'Dean',
+        action: 'Log in',
+        status: 'Success'
+      });
+
       navigate('/dean/dashboard');
 
     } catch (error) {
@@ -133,6 +141,14 @@ export default function Login() {
       } else {
         setError(`Login failed: ${error.code}. Please check your credentials.`);
       }
+
+      await logActivity({
+        user: loginEmail.trim().toLowerCase() || 'unknown',
+        role: 'Dean',
+        action: 'Failed login attempt',
+        status: 'Failed',
+        details: error.message
+      });
 
       setLoading(false);
     }

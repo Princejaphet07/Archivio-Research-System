@@ -217,7 +217,14 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   {loadingData ? (
                     <div className="h-4 w-32 bg-white/20 rounded animate-pulse ml-auto mt-1" />
                   ) : (
-                    <p className="text-white/80 text-[13px] mt-1">Adviser: {displayAdviser}</p>
+                    <>
+                      <p className="text-white/80 text-[13px] mt-1">Adviser: {displayAdviser}</p>
+                      {studentData?.adviserUid && (
+                        <p className="text-white/60 text-[11px] mt-0.5 truncate max-w-[200px] ml-auto" title="Contact via Email">
+                          ✉️ {studentData.adviserUid}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

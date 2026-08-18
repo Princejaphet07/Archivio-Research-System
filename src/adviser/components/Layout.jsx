@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import ChatWidget from './ChatWidget';
 import { db, auth } from '../firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -41,7 +40,6 @@ function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, o
           {children}
         </main>
       </div>
-      <ChatWidget />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
+import { logActivity } from '../../firebase/logActivity';
 import logoImg from '../../assets/logo.png';
 import bgTexture from '../../assets/Rectangle 9 (2).png';
 import leftPanelBg from '../../assets/left-panel-bg.png';
@@ -45,6 +46,13 @@ function Login() {
         localStorage.removeItem('adviser_remembered_email');
       }
 
+      await logActivity({
+        user: trimmedEmail,
+        role: 'Adviser',
+        action: 'Log in',
+        status: 'Success'
+      });
+
       // Login successful - protected routes will handle redirect
       navigate('/adviser/dashboard');
     } catch (err) {
@@ -61,6 +69,14 @@ function Login() {
       } else {
         setError(`❌ Login failed: ${err.message}`);
       }
+
+      await logActivity({
+        user: email.trim().toLowerCase() || 'unknown',
+        role: 'Adviser',
+        action: 'Failed login attempt',
+        status: 'Failed',
+        details: err.message
+      });
     } finally {
       setLoading(false);
     }

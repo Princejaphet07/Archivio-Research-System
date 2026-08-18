@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logActivity } from '../../firebase/logActivity';
 import Layout from '../components/Layout';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -79,6 +80,15 @@ function MyProfile() {
 
   const handleLogout = async () => {
     try {
+      const email = auth.currentUser?.email;
+      if (email) {
+        await logActivity({
+          user: profile.displayName || email,
+          role: 'Adviser',
+          action: 'Log out',
+          status: 'Success'
+        });
+      }
       await signOut(auth);
       window.location.href = '/';
     } catch (error) {
