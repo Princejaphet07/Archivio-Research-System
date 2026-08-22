@@ -1,0 +1,9 @@
+[build]
+  base = "public-archive"
+  publish = "public-archive/dist"
+  command = "CI=false npm run build"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
