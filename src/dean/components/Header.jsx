@@ -46,14 +46,6 @@ export default function Header({ activePage, onMenuClick }) {
 
         <div className="hidden lg:block h-6 w-px bg-stone-200 dark:bg-stone-700 mx-2"></div>
 
-        <div className="relative">
-          <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 text-xs">🔍</span>
-          <input
-            type="text"
-            placeholder="Search records, advisers, groups..."
-            className="pl-9 pr-4 py-1.5 bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700 rounded-xl text-xs w-40 sm:w-60 lg:w-80 outline-none transition-all focus:bg-white dark:focus:bg-stone-800 focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] text-stone-900 dark:text-stone-100"
-          />
-        </div>
       </div>
 
       {/* Right side: Role tags, Year selector, Bell */}

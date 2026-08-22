@@ -48,7 +48,7 @@ export default function Requirements({ activePage, onNavigate }) {
 
   // Compute enriched rows
   const enrichedRows = groups.map((group, index) => {
-    const sub = submissions.find(s => s.studentUid === group.leaderUid) || {};
+    const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle)) || {};
     
     // Find requirements applicable to this group (global + their adviser's)
     const applicableReqs = requirements.filter(r => 
@@ -218,7 +218,7 @@ export default function Requirements({ activePage, onNavigate }) {
             <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white dark:bg-stone-800/20 rounded-full flex items-center justify-center hover:bg-white dark:bg-stone-800/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white text-stone-800 dark:bg-stone-800/20 dark:text-white rounded-full flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800/30 transition text-lg"
               >
                 ✕
               </button>

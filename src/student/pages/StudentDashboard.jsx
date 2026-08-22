@@ -318,18 +318,28 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                             key={step}
                             className={`flex flex-col items-center gap-3 w-20 ${idx === 0 ? '-ml-4' : ''} ${idx === STEPS.length - 1 ? '-mr-4' : ''}`}
                           >
-                            <div className={`w-[34px] h-[34px] rounded-full ring-[6px] ring-white dark:ring-stone-900 flex items-center justify-center transition-all duration-500 ${
-                              isDone
-                                ? 'bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white shadow-md'
-                                : isCurrent
-                                  ? 'bg-white dark:bg-stone-900 border-[5px] border-[#7B1F35] dark:border-[#7B1F35] shadow-md'
-                                  : 'bg-white dark:bg-stone-900 border-[5px] border-stone-200 dark:border-stone-700'
-                            }`}>
-                              {isDone && (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
+                            <div className="relative">
+                              {/* Outer Ripple Effect for Current Step */}
+                              {isCurrent && (
+                                <div className="absolute inset-0 rounded-full bg-[#7B1F35] opacity-20 animate-ping" />
                               )}
+                              
+                              <div className={`relative w-[34px] h-[34px] rounded-full ring-[6px] ring-white dark:ring-stone-900 flex items-center justify-center transition-all duration-500 z-10 ${
+                                isDone
+                                  ? 'bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white shadow-md'
+                                  : isCurrent
+                                    ? 'bg-white dark:bg-stone-900 border-[3px] border-[#7B1F35] dark:border-[#7B1F35] shadow-md'
+                                    : 'bg-white dark:bg-stone-900 border-[5px] border-stone-200 dark:border-stone-700'
+                              }`}>
+                                {isDone && (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {isCurrent && (
+                                  <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35] animate-pulse" />
+                                )}
+                              </div>
                             </div>
                             <span className={isPending ? 'text-gray-400 dark:text-stone-500 font-medium' : 'text-[#1A1A1A] dark:text-stone-300'}>
                               {step}

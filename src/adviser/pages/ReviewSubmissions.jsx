@@ -27,6 +27,12 @@ function ReviewSubmissions() {
   const [filterYear, setFilterYear] = useState('All Year');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [msgSubject, setMsgSubject] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [msgSending, setMsgSending] = useState(false);
+  const [msgStatus, setMsgStatus] = useState(null);
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
   // Fetch real data from Firebase
   useEffect(() => {
@@ -71,26 +77,24 @@ function ReviewSubmissions() {
     };
   }, []);
 
-  // Match submissions to adviser's groups
-  const adviserStudentUids = groups.map(g => g.leaderUid);
-  const mySubmissions = submissions.filter(s => adviserStudentUids.includes(s.studentUid));
-
-  // Enrich submissions with group data
-  const enrichedSubmissions = mySubmissions.map(sub => {
-    const group = groups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+  // Enrich submissions with group data (Map over groups instead of submissions so all approved groups appear)
+  const enrichedSubmissions = groups.map(group => {
+    const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
     const uploadedCount = sub.uploadedDocs?.length || 0;
     const requiredCount = requirements.length;
     const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
 
     return {
       ...sub,
-      groupName: group?.groupName || sub.groupName || 'Unknown Group',
-      researchTitle: group?.researchTitle || sub.title || 'Untitled',
-      leaderName: group?.leaderName || sub.studentName || 'Unknown',
-      leaderEmail: group?.leaderEmail || '',
-      program: group?.program || '',
-      members: group?.members || [],
-      submittedDate: sub.createdAt || sub.updatedAt || '',
+      id: sub.id || group.id,
+      groupName: group.groupName || 'Unknown Group',
+      researchTitle: group.researchTitle || 'Untitled',
+      leaderName: group.leaderName || 'Unknown',
+      leaderEmail: group.leaderEmail || '',
+      program: group.program || '',
+      members: group.members || [],
+      studentUid: group.leaderUid, // Ensure this exists for messages
+      submittedDate: sub.createdAt || sub.updatedAt || group.createdAt || group.approvedAt || '',
       completionPercent,
       uploadedCount,
       requiredCount,
@@ -360,6 +364,66 @@ function ReviewSubmissions() {
         console.error('Error deleting submission:', err);
         Swal.fire('Error', 'Failed to delete research.', 'error');
       }
+    }
+  };
+
+  // Handle Send Message to Student
+  const handleSendMessageToStudent = async (e) => {
+    e.preventDefault();
+    if (!selectedSubmission || !msgSubject.trim() || !msgBody.trim()) return;
+
+    const studentEmail = selectedSubmission.leaderEmail;
+    if (!studentEmail) {
+      Swal.fire('Error', 'Student email not found in group data.', 'error');
+      return;
+    }
+
+    setMsgSending(true);
+    setMsgStatus(null);
+    try {
+      // 1. Send Email via Backend
+      const res = await fetch(`${BACKEND_URL}/api/send-adviser-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adviserName: auth.currentUser?.displayName || 'Research Adviser',
+          adviserEmail: auth.currentUser?.email || '',
+          studentName: selectedSubmission.leaderName,
+          studentEmail: studentEmail,
+          subject: msgSubject,
+          message: msgBody
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to send email');
+
+      // 2. Create In-App Notification for the Student
+      await addDoc(collection(db, 'notifications'), {
+        userId: selectedSubmission.studentUid, // Leader UID
+        title: `Message from Adviser: ${msgSubject.substring(0, 30)}${msgSubject.length > 30 ? '...' : ''}`,
+        message: msgBody,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      setMsgStatus('success');
+      
+      Swal.fire({
+        title: 'Message Sent!',
+        text: 'Your email and in-app notification have been successfully sent to the student.',
+        icon: 'success',
+        confirmButtonColor: '#7a2e46'
+      });
+
+      setShowMsgModal(false);
+      setMsgSubject('');
+      setMsgBody('');
+      setMsgStatus(null);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setMsgStatus('error');
+    } finally {
+      setMsgSending(false);
     }
   };
 
@@ -716,12 +780,23 @@ function ReviewSubmissions() {
 
             {/* Modal Footer */}
             <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex justify-between items-center bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
-              <button
-                onClick={() => setShowReviewModal(false)}
-                className="border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition"
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => setShowMsgModal(true)}
+                  className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Message Student
+                </button>
+              </div>
               <div className="flex gap-3">
                 {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && (
                   <>
@@ -772,6 +847,83 @@ function ReviewSubmissions() {
         documentUrl={viewerState.url}
         documentTitle={viewerState.title}
       />
+
+      {/* ── MESSAGE STUDENT MODAL ─────────────────────────────────────────────── */}
+      {showMsgModal && selectedSubmission && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-[#7a2e46] dark:bg-[#f8d070] px-6 py-5 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 dark:text-stone-800/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Direct Message</p>
+                <h3 className="text-white dark:text-stone-900 font-serif font-bold text-[18px]">Message Student</h3>
+              </div>
+              <button
+                onClick={() => setShowMsgModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-stone-900"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSendMessageToStudent} className="px-6 py-5 space-y-4">
+              {msgStatus === 'error' && (
+                <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-xl text-sm font-medium border border-red-200 dark:border-red-800">
+                  Failed to send message. Please try again.
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">To</label>
+                <div className="w-full border border-gray-200 dark:border-stone-700 bg-gray-50 dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-gray-500 dark:text-stone-400">
+                  {selectedSubmission.leaderName} ({selectedSubmission.leaderEmail || 'No email found'})
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Subject <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={msgSubject}
+                  onChange={e => setMsgSubject(e.target.value)}
+                  required
+                  placeholder="What is this about?"
+                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a2e46]/30 focus:border-[#7a2e46] transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Message <span className="text-red-500">*</span></label>
+                <textarea
+                  value={msgBody}
+                  onChange={e => setMsgBody(e.target.value)}
+                  required
+                  rows="4"
+                  placeholder="Type your message to the student here..."
+                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a2e46]/30 focus:border-[#7a2e46] transition resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
+                  className="w-full bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-stone-900 font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {msgSending ? 'Sending...' : 'Send Message via Email'}
+                  {!msgSending && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }

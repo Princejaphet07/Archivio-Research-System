@@ -12,6 +12,8 @@ function MyGroups() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const email = auth.currentUser?.email;
@@ -90,13 +92,20 @@ function MyGroups() {
     );
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredGroups.length / itemsPerPage);
+  const paginatedGroups = filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset to page 1 if search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   // Handle View click
   const handleView = (group) => {
     setSelectedGroup(group);
     setShowModal(true);
   };
-
-  // (Removed static REQUIREMENT_ITEMS in favor of dynamic requirements state)
 
   return (
     <Layout title="My Groups" breadcrumb="ARCHIVIO › My Groups" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
@@ -108,8 +117,6 @@ function MyGroups() {
             <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">My Groups</h1>
             <p className="text-sm text-gray-500 dark:text-stone-400">Research groups assigned under your advisory this semester</p>
           </div>
-          
-          {/* Search Bar Removed */}
         </div>
 
         {/* Data Table */}
@@ -129,7 +136,7 @@ function MyGroups() {
               <tbody className="text-sm text-gray-700 dark:text-stone-300">
                 {loading ? (
                   <TableSkeleton columns={6} rows={4} />
-                ) : filteredGroups.length === 0 ? (
+                ) : paginatedGroups.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
@@ -144,7 +151,7 @@ function MyGroups() {
                     </td>
                   </tr>
                 ) : (
-                  filteredGroups.map((group, index) => {
+                  paginatedGroups.map((group, index) => {
                     const status = getGroupStatus(group);
                     const memberCount = 1 + (group.members?.length || 0);
                     const registeredDate = group.createdAt
@@ -180,12 +187,49 @@ function MyGroups() {
           </div>
         </div>
 
-        {/* Footer Stats */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
-          <p className="text-xs text-gray-500 dark:text-stone-400 font-medium">
-            Showing {filteredGroups.length} of {groups.length} group{groups.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+        {/* Pagination Controls */}
+        {totalPages > 1 ? (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4 text-sm">
+            <span className="text-gray-500 dark:text-stone-400">
+              Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredGroups.length)} of {filteredGroups.length} records
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition ${
+                    currentPage === page
+                      ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                      : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
+            <p className="text-xs text-gray-500 dark:text-stone-400 font-medium">
+              Showing {filteredGroups.length} of {groups.length} group{groups.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        )}
 
       </div>
 

@@ -177,7 +177,8 @@ app.post('/api/send-student-message', async (req, res) => {
     </div>
     <div class="footer">
       <p>This message was sent via the ARCHIVIO Research Management System.</p>
-      <p>Do not reply directly to this email — use the Reply button above to contact the student.</p>
+      <p><strong>Note:</strong> To ensure the student receives an in-app notification, please log in to your Adviser Portal and reply from the system.</p>
+      <p>Alternatively, use the Reply button above to reply directly via email.</p>
     </div>
   </div>
 </body>
@@ -201,6 +202,81 @@ app.post('/api/send-student-message', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to send message', details: error.message });
   }
 });
+
+// ============================================
+// SEND ADVISER MESSAGE TO STUDENT
+// ============================================
+app.post('/api/send-adviser-message', async (req, res) => {
+  try {
+    const { adviserName, adviserEmail, studentName, studentEmail, subject, message } = req.body;
+
+    if (!studentEmail || !adviserEmail || !message) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const emailHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #7B1F35 0%, #5D1627 100%); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
+    .badge { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .content { padding: 32px 30px; }
+    .from-box { background: #FDF9ED; border: 1px solid #E8DFCB; border-left: 4px solid #7B1F35; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .from-box p { margin: 0; font-size: 13px; color: #555; }
+    .from-box strong { color: #7B1F35; }
+    .message-box { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; font-size: 15px; color: #444; line-height: 1.8; white-space: pre-wrap; }
+    .footer { background: #f0ebe3; padding: 16px 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #e8dfcb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">📬 Adviser Message</div>
+      <h1>ARCHIVIO Research System</h1>
+      <p>You have a new message from your adviser</p>
+    </div>
+    <div class="content">
+      <div class="from-box">
+        <p>📌 <strong>From:</strong> ${adviserName || adviserEmail}</p>
+        <p>📧 <strong>Email:</strong> ${adviserEmail}</p>
+        <p>👤 <strong>To:</strong> ${studentName || studentEmail}</p>
+        ${subject ? `<p>📝 <strong>Subject:</strong> ${subject}</p>` : ''}
+      </div>
+      <div class="message-box">${message}</div>
+    </div>
+    <div class="footer">
+      <p>This message was sent via the ARCHIVIO Research Management System.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const mailOptions = {
+      from: \`ARCHIVIO <\${process.env.EMAIL_USER}>\`,
+      to: studentEmail,
+      replyTo: adviserEmail,
+      subject: subject ? \`[ARCHIVIO] \${subject}\` : \`[ARCHIVIO] Message from \${adviserName || adviserEmail}\`,
+      html: emailHTML,
+      text: \`Message from \${adviserName || adviserEmail} (\${adviserEmail}):\\n\\n\${message}\`,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(\`✅ Adviser message sent to student \${studentEmail}: \${info.response}\`);
+
+    res.status(200).json({ success: true, message: 'Message sent successfully', messageId: info.messageId });
+  } catch (error) {
+    console.error('❌ Error sending adviser message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send message', details: error.message });
+  }
+});
+
 
 // ============================================
 // SEND ADVISER INVITATION EMAIL

@@ -186,7 +186,53 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   // ── Send Message handler ─────────────────────────────────────────────────────
   const handleSendMessage = (e) => {
     e.preventDefault();
-    window.dispatchEvent(new CustomEvent('open-chat'));
+    setShowMsgModal(true);
+  };
+
+  const submitMessageToAdviser = async (e) => {
+    e.preventDefault();
+    if (!msgSubject.trim() || !msgBody.trim() || !adviserEmail) return;
+    
+    setMsgSending(true);
+    setMsgStatus(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/send-student-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adviserEmail: adviserEmail,
+          adviserName: adviserName,
+          studentName: studentData?.displayName || 'Student',
+          studentEmail: studentData?.email || '',
+          groupName: groupName,
+          subject: msgSubject,
+          message: msgBody
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to send message');
+      
+      setMsgStatus('success');
+      
+      // Show success alert
+      Swal.fire({
+        title: 'Message Sent!',
+        text: 'Your email has been successfully sent to your adviser.',
+        icon: 'success',
+        confirmButtonColor: '#7B1F35'
+      });
+
+      setShowMsgModal(false);
+      setMsgSubject('');
+      setMsgBody('');
+      setMsgStatus(null);
+      
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setMsgStatus('error');
+    } finally {
+      setMsgSending(false);
+    }
   };
 
   // ── Start New Research handler ───────────────────────────────────────────────
@@ -281,7 +327,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   );
   const ActiveTag = () => (
     <span className="flex items-center gap-1.5 bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] px-3 py-1 rounded-full text-[12px] font-bold border border-[#7B1F35]/20 dark:border-[#7B1F35]/30 shrink-0">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35]" /> In Progress
+      <span className="w-1.5 h-1.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] animate-pulse" /> In Progress
     </span>
   );
 
@@ -294,7 +340,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   );
   const ActiveNode = () => (
     <div className="w-8 h-8 rounded-full bg-white dark:bg-stone-900 border-2 border-[#7B1F35] dark:border-[#7B1F35] flex items-center justify-center shrink-0 ring-[6px] ring-[#F3EADB] dark:ring-stone-800 mt-4 z-10">
-      <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35]" />
+      <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] animate-pulse" />
     </div>
   );
   const PendingNode = ({ num }) => (
@@ -710,6 +756,79 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   className="w-full bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] dark:hover:bg-[#5a1831] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {isSubmittingNewResearch ? 'Initializing...' : 'Confirm & Start New Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ── MESSAGE ADVISER MODAL ─────────────────────────────────────────────── */}
+      {showMsgModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-[#4a1024] dark:bg-[#7B1F35] px-6 py-5 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 dark:text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Direct Message</p>
+                <h3 className="text-white dark:text-white font-serif font-bold text-[18px]">Message Your Adviser</h3>
+              </div>
+              <button
+                onClick={() => setShowMsgModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-white"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={submitMessageToAdviser} className="px-6 py-5 space-y-4">
+              {msgStatus === 'success' && (
+                <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-3 rounded-xl text-sm font-medium border border-green-200 dark:border-green-800">
+                  Message sent successfully! Your adviser will receive an email.
+                </div>
+              )}
+              {msgStatus === 'error' && (
+                <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-xl text-sm font-medium border border-red-200 dark:border-red-800">
+                  Failed to send message. Please try again.
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Subject <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={msgSubject}
+                  onChange={e => setMsgSubject(e.target.value)}
+                  required
+                  placeholder="What is this about?"
+                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Message <span className="text-red-500">*</span></label>
+                <textarea
+                  value={msgBody}
+                  onChange={e => setMsgBody(e.target.value)}
+                  required
+                  rows="4"
+                  placeholder="Type your message to your adviser here..."
+                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
+                  className="w-full bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {msgSending ? 'Sending...' : 'Send Message via Email'}
+                  {!msgSending && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </form>

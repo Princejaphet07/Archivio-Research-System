@@ -359,7 +359,7 @@ export default function UserManagement() {
             <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 relative flex items-center gap-4">
               <button
                 onClick={() => setShowUserModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white dark:bg-stone-800/20 rounded-full flex items-center justify-center hover:bg-white dark:bg-stone-800/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white text-stone-800 dark:bg-stone-800/20 dark:text-white rounded-full flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800/30 transition text-lg"
               >
                 ✕
               </button>
@@ -373,7 +373,7 @@ export default function UserManagement() {
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedUser.status === 'inactive' ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'} uppercase tracking-wider`}>
                     {selectedUser.status || 'active'}
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-stone-800/10 text-white border border-white/20 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 dark:bg-stone-800/10 text-white border border-white/20 uppercase tracking-wider">
                     {selectedUser.type}
                   </span>
                 </div>

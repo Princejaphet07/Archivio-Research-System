@@ -47,22 +47,25 @@ function Sidebar() {
     const sq = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'approved'));
     let unsubSub = null;
     const unsub3 = onSnapshot(sq, (snap) => {
-      const leaderUids = snap.docs.map(d => d.data().leaderUid);
+      const groupsData = snap.docs.map(d => d.data());
       
       if (unsubSub) unsubSub(); // clear previous listener
 
-      if (leaderUids.length > 0) {
+      if (groupsData.length > 0) {
         const subQ = query(collection(db, 'submissions'));
         unsubSub = onSnapshot(subQ, (subSnap) => {
+          const subsData = subSnap.docs.map(d => d.data());
           let count = 0;
-          subSnap.docs.forEach(d => {
-            const data = d.data();
-            if (leaderUids.includes(data.studentUid)) {
-              if (data.reviewStatus === 'pending' || data.reviewStatus === 'in_progress' || !data.reviewStatus) {
-                count++;
-              }
+          
+          groupsData.forEach(group => {
+            const sub = subsData.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
+            const status = sub.reviewStatus || 'in_progress';
+            
+            if (status === 'pending' || status === 'in_progress') {
+              count++;
             }
           });
+          
           setPendingSubCount(count);
         });
       } else {

@@ -103,11 +103,10 @@ export default function Dashboard({ activePage }) {
     const categoriesMap = {};
     const yearMap = {};
 
-    allRawSubmissions.forEach(data => {
-      // Join submission to group to securely verify department
-      const group = allGroups.find(g => g.leaderUid === data.studentUid && (g.groupName === data.groupName || g.researchTitle === (data.title || data.researchTitle)));
-      if (!group) return; // Skip if it doesn't belong to a group in this Dean's department
-
+    allGroups.forEach(group => {
+      // Find submission strictly matching the group
+      const data = allRawSubmissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle)) || {};
+      
       const status = data.reviewStatus || 'pending';
       
       if (status === 'approved') approvedCount++;

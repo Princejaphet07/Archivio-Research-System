@@ -21,6 +21,10 @@ function Dashboard() {
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination for My Submissions Dashboard
+  const [currentSubPage, setCurrentSubPage] = useState(1);
+  const subsPerPage = 5;
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -91,14 +95,12 @@ function Dashboard() {
 
   // --- Derive stats ---
   const activeGroupCount = activeGroups.length;
-  
-  const adviserStudentUids = activeGroups.map(g => g.leaderUid);
-  const mySubmissions = submissions.filter(s => adviserStudentUids.includes(s.studentUid));
 
-  const enrichedSubmissions = mySubmissions.map(sub => {
-    const group = activeGroups.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.researchTitle || sub.title)));
+  const enrichedSubmissions = activeGroups.map(group => {
+    const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.researchTitle || s.title) === group.researchTitle)) || {};
+    
     const uploadedCount = sub.uploadedDocs?.length || 0;
-    const requiredCount = requirements.length || 6; // default to 6 if requirements empty
+    const requiredCount = requirements.length > 0 ? requirements.length : 6;
     const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
     
     // figure out missing docs
@@ -106,15 +108,24 @@ function Dashboard() {
 
     return {
       ...sub,
-      groupName: group?.groupName || sub.groupName || 'Unknown Group',
-      researchTitle: group?.researchTitle || sub.title || 'Untitled',
+      groupName: group.groupName || sub.groupName || 'Unknown Group',
+      researchTitle: group.researchTitle || sub.title || 'Untitled',
+      leaderName: group.leaderName,
+      members: group.members || [],
       completionPercent,
       uploadedCount,
       requiredCount,
       missingDocs,
       reviewStatus: sub.reviewStatus || (completionPercent === 100 ? 'pending' : 'in_progress'),
     };
-  }).sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+  }).sort((a, b) => {
+    // Priority 1: Incomplete submissions first (ascending order)
+    if (a.completionPercent !== b.completionPercent) {
+      return a.completionPercent - b.completionPercent;
+    }
+    // Priority 2: Newest updates first
+    return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+  });
 
   const pendingReviewSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress');
   const pendingReviewCount = pendingReviewSubs.length;
@@ -197,71 +208,116 @@ function Dashboard() {
             <div className="space-y-6">
               {loading ? (
                 <HorizontalCardSkeleton count={2} />
-              ) : enrichedSubmissions.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-stone-400 py-4">No submissions yet.</p>
               ) : (
-                enrichedSubmissions.slice(0, 5).map((sub, idx) => {
-                  const isApproved = sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
-                  const isPending = sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
-                  const pct = sub.completionPercent;
+                (() => {
+                  const totalSubPages = Math.ceil(enrichedSubmissions.length / subsPerPage);
+                  const paginatedSubs = enrichedSubmissions.slice((currentSubPage - 1) * subsPerPage, currentSubPage * subsPerPage);
                   
-                  // Color scheme based on status and completion
-                  let borderColor = 'border-yellow-400';
-                  let textColor = 'text-yellow-700';
-                  let bgColor = 'bg-yellow-100';
-                  let barColor = 'bg-yellow-400';
-                  let badgeText = '• Pending Review';
-                  
-                  if (isApproved) {
-                    borderColor = 'border-[#5a1831]';
-                    textColor = 'text-[#5a1831]';
-                    bgColor = 'bg-green-100';
-                    barColor = 'bg-[#5a1831]';
-                    badgeText = '• Complete ✓';
-                    textColor = 'text-green-700';
-                  } else if (sub.missingDocs.length > 0) {
-                    borderColor = 'border-blue-400';
-                    textColor = 'text-red-700';
-                    bgColor = 'bg-red-100';
-                    barColor = 'bg-blue-500';
-                    badgeText = `• ${sub.missingDocs.length} Missing`;
-                  }
-
                   return (
-                    <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 dark:border-stone-800 pb-5">
-                      <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 dark:text-stone-200 text-sm`}>
-                        {pct}%
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 flex items-center gap-2">
-                              {sub.groupName} <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold`}>{badgeText}</span>
-                            </h4>
-                            <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+                    <>
+                      {paginatedSubs.map((sub, idx) => {
+                        const isApproved = sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
+                        const isPending = sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
+                        const pct = sub.completionPercent;
+                        
+                        // Color scheme based on status and completion
+                        let borderColor = 'border-yellow-400';
+                        let textColor = 'text-yellow-700';
+                        let bgColor = 'bg-yellow-100';
+                        let barColor = 'bg-yellow-400';
+                        let badgeText = '• Pending Review';
+                        
+                        if (isApproved) {
+                          borderColor = 'border-[#5a1831]';
+                          textColor = 'text-[#5a1831]';
+                          bgColor = 'bg-green-100';
+                          barColor = 'bg-[#5a1831]';
+                          badgeText = '• Complete ✓';
+                          textColor = 'text-green-700';
+                        } else if (sub.missingDocs.length > 0) {
+                          borderColor = 'border-blue-400';
+                          textColor = 'text-red-700';
+                          bgColor = 'bg-red-100';
+                          barColor = 'bg-blue-500';
+                          badgeText = `• ${sub.missingDocs.length} Missing`;
+                        }
+
+                        return (
+                          <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 dark:border-stone-800 pb-5">
+                            <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 dark:text-stone-200 text-sm`}>
+                              {pct}%
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 flex items-center gap-2">
+                                    {sub.groupName} <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold`}>{badgeText}</span>
+                                  </h4>
+                                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+                                </div>
+                                <button 
+                                  onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
+                                  className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded hover:bg-gray-50 dark:hover:bg-stone-800 transition"
+                                >
+                                  Details
+                                </button>
+                              </div>
+                              <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1 flex justify-between">
+                                <span>
+                                  {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
+                                </span>
+                                <span className={`font-bold ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
+                                  {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-100 dark:bg-stone-800 h-1.5 rounded-full">
+                                <div className={`${barColor} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
+                              </div>
+                            </div>
                           </div>
-                          <button 
-                            onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
-                            className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded hover:bg-gray-50 dark:hover:bg-stone-800"
-                          >
-                            Details
-                          </button>
-                        </div>
-                        <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1 flex justify-between">
-                          <span>
-                            {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
+                        );
+                      })}
+                      
+                      {/* Pagination Controls */}
+                      {totalSubPages > 1 && (
+                        <div className="pt-2 flex items-center justify-between text-sm">
+                          <span className="text-gray-500 dark:text-stone-400 text-xs">
+                            Showing {((currentSubPage - 1) * subsPerPage) + 1}–{Math.min(currentSubPage * subsPerPage, enrichedSubmissions.length)} of {enrichedSubmissions.length} groups
                           </span>
-                          <span className={`font-bold ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
-                            {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setCurrentSubPage(p => Math.max(1, p - 1))}
+                              disabled={currentSubPage === 1}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                              &lt;
+                            </button>
+                            {Array.from({ length: totalSubPages }, (_, i) => i + 1).map(page => (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentSubPage(page)}
+                                className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-medium transition ${
+                                  currentSubPage === page
+                                    ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                                    : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => setCurrentSubPage(p => Math.min(totalSubPages, p + 1))}
+                              disabled={currentSubPage === totalSubPages}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                              &gt;
+                            </button>
+                          </div>
                         </div>
-                        <div className="w-full bg-gray-100 dark:bg-stone-800 h-1.5 rounded-full">
-                          <div className={`${barColor} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
+                      )}
+                    </>
                   );
-                })
+                })()
               )}
             </div>
           </div>

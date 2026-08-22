@@ -14,6 +14,8 @@ function GroupRegistrations() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const filterGroup = (group) => {
     if (!searchQuery) return true;
@@ -138,6 +140,16 @@ function GroupRegistrations() {
     }
   };
 
+  // Pagination calculations
+  const filteredHistory = historyGroups.filter(filterGroup);
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset to page 1 if search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   return (
     <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={false}>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -219,12 +231,12 @@ function GroupRegistrations() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
-                {historyGroups.filter(filterGroup).length === 0 ? (
+                {paginatedHistory.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="py-6 text-center text-gray-500 dark:text-stone-400">No registration history yet.</td>
                   </tr>
                 ) : (
-                  historyGroups.filter(filterGroup).map((item) => (
+                  paginatedHistory.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50">
                       <td className="py-3 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.leaderName}</td>
@@ -243,6 +255,44 @@ function GroupRegistrations() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-gray-200 dark:border-stone-800 flex items-center justify-between text-sm">
+              <span className="text-gray-500 dark:text-stone-400">
+                Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredHistory.length)} of {filteredHistory.length} records
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  &lt;
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition ${
+                      currentPage === page
+                        ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                        : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

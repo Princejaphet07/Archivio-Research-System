@@ -76,13 +76,6 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
         </button>
         <NotificationBell />
         <button 
-          onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))} 
-          className="text-gray-400 hover:text-[#541b2f] dark:text-stone-500 dark:hover:text-[#f8d070] transition"
-          title="Open Chat"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-        </button>
-        <button 
           onClick={() => navigate('/adviser/my-profile')}
           className="w-8 h-8 rounded-full border border-gray-200 dark:border-stone-700 overflow-hidden hover:ring-2 hover:ring-[#7a2e46] dark:hover:ring-[#f8d070] transition-all cursor-pointer"
           title="Go to Profile/Settings"
