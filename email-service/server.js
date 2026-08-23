@@ -259,16 +259,16 @@ app.post('/api/send-adviser-message', async (req, res) => {
 </html>`;
 
     const mailOptions = {
-      from: \`ARCHIVIO <\${process.env.EMAIL_USER}>\`,
+      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
       to: studentEmail,
       replyTo: adviserEmail,
-      subject: subject ? \`[ARCHIVIO] \${subject}\` : \`[ARCHIVIO] Message from \${adviserName || adviserEmail}\`,
+      subject: subject ? `[ARCHIVIO] ${subject}` : `[ARCHIVIO] Message from ${adviserName || adviserEmail}`,
       html: emailHTML,
-      text: \`Message from \${adviserName || adviserEmail} (\${adviserEmail}):\\n\\n\${message}\`,
+      text: `Message from ${adviserName || adviserEmail} (${adviserEmail}):\n\n${message}`,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(\`✅ Adviser message sent to student \${studentEmail}: \${info.response}\`);
+    console.log(`✅ Adviser message sent to student ${studentEmail}: ${info.response}`);
 
     res.status(200).json({ success: true, message: 'Message sent successfully', messageId: info.messageId });
   } catch (error) {
