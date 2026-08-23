@@ -25,6 +25,32 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+const rateLimit = require('express-rate-limit');
+
+// Rate limiting to prevent spam/abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiter to all /api/ routes
+app.use('/api/', apiLimiter);
+
+// Global Error Handler to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Do not exit the process, keep the server alive
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+  // Ideally, exit the process and let PM2/Render restart it, but for maximum uptime without a monitor:
+  // We'll log it and keep going (though it's risky if state is corrupted, it prevents "mabuang" for transient errors)
+});
+
 // Email Configuration for Mailtrap
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',

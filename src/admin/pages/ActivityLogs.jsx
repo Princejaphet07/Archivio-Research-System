@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Search } from 'lucide-react';
@@ -75,7 +75,7 @@ export default function ActivityLogs() {
       }
       
       setLoading(true);
-      const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+      const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(500));
       
       unsubscribeSnapshot = onSnapshot(q, (snap) => {
         setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));

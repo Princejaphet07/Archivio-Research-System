@@ -32,6 +32,8 @@ function Dashboard() {
     return 'Good evening';
   };
 
+  const prevPendingCountRef = React.useRef(0);
+
   useEffect(() => {
     const email = adviserData?.email;
     if (!email) {
@@ -43,11 +45,11 @@ function Dashboard() {
     const pendingQuery = query(collection(db, 'groups'), where('adviserUid', '==', email), where('status', '==', 'pending'));
     const unsubPending = onSnapshot(pendingQuery, (snapshot) => {
       const count = snapshot.size;
-      // Only show alert if count increased from 0, or on initial load if > 0 (handled by avoiding repeated toasts)
-      if (count > 0 && pendingGroupsCount === 0) {
+      // Show alert if count increased
+      if (count > prevPendingCountRef.current) {
         Swal.fire({
           title: 'Pending Registrations',
-          text: `You have ${count} new student group registration(s) waiting for your approval!`,
+          text: `You have ${count} student group registration(s) waiting for your approval!`,
           icon: 'info',
           toast: true,
           position: 'top-end',
@@ -56,6 +58,7 @@ function Dashboard() {
           timerProgressBar: true
         });
       }
+      prevPendingCountRef.current = count;
       setPendingGroupsCount(count);
     });
 
@@ -91,7 +94,7 @@ function Dashboard() {
       unsubSubs();
       unsubReqs();
     };
-  }, [adviserData?.email, pendingGroupsCount]);
+  }, [adviserData?.email]);
 
   // --- Derive stats ---
   const activeGroupCount = activeGroups.length;
