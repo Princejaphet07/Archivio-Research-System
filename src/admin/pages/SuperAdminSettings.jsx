@@ -10,6 +10,7 @@ import {
   updateEmail
 } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { Card, SectionTitle } from '../../components/ui/Card';
 
 export default function SuperAdminSettings() {
   const { currentUser, setCurrentUser } = useUser();
@@ -149,17 +150,15 @@ export default function SuperAdminSettings() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header title="My Account" breadcrumbs={['Account', 'Settings']} />
 
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto p-6 md:p-8">
           <div className="max-w-4xl mx-auto">
 
-            {/* Page Title */}
-            <div className="mb-8">
-              <h3 className="text-3xl font-serif font-bold text-stone-900 mb-1">My Account</h3>
-              <p className="text-sm text-stone-500">Manage your personal information, password, and view your access permissions.</p>
-            </div>
+            <SectionTitle sub="Manage your personal information, password, and view your access permissions.">
+              My Account
+            </SectionTitle>
 
             {/* Profile Card */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-6 mb-6 flex items-center gap-5 shadow-sm">
+            <Card className="p-6 mb-6 flex flex-col md:flex-row items-center md:items-start gap-5">
               <div className="w-16 h-16 rounded-full bg-amber-700 flex items-center justify-center font-bold text-2xl text-amber-100 shrink-0 shadow-md">
                 {initials}
               </div>
@@ -167,8 +166,8 @@ export default function SuperAdminSettings() {
                 <h4 className="text-xl font-bold text-stone-900">{currentUser?.displayName || 'Super Admin'}</h4>
                 <p className="text-sm text-stone-500">{currentUser?.email}</p>
               </div>
-              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full">⭐ Super Admin</span>
-            </div>
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full mt-2 md:mt-0">⭐ Super Admin</span>
+            </Card>
 
             {/* Tabs */}
             <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-6 w-fit">
@@ -193,7 +192,7 @@ export default function SuperAdminSettings() {
 
             {/* ===== PROFILE TAB ===== */}
             {activeTab === 'profile' && (
-              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
+              <Card className="flex flex-col overflow-hidden">
                 <div className="p-5 border-b border-stone-100 bg-stone-50">
                   <h4 className="font-bold text-stone-900">Personal Information</h4>
                   <p className="text-xs text-stone-500 mt-0.5">Update your display name shown across the portal.</p>
@@ -255,12 +254,12 @@ export default function SuperAdminSettings() {
                     </button>
                   </div>
                 </form>
-              </div>
+              </Card>
             )}
 
             {/* ===== PASSWORD TAB ===== */}
             {activeTab === 'password' && (
-              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
+              <Card className="flex flex-col overflow-hidden">
                 <div className="p-5 border-b border-stone-100 bg-stone-50">
                   <h4 className="font-bold text-stone-900">Change Password</h4>
                   <p className="text-xs text-stone-500 mt-0.5">Set a new password for your account. You'll need your current password to confirm.</p>
@@ -388,12 +387,12 @@ export default function SuperAdminSettings() {
                     </button>
                   </div>
                 </form>
-              </div>
+              </Card>
             )}
 
             {/* ===== ACCESS TAB ===== */}
             {activeTab === 'access' && (
-              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
+              <Card className="flex flex-col overflow-hidden">
                 <div className="p-5 border-b border-stone-100 bg-stone-50">
                   <h4 className="font-bold text-stone-900">My Module Access</h4>
                   <p className="text-xs text-stone-500 mt-0.5">These are the modules granted to you by the System Administrator. To request additional access, contact the administrator.</p>
@@ -429,7 +428,7 @@ export default function SuperAdminSettings() {
                     <p className="text-xs text-amber-600">Your access is configured by the System Administrator. Modules marked as "Not Granted" are not accessible to your account. To request changes, please contact the System Administrator directly.</p>
                   </div>
                 </div>
-              </div>
+              </Card>
             )}
 
           </div>

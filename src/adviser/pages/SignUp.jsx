@@ -219,38 +219,75 @@ function SignUp() {
               readOnly={isPrefilled} required disabled={loading} />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Password <span className="text-red-500">*</span></label>
+          {/* Password */}
+          <div className="relative z-0 w-full group mb-4">
+            <label className="block text-[11px] font-bold text-stone-700 dark:text-stone-300 mb-1.5 uppercase tracking-wide">
+              Password <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <input 
-                name="password" value={formData.password} onChange={handleChange}
-                type={showPassword ? "text" : "password"} 
-                placeholder="Create a strong password" 
-                className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
-                required disabled={loading}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-[#f0f4f8] dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/20 focus:border-[#7B1F35] dark:focus:border-[#D05353] transition-all text-sm font-medium"
+                placeholder="••••••••••••"
+                required
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600 focus:outline-none"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
               >
                 {showPassword ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.978 9.978 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                 )}
               </button>
             </div>
-            {/* Password Strength Indicator */}
+
+            {/* Password Strength indicator */}
             {formData.password && (
-              <div className="flex justify-between items-center mt-3 mb-1">
-                <div className="w-1/2 flex gap-1">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className={`h-1.5 w-full rounded-full ${i <= strengthCount ? strengthColor : 'bg-stone-200'}`}></div>
+              <div className="mt-2.5">
+                <div className="flex gap-1 h-1.5 mb-2">
+                  {[1, 2, 3, 4].map((level) => (
+                    <div 
+                      key={level}
+                      className={`flex-1 rounded-full transition-colors duration-300 ${
+                        strengthCount >= level ? strengthColor : 'bg-stone-200 dark:bg-stone-800'
+                      }`}
+                    />
                   ))}
                 </div>
-                <div className={`text-[10px] font-bold ${strengthCount <= 1 ? 'text-red-500' : strengthCount === 2 ? 'text-yellow-600' : strengthCount === 3 ? 'text-blue-500' : 'text-green-600'}`}>
-                  {strengthLabel}
+                <div className="flex justify-end mb-2">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    strengthCount <= 1 ? 'text-red-500' :
+                    strengthCount === 2 ? 'text-yellow-500' :
+                    strengthCount === 3 ? 'text-blue-500' : 'text-green-500'
+                  }`}>
+                    {strengthLabel}
+                  </span>
+                </div>
+                
+                {/* Password Checklist */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1 bg-stone-50 dark:bg-stone-900/50 p-2.5 rounded-lg border border-stone-100 dark:border-stone-800">
+                  <div className="flex items-center gap-1.5">
+                    {hasEightChars ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    <span className={`text-[11px] ${hasEightChars ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>At least 8 characters</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {hasUpper ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    <span className={`text-[11px] ${hasUpper ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Uppercase letter</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {hasNumber ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    <span className={`text-[11px] ${hasNumber ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Number (0-9)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {hasSpecial ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    <span className={`text-[11px] ${hasSpecial ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Special character (!@#$%)</span>
+                  </div>
                 </div>
               </div>
             )}

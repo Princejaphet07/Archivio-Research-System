@@ -5,6 +5,7 @@ import DepartmentsProgramsTab from './DepartmentsPrograms';
 import { db } from '../firebase/config';
 import { doc, setDoc, onSnapshot, getDocs, collection } from 'firebase/firestore';
 import { Building2, Settings2, Trash2, Lock } from 'lucide-react';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('system');
@@ -120,7 +121,7 @@ export default function Settings() {
   const renderSystemSettings = () => (
     <div className="max-w-4xl space-y-6 animate-fade-in">
       {/* INSTITUTION INFORMATION */}
-      <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+      <Card className="flex flex-col overflow-hidden">
         <div className="p-4 border-b border-stone-200 bg-stone-50">
           <h4 className="font-bold text-stone-900 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-[#801e38]" /> Institution Information
@@ -151,10 +152,10 @@ export default function Settings() {
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* SYSTEM PREFERENCES */}
-      <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+      <Card className="flex flex-col overflow-hidden">
         <div className="p-4 border-b border-stone-200 bg-stone-50">
           <h4 className="font-bold text-stone-900 flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-[#801e38]" /> System Preferences
@@ -178,10 +179,10 @@ export default function Settings() {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* DATA MANAGEMENT */}
-      <div className="bg-white border-2 border-red-600 rounded-xl overflow-hidden shadow-sm">
+      <Card className="flex flex-col overflow-hidden border-red-500">
         <div className="p-5">
           <h4 className="font-bold text-stone-900 mb-1">Data Management</h4>
           <p className="text-xs text-stone-500 mb-4">Sensitive operations that affect system-wide data. These actions cannot be undone.</p>
@@ -219,12 +220,12 @@ export default function Settings() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 
   const renderStorageManagement = () => (
-    <div className="max-w-[1000px] bg-white rounded-xl shadow-sm border border-stone-200 border-t-4 border-t-blue-500 overflow-hidden animate-fade-in">
+    <Card className="max-w-[1000px] border-t-4 border-t-blue-500 animate-fade-in">
       <div className="p-6">
         <div className="mb-6">
           <h3 className="text-lg font-serif font-bold text-stone-900">Storage Management</h3>
@@ -311,7 +312,7 @@ export default function Settings() {
           </button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 
   const renderAdminManagement = () => (
@@ -431,8 +432,12 @@ export default function Settings() {
         <Header title="System Settings" breadcrumbs={['Settings']} />
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
           
+          <SectionTitle sub="Manage institution details, system preferences, and storage settings.">
+            System Settings
+          </SectionTitle>
+
           {/* Tab Navigation */}
           <div className="flex gap-4 border-b border-stone-200 mb-6 pb-2">
             <button 

@@ -624,30 +624,60 @@ export default function StudentSignup({ onSwitchPage }) {
             <p className="text-xs text-gray-500 text-center mb-1">Set your password and verify your email</p>
             <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
 
-            <div className="mb-3">
+            <div className="mb-4">
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Password</label>
               <div className="relative">
-                <input
+                <input 
+                  name="password"
                   value={securityInfo.password}
                   onChange={e => setSecurityInfo(p => ({ ...p, password: e.target.value }))}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter a strong password"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A] pr-10"
-                  required />
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" 
+                />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2 text-gray-400 hover:text-[#6B0F1A] text-base">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
-              {pw && (
-                <div className="mt-1.5">
-                  <div className="flex gap-1 mb-0.5">
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="h-1 flex-1 rounded-full transition-all"
-                        style={{ backgroundColor: i <= strength ? strengthColor : '#e5e7eb' }} />
+
+              {/* Password Strength indicator */}
+              {securityInfo.password && (
+                <div className="mt-2.5">
+                  <div className="flex gap-1 h-1 mb-1.5">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div 
+                        key={level}
+                        className={`flex-1 rounded-full transition-colors duration-300 ${
+                          strength >= level ? (
+                            strength <= 1 ? 'bg-red-500' :
+                            strength === 2 ? 'bg-yellow-500' :
+                            strength === 3 ? 'bg-blue-500' : 'bg-green-500'
+                          ) : 'bg-gray-200'
+                        }`}
+                      />
                     ))}
                   </div>
-                  <p className="text-[10px] font-medium" style={{ color: strengthColor }}>{strengthLabel} password</p>
+                  
+                  {/* Password Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2 p-2 bg-[#faf6f0]/50 rounded-lg border border-[#d5c9bb]/50">
+                    <div className="flex items-center gap-1.5">
+                      {hasEight ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasEight ? 'text-[#2A1115]' : 'text-gray-500'}`}>At least 8 characters</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {hasUp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasUp ? 'text-[#2A1115]' : 'text-gray-500'}`}>Uppercase letter</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {hasNum ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasNum ? 'text-[#2A1115]' : 'text-gray-500'}`}>Number (0-9)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {hasSp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasSp ? 'text-[#2A1115]' : 'text-gray-500'}`}>Special char (!@#$%)</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

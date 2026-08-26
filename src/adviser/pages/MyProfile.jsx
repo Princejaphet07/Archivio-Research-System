@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -107,16 +108,16 @@ function MyProfile() {
   return (
     <Layout title="My Profile" breadcrumb="ARCHIVIO › My Profile" showSearch={true}>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">My Profile</h1>
-          <p className="text-sm text-gray-500 dark:text-stone-400">Manage your adviser account and preferences</p>
-        </div>
+        <SectionTitle sub="Manage your adviser account and preferences">
+          My Profile
+        </SectionTitle>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar Menu */}
           <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 overflow-hidden">
+            <Card glass={true} className="overflow-hidden">
               <button 
+                type="button"
                 onClick={() => setActiveTab('profile')}
                 className={`w-full text-left px-5 py-4 text-sm font-semibold flex items-center gap-3 transition-colors ${
                   activeTab === 'profile' 
@@ -127,6 +128,7 @@ function MyProfile() {
                 👤 Profile
               </button>
               <button 
+                type="button"
                 onClick={() => setActiveTab('notifications')}
                 className={`w-full text-left px-5 py-4 text-sm font-medium flex items-center gap-3 border-t border-gray-100 dark:border-stone-800 transition-colors ${
                   activeTab === 'notifications' 
@@ -137,6 +139,7 @@ function MyProfile() {
                 🔔 Notifications
               </button>
               <button 
+                type="button"
                 onClick={() => setActiveTab('password')}
                 className={`w-full text-left px-5 py-4 text-sm font-medium flex items-center gap-3 border-t border-gray-100 dark:border-stone-800 transition-colors ${
                   activeTab === 'password' 
@@ -147,16 +150,17 @@ function MyProfile() {
                 🔒 Password
               </button>
               <button 
+                type="button"
                 onClick={handleLogout}
                 className="w-full text-left px-5 py-4 text-sm font-bold text-red-600 dark:text-red-400 border-t border-gray-100 dark:border-stone-800 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 border-l-4 border-l-transparent transition-colors"
               >
                 🚪 Logout
               </button>
-            </div>
+            </Card>
           </div>
 
           {/* Form Content */}
-          <div className="flex-1 bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800">
+          <Card glass={true} className="flex-1">
             <div className="p-6 border-b border-gray-200 dark:border-stone-800">
               <h2 className="text-lg font-bold text-gray-900 dark:text-stone-100">
                 {activeTab === 'profile' && 'My Profile'}
@@ -223,9 +227,9 @@ function MyProfile() {
                   </div>
                   
                   <div className="pt-4 flex justify-end">
-                    <button onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] disabled:opacity-50 transition">
+                    <PremiumButton onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} variant="primary">
                       {saveStatus === 'Saving...' ? 'Saving...' : 'Save Changes'}
-                    </button>
+                    </PremiumButton>
                   </div>
                 </>
               )}
@@ -313,9 +317,9 @@ function MyProfile() {
                   </div>
 
                   <div className="pt-4 flex justify-end">
-                    <button className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition">
+                    <PremiumButton variant="primary">
                       Save Preferences
-                    </button>
+                    </PremiumButton>
                   </div>
                 </>
               )}
@@ -369,14 +373,14 @@ function MyProfile() {
                   </div>
 
                   <div className="pt-4 flex justify-end">
-                    <button className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition">
+                    <PremiumButton variant="primary">
                       Update Password
-                    </button>
+                    </PremiumButton>
                   </div>
                 </>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </Layout>

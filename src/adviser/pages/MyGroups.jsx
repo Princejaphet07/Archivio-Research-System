@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function MyGroups() {
   const [groups, setGroups] = useState([]);
@@ -112,15 +113,12 @@ function MyGroups() {
       <div className="max-w-6xl mx-auto">
         
         {/* Page Header Area */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">My Groups</h1>
-            <p className="text-sm text-gray-500 dark:text-stone-400">Research groups assigned under your advisory this semester</p>
-          </div>
-        </div>
+        <SectionTitle sub="Research groups assigned under your advisory this semester">
+          My Groups
+        </SectionTitle>
 
         {/* Data Table */}
-        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 overflow-hidden">
+        <Card glass={true}>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
@@ -171,12 +169,13 @@ function MyGroups() {
                           </div>
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <button
+                          <PremiumButton
                             onClick={() => handleView(group)}
-                            className="border border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070] font-semibold text-xs px-4 py-1.5 rounded hover:bg-[#7a2e46] hover:text-white dark:hover:bg-[#f8d070] dark:hover:text-stone-900 transition"
+                            variant="ghost"
+                            size="sm"
                           >
                             View
-                          </button>
+                          </PremiumButton>
                         </td>
                       </tr>
                     );
@@ -185,7 +184,7 @@ function MyGroups() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
         {/* Pagination Controls */}
         {totalPages > 1 ? (

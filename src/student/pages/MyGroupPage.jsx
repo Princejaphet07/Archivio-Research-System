@@ -4,6 +4,7 @@ import { db, auth } from '../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
+import { Card, CardBody, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 
 const Shimmer = () => (
@@ -154,18 +155,34 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
       // Send email to the new member
       try {
-        await fetch('http://localhost:3001/api/send-student-invitation-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: newEmail,
-            invitationLink: window.location.origin + '/student/login',
-            senderName: studentData.displayName || studentData.email,
-            senderDepartment: studentData.department || 'Your Department',
-            message: 'I have added you to our research group in ARCHIVIO. Please sign up using this exact email to access our group portal.'
-          }),
+        const link = window.location.origin + '/student/login';
+        await addDoc(collection(db, 'mail'), {
+          to: newEmail,
+          message: {
+            subject: "Invitation to Research Group - ARCHIVIO",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi,</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">I have added you to our research group in ARCHIVIO. Please sign up using this exact email to access our group portal.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${link}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set up your account</a>
+                  </div>
+                  
+                  <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong>${studentData.displayName || studentData.email}</strong><br>
+                    ${studentData.department || 'Your Department'}
+                  </p>
+                </div>
+              </div>
+            `
+          }
         });
       } catch (emailErr) {
         console.error('Error sending invitation email to member:', emailErr);
@@ -360,29 +377,27 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
             )}
 
             {/* ── TEAM MEMBERS SECTION ────────────────────────────────── */}
-            <div className="mt-2 bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] dark:text-stone-100 mb-1">Team Members</h3>
-                  <p className="text-[14px] text-gray-500 dark:text-stone-400">
-                    {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
-                  </p>
+            <Card hover className="mt-2">
+              <CardBody className="p-8">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] dark:text-stone-100 mb-1">Team Members</h3>
+                    <p className="text-[14px] text-gray-500 dark:text-stone-400">
+                      {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
+                    </p>
+                  </div>
+                  
+                  {leaderCard.isYou && (
+                    <PremiumButton onClick={handleAddMember}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Member
+                    </PremiumButton>
+                  )}
                 </div>
-                
-                {leaderCard.isYou && (
-                  <button 
-                    onClick={handleAddMember}
-                    className="px-4 py-2 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white rounded-lg text-sm font-semibold hover:bg-[#5E1627] dark:hover:bg-[#5a1831] transition flex items-center gap-2 shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Member
-                  </button>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {loading ? (
                   <>
                     <SkeletonCard /><SkeletonCard />
@@ -390,9 +405,11 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                   </>
                 ) : (
                   allMembers.map((member, idx) => (
-                    <div
+                    <Card
+                      hover
                       key={idx}
-                      className={`${member.cardBg} border ${member.cardBorder} rounded-2xl p-6 flex items-start gap-4 transition-all hover:shadow-sm hover:-translate-y-0.5 duration-200`}
+                      className="flex items-start gap-4 p-6"
+                      glass={!member.isYou && member.pending}
                     >
                       {/* Avatar */}
                       <div className={`w-14 h-14 rounded-full ${member.color} text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm`}>
@@ -437,11 +454,12 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                           )}
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   ))
                 )}
               </div>
-            </div>
+            </CardBody>
+          </Card>
 
           </div>
         </div>

@@ -3,6 +3,7 @@ import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'fireb
 import { db } from '../firebase/config';
 import { useAdviser } from '../context/AdviserContext';
 import Layout from '../components/Layout';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function SendInvitations() {
   const { adviserData } = useAdviser();
@@ -94,24 +95,34 @@ function SendInvitations() {
 
       // Call email service to send invitation
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const emailResponse = await fetch(`${backendUrl}/api/send-student-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: studentEmail,
-            invitationLink: invitationLink,
-            senderName: adviserData.displayName,
-            senderDepartment: adviserData.department,
-            message: `You have been invited to join ARCHIVIO Research Management System as a student researcher.`
-          })
+        await addDoc(collection(db, 'mail'), {
+          to: studentEmail,
+          message: {
+            subject: "Invitation to Join ARCHIVIO",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi Student,</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a student researcher.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set up your account</a>
+                  </div>
+                  
+                  <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+                    ${adviserData.department || 'SWU Phinma'}
+                  </p>
+                </div>
+              </div>
+            `
+          }
         });
-
-        if (!emailResponse.ok) {
-          console.warn('Email send failed, but invitation saved to database');
-        }
       } catch (emailError) {
         console.warn('Email service error (invitation still saved):', emailError);
       }
@@ -146,20 +157,36 @@ function SendInvitations() {
 
       // Resend email
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
         const studentPortalUrl = window.location.origin;
-        await fetch(`${backendUrl}/api/send-student-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: studentEmail,
-            invitationLink: invitation.invitationLink || `${studentPortalUrl}/signup`,
-            senderName: adviserData.displayName,
-            senderDepartment: adviserData.department,
-            message: `You have been invited to join ARCHIVIO Research Management System as a student researcher.`
-          })
+        const link = invitation.invitationLink || `${studentPortalUrl}/signup`;
+        
+        await addDoc(collection(db, 'mail'), {
+          to: studentEmail,
+          message: {
+            subject: "Reminder: Invitation to Join ARCHIVIO",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi Student,</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">This is a reminder that you have been invited to join the ARCHIVIO Research Management System as a student researcher.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${link}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set up your account</a>
+                  </div>
+                  
+                  <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+                    ${adviserData.department || 'SWU Phinma'}
+                  </p>
+                </div>
+              </div>
+            `
+          }
         });
       } catch (emailError) {
         console.warn('Email service error:', emailError);
@@ -178,10 +205,9 @@ function SendInvitations() {
   return (
     <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={true}>
       <div className="max-w-5xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Send Student Invitations</h1>
-          <p className="text-sm text-gray-500 dark:text-stone-400">Invite students to your research group — type their email and send</p>
-        </div>
+        <SectionTitle sub="Invite students to your research group — type their email and send">
+          Send Student Invitations
+        </SectionTitle>
 
         {/* Error/Success Messages */}
         {error && (
@@ -207,7 +233,7 @@ function SendInvitations() {
         )}
 
         {/* Action Card */}
-        <div className="bg-white dark:bg-stone-900 border-2 border-dashed border-gray-200 dark:border-stone-800 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
+        <Card glass={true} className="border-2 border-dashed border-stone-200 dark:border-stone-800 p-10 flex flex-col items-center justify-center text-center">
           <div className="text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-3">✉️</div>
           <h2 className="text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
           <p className="text-gray-500 dark:text-stone-400 text-sm max-w-lg mb-6">
@@ -215,7 +241,7 @@ function SendInvitations() {
           </p>
           <form onSubmit={handleSendInvitation} className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
             <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">M</span>
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">📧</span>
               <input 
                 type="email" 
                 value={studentEmail}
@@ -225,19 +251,19 @@ function SendInvitations() {
                 disabled={loading}
               />
             </div>
-            <button 
+            <PremiumButton 
               type="submit"
               disabled={loading}
-              className="bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] dark:hover:bg-[#ffe090] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-stone-900 font-bold px-6 py-3 rounded-lg transition whitespace-nowrap"
+              variant="primary"
             >
               {loading ? 'Sending...' : 'Send Link'}
-            </button>
+            </PremiumButton>
           </form>
           <p className="text-xs text-gray-400 dark:text-stone-500 mt-4">💡 Only @phinmaed.com emails can receive invitations.</p>
-        </div>
+        </Card>
 
         {/* History Table */}
-        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800">
+        <Card glass={true}>
           <div className="p-5 border-b border-gray-200 dark:border-stone-800">
             <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Sent Invitations</h3>
             <p className="text-xs text-gray-500 dark:text-stone-400">Track invitations you've sent to students</p>
@@ -276,13 +302,14 @@ function SendInvitations() {
                       </td>
                       <td className="py-4 px-6">
                         {invitation.status === 'pending' && (
-                          <button 
+                          <PremiumButton 
                             onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                             disabled={loading}
-                            className="border border-gray-300 dark:border-stone-700 text-gray-600 dark:text-stone-300 px-3 py-1.5 rounded text-xs font-semibold hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50"
+                            variant="ghost"
+                            size="sm"
                           >
                             🔄 Resend
-                          </button>
+                          </PremiumButton>
                         )}
                       </td>
                     </tr>
@@ -291,7 +318,7 @@ function SendInvitations() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </Layout>
   );

@@ -8,6 +8,7 @@ import { logActivity } from '../../firebase/logActivity';
 import { useUser } from '../context/UserContext';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const { deanData } = useUser();
@@ -244,15 +245,29 @@ export default function PublishQueue({ activePage, onNavigate }) {
         for (const item of eligibleItems) {
           if (item.leaderEmail) {
             try {
-              await fetch('http://localhost:3001/api/send-status-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: item.leaderEmail,
-                  studentName: item.leaderName || 'Student',
-                  title: item.researchTitle,
-                  status: 'published'
-                })
+              await addDoc(collection(db, 'mail'), {
+                to: item.leaderEmail,
+                message: {
+                  subject: `Congratulations! Your manuscript is now Published: ${item.researchTitle}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                      </div>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${item.leaderName || 'Student'},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">Great news! The status of your submission <strong>"${item.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">published</span></p>
+                        <p style="color: #4a5568; line-height: 1.6;">Your research is now available in the ARCHIVIO public archive.</p>
+                        
+                        <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                          Best regards,<br>
+                          <strong>ARCHIVIO System</strong>
+                        </p>
+                      </div>
+                    </div>
+                  `
+                }
               });
             } catch (e) {
               console.error('Failed to send publish email', e);
@@ -279,26 +294,23 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
           {/* ===== PAGE HEADER ===== */}
           <div className="flex justify-between items-start mb-6">
-            <div>
-              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight">Publish Queue</h1>
-              <p className="text-xs text-stone-400 mt-1 font-medium">
-                Approved manuscripts ready for publication. 100% requirements completion required.
-              </p>
-            </div>
-            <button
+            <SectionTitle sub="Approved manuscripts ready for publication. 100% requirements completion required.">
+              Publish Queue
+            </SectionTitle>
+            <PremiumButton
               onClick={handlePublishAll}
               disabled={eligibleCount === 0}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors whitespace-nowrap ${eligibleCount > 0 ? 'bg-[#c9a227] hover:bg-[#b8911f] text-white' : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
+              variant="primary"
             >
               🌐 Publish All Eligible ({eligibleCount})
-            </button>
+            </PremiumButton>
           </div>
 
           {/* ===== TWO-COLUMN LAYOUT ===== */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* ===== LEFT: AWAITING PUBLICATION LIST ===== */}
-            <div className="col-span-2 bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden flex flex-col">
+            <Card glass={true} className="col-span-2 overflow-hidden flex flex-col">
 
               {/* Card Header */}
               <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white dark:bg-stone-800 z-10 sticky top-0">
@@ -365,40 +377,45 @@ export default function PublishQueue({ activePage, onNavigate }) {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
-                        <button 
+                        <PremiumButton 
                           onClick={() => handlePreview(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
+                          variant="ghost"
+                          size="sm"
                         >
                           Abstract
-                        </button>
-                        <button 
+                        </PremiumButton>
+                        <PremiumButton 
                           onClick={() => handleViewManuscript(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#7a1f3d]/30 dark:border-[#f8d070]/30 rounded-lg hover:bg-[#7a1f3d]/5 dark:hover:bg-[#f8d070]/10 transition-colors flex items-center gap-1.5 shadow-sm"
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1.5"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                           View Doc
-                        </button>
-                        <button
+                        </PremiumButton>
+                        <PremiumButton
                           onClick={() => handlePublish(item)}
-                          className="px-4 py-1.5 text-xs font-bold text-white bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] rounded-lg hover:bg-[#5a162d] dark:hover:bg-[#b09230] transition-colors flex items-center gap-1.5 shadow-sm"
+                          variant="primary"
+                          size="sm"
+                          className="flex items-center gap-1.5"
                         >
                           🌐 Publish
-                        </button>
+                        </PremiumButton>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </Card>
 
             {/* ===== RIGHT COLUMN ===== */}
             <div className="flex flex-col gap-5">
 
               {/* Status Flow Card */}
-              <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm p-6">
+              <Card glass={true} className="p-6">
                 <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Status Flow</h2>
                 <p className="text-[11px] text-stone-400 mt-0.5 mb-5">Workflow stages</p>
 
@@ -471,10 +488,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   <span className="text-amber-500 text-sm">⚠</span>
                   <p className="text-[10px] font-bold text-amber-700">100% completion required to publish</p>
                 </div>
-              </div>
+              </Card>
 
               {/* Publish Summary Card */}
-              <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm p-6">
+              <Card glass={true} className="p-6">
                 <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight mb-4">Publish Summary</h2>
 
                 <div className="space-y-3 mb-5">
@@ -489,14 +506,15 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   </div>
                 </div>
 
-                <button
+                <PremiumButton
                   onClick={handlePublishAll}
                   disabled={eligibleCount === 0}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors ${eligibleCount > 0 ? 'bg-[#c9a227] hover:bg-[#b8911f] text-white' : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
+                  variant="primary"
+                  className="w-full flex items-center justify-center gap-2"
                 >
                   🌐 Publish {eligibleCount} Eligible Papers
-                </button>
-              </div>
+                </PremiumButton>
+              </Card>
 
             </div>
           </div>

@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -17,6 +18,8 @@ const CATEGORY_COLORS = {
   Web: 'bg-emerald-100 text-emerald-700',
   Data: 'bg-orange-100 text-orange-700',
 };
+
+const RECORDS_PER_PAGE = 10;
 
 const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 border border-amber-200',
@@ -32,8 +35,6 @@ const ACTION_STYLES = {
   Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
 };
 
-const RECORDS_PER_PAGE = 10;
-
 export default function ResearchRecords() {
   const navigate = useNavigate();
   const { deanData } = useUser();
@@ -43,6 +44,7 @@ export default function ResearchRecords() {
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [filterCategory, setFilterCategory] = useState('All Categories');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   
   const [records, setRecords] = useState([]);
@@ -212,19 +214,16 @@ export default function ResearchRecords() {
 
           {/* ===== PAGE TITLE ===== */}
           <div className="flex justify-between items-start mb-6">
-            <div>
-              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight">Research Records</h1>
-              <p className="text-xs text-stone-400 mt-1 font-medium">
-                All uploaded research within the College of IT &nbsp;·&nbsp; {records.length} total records
-              </p>
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors">
+            <SectionTitle sub={`All uploaded research within the College of IT · ${records.length} total records`}>
+              Research Records
+            </SectionTitle>
+            <PremiumButton variant="outline" className="flex items-center gap-2">
               <span>📤</span> Export CSV
-            </button>
+            </PremiumButton>
           </div>
 
           {/* ===== TABLE CARD ===== */}
-          <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden">
+          <Card glass={true} className="overflow-hidden">
 
             {/* ---- Filter Bar ---- */}
             <div className="p-4 border-b border-stone-100 bg-stone-50 dark:bg-stone-800/50">
@@ -355,9 +354,26 @@ export default function ResearchRecords() {
 
             {/* ---- Pagination Footer ---- */}
             <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50 dark:bg-stone-800/30">
-              <p className="text-[11px] text-stone-400 font-medium">
-                Showing {paginated.length} of {filtered.length} record{filtered.length !== 1 ? 's' : ''}
-              </p>
+              <div className="flex items-center gap-4">
+                <p className="text-[11px] text-stone-400 font-medium">
+                  Showing {paginated.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} record{filtered.length !== 1 ? 's' : ''}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-stone-400 font-medium">Items per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-[11px] rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#7a1f3d]"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="flex items-center gap-1">
                 {/* Prev */}
@@ -394,7 +410,7 @@ export default function ResearchRecords() {
                 </button>
               </div>
             </div>
-          </div>
+          </Card>
         </main>
       </div>
 

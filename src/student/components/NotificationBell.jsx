@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import Swal from 'sweetalert2';
@@ -29,7 +30,8 @@ const getIcon = (title, message) => {
   return '🔔';
 };
 
-export default function NotificationBell() {
+export default function NotificationBell({ onNavigate }) {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [prefs, setPrefs] = useState(null);
@@ -233,9 +235,9 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-stone-900 rounded-xl shadow-lg border border-stone-200 dark:border-stone-800 overflow-hidden z-50 transform origin-top-right transition-all">
-          <div className="bg-[#7B1F35] dark:bg-stone-800 text-white px-4 py-3 flex justify-between items-center border-b border-[#7B1F35] dark:border-stone-700">
-            <h3 className="font-bold text-[14px]">Notifications</h3>
+        <div className="absolute right-0 mt-3 w-80 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700/50 overflow-hidden z-[9999] transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-gradient-to-r from-[#7B1F35] to-[#9a2843] dark:from-stone-800 dark:to-stone-800 text-white px-5 py-4 flex justify-between items-center shadow-inner">
+            <h3 className="font-bold text-[15px] tracking-wide">Notifications</h3>
             {notifications.length > 0 && (
               <div className="flex gap-3">
                 {unreadCount > 0 && (
@@ -249,40 +251,81 @@ export default function NotificationBell() {
               </div>
             )}
           </div>
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
             {notifications.length === 0 ? (
-              <div className="p-8 flex flex-col items-center justify-center text-center">
-                <span className="text-4xl mb-3 opacity-50">📭</span>
-                <p className="text-sm font-bold text-gray-500 dark:text-stone-400">All caught up!</p>
-                <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">No new notifications</p>
+              <div className="p-10 flex flex-col items-center justify-center text-center">
+                <div className="w-20 h-20 bg-gradient-to-tr from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-700 rounded-full flex items-center justify-center mb-5 shadow-inner border border-white/50 dark:border-stone-600/50 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.8),transparent)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]"></div>
+                  <span className="text-4xl filter drop-shadow-sm relative z-10">📭</span>
+                </div>
+                <p className="text-[16px] font-bold text-stone-800 dark:text-stone-200 tracking-tight">All caught up!</p>
+                <p className="text-[13px] text-stone-500 dark:text-stone-400 mt-2 max-w-[200px]">You don't have any new notifications at the moment.</p>
               </div>
             ) : (
               notifications.map(n => (
                 <div 
                   key={n.id} 
-                  onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 dark:border-stone-800/50 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-stone-800 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700/50' : 'bg-white dark:bg-stone-900/50 opacity-75'}`}
+                  onClick={() => {
+                    if (!n.isRead) markAsRead(n.id);
+                    if (onNavigate && n.link) {
+                      setIsOpen(false);
+                      // Map the link to the tab name
+                      if (n.link.includes('requirements')) onNavigate('Requirements');
+                      else if (n.link.includes('manuscript')) onNavigate('Manuscript');
+                      else if (n.link.includes('progress')) onNavigate('Progress');
+                      else if (n.link.includes('dashboard')) onNavigate('Dashboard');
+                      else if (n.link.includes('group')) onNavigate('My Group');
+                    } else if (n.link) {
+                      setIsOpen(false);
+                      navigate(n.link);
+                    }
+                  }}
+                  className={`relative p-5 border-b border-stone-100 dark:border-stone-800/50 last:border-none flex flex-col gap-2 transition-all duration-300 group ${
+                    !n.isRead 
+                      ? 'bg-gradient-to-r from-white to-[#fffafb] dark:from-stone-800/90 dark:to-stone-800/70 cursor-pointer hover:shadow-md z-10 hover:-translate-y-[1px]' 
+                      : `bg-white/40 dark:bg-stone-900/40 opacity-85 ${n.link ? 'cursor-pointer hover:bg-stone-50/80 dark:hover:bg-stone-800/60 hover:opacity-100' : ''}`
+                  }`}
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex gap-2.5 items-start">
-                      <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
-                      <div className="flex flex-col">
-                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#D05353]' : 'text-gray-700 dark:text-stone-300'}`}>
+                  {/* Unread Indicator Bar */}
+                  {!n.isRead && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-gradient-to-b from-[#7B1F35] to-[#DDA3B6] shadow-[0_0_8px_rgba(123,31,53,0.4)]"></div>
+                  )}
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex gap-4 items-start w-full">
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
+                        !n.isRead 
+                          ? 'bg-gradient-to-br from-[#7B1F35]/10 to-[#7B1F35]/5 border-[#7B1F35]/20 dark:from-[#7B1F35]/30 dark:to-[#7B1F35]/10 dark:border-[#7B1F35]/40' 
+                          : 'bg-stone-50 dark:bg-stone-800/50 border-stone-200/50 dark:border-stone-700/50'
+                      }`}>
+                        <span className="text-[18px] leading-none filter drop-shadow-sm transition-transform group-hover:scale-110 duration-300">{getIcon(n.title, n.message)}</span>
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0 pr-6 mt-0.5">
+                        <span className={`text-[14px] font-bold tracking-tight truncate ${!n.isRead ? 'text-[#7a2e46] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300'}`}>
                           {n.title}
                         </span>
-                        <p className="text-[12px] text-gray-600 dark:text-stone-400 leading-snug mt-0.5">{n.message}</p>
+                        <p className={`text-[13px] leading-relaxed mt-1.5 ${!n.isRead ? 'text-stone-800 dark:text-stone-200 font-medium' : 'text-stone-500 dark:text-stone-400'}`}>
+                          {n.message}
+                        </p>
+                        {n.link && (
+                          <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-[#7a2e46]/70 dark:text-[#f8d070]/70 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] transition-colors">
+                            <span>View Details</span>
+                            <svg className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#CF3645]"></span>}
+                    <div className="absolute right-4 top-5 flex flex-col items-end gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <button 
                         type="button"
-                        onClick={(e) => deleteNotification(n.id, e)}
-                        className="text-gray-300 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                        title="Remove"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(n.id, e);
+                        }}
+                        className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete notification"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </div>

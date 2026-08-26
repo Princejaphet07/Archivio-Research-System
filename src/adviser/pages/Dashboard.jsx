@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
+import { Card, CardHeader, CardBody, StatCard, PremiumButton, SectionTitle } from '../../components/ui/Card';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -163,29 +164,34 @@ function Dashboard() {
             </>
           ) : (
             <>
-              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-300 dark:border-t-stone-700">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">My Groups <span>🎓</span></p>
-                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{activeGroupCount}</h3>
-                <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Active this semester</p>
-              </div>
-              
-              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-yellow-400 dark:border-t-yellow-500">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Pending Review <span>⏳</span></p>
-                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{pendingReviewCount}</h3>
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/30 inline-block px-2 py-0.5 rounded mt-1">Needs attention</p>
-              </div>
-
-              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-blue-500 dark:border-t-blue-600">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Approved Papers <span>📄</span></p>
-                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{approvedPapersCount}</h3>
-                <p className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 inline-block px-2 py-0.5 rounded mt-1">Total completed</p>
-              </div>
-
-              <div className="bg-white dark:bg-stone-900 rounded-xl p-5 border border-gray-100 dark:border-stone-800 shadow-sm border-t-4 border-t-gray-200 dark:border-t-stone-700">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex justify-between">Avg Completion <span>📈</span></p>
-                <h3 className="text-3xl font-serif font-bold text-gray-800 dark:text-stone-200">{avgCompletion}%</h3>
-                <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Across all groups</p>
-              </div>
+              <StatCard
+                icon="🎓"
+                label="My Groups"
+                value={activeGroupCount}
+                sub="Active this semester"
+                color="blue"
+              />
+              <StatCard
+                icon="⏳"
+                label="Pending Review"
+                value={pendingReviewCount}
+                sub="Needs attention"
+                color="amber"
+              />
+              <StatCard
+                icon="📄"
+                label="Approved Papers"
+                value={approvedPapersCount}
+                sub="Total completed"
+                color="green"
+              />
+              <StatCard
+                icon="📈"
+                label="Avg Completion"
+                value={`${avgCompletion}%`}
+                sub="Across all groups"
+                color="maroon"
+              />
             </>
           )}
         </div>
@@ -194,21 +200,22 @@ function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Left Column: My Submissions */}
-          <div className="lg:col-span-2 bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
-            <div className="flex justify-between items-center mb-6">
+          <Card className="lg:col-span-2" glass={true}>
+            <CardHeader>
               <div>
-                <h3 className="font-serif font-bold text-lg text-gray-900 dark:text-stone-100">My Submissions Dashboard</h3>
-                <p className="text-xs text-gray-500 dark:text-stone-400">Recent activity from your groups</p>
+                <h3 className="font-serif font-bold text-lg text-[#1A1A1A] dark:text-stone-100">My Submissions Dashboard</h3>
+                <p className="text-[13px] text-stone-500 dark:text-stone-400">Recent activity from your groups</p>
               </div>
-              <button 
+              <PremiumButton 
                 onClick={() => navigate('/adviser/review-submissions')}
-                className="text-xs font-semibold text-gray-600 dark:text-stone-300 border border-gray-200 dark:border-stone-700 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-stone-800 transition"
+                variant="ghost"
+                size="sm"
               >
                 Review All →
-              </button>
-            </div>
+              </PremiumButton>
+            </CardHeader>
 
-            <div className="space-y-6">
+            <CardBody className="space-y-6">
               {loading ? (
                 <HorizontalCardSkeleton count={2} />
               ) : (
@@ -322,105 +329,114 @@ function Dashboard() {
                   );
                 })()
               )}
-            </div>
-          </div>
+            </CardBody>
+          </Card>
 
           {/* Right Column */}
           <div className="space-y-6">
             
             {/* Pending Actions */}
-            <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
-              <div className="flex justify-between items-center mb-5">
-                <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100">Pending Actions</h3>
-                <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full">• {pendingReviewCount} reviews</span>
-              </div>
-              
-              <div className="space-y-3">
+            <Card glass={true}>
+              <CardHeader accent={true}>
+                <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                  <span className="text-lg">⏳</span> Pending Actions
+                </h3>
+                <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200">
+                  {pendingReviewCount} pending
+                </span>
+              </CardHeader>
+              <CardBody className="space-y-3">
                 {pendingReviewSubs.slice(0, 3).map((sub, idx) => (
-                  <div key={sub.id || idx} className="flex justify-between items-center border-b border-gray-50 dark:border-stone-800 pb-3">
+                  <div key={sub.id || idx} className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-3">
                     <div>
-                      <h4 className="text-xs font-bold text-gray-800 dark:text-stone-200">{sub.researchTitle}</h4>
-                      <p className="text-[10px] text-gray-500 dark:text-stone-400">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
+                      <h4 className="text-[13px] font-bold text-stone-800 dark:text-stone-200">{sub.researchTitle}</h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
                     </div>
-                    <span className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold border border-yellow-200 dark:border-yellow-700/50 px-2 py-1 rounded">• Review</span>
+                    <span className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold border border-yellow-200 dark:border-yellow-700/50 px-2 py-1 rounded">Review</span>
                   </div>
                 ))}
                 
                 <div className="flex justify-between items-center pb-2">
                   <div>
-                    <h4 className="text-xs font-bold text-gray-800 dark:text-stone-200">{pendingGroupsCount} group registrations</h4>
-                    <p className="text-[10px] text-gray-500 dark:text-stone-400">Waiting for approval</p>
+                    <h4 className="text-[13px] font-bold text-stone-800 dark:text-stone-200">{pendingGroupsCount} group registrations</h4>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">Waiting for approval</p>
                   </div>
-                  <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-bold border border-purple-200 dark:border-purple-700/50 px-2 py-1 rounded">• Pending</span>
+                  <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-bold border border-purple-200 dark:border-purple-700/50 px-2 py-1 rounded">Pending</span>
                 </div>
-              </div>
-              
-              <button 
-                onClick={() => navigate('/adviser/review-submissions')}
-                className="w-full mt-4 bg-[#6b253e] hover:bg-[#541b2f] text-white text-xs font-semibold py-2.5 rounded-lg transition cursor-pointer"
-              >
-                View All Pending →
-              </button>
-            </div>
+                
+                <PremiumButton 
+                  onClick={() => navigate('/adviser/review-submissions')}
+                  variant="primary"
+                  className="w-full mt-4 justify-center"
+                >
+                  View All Pending →
+                </PremiumButton>
+              </CardBody>
+            </Card>
 
             {/* Group Progress Chart */}
-            <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-100 dark:border-stone-800 p-6">
-              <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 mb-4">Group Progress</h3>
-              <div className="h-48">
-                {enrichedSubmissions.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={enrichedSubmissions} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <XAxis dataKey="groupName" hide />
-                      <YAxis tick={{fontSize: 10}} axisLine={false} tickLine={false} />
-                      <Tooltip 
-                        cursor={{fill: '#f5f5f4'}}
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
-                      />
-                      <Bar dataKey="completionPercent" radius={[4, 4, 0, 0]}>
-                        {enrichedSubmissions.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.completionPercent === 100 ? '#059669' : '#ca8a04'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-xs text-gray-400 dark:text-stone-500 text-center py-10">No progress data yet.</p>
-                )}
-              </div>
-            </div>
+            <Card glass={true}>
+              <CardBody>
+                <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2">
+                  <span className="text-lg">📊</span> Group Progress
+                </h3>
+                <div className="h-48">
+                  {enrichedSubmissions.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={enrichedSubmissions} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                        <XAxis dataKey="groupName" hide />
+                        <YAxis tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          cursor={{fill: '#f5f5f4'}}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                        />
+                        <Bar dataKey="completionPercent" radius={[4, 4, 0, 0]}>
+                          {enrichedSubmissions.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.completionPercent === 100 ? '#059669' : '#ca8a04'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-stone-500 text-center py-10">No progress data yet.</p>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
 
             {/* Quick Actions */}
-            <div className="bg-transparent">
-              <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 mb-3 ml-1">Quick Actions</h3>
+            <div className="bg-transparent mt-6">
+              <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 mb-3 ml-1 flex items-center gap-2">
+                <span className="text-lg">⚡</span> Quick Actions
+              </h3>
               <div className="grid grid-cols-2 gap-3">
-                <button 
-                  onClick={() => navigate('/adviser/group-registrations')}
-                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
-                >
-                  <span className="text-green-500 text-lg">✅</span>
-                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Approve Registrations</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/adviser/send-invitations')}
-                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
-                >
-                  <span className="text-blue-500 text-lg">📩</span>
-                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Send Invite Link</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/adviser/research-categories')}
-                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
-                >
-                  <span className="text-yellow-500 text-lg">📁</span>
-                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">Manage Categories</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/adviser/submission-requirements')}
-                  className="bg-white dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-md dark:hover:bg-stone-800 transition text-center gap-1.5 cursor-pointer"
-                >
-                  <span className="text-purple-500 text-lg">⚙️</span>
-                  <span className="text-[10px] font-bold text-gray-600 dark:text-stone-400">My Requirements</span>
-                </button>
+                <Card hover={true} onClick={() => navigate('/adviser/group-registrations')} className="group">
+                  <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-green-500 text-2xl group-hover:scale-110 transition-transform">✅</span>
+                    <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Approve Registrations</span>
+                  </CardBody>
+                </Card>
+                
+                <Card hover={true} onClick={() => navigate('/adviser/send-invitations')} className="group">
+                  <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-blue-500 text-2xl group-hover:scale-110 transition-transform">📩</span>
+                    <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Send Invite Link</span>
+                  </CardBody>
+                </Card>
+                
+                <Card hover={true} onClick={() => navigate('/adviser/research-categories')} className="group">
+                  <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-yellow-500 text-2xl group-hover:scale-110 transition-transform">📁</span>
+                    <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Manage Categories</span>
+                  </CardBody>
+                </Card>
+                
+                <Card hover={true} onClick={() => navigate('/adviser/submission-requirements')} className="group">
+                  <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-purple-500 text-2xl group-hover:scale-110 transition-transform">⚙️</span>
+                    <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">My Requirements</span>
+                  </CardBody>
+                </Card>
               </div>
             </div>
 

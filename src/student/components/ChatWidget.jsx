@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db, auth } from '../../firebase/config';
+import { db, auth, storage } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, getDocs, updateDoc, doc, deleteField, deleteDoc, increment } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import Swal from 'sweetalert2';
 
 export default function ChatWidget({ role, leaderUid }) {
@@ -167,20 +168,14 @@ export default function ChatWidget({ role, leaderUid }) {
     setUploadProgress(25); // Simulate progress for fetch
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'Archivio');
+      const fileExtension = file.name ? file.name.split('.').pop() : (isImage ? 'jpg' : 'mp4');
+      const timestamp = Date.now();
+      const storagePath = `chat_media/${groupId}/${timestamp}.${fileExtension}`;
+      const storageRef = ref(storage, storagePath);
 
-      const res = await fetch('https://api.cloudinary.com/v1_1/peqpcqug/auto/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!res.ok) throw new Error('Cloudinary upload failed');
-      
+      await uploadBytes(storageRef, file);
       setUploadProgress(75);
-      const data = await res.json();
-      const downloadURL = data.secure_url;
+      const downloadURL = await getDownloadURL(storageRef);
       
       const user = auth.currentUser;
       let displayName = user.displayName || user.email?.split('@')[0] || 'Student';
@@ -244,15 +239,12 @@ export default function ChatWidget({ role, leaderUid }) {
     });
 
     if (result.isConfirmed) {
-      if (msg.mediaUrl) {
+      if (msg.mediaUrl && msg.mediaUrl.includes('firebasestorage')) {
         try {
-          await fetch('http://localhost:3001/api/delete-cloudinary', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileUrl: msg.mediaUrl })
-          });
+          const fileRef = ref(storage, msg.mediaUrl);
+          await deleteObject(fileRef);
         } catch (e) {
-          console.error("Failed to delete from cloudinary", e);
+          console.error("Failed to delete from firebase storage", e);
         }
       }
 

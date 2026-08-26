@@ -4,6 +4,7 @@ import { db } from '../firebase/config';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -153,35 +154,42 @@ Please click the button below to activate your account and set up your credentia
 
       await addDoc(collection(db, 'advisers'), adviserData);
 
-      // Call Node.js backend to send email
+      // Trigger Firebase Email Extension
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const emailResponse = await fetch(`${backendUrl}/api/send-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: formData.email,
-            adviserName: formData.firstName,
+        await addDoc(collection(db, 'mail'), {
+          to: formData.email,
+          message: {
             subject: defaultSubject,
-            message: formData.message || defaultMessage,
-            invitationLink: invitationLink,
-            senderName: deanData?.displayName,
-            senderDepartment: deanData?.department
-          })
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #7B1F35; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName},</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${invitationLink}" style="background-color: #7B1F35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set up your account</a>
+                  </div>
+                  
+                  <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong>${deanData?.displayName || 'Dean'}</strong><br>
+                    ${deanData?.department || 'SWU Phinma'}<br>
+                    ARCHIVIO Administrator
+                  </p>
+                </div>
+              </div>
+            `
+          }
         });
 
-        if (!emailResponse.ok) {
-          const errData = await emailResponse.json();
-          console.warn('Email send failed, but invitation saved to database');
-          setSuccess(`⚠️ Invitation saved, but email failed: ${errData.error || 'Server error'}`);
-        } else {
-          setSuccess(`✅ Invitation sent to ${formData.email}!`);
-        }
+        setSuccess(`✅ Invitation sent to ${formData.email}!`);
       } catch (emailError) {
         console.warn('Email service error (invitation still saved):', emailError);
-        setSuccess(`⚠️ Invitation saved to database, but email service is offline.`);
+        setSuccess('✅ Invitation saved, but email could not be sent.');
       }
 
       // Refresh advisers list (handled by onSnapshot)
@@ -256,14 +264,15 @@ Please click the button below to activate your account and set up your credentia
 
         <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Send Invitations</h1>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Send invitation links to Research Advisers for account creation</p>
+            <SectionTitle sub="Send invitation links to Research Advisers for account creation">
+              Send Invitations
+            </SectionTitle>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             {/* Left Column: Form Panel */}
-            <div className="lg:col-span-4 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden">
+            <Card glass={true} className="lg:col-span-4 overflow-hidden">
               <div className="bg-[#4a1024] dark:bg-stone-950 p-5 text-white relative">
                 <span className="text-xl">✉️</span>
                 <h3 className="font-serif text-base font-bold mt-2">Invite a Research Adviser</h3>
@@ -349,19 +358,20 @@ Please click the button below to activate your account and set up your credentia
                     <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
                   </div>
 
-                  <button
+                  <PremiumButton
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
+                    variant="primary"
+                    className="w-full flex items-center justify-center gap-2 mt-2"
                   >
                     <span>✉️</span> {loading ? 'Sending...' : 'Send Invitation Link'}
-                  </button>
+                  </PremiumButton>
                 </form>
               </div>
-            </div>
+            </Card>
 
             {/* Right Column: Tracker Log Panel */}
-            <div className="lg:col-span-8 bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 p-5">
+            <Card glass={true} className="lg:col-span-8 p-5">
               <div className="flex justify-between items-center border-b border-stone-100 pb-4 mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Sent Invitations</h3>
@@ -405,13 +415,15 @@ Please click the button below to activate your account and set up your credentia
                           </td>
                           <td className="py-3.5 text-center">
                             {adviser.status === 'pending' && (
-                              <button
+                              <PremiumButton
                                 onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                 disabled={loading}
-                                className="px-2.5 py-1 border border-stone-200 dark:border-stone-700 rounded-lg text-[10px] font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 disabled:opacity-50 flex items-center gap-1 mx-auto shadow-sm"
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1 mx-auto"
                               >
                                 🔄 Resend
-                              </button>
+                              </PremiumButton>
                             )}
                           </td>
                         </tr>
@@ -420,7 +432,7 @@ Please click the button below to activate your account and set up your credentia
                   </table>
                 </div>
               )}
-            </div>
+            </Card>
 
           </div>
         </main>

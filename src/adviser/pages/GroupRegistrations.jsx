@@ -6,6 +6,7 @@ import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function GroupRegistrations() {
   const { adviserData, user } = useAdviser();
@@ -153,26 +154,27 @@ function GroupRegistrations() {
   return (
     <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={false}>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Group Registrations</h1>
-            <p className="text-sm text-gray-500 dark:text-stone-400">Approve or decline student group registration requests</p>
-          </div>
-          <div className="relative w-full sm:w-80">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
+        <SectionTitle 
+          sub="Approve or decline student group registration requests"
+          action={
+            <div className="relative w-full sm:w-80">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-stone-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search groups..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm border border-stone-200 dark:border-stone-800 rounded-lg focus:ring-[#7B1F35] focus:border-[#7B1F35] w-full text-sm outline-none transition-all shadow-sm"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search groups..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100 rounded-lg focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] w-full text-sm"
-            />
-          </div>
-        </div>
+          }
+        >
+          Group Registrations
+        </SectionTitle>
 
 
         {/* Pending Requests */}
@@ -185,35 +187,39 @@ function GroupRegistrations() {
             </div>
           ) : (
             pendingGroups.filter(filterGroup).map((req) => (
-              <div key={req.id} className="bg-white dark:bg-stone-900 border border-[#fed7aa] dark:border-stone-800 rounded-xl p-5 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+              <Card key={req.id} glass={true} hover={true} className="p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-orange-200 dark:border-orange-800/50">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 bg-[#fff7ed] dark:bg-stone-800 rounded-lg border border-[#fed7aa] dark:border-stone-700 flex items-center justify-center text-xl">📋</div>
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-stone-800 rounded-lg border border-orange-200 dark:border-stone-700 flex items-center justify-center text-xl shrink-0">📋</div>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg flex items-center gap-2">
-                      {req.groupName} <span className="bg-[#fff7ed] dark:bg-orange-900/30 text-[#c2410c] dark:text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-[#fed7aa] dark:border-orange-800/50 uppercase tracking-wider font-bold">• Pending Approval</span>
+                      {req.groupName} <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800/50 uppercase tracking-wider font-bold">• Pending Approval</span>
                     </h3>
                     <p className="text-sm text-gray-800 dark:text-stone-300 mt-1">Research Title: <strong>{req.researchTitle}</strong></p>
                   </div>
                 </div>
                 <div className="flex lg:flex-col gap-2 w-full lg:w-32">
-                  <button
+                  <PremiumButton
                     onClick={() => setSelectedGroup(req)}
-                    className="flex-1 lg:flex-none bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 font-semibold text-sm py-2 px-4 rounded-lg hover:bg-[#5a162d] dark:hover:bg-[#ffe090] flex justify-center items-center gap-2 shadow-sm transition"
+                    variant="primary"
+                    size="sm"
+                    className="w-full justify-center"
+                    icon={
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                    }
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                    </svg>
                     View
-                  </button>
+                  </PremiumButton>
                 </div>
-              </div>
+              </Card>
             ))
           )}
         </div>
 
         {/* History Table */}
-        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 mt-8">
+        <Card glass={true} className="mt-8">
           <div className="p-5 border-b border-gray-200 dark:border-stone-800">
             <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Registration History</h3>
             <p className="text-xs text-gray-500 dark:text-stone-400">Previously processed</p>
@@ -293,7 +299,7 @@ function GroupRegistrations() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* View Modal */}

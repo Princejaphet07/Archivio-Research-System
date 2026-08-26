@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
+import { Building2, GraduationCap, Users, UserPlus, BookOpen } from 'lucide-react';
+import { Card, CardBody, StatCard, SectionTitle } from '../../components/ui/Card';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -13,6 +15,8 @@ function Dashboard() {
   const [advisers, setAdvisers] = useState([]);
   const [students, setStudents] = useState([]);
   const [activityLogs, setActivityLogs] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [programs, setPrograms] = useState([]);
 
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
@@ -25,7 +29,9 @@ function Dashboard() {
     const unsubLogs = onSnapshot(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(100)), snap => {
       setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); };
+    const unsubDepts = onSnapshot(collection(db, 'departments'), snap => setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubProgs = onSnapshot(collection(db, 'programs'), snap => setPrograms(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); unsubDepts(); unsubProgs(); };
   }, []);
 
   const filteredSubmissions = useMemo(() => filterByAcademicYear(submissions, 'createdAt'), [submissions, selectedYear]);
@@ -38,29 +44,19 @@ function Dashboard() {
   const deptStats = useMemo(() => {
     const deptsMap = {};
     
-    // Mapping of student courses to standard department names
-    const courseToDeptMap = {
-      'BS Information Technology': 'College of Information Technology',
-      'Bachelor of Science in Information Technology': 'College of Information Technology',
-      'BS Computer Science': 'College of Information Technology',
-      'Bachelor of Science in Computer Science': 'College of Information Technology',
-      'BS Computer Engineering': 'College of Information Technology',
-      'Bachelor of Science in Computer Engineering': 'College of Information Technology',
-      'BS Nursing': 'College of Nursing',
-      'Bachelor of Science in Nursing': 'College of Nursing',
-      'BS Accountancy': 'College of Business and Management',
-      'Bachelor of Science in Accountancy': 'College of Business and Management',
-      'BS Business Administration': 'College of Business and Management',
-      'Bachelor of Science in Business Administration': 'College of Business and Management',
-      'BS Civil Engineering': 'College of Engineering',
-      'Bachelor of Science in Civil Engineering': 'College of Engineering',
-      'BS Architecture': 'College of Architecture',
-      'Bachelor of Science in Architecture': 'College of Architecture',
-      'Doctor of Medicine': 'School of Medicine',
-      'Doctor of Dental Medicine': 'School of Dentistry',
-      'BS Psychology': 'College of Arts and Sciences',
-      'Bachelor of Science in Psychology': 'College of Arts and Sciences',
-    };
+    // Initialize with active departments from DB
+    departments.forEach(d => {
+      if (d.name) {
+        deptsMap[d.name] = { name: d.name, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
+      }
+    });
+    
+    // Dynamic Mapping of student courses/programs to department names
+    const courseToDeptMap = {};
+    programs.forEach(p => {
+      if (p.name && p.school) courseToDeptMap[p.name] = p.school;
+      if (p.code && p.school) courseToDeptMap[p.code] = p.school;
+    });
     
     filteredDeans.forEach(dean => {
       const dName = dean.department || 'Unknown';
@@ -91,35 +87,23 @@ function Dashboard() {
     });
 
     return Object.values(deptsMap).sort((a,b) => b.uploaded - a.uploaded);
-  }, [filteredSubmissions, filteredGroups, filteredDeans, filteredAdvisers, filteredStudents]);
+  }, [filteredSubmissions, filteredGroups, filteredDeans, filteredAdvisers, filteredStudents, departments, programs]);
 
   const categories = useMemo(() => {
+    // Initialize dynamically with active departments
     const cats = {};
+    departments.forEach(d => {
+      if (d.name) cats[d.name] = 0;
+    });
+    
     let totalPub = 0;
     
-    // Use the same courseToDeptMap for consistency
-    const courseToDeptMap = {
-      'BS Information Technology': 'College of Information Technology',
-      'Bachelor of Science in Information Technology': 'College of Information Technology',
-      'BS Computer Science': 'College of Information Technology',
-      'Bachelor of Science in Computer Science': 'College of Information Technology',
-      'BS Computer Engineering': 'College of Information Technology',
-      'Bachelor of Science in Computer Engineering': 'College of Information Technology',
-      'BS Nursing': 'College of Nursing',
-      'Bachelor of Science in Nursing': 'College of Nursing',
-      'BS Accountancy': 'College of Business and Management',
-      'Bachelor of Science in Accountancy': 'College of Business and Management',
-      'BS Business Administration': 'College of Business and Management',
-      'Bachelor of Science in Business Administration': 'College of Business and Management',
-      'BS Civil Engineering': 'College of Engineering',
-      'Bachelor of Science in Civil Engineering': 'College of Engineering',
-      'BS Architecture': 'College of Architecture',
-      'Bachelor of Science in Architecture': 'College of Architecture',
-      'Doctor of Medicine': 'School of Medicine',
-      'Doctor of Dental Medicine': 'School of Dentistry',
-      'BS Psychology': 'College of Arts and Sciences',
-      'Bachelor of Science in Psychology': 'College of Arts and Sciences',
-    };
+    // Dynamic Mapping of student courses/programs to department names
+    const courseToDeptMap = {};
+    programs.forEach(p => {
+      if (p.name && p.school) courseToDeptMap[p.name] = p.school;
+      if (p.code && p.school) courseToDeptMap[p.code] = p.school;
+    });
 
     filteredSubmissions.forEach(sub => {
       if (sub.reviewStatus === 'published') {
@@ -127,27 +111,48 @@ function Dashboard() {
         const rawDName = group?.department || sub.program || group?.program || 'Unknown';
         const deptName = courseToDeptMap[rawDName] || rawDName;
         
-        cats[deptName] = (cats[deptName] || 0) + 1;
+        if (cats.hasOwnProperty(deptName)) {
+          cats[deptName] = (cats[deptName] || 0) + 1;
+        } else {
+          cats[deptName] = (cats[deptName] || 0) + 1;
+        }
         totalPub++;
       }
     });
 
     const colors = ['bg-[#801e38]', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-[#9c6e3b]', 'bg-indigo-500', 'bg-purple-500', 'bg-stone-400'];
     const strokeColors = ['#801e38', '#3b82f6', '#f59e0b', '#10b981', '#9c6e3b', '#6366f1', '#a855f7', '#a8a29e'];
+    
     return Object.entries(cats)
-      .sort((a,b) => b[1] - a[1])
-      .map(([name, count], index) => ({
-        name, count,
-        percentageVal: totalPub > 0 ? (count / totalPub) : 0,
-        percentage: totalPub > 0 ? ((count / totalPub) * 100).toFixed(1) + '%' : '0%',
-        color: colors[index % colors.length],
-        strokeColor: strokeColors[index % strokeColors.length]
-      }));
-  }, [filteredSubmissions, filteredGroups]);
+      // Only keep departments that exist in DB (or fallback for unknown ones with count > 0)
+      .filter(([name, count]) => count > 0 || departments.some(d => d.name === name))
+      .map(([name, count], index) => {
+        // Use acronyms for chart axes to save space
+        const acronym = name.split(' ').map(w => w[0]).join('').replace(/o/g, '').replace(/a/g, 'A'); 
+        const shortName = name === 'College of Information Technology' ? 'CIT' :
+                          name === 'College of Nursing' ? 'CON' :
+                          name === 'College of Business and Management' ? 'CBM' :
+                          name === 'College of Engineering' ? 'COE' :
+                          name === 'College of Architecture' ? 'COA' :
+                          name === 'School of Medicine' ? 'SOM' :
+                          name === 'School of Dentistry' ? 'SOD' :
+                          name === 'College of Arts and Sciences' ? 'CAS' : acronym;
+
+        return {
+          name: shortName,
+          fullName: name, // Add full name for the legend/list below
+          count,
+          percentage: totalPub === 0 ? '0.0%' : ((count / totalPub) * 100).toFixed(1) + '%',
+          percentageVal: totalPub === 0 ? 0 : (count / totalPub),
+          color: colors[index % colors.length],
+          strokeColor: strokeColors[index % strokeColors.length]
+        };
+      });
+  }, [filteredSubmissions, filteredGroups, departments, programs]);
 
   const quickStats = useMemo(() => {
-    const totalDepartments = new Set([...filteredDeans.map(d=>d.department), ...filteredAdvisers.map(a=>a.department)]).size;
-    const totalPrograms = new Set(filteredStudents.map(s=>s.course)).size;
+    const totalDepartments = departments.length;
+    const totalPrograms = programs.length;
     const totalUsers = filteredDeans.length + filteredAdvisers.length + filteredStudents.length;
     
     // Dynamically calculate pending invitations
@@ -216,21 +221,17 @@ function Dashboard() {
           
           {/* Row 1: Quick Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {quickStats.map((stat, i) => (
-              <div key={i} className="bg-white rounded-xl p-5 border border-stone-200 shadow-[0_2px_10px_rgba(0,0,0,0.02)] relative overflow-hidden flex flex-col justify-between min-h-[110px]">
-                <div className={`absolute top-0 left-0 right-0 h-[4px] ${['bg-[#801e38]','bg-blue-500','bg-emerald-500','bg-[#801e38]','bg-[#9c6e3b]'][i]}`}></div>
-                <h4 className={`text-4xl font-serif font-bold mb-1 ${['text-[#801e38]','text-blue-500','text-emerald-500','text-[#801e38]','text-[#9c6e3b]'][i]}`}>{stat}</h4>
-                <div>
-                  <p className="text-[11px] font-bold text-stone-800">{['Total Departments','Total Programs','Registered Users','Pending Invitations','Published Research'][i]}</p>
-                  <p className="text-[9px] text-stone-400 mt-0.5 leading-tight">{['Active','Across all departments','Advisers + Students','Nursing — Dean not yet activate','Across all departments'][i]}</p>
-                </div>
-              </div>
-            ))}
+            <StatCard icon={<Building2 />} label="Total Departments" value={quickStats[0]} sub="Active" color="maroon" />
+            <StatCard icon={<GraduationCap />} label="Total Programs" value={quickStats[1]} sub="Across all departments" color="blue" />
+            <StatCard icon={<Users />} label="Registered Users" value={quickStats[2]} sub="Advisers + Students" color="green" />
+            <StatCard icon={<UserPlus />} label="Pending Invitations" value={quickStats[3]} sub="Needs activation" color="amber" />
+            <StatCard icon={<BookOpen />} label="Published Research" value={quickStats[4]} sub="Across all departments" color="maroon" />
           </div>
 
           {/* Row 2: Yearly Research Upload Trend */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
+          <Card className="mb-6">
+            <CardBody>
+              <div className="flex items-center gap-2 mb-6">
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Yearly Research Upload Trend</h3>
@@ -285,11 +286,13 @@ function Dashboard() {
                 </span>
               </div>
             </div>
-          </div>
+            </CardBody>
+          </Card>
 
           {/* Row 3: Research Status per Department Horizontal Bar Chart */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
+          <Card className="mb-6">
+            <CardBody>
+              <div className="flex items-center gap-2 mb-6">
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Research Status per Department</h3>
@@ -331,13 +334,15 @@ function Dashboard() {
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#64b494] rounded-sm"></span><span>Approved</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#9c6e3b] rounded-sm"></span><span>Published</span></div>
             </div>
-          </div>
+            </CardBody>
+          </Card>
 
           {/* Row 4: Department Stats Table & Category Donut Pie Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm lg:col-span-2 overflow-x-auto">
-              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
-              <div className="overflow-x-auto min-w-[500px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <Card className="lg:col-span-2 overflow-x-auto">
+              <CardBody>
+                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
+                <div className="overflow-x-auto min-w-[500px]">
                 <table className="w-full text-left text-xs">
                   <thead><tr className="bg-[#801e38] text-white uppercase text-[9px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
                   <tbody className="divide-y divide-stone-100">
@@ -362,38 +367,38 @@ function Dashboard() {
                   </tbody>
                 </table>
               </div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm">
-              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
-              <div className="flex justify-center mb-6"><div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="64" cy="64" r="50" fill="transparent" stroke="#f5f5f5" strokeWidth="12" />
-                  {(() => {
-                    let cumulative = 0;
-                    const circ = 314.159;
-                    return categories.map((cat, i) => {
-                      const arc = cat.percentageVal * circ;
-                      const offset = -(cumulative * circ);
-                      cumulative += cat.percentageVal;
-                      return (
-                        <circle key={i} cx="64" cy="64" r="50" fill="transparent" stroke={cat.strokeColor} strokeWidth="12" strokeDasharray={`${arc} ${circ}`} strokeDashoffset={offset} className="transition-all duration-1000 ease-out" />
-                      );
-                    });
-                  })()}
-                </svg>
-                <div className="absolute flex flex-col items-center"><span className="text-2xl font-serif font-bold text-[#801e38]">{quickStats[4]}</span><span className="text-[8px] font-bold text-stone-400 uppercase tracking-wider">Total</span></div></div></div>
-              <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.name}</span></div><span className="text-stone-900 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
+              </CardBody>
+            </Card>
+            <Card>
+              <CardBody>
+                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
+                <div className="flex justify-center mb-4">
+                <div className="w-full h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={categories}>
+                      <PolarGrid stroke="#e5e7eb" />
+                      <PolarAngleAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10, fontWeight: 'bold' }} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Radar name="Published Papers" dataKey="count" stroke="#801e38" strokeWidth={2} fill="#801e38" fillOpacity={0.5} activeDot={{ r: 6, fill: '#801e38' }} dot={{ r: 4, fill: '#fff', stroke: '#801e38', strokeWidth: 2 }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+              <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
+              </div>
+              </CardBody>
+            </Card>
           </div>
 
           {/* Row 5: Storage Usage Overview */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-150 shadow-sm mb-6">
-            <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600"><span>Total Files Uploaded</span><span className="text-stone-900 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Published Papers</span><span className="text-stone-900 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Supporting Documents</span><span className="text-stone-900 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Other Assets</span><span className="text-stone-900 font-bold">136 files</span></div></div></div>
+          <Card className="mb-6">
+            <CardBody>
+              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600"><span>Total Files Uploaded</span><span className="text-stone-900 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Published Papers</span><span className="text-stone-900 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Supporting Documents</span><span className="text-stone-900 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Other Assets</span><span className="text-stone-900 font-bold">136 files</span></div></div></div>
             <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center gap-2 text-xs font-bold text-[#801e38]"><span>⚠️</span><span>Storage above 60% — consider archiving old records.</span></div>
-          </div>
+            </CardBody>
+          </Card>
 
         </div>
       </main>

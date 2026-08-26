@@ -7,6 +7,7 @@ import { collection, query, onSnapshot, updateDoc, doc } from 'firebase/firestor
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { PremiumButton } from '../../components/ui/Card';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -277,19 +278,21 @@ export default function UserManagement() {
                               )}
                             </td>
                             <td className="py-4 text-right space-x-2">
-                              <button 
+                              <PremiumButton 
                                 onClick={() => handleView(row, 'adviser')}
-                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 shadow-sm transition-colors"
+                                variant="outline"
+                                size="sm"
                               >
                                 👁️ View
-                              </button>
+                              </PremiumButton>
                               {!row.isYou && (
-                                <button 
+                                <PremiumButton 
                                   onClick={() => handleDeactivate(row)}
-                                  className={`px-3 py-1 font-bold rounded-lg text-[11px] shadow-sm transition-colors ${row.status === 'inactive' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                                  variant={row.status === 'inactive' ? 'primary' : 'danger'}
+                                  size="sm"
                                 >
                                   {row.status === 'inactive' ? 'Activate' : 'Deactivate'}
-                                </button>
+                                </PremiumButton>
                               )}
                             </td>
                           </tr>
@@ -326,18 +329,21 @@ export default function UserManagement() {
                               )}
                             </td>
                             <td className="py-4 text-right space-x-2">
-                              <button 
+                              <PremiumButton 
                                 onClick={() => handleView(row, 'student')}
-                                className="px-3 py-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 font-bold rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 shadow-sm transition-colors mr-2"
+                                variant="outline"
+                                size="sm"
+                                className="mr-2"
                               >
                                 👁️ View
-                              </button>
-                              <button 
+                              </PremiumButton>
+                              <PremiumButton 
                                 onClick={() => handleDeactivate(row)}
-                                className={`px-3 py-1 font-bold rounded-lg text-[11px] shadow-sm transition-colors ${row.status === 'inactive' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                                variant={row.status === 'inactive' ? 'primary' : 'danger'}
+                                size="sm"
                               >
                                 {row.status === 'inactive' ? 'Activate' : 'Deactivate'}
-                              </button>
+                              </PremiumButton>
                             </td>
                           </tr>
                         ))

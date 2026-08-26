@@ -5,6 +5,7 @@ import { db } from '../firebase/config';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 const REPORT_TYPES = [
   { id: 'research-by-year', title: 'Research by Year', desc: 'Uploads by academic year', icon: '📅' },
@@ -208,12 +209,13 @@ export default function Reports() {
             <hr style={{ margin: '15px 0' }} />
           </div>
 
-          <div className="no-print">
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024]">Generate Reports</h1>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Select a report type, apply filters, and export</p>
+          <div className="no-print mb-6">
+            <SectionTitle sub="Select a report type, apply filters, and export">
+              Generate Reports
+            </SectionTitle>
           </div>
 
-          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 p-6 space-y-6 print-container">
+          <Card glass={true} className="p-6 space-y-6 print-container">
             <div className="no-print">
               <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200 mb-4">Report Type</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -243,8 +245,12 @@ export default function Reports() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Filters & Export</h3>
                 <div className="flex items-center gap-2 font-bold text-[11px]">
-                  <button onClick={() => window.print()} className="px-4 py-2 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 rounded-xl shadow-sm text-stone-600 dark:text-stone-400 flex items-center gap-1.5">🖨️ Print / PDF</button>
-                  <button onClick={handleExportCSV} className="px-5 py-2 bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">📊 Export Excel (CSV)</button>
+                  <PremiumButton onClick={() => window.print()} variant="outline" className="flex items-center gap-1.5">
+                    🖨️ Print / PDF
+                  </PremiumButton>
+                  <PremiumButton onClick={handleExportCSV} variant="primary" className="flex items-center gap-1.5">
+                    📊 Export Excel (CSV)
+                  </PremiumButton>
                 </div>
               </div>
 
@@ -299,7 +305,7 @@ export default function Reports() {
               )}
             </div>
 
-          </div>
+          </Card>
         </main>
       </div>
     </div>

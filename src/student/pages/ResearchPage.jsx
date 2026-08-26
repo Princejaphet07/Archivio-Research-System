@@ -3,6 +3,7 @@ import Sidebar from '../Components/Sidebar';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import swuBuilding from '../../assets/swu-building.png';
+import { Card, CardBody } from '../../components/ui/Card';
 
 export default function ResearchPage({ onLogout, studentName, initials, onUploadClick, activeTab, setActiveTab, profilePhotoUrl, role }) {
   const displayName = studentName || 'STUDENT';
@@ -185,8 +186,8 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
             ) : (
               <div className="space-y-6">
                 {filteredPapers.map(paper => (
-                  <div key={paper.id} className="bg-white dark:bg-stone-900 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="p-6">
+                  <Card hover key={paper.id} className="overflow-hidden">
+                    <CardBody>
                       {/* Title */}
                       <h3 className="text-xl font-bold text-[#3a1a1a] dark:text-stone-100 mb-2">
                         {paper.title}

@@ -179,10 +179,53 @@ export default function Sidebar({ onNavigate }) {
     }
   };
 
-  // Handle navigation
   const handleNavigate = (itemId) => {
     navigate(`/dean/${itemId}`);
   };
+
+  const NavButton = ({ id, label, icon, badge, badgeStyle }) => {
+    const isActive = activePage === id;
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleNavigate(id)}
+        className={`group relative w-full flex items-center justify-between px-4 py-3 mb-1 rounded-xl text-xs font-bold transition-all duration-300 ease-out overflow-hidden ${
+          isActive
+            ? 'text-white shadow-lg shadow-black/20'
+            : 'text-stone-400 hover:text-white'
+        }`}
+      >
+        <div 
+          className={`absolute inset-0 rounded-xl transition-all duration-300 ease-out ${
+            isActive 
+              ? 'bg-gradient-to-r from-white/15 to-transparent border border-white/10 opacity-100 translate-x-0' 
+              : 'bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4'
+          }`} 
+        />
+        
+        <div 
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#f8d070] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#f8d070] ${
+            isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
+          }`}
+        />
+
+        <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-300 group-hover:translate-x-1">
+          <div className={`transition-all duration-300 ${isActive ? 'text-[#f8d070] scale-110 drop-shadow-[0_0_8px_rgba(248,208,112,0.5)]' : 'text-stone-400 group-hover:text-white'}`}>
+            {icon}
+          </div>
+          <span className="tracking-wide">{label}</span>
+        </div>
+        
+        {badge && (
+          <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${badgeStyle || 'bg-[#801e38] text-white'}`}>
+            {badge}
+          </span>
+        )}
+      </button>
+    );
+  };
+
   return (
     <aside className="w-[260px] bg-[#4a1024] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0">
 
@@ -222,24 +265,13 @@ export default function Sidebar({ onNavigate }) {
 
               return (
                 <li key={item.id}>
-                  <button
-                    onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
-                      ${activePage === item.id
-                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white/5 hover:text-white text-stone-300'
-                      }`}
-                  >
-                    <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
-                      {item.icon}
-                      {item.label}
-                    </span>
-                    {currentBadge && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeStyle}`}>
-                        {currentBadge}
-                      </span>
-                    )}
-                  </button>
+                  <NavButton
+                    id={item.id}
+                    label={item.label}
+                    icon={item.icon}
+                    badge={currentBadge}
+                    badgeStyle={item.badgeStyle}
+                  />
                 </li>
               );
             })}
@@ -256,24 +288,13 @@ export default function Sidebar({ onNavigate }) {
 
               return (
                 <li key={item.id}>
-                  <button
-                    onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm text-left group
-                      ${activePage === item.id
-                        ? 'bg-white/10 text-white font-medium border border-white/5 shadow-sm'
-                        : 'hover:bg-white/5 hover:text-white text-stone-300'
-                      }`}
-                  >
-                    <span className={`flex items-center gap-3 ${activePage === item.id ? '' : 'opacity-70 group-hover:opacity-100 transition-opacity'}`}>
-                      {item.icon}
-                      {item.label}
-                    </span>
-                    {currentBadge && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeStyle}`}>
-                        {currentBadge}
-                      </span>
-                    )}
-                  </button>
+                  <NavButton
+                    id={item.id}
+                    label={item.label}
+                    icon={item.icon}
+                    badge={currentBadge}
+                    badgeStyle={item.badgeStyle}
+                  />
                 </li>
               );
             })}

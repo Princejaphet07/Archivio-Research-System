@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../Components/Sidebar';
 import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { logActivity } from '../../firebase/logActivity';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { AlertTriangle } from 'lucide-react';
+import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
 
 // Dynamic requirements fetched from DB instead of hardcoded array
 
@@ -20,6 +23,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [documentsMeta, setDocumentsMeta] = useState({});
   const [uploadingItem, setUploadingItem] = useState(null);
   const [requirements, setRequirements] = useState([]);
+  const [documentRevisions, setDocumentRevisions] = useState({});
+  const [adviserUid, setAdviserUid] = useState(null);
+  const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '', reqId: null });
 
   const fileInputRefs = useRef({});
 
@@ -34,20 +40,21 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         const uid = studentUid || auth.currentUser?.uid;
         if (!uid) { setLoadingData(false); return; }
 
-        let adviserUid = null;
+        let resolvedAdviserUid = null;
         const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', uid)));
         if (!groupSnap.empty) {
-          adviserUid = groupSnap.docs[0].data().adviserUid;
+          resolvedAdviserUid = groupSnap.docs[0].data().adviserUid;
         } else {
           const allGroupsSnap = await getDocs(collection(db, 'groups'));
           for (const doc of allGroupsSnap.docs) {
             const data = doc.data();
             if (data.members?.some(m => m.email === auth.currentUser?.email)) {
-              adviserUid = data.adviserUid;
+              resolvedAdviserUid = data.adviserUid;
               break;
             }
           }
         }
+        setAdviserUid(resolvedAdviserUid);
 
         unsubReq = onSnapshot(collection(db, 'requirements'), (reqSnap) => {
           const allReqs = reqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -78,10 +85,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setSubmissionDocId(subDocId);
             setUploadedDocs(subData.uploadedDocs || []);
             setDocumentsMeta(subData.documents || {});
+            setDocumentRevisions(subData.documentRevisions || {});
           } else {
             setSubmissionDocId(null);
             setUploadedDocs([]);
             setDocumentsMeta({});
+            setDocumentRevisions({});
           }
           setLoadingData(false);
         }, (err) => {
@@ -125,30 +134,21 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       const displayName = studentName || auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown';
       let fileUrl = '';
 
-      // Upload to Cloudinary
+      // Upload to Firebase Storage
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', 'Archivio'); // From your screenshot
-
-        // Use 'auto' to support raw files (PDFs/ZIPs) and images/videos
-        const res = await fetch('https://api.cloudinary.com/v1_1/peqpcqug/auto/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          throw new Error('Cloudinary upload failed');
-        }
-
-        const data = await res.json();
-        fileUrl = data.secure_url;
+        const fileExtension = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const storagePath = `requirements/${uid}/${item.id}_${timestamp}.${fileExtension}`;
+        const storageRef = ref(storage, storagePath);
+        
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
       } catch (uploadErr) {
-        console.error('Cloudinary upload failed:', uploadErr);
+        console.error('Firebase Storage upload failed:', uploadErr);
         Swal.fire({
           icon: 'error',
           title: 'Upload Failed',
-          text: 'Cloudinary rejected the file. If this is a PDF, it might be over the 10MB free tier limit. Please compress your PDF and try again.',
+          text: 'Firebase Storage rejected the file. Please check your internet connection or file size.',
           confirmButtonColor: '#7B1F35'
         });
         setUploadingItem(null);
@@ -288,6 +288,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const saveToFirestore = async (itemId, meta, displayName) => {
     const uid = studentUid || auth.currentUser?.uid;
     const subRef = collection(db, 'submissions');
+    const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
+    const hadRevision = !!documentRevisions?.[itemId];
 
     let currentDocId = submissionDocId;
     if (submissionDocId) {
@@ -299,6 +301,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         updatedAt: new Date().toISOString()
       };
       if (meta.pageCount) updatePayload.pageCount = meta.pageCount;
+
+      // If this item had a revision request, clear it on re-upload
+      if (hadRevision) {
+        updatePayload[`documentRevisions.${itemId}`] = deleteField();
+      }
+
       await updateDoc(docRef, updatePayload);
     } else {
       // Create new submission document
@@ -319,18 +327,32 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       currentDocId = addedDoc.id;
     }
 
-    const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
+    // Student self-notification
     await addDoc(collection(db, 'notifications'), {
       userId: uid,
-      title: "Document Uploaded",
-      message: `You successfully uploaded: ${itemTitle}`,
+      title: hadRevision ? '✅ Revision Resubmitted' : 'Document Uploaded',
+      message: hadRevision
+        ? `You resubmitted "${itemTitle}" after revision. Your adviser will review it.`
+        : `You successfully uploaded: ${itemTitle}`,
       isRead: false,
       createdAt: serverTimestamp()
     });
 
+    // Notify the adviser if student resubmitted a revised document
+    if (hadRevision && adviserUid) {
+      await addDoc(collection(db, 'notifications'), {
+        userId: adviserUid,
+        title: '📄 Student Resubmitted Revision',
+        message: `${displayName} has resubmitted "${itemTitle}" after your revision request. Please review the updated file.`,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+    }
+
     // Update local state
     if (!uploadedDocs.includes(itemId)) setUploadedDocs(prev => [...prev, itemId]);
     setDocumentsMeta(prev => ({ ...prev, [itemId]: meta }));
+    if (hadRevision) setDocumentRevisions(prev => { const n = { ...prev }; delete n[itemId]; return n; });
     
     return currentDocId;
   };
@@ -352,17 +374,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       const docRef = doc(db, 'submissions', submissionDocId);
       const fileUrl = documentsMeta[item.id]?.url;
 
-      // Attempt to delete from Cloudinary backend
-      if (fileUrl && fileUrl.includes('cloudinary.com')) {
+      // Attempt to delete from Firebase Storage
+      if (fileUrl && fileUrl.includes('firebasestorage')) {
         try {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-          await fetch(`${backendUrl}/api/delete-cloudinary`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileUrl })
-          });
+          const fileRef = ref(storage, fileUrl);
+          await deleteObject(fileRef);
         } catch (err) {
-          console.warn('Backend cloudinary delete failed:', err);
+          console.warn('Firebase Storage delete failed:', err);
         }
       }
 
@@ -446,43 +464,46 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             </div>
 
             {/* PROGRESS BAR CARD */}
-            <div className="w-full bg-white dark:bg-stone-900 rounded-2xl p-6 flex items-center justify-between shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
-              <div className="w-48">
-                {loadingData ? (
-                  <div className="h-6 w-24 bg-stone-200 dark:bg-stone-800 animate-pulse rounded mb-1" />
-                ) : (
-                  <h3 className="text-[22px] font-serif font-bold text-[#7B1F35] dark:text-[#D05353]">{uploadedCount} of {totalCount}</h3>
-                )}
-                <p className="text-[13px] text-gray-500 dark:text-stone-400">documents submitted</p>
-              </div>
-
-              <div className="flex-1 px-8">
-                <div className="w-full bg-stone-100 dark:bg-stone-900 h-3 rounded-full overflow-hidden mb-2">
-                  <div
-                    className="bg-[#7B1F35] dark:bg-[#7B1F35] h-full rounded-full transition-all duration-700"
-                    style={{ width: `${loadingData ? 0 : progressPercent}%` }}
-                  />
+            <Card hover className="w-full">
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]" />
+              <CardBody className="flex items-center justify-between pt-8">
+                <div className="w-48">
+                  {loadingData ? (
+                    <div className="h-8 w-28 bg-stone-200 dark:bg-stone-800 animate-pulse rounded mb-1" />
+                  ) : (
+                    <h3 className="text-[30px] font-serif font-bold text-[#7B1F35] dark:text-[#D05353] leading-none">
+                      {uploadedCount} <span className="text-[18px] text-stone-400 dark:text-stone-500">of {totalCount}</span>
+                    </h3>
+                  )}
+                  <p className="text-[13px] text-stone-500 dark:text-stone-400 mt-1">documents submitted</p>
                 </div>
-                {loadingData ? (
-                  <div className="h-3 w-20 bg-stone-200 dark:bg-stone-800 animate-pulse rounded" />
-                ) : (
-                  <p className="text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">{progressPercent}% complete</p>
-                )}
-              </div>
 
-              <div className="w-48 flex justify-end">
-                {missingCount === 0 && !loadingData ? (
-                  <span className="bg-[#E6F4EA] dark:bg-green-900/30 text-[#1E8E3E] dark:text-green-400 text-[13px] font-bold px-4 py-2 rounded-full border border-[#CEEAD6] dark:border-green-900/50">
-                    ✓ Complete
-                  </span>
-                ) : (
-                  <span className="bg-[#FCE8EB] dark:bg-red-900/30 text-[#CF3645] dark:text-red-400 text-[13px] font-bold px-4 py-2 rounded-full flex items-center gap-2 border border-[#F5C2C7] dark:border-red-900/50">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {missingCount} missing
-                  </span>
-                )}
-              </div>
-            </div>
+                <div className="flex-1 px-8">
+                  <div className="w-full bg-stone-100 dark:bg-stone-800 h-2.5 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="bg-gradient-to-r from-[#7B1F35] to-[#C73D4C] h-full rounded-full transition-all duration-700"
+                      style={{ width: `${loadingData ? 0 : progressPercent}%` }}
+                    />
+                  </div>
+                  {loadingData ? (
+                    <div className="h-3 w-20 bg-stone-200 dark:bg-stone-800 animate-pulse rounded" />
+                  ) : (
+                    <p className="text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">{progressPercent}% complete</p>
+                  )}
+                </div>
+
+                <div className="w-48 flex justify-end">
+                  {missingCount === 0 && !loadingData ? (
+                    <StatusBadge status="approved" />
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2 rounded-full border bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      {missingCount} missing
+                    </span>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
 
             {/* DOCUMENT GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -494,55 +515,137 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
+                  const hasRevision = !!documentRevisions[item.id];
                   return (
-                    <div key={item.id} className="bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 border-t-4 border-t-[#7B1F35] dark:border-t-[#7B1F35] flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
+                    <Card key={item.id} hover className="flex flex-col h-full">
+                      {/* top accent */}
+                      <div className={`absolute top-0 left-0 right-0 h-[3px] ${hasRevision ? 'bg-gradient-to-r from-amber-500 to-orange-400' : 'bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]'}`} />
+                      <CardBody className="flex flex-col flex-1 pt-7">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl ${hasRevision ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20'}`}>
+                            {item.icon}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
+                            <span className="text-[9px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 px-2 py-0.5 rounded">Required</span>
+                          </div>
+                        </div>
+                        <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-4 flex-1">{item.desc}</p>
+
+                        <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700 rounded-xl p-4 mb-4">
+                          <div className="flex items-start gap-2">
+                            <svg className="w-4 h-4 text-stone-400 dark:text-stone-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            <div className="min-w-0 flex-1">
+                              {meta.url && meta.url !== '#' ? (
+                                <button
+                                  onClick={() => setViewerState({ isOpen: true, url: meta.url, title: item.title, reqId: item.id })}
+                                  className="text-[13px] font-bold text-[#7B1F35] dark:text-[#D05353] hover:underline truncate block w-full text-left"
+                                >
+                                  {meta.name}
+                                </button>
+                              ) : (
+                                <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{meta.name}</p>
+                              )}
+                              <p className="text-[11px] text-stone-500 dark:text-stone-400">{meta.size} · {meta.date}</p>
+                              {hasRevision && (
+                                <button
+                                  onClick={() => setViewerState({ isOpen: true, url: meta.url, title: item.title, reqId: item.id })}
+                                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/60 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold rounded-lg border border-amber-200 dark:border-amber-800/50 hover:bg-amber-200/60 transition-colors"
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  View Revision Notes
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-auto">
+                          {hasRevision ? (
+                            <span className="flex items-center gap-1.5 text-[12px] font-bold text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="w-3.5 h-3.5" /> Revision Required
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-[12px] font-bold text-green-600 dark:text-green-400">
+                              <span className="w-2 h-2 bg-green-500 rounded-full" /> Submitted
+                            </span>
+                          )}
+                          <div className="flex items-center gap-3 text-[12px] font-bold">
+                            <button
+                              className="text-[#7B1F35] dark:text-[#D05353] hover:underline"
+                              onClick={() => {
+                                if (item.type === 'url') handleUploadUrl(item);
+                                else fileInputRefs.current[item.id]?.click();
+                              }}
+                            >
+                              Replace
+                            </button>
+                            <span className="text-stone-300 dark:text-stone-600">·</span>
+                            <button className="hover:underline text-stone-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
+                          </div>
+                        </div>
+
+                        {/* Hidden File Input for Replace */}
+                        <input
+                          type="file"
+                          accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
+                          ref={el => fileInputRefs.current[item.id] = el}
+                          className="hidden"
+                          onChange={(e) => handleUploadFile(item, e.target.files[0])}
+                        />
+                      </CardBody>
+                    </Card>
+                  );
+                }
+
+                // ── MISSING CARD ──
+                return (
+                  <Card key={item.id} hover className={`flex flex-col h-full ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 to-red-400" />
+                    <CardBody className="flex flex-col flex-1 pt-7">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
+                        <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center shrink-0 text-xl">
                           {item.icon}
                         </div>
                         <div>
                           <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
-                          <span className="text-[9px] font-bold text-[#7B1F35] dark:text-white tracking-widest uppercase bg-[#F4DEE5] dark:bg-[#7B1F35] px-2 py-0.5 rounded">Required</span>
+                          <span className="text-[9px] font-bold text-red-600 dark:text-red-400 tracking-widest uppercase bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">Required</span>
                         </div>
                       </div>
-                      <p className="text-gray-600 dark:text-stone-400 text-[13px] mb-6 flex-1">{item.desc}</p>
+                      <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-4 flex-1">{item.desc}</p>
 
-                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700 rounded-xl p-4 mb-4 relative group">
-                        <div className="flex items-start gap-2">
-                          <svg className="w-4 h-4 text-gray-400 dark:text-stone-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                          <div className="min-w-0 flex-1">
-                            {meta.url && meta.url !== '#' ? (
-                              <a href={meta.url} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-[#7B1F35] dark:text-[#D05353] hover:underline truncate block w-full">
-                                {meta.name}
-                              </a>
-                            ) : (
-                              <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate w-full">{meta.name}</p>
-                            )}
-                            <p className="text-[11px] text-gray-500 dark:text-stone-400">{meta.size} · {meta.date}</p>
+                      <div
+                        className="border-2 border-dashed border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-red-50/80 dark:hover:bg-red-900/20 transition-all mt-auto"
+                        onClick={() => {
+                          if (item.type === 'url') handleUploadUrl(item);
+                          else fileInputRefs.current[item.id]?.click();
+                        }}
+                      >
+                        {isUploadingThis ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-6 h-6 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                            <span className="text-red-500 font-bold text-[12px]">Uploading...</span>
                           </div>
-                        </div>
+                        ) : (
+                          <>
+                            <div className="w-9 h-9 bg-red-100 dark:bg-red-900/40 rounded-xl text-red-500 flex items-center justify-center mb-2">
+                              {item.type === 'url' ? (
+                                <span className="font-bold text-sm">URL</span>
+                              ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                              )}
+                            </div>
+                            <p className="text-red-500 dark:text-red-400 font-bold text-[13px]">
+                              {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
+                            </p>
+                            <p className="text-red-400/70 dark:text-red-500/60 text-[11px] mt-1">
+                              {item.type === 'url' ? 'GitHub or Publisher Link' : (isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB')}
+                            </p>
+                          </>
+                        )}
                       </div>
 
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="flex items-center gap-1.5 text-[12px] font-bold text-[#1E8E3E] dark:text-green-400">
-                          <span className="w-2 h-2 bg-[#1E8E3E] dark:bg-green-400 rounded-full"></span> Submitted
-                        </span>
-                        <div className="flex items-center gap-3 text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">
-                          <button
-                            className="hover:underline"
-                            onClick={() => {
-                              if (item.type === 'url') handleUploadUrl(item);
-                              else fileInputRefs.current[item.id]?.click();
-                            }}
-                          >
-                            Replace
-                          </button>
-                          <span className="text-gray-300 dark:text-stone-600">·</span>
-                          <button className="hover:underline text-gray-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
-                        </div>
-                      </div>
-
-                      {/* Hidden File Input for Replace */}
+                      {/* Hidden File Input */}
                       <input
                         type="file"
                         accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
@@ -550,64 +653,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                         className="hidden"
                         onChange={(e) => handleUploadFile(item, e.target.files[0])}
                       />
-                    </div>
-                  );
-                }
-
-                // ── MISSING CARD ──
-                return (
-                  <div key={item.id} className={`bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 border-t-4 border-t-[#CF3645] dark:border-t-red-500 flex flex-col h-full transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-10 h-10 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center shrink-0 shadow-sm text-xl">
-                        {item.icon}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
-                        <span className="text-[9px] font-bold text-[#CF3645] dark:text-red-400 tracking-widest uppercase bg-[#FCE8EB] dark:bg-red-950/50 px-2 py-0.5 rounded">Required</span>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 dark:text-stone-400 text-[13px] mb-6 flex-1">{item.desc}</p>
-
-                    <div
-                      className="border-2 border-dashed border-[#CF3645]/40 dark:border-red-900/50 bg-[#FCE8EB]/30 dark:bg-red-950/30 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#FCE8EB]/60 dark:hover:bg-red-900/20 transition-colors mt-auto relative overflow-hidden"
-                      onClick={() => {
-                        if (item.type === 'url') handleUploadUrl(item);
-                        else fileInputRefs.current[item.id]?.click();
-                      }}
-                    >
-                      {isUploadingThis ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-6 h-6 border-2 border-[#CF3645]/30 dark:border-red-900/50 border-t-[#CF3645] dark:border-t-red-500 rounded-full animate-spin" />
-                          <span className="text-[#CF3645] dark:text-red-400 font-bold text-[12px]">Uploading...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="w-8 h-8 bg-[#8C9BB4] dark:bg-stone-700 rounded text-white dark:text-stone-200 flex items-center justify-center mb-2 shadow-sm">
-                            {item.type === 'url' ? (
-                              <span className="font-bold text-sm">URL</span>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            )}
-                          </div>
-                          <p className="text-[#CF3645] dark:text-red-400 font-bold text-[13px]">
-                            {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
-                          </p>
-                          <p className="text-[#CF3645]/60 dark:text-red-400/60 text-[11px] mt-1">
-                            {item.type === 'url' ? 'GitHub or Publisher Link' : (isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB')}
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Hidden File Input */}
-                    <input
-                      type="file"
-                      accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
-                      ref={el => fileInputRefs.current[item.id] = el}
-                      className="hidden"
-                      onChange={(e) => handleUploadFile(item, e.target.files[0])}
-                    />
-                  </div>
+                    </CardBody>
+                  </Card>
                 );
               })}
 
@@ -615,6 +662,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           </div>
         </div>
       </div>
+
+      <DocumentViewerModal
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ ...viewerState, isOpen: false, reqId: null })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+        role="student"
+        initialNote={documentRevisions[viewerState.reqId] || ''}
+      />
     </div>
   );
 }

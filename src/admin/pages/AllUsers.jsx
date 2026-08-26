@@ -7,7 +7,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Download } from 'lucide-react';
+import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -249,11 +250,10 @@ export default function AllUsers() {
         />
 
         {/* PAGE CONTENT */}
-        <div className="flex-1 overflow-auto p-8">
-          <div className="mb-6">
-            <h3 className="text-3xl font-serif font-bold text-stone-900 mb-1">All Users Overview</h3>
-            <p className="text-sm text-stone-500">Read-only view across all roles in ARCHIVIO.</p>
-          </div>
+        <div className="flex-1 overflow-auto p-6 md:p-8">
+          <SectionTitle sub="Read-only view across all roles in ARCHIVIO.">
+            All Users Overview
+          </SectionTitle>
 
           {/* TABS */}
           <div className="flex gap-6 border-b border-stone-200 mb-6">
@@ -269,13 +269,13 @@ export default function AllUsers() {
           </div>
 
           {/* TABLE CARD */}
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+          <Card className="flex flex-col overflow-hidden mb-6">
 
             {/* Search + Export */}
-            <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100">
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-all shadow-sm cursor-pointer">
-                <span>📤</span> Export CSV
-              </button>
+            <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100 bg-stone-50/50">
+              <PremiumButton variant="ghost" icon={<Download className="w-4 h-4" />}>
+                Export CSV
+              </PremiumButton>
             </div>
 
             {/* TABLE */}
@@ -364,7 +364,7 @@ export default function AllUsers() {
                 >›</button>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </main>
     </div>

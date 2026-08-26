@@ -5,6 +5,7 @@ import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimest
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
+import { Card, CardBody, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function ResearchCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,18 +166,16 @@ function ResearchCategories() {
   return (
     <Layout title="Research Categories" breadcrumb="ARCHIVIO › Research Categories" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Research Categories</h1>
-            <p className="text-sm text-gray-500 dark:text-stone-400">Create and manage research paper categories for your submissions</p>
-          </div>
-          <button 
-            onClick={openAddModal}
-            className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
-          >
-            + New Category
-          </button>
-        </div>
+        <SectionTitle 
+          sub="Create and manage research paper categories for your submissions"
+          action={
+            <PremiumButton onClick={openAddModal} variant="primary">
+              + New Category
+            </PremiumButton>
+          }
+        >
+          Research Categories
+        </SectionTitle>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {loading ? (
@@ -188,38 +187,41 @@ function ResearchCategories() {
             </>
           ) : (
             filteredCategories.map((cat, i) => (
-              <div key={cat.id || i} className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 p-5 flex flex-col justify-between h-40" style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
-                <div>
-                  <div className="text-2xl mb-1">{cat.icon || '🔗'}</div>
-                  <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
-                  <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => openEditModal(cat)}
-                    className="border border-gray-200 dark:border-stone-700 rounded px-3 py-1 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1"
-                  >
-                    ✏️ Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(cat.id, cat.name)}
-                    className="border border-gray-200 dark:border-stone-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+              <Card key={cat.id || i} className="flex flex-col justify-between h-40 group" hover={true} style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
+                <CardBody className="flex flex-col h-full p-5">
+                  <div className="flex-1">
+                    <div className="text-2xl mb-1 group-hover:scale-110 transition-transform origin-left">{cat.icon || '🔗'}</div>
+                    <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button 
+                      onClick={() => openEditModal(cat)}
+                      className="border border-gray-200 dark:border-stone-700 rounded px-3 py-1 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1 transition"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(cat.id, cat.name)}
+                      className="border border-gray-200 dark:border-stone-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </CardBody>
+              </Card>
             ))
           )}
           
           {/* Add New Category Card */}
-          <button 
+          <Card 
+            hover={true}
             onClick={openAddModal}
-            className="bg-transparent border-2 border-dashed border-gray-300 dark:border-stone-700 rounded-xl p-5 flex flex-col items-center justify-center h-40 text-gray-400 dark:text-stone-500 hover:text-[#7a2e46] dark:hover:text-[#f8d070] hover:border-[#7a2e46] dark:hover:border-[#f8d070] hover:bg-white dark:hover:bg-stone-900 transition group"
+            className="border-2 border-dashed border-stone-300 dark:border-stone-700 bg-transparent flex flex-col items-center justify-center h-40 group text-stone-500 hover:border-[#7B1F35] hover:text-[#7B1F35]"
           >
-            <span className="text-3xl font-light mb-2 group-hover:scale-110 transition">+</span>
-            <span className="text-sm font-semibold">Add New Category</span>
-          </button>
+            <span className="text-3xl font-light mb-2 group-hover:scale-110 transition-transform">+</span>
+            <span className="text-[13px] font-bold">Add New Category</span>
+          </Card>
         </div>
 
         {/* Modal */}

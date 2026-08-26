@@ -68,9 +68,53 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     },
     { 
       name: 'Settings', 
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg> 
     }
   ];
+
+  const NavButton = ({ name, icon, badge }) => {
+    const isActive = activeTab === name;
+
+    return (
+      <button
+        type="button"
+        onClick={() => { setActiveTab(name); setIsOpen(false); }}
+        className={`group relative w-full flex items-center justify-between px-4 py-3 mb-1 rounded-xl text-xs font-bold transition-all duration-300 ease-out overflow-hidden ${
+          isActive
+            ? 'text-white shadow-lg shadow-black/20'
+            : 'text-gray-300 dark:text-stone-300 hover:text-white'
+        }`}
+      >
+        <div 
+          className={`absolute inset-0 rounded-xl transition-all duration-300 ease-out ${
+            isActive 
+              ? 'bg-gradient-to-r from-white/15 to-transparent border border-white/10 opacity-100 translate-x-0' 
+              : 'bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4'
+          }`} 
+        />
+        
+        <div 
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#d0a36e] ${
+            isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
+          }`}
+        />
+
+        <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-300 group-hover:translate-x-1">
+          <div className={`transition-all duration-300 ${isActive ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' : 'text-gray-300 dark:text-stone-300 group-hover:text-white'}`}>
+            {icon}
+          </div>
+          <span className="tracking-wide text-[13px]">{name}</span>
+        </div>
+        
+        {badge && (
+          <span className={`relative z-10 text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full shadow-sm transition-all duration-300 ${
+            isActive ? 'bg-[#d0a36e] text-[#541b2f]' : 'bg-[#CF3645] text-white'
+          }`}>
+            {badge}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -94,38 +138,15 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5 px-4">
-            {menuItems.map((item) => {
-              const isActive = activeTab === item.name;
-              return (
-                <button 
-                  key={item.name} 
-                  onClick={() => { setActiveTab(item.name); setIsOpen(false); }}
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 relative ${
-                    isActive 
-                      ? 'bg-[#6b253e]/80 dark:bg-white/10 text-white font-bold border border-[#d0a36e]/30 dark:border-white/5' 
-                      : 'bg-transparent text-gray-300 dark:text-stone-300 hover:bg-[#6b253e]/40 dark:hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`${isActive ? 'text-white' : 'text-gray-300 dark:text-stone-300'}`}>
-                      {item.icon}
-                    </div>
-                    {item.name}
-                  </div>
-                  
-                  {/* Right side Badge or active indicator */}
-                  {item.badge && (
-                    <span className="bg-[#CF3645] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#d0a36e] rounded-r-full" />
-                  )}
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-1 px-4">
+            {menuItems.map((item) => (
+              <NavButton
+                key={item.name}
+                name={item.name}
+                icon={item.icon}
+                badge={item.badge}
+              />
+            ))}
           </div>
         </div>
         

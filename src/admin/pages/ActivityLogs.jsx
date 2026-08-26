@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 
 const ROWS_PER_PAGE = 10;
 
@@ -144,19 +145,19 @@ export default function ActivityLogs() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header title="Activity Logs" breadcrumbs={['Monitoring', 'Activity Logs']} />
 
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
 
-          {/* ── Title Row ──────────────────────────────────────────────────── */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <p className="text-sm text-stone-500">Track and audit all user activities across the system</p>
-            </div>
-            <div className="flex items-center gap-3">
+          <SectionTitle 
+            sub="Track and audit all user activities across the system"
+            action={
               <span className="bg-[#801e38] text-white text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap">
                 {todayCount} {todayCount === 1 ? 'entry' : 'entries'} today
               </span>
-            </div>
-          </div>
+            }
+          >
+            Activity Logs
+          </SectionTitle>
 
           {/* ── Filters ────────────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -213,15 +214,16 @@ export default function ActivityLogs() {
             )}
 
             {/* Export CSV */}
-            <button onClick={handleExportCSV}
-              className="ml-auto bg-[#3b1220] hover:bg-[#2b0d16] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer">
-              📤 Export CSV
-            </button>
+            <div className="ml-auto">
+              <PremiumButton onClick={handleExportCSV} variant="primary" icon={<Download className="w-4 h-4" />}>
+                Export CSV
+              </PremiumButton>
+            </div>
           </div>
 
           {/* ── Table ──────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+          <Card className="flex flex-col overflow-hidden mb-6">
+            <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-[#801e38] text-white text-[10px] font-bold uppercase tracking-wider">
@@ -329,7 +331,8 @@ export default function ActivityLogs() {
                 >›</button>
               </div>
             </div>
-          </div>
+          </Card>
+        </div>
 
         </div>
       </main>

@@ -4,7 +4,8 @@ import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
-import { Building2, Trash2 } from 'lucide-react';
+import { Building2, Trash2, Printer, Download, FileText } from 'lucide-react';
+import { Card, SectionTitle, PremiumButton, StatCard } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 
 const reportTypes = [
@@ -224,10 +225,10 @@ export default function Reports() {
         <Header title="Reports" breadcrumbs={['Reports']} />
 
         {/* PAGE CONTENT */}
-        <div className="flex-1 overflow-auto p-8">
-          <div className="mb-6">
-            <p className="text-sm text-stone-500">Generate, view, and export reports across the ARCHIVIO system.</p>
-          </div>
+        <div className="flex-1 overflow-auto p-6 md:p-8">
+          <SectionTitle sub="Generate, view, and export reports across the ARCHIVIO system.">
+            System Reports
+          </SectionTitle>
 
           {/* REPORT TYPE SELECTOR */}
           <p className="text-[10px] font-bold text-stone-400 tracking-widest uppercase mb-4">SELECT REPORT TYPE</p>
@@ -272,19 +273,16 @@ export default function Reports() {
                     {selected === 'dept' && `${selectedYear} • All Departments • Showing: Published, Endorsed, and Pending Approval`}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-all shadow-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    Print Report
-                  </button>
-                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <div className="flex flex-wrap items-center gap-3">
+                  <PremiumButton onClick={handlePrint} variant="ghost" icon={<Printer className="w-4 h-4" />}>
+                    Print
+                  </PremiumButton>
+                  <PremiumButton onClick={handlePrint} variant="primary" icon={<FileText className="w-4 h-4" />}>
                     Export PDF
-                  </button>
-                  <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#3b1220] hover:bg-[#2b0d16] text-white rounded-lg text-sm font-bold transition-all shadow-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  </PremiumButton>
+                  <PremiumButton onClick={handleExportCSV} variant="primary" icon={<Download className="w-4 h-4" />}>
                     Export CSV
-                  </button>
+                  </PremiumButton>
                 </div>
               </div>
 
@@ -316,70 +314,34 @@ export default function Reports() {
               </div>
 
               {/* Stats Cards */}
-              <div className={`grid gap-4 mb-8 ${selected === 'published' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+              <div className={`grid gap-4 mb-8 ${selected === 'published' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
                 {selected === 'published' && (
                   <>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">{publishedData.length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Total Published</p>
-                      <p className="text-[11px] text-stone-400">All time • all departments</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">{publishedData.filter(p => p.sy.includes('2025')).length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Published This SY</p>
-                      <p className="text-[11px] text-stone-400">SY 2025-2026 in progress</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-amber-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-amber-600">{new Set(publishedData.map(p => p.cat)).size}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Research Categories</p>
-                      <p className="text-[11px] text-stone-400">Across all published papers</p>
-                    </div>
+                    <StatCard icon={<FileText className="w-5 h-5"/>} label="Total Published" value={publishedData.length} sub="All time • all departments" color="maroon" />
+                    <StatCard icon={<FileText className="w-5 h-5"/>} label="Published This SY" value={publishedData.filter(p => p.sy.includes('2025')).length} sub="SY 2025-2026 in progress" color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Research Categories" value={new Set(publishedData.map(p => p.cat)).size} sub="Across all published papers" color="amber" />
                   </>
                 )}
                 {selected === 'users' && (
                   <>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">{usersData.length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Total Users</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-stone-300 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-stone-700">{usersData.filter(u => u.role === 'Dean').length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Deans</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-amber-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-amber-600">{usersData.filter(u => u.role === 'Advisor').length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Research Advisers</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">{usersData.filter(u => u.role === 'Student').length}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Students</p>
-                    </div>
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Total Users" value={usersData.length} color="maroon" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Deans" value={usersData.filter(u => u.role === 'Dean').length} color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Research Advisers" value={usersData.filter(u => u.role === 'Advisor').length} color="amber" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Students" value={usersData.filter(u => u.role === 'Student').length} color="green" />
                   </>
                 )}
                 {selected === 'dept' && (
                   <>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-[#801e38] p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#801e38]">{deptData.reduce((acc, curr) => acc + curr.sub, 0)}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Total Submissions</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-emerald-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-emerald-600">{deptData.reduce((acc, curr) => acc + curr.pub, 0)}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Published</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-blue-500 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-blue-600">{deptData.reduce((acc, curr) => acc + curr.end, 0)}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Endorsed to Dean</p>
-                    </div>
-                    <div className="bg-white border border-stone-200 border-t-4 border-t-red-900 p-5 rounded-xl shadow-sm">
-                      <p className="text-4xl font-serif font-bold text-[#3b1220]">{deptData.reduce((acc, curr) => acc + curr.pend, 0)}</p>
-                      <p className="text-xs font-bold text-stone-900 mt-1">Pending Approval</p>
-                    </div>
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Total Submissions" value={deptData.reduce((acc, curr) => acc + curr.sub, 0)} color="maroon" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Published" value={deptData.reduce((acc, curr) => acc + curr.pub, 0)} color="green" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Endorsed to Dean" value={deptData.reduce((acc, curr) => acc + curr.end, 0)} color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Pending Approval" value={deptData.reduce((acc, curr) => acc + curr.pend, 0)} color="red" />
                   </>
                 )}
               </div>
 
               {/* Data Table */}
-              <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm mb-6">
+              <Card className="mb-6 flex flex-col overflow-hidden">
                 
                 {/* Custom Card Headers based on report */}
                 {selected === 'published' && (
@@ -524,7 +486,7 @@ export default function Reports() {
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
 
               {/* Department Performance - Bar Chart Section */}
               {selected === 'dept' && (

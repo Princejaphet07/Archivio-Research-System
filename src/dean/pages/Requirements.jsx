@@ -6,12 +6,15 @@ import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function Requirements({ activePage, onNavigate }) {
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -77,6 +80,9 @@ export default function Requirements({ activePage, onNavigate }) {
     };
   });
 
+  const totalPages = Math.max(1, Math.ceil(enrichedRows.length / itemsPerPage));
+  const paginatedRows = enrichedRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Compute Stats
   const totalGroups = groups.length;
   const completeCount = enrichedRows.filter(r => r.progressValue === 100).length;
@@ -118,8 +124,9 @@ export default function Requirements({ activePage, onNavigate }) {
         
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Requirements Tracking</h1>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Monitor completion status across all research groups under your supervision</p>
+            <SectionTitle sub="Monitor completion status across all research groups under your supervision">
+              Requirements Tracking
+            </SectionTitle>
           </div>
 
           {/* Stats Cards Row */}
@@ -130,17 +137,17 @@ export default function Requirements({ activePage, onNavigate }) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((card, idx) => (
-                <div key={idx} className={`p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 ${card.bg}`}>
+                <Card glass={true} key={idx} className={`p-4 ${card.bg}`}>
                   <p className="text-[10px] font-bold tracking-wider text-stone-400 uppercase">{card.title}</p>
                   <p className="text-2xl font-bold text-stone-800 dark:text-stone-200 my-1">{card.value}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400">{card.sub}</p>
-                </div>
+                </Card>
               ))}
             </div>
           )}
 
           {/* Table Area */}
-          <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
+          <Card glass={true} className="overflow-hidden">
             <div className="overflow-x-auto">
               {loading ? (
                 <div className="p-4">
@@ -161,12 +168,12 @@ export default function Requirements({ activePage, onNavigate }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 font-medium">
-                  {enrichedRows.length === 0 ? (
+                  {paginatedRows.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="py-8 text-center text-stone-500 dark:text-stone-400">No approved groups found.</td>
                     </tr>
                   ) : (
-                    enrichedRows.map((row) => (
+                    paginatedRows.map((row) => (
                       <tr key={row.no} className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${row.missingValue > 0 ? 'bg-amber-50/30 dark:bg-amber-900/10' : row.progressValue === 100 ? 'bg-emerald-50/10 dark:bg-emerald-900/10' : ''}`}>
                         <td className="py-4 px-4 text-center text-stone-400 font-normal">{row.no}</td>
                         <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">{row.name}</td>
@@ -184,12 +191,13 @@ export default function Requirements({ activePage, onNavigate }) {
                         </td>
                         <td className="py-4 px-4 text-center font-bold text-stone-800 dark:text-stone-200">{row.progress}</td>
                         <td className="py-4 px-4 text-center">
-                          <button 
+                          <PremiumButton 
                             onClick={() => handleView(row)}
-                            className="px-4 py-1.5 text-[#4a1024] dark:text-[#f8d070] border border-[#4a1024] dark:border-[#f8d070]/30 rounded-lg text-xs font-bold hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition-all shadow-sm"
+                            variant="outline"
+                            size="sm"
                           >
                             View
-                          </button>
+                          </PremiumButton>
                         </td>
                       </tr>
                     ))
@@ -199,15 +207,56 @@ export default function Requirements({ activePage, onNavigate }) {
               )}
             </div>
             
-            <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 font-medium">
-              <span>Showing 1–{enrichedRows.length} of {enrichedRows.length} groups</span>
+            <div className="bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 p-4 flex items-center justify-between mt-auto">
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-stone-500 dark:text-stone-400">
+                  Showing {paginatedRows.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0} to {Math.min(currentPage * itemsPerPage, enrichedRows.length)} of {enrichedRows.length} entries
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-stone-500 dark:text-stone-400">Items per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-sm rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#7a1f3d]"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex items-center gap-1">
-                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-400">‹</button>
-                <button className="px-2.5 py-1 bg-[#4a1024] dark:bg-stone-950 text-white rounded font-bold">1</button>
-                <button className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700">›</button>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ‹
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-2.5 py-1 rounded font-bold ${currentPage === page ? 'bg-[#4a1024] dark:bg-stone-950 text-white' : 'border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500'}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ›
+                </button>
               </div>
             </div>
-          </div>
+          </Card>
         </main>
       </div>
 

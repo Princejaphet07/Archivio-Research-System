@@ -6,6 +6,7 @@ import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
+import { Card, PremiumButton } from '../../components/ui/Card';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
@@ -417,7 +418,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
               {/* LEFT COLUMN: TIMELINE */}
-              <div className="lg:col-span-2 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+              <Card hover className="lg:col-span-2 p-8">
                 <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100 mb-8">Your Research Journey</h3>
 
@@ -558,14 +559,14 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
                   </div>
                 )}
-              </div>
+              </Card>
 
               {/* RIGHT COLUMN */}
               <div className="lg:col-span-1 flex flex-col gap-6">
 
                 {/* Action Card — only show if not published */}
                 {!isPublished && !loading && (
-                  <div className="bg-[#FCF9F2] dark:bg-red-950/30 rounded-2xl p-6 shadow-sm border-t-4 border-[#CF3645] border-l border-r border-b border-[#E8DFCB] dark:border-r-red-900/50 dark:border-l-red-900/50 dark:border-b-red-900/50">
+                  <Card hover className="bg-[#FCF9F2] dark:bg-red-950/30 p-6 border-t-4 border-[#CF3645]">
                     <p className="text-[10px] font-bold text-[#CF3645] dark:text-red-400 tracking-widest uppercase mb-1">Action Needed</p>
                     {currentStep <= 2 ? (
                       <>
@@ -579,15 +580,12 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                               ? 'All documents submitted! Awaiting adviser review.'
                               : 'Start by uploading your research manuscript.'}
                         </p>
-                        <button
+                        <PremiumButton
                           onClick={() => setActiveTab && setActiveTab('Requirements')}
-                          className="w-full bg-[#CF3645] dark:bg-red-500 hover:bg-[#B02A38] dark:hover:bg-red-600 text-white dark:text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                          className="w-full bg-[#CF3645] dark:bg-red-500 hover:bg-[#B02A38] dark:hover:bg-red-600"
                         >
                           Upload Now
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                          </svg>
-                        </button>
+                        </PremiumButton>
                       </>
                     ) : (
                       <>
@@ -595,37 +593,37 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                         <p className="text-[13px] text-gray-600 dark:text-stone-400">Your submission is complete. You will be notified when your adviser or dean takes action.</p>
                       </>
                     )}
-                  </div>
+                  </Card>
                 )}
 
                 {/* Congrats card if published */}
                 {isPublished && !loading && (
                   <>
-                    <div className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 rounded-2xl p-6 shadow-sm border-t-4 border-[#7B1F35] dark:border-t-[#7B1F35] border border-[#E8DFCB] dark:border-[#7B1F35]/40">
+                    <Card hover className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 p-6 border-t-4 border-[#7B1F35]">
                       <p className="text-4xl mb-3 text-center">🎉</p>
                       <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2 text-center">Research Published!</h3>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 text-center">Your research is now live in the public archive and searchable by anyone.</p>
-                    </div>
+                    </Card>
 
-                    <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-[#E8DFCB] dark:border-stone-800">
+                    <Card hover className="p-6">
                       <p className="text-[10px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-2">Next Steps</p>
                       <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Start Another Project</h3>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-5">You can now begin uploading documents for a new research project under the same adviser.</p>
-                      <button
+                      <PremiumButton
                         onClick={() => setShowNewResearchModal(true)}
-                        className="w-full bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#5D1627] dark:hover:bg-[#5a1831] text-white dark:text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                        className="w-full bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#5D1627] dark:hover:bg-[#5a1831]"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                         Start New Research
-                      </button>
-                    </div>
+                      </PremiumButton>
+                    </Card>
                   </>
                 )}
 
                 {/* Adviser Card */}
-                <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
+                <Card hover className="p-6">
                   <p className="text-[10px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-4">Your Adviser</p>
                   {loading ? (
                     <div className="animate-pulse flex gap-4 mb-5">
@@ -649,19 +647,19 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       </div>
                     </div>
                   )}
-                  <button
+                  <PremiumButton
                     onClick={handleSendMessage}
-                    className="w-full bg-[#7B1F35] dark:bg-stone-800 hover:bg-[#5D1627] dark:hover:bg-stone-700 text-white dark:text-stone-200 font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-[#7B1F35] dark:bg-stone-800 hover:bg-[#5D1627] dark:hover:bg-stone-700"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     Send Message
-                  </button>
-                </div>
+                  </PremiumButton>
+                </Card>
 
                 {/* Helpful Tips */}
-                <div className="bg-stone-50 dark:bg-stone-900 rounded-2xl p-6 shadow-sm border border-stone-200/80 dark:border-stone-800 hover:shadow-md transition-shadow">
+                <Card hover className="p-6 bg-stone-50 dark:bg-stone-900">
                   <p className="text-[10px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Helpful Tips</p>
                   <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-5">Did you know?</h3>
                   <ul className="flex flex-col gap-4">
@@ -678,7 +676,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 leading-snug">Adviser feedback will appear in your dashboard notifications.</p>
                     </li>
                   </ul>
-                </div>
+                </Card>
 
               </div>
             </div>

@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function SubmissionRequirements() {
   const [requirements, setRequirements] = useState([]);
@@ -84,10 +85,9 @@ function SubmissionRequirements() {
   return (
     <Layout title="Submission Requirements" breadcrumb="ARCHIVIO › Submission Requirements" showSearch={true}>
       <div className="max-w-5xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Submission Requirements</h1>
-          <p className="text-sm text-gray-500 dark:text-stone-400">Set what items your student groups must submit for their research to be considered complete</p>
-        </div>
+        <SectionTitle sub="Set what items your student groups must submit for their research to be considered complete">
+          Submission Requirements
+        </SectionTitle>
 
         {/* Info Banner */}
         <div className="bg-[#eff6ff] dark:bg-blue-900/20 border border-[#bfdbfe] dark:border-blue-800/50 p-4 rounded-lg flex gap-3 text-sm text-[#1e40af] dark:text-blue-400">
@@ -96,18 +96,18 @@ function SubmissionRequirements() {
         </div>
 
         {/* Checklist Card */}
-        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 p-6">
+        <Card glass={true} className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Requirement Checklist</h3>
               <p className="text-xs text-gray-500 dark:text-stone-400">Items students must submit for completion</p>
             </div>
-            <button 
+            <PremiumButton 
               onClick={() => setShowModal(true)}
-              className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
+              variant="primary"
             >
               + Add Requirement
-            </button>
+            </PremiumButton>
           </div>
 
           <div className="space-y-3">
@@ -157,7 +157,7 @@ function SubmissionRequirements() {
               ))
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Add Requirement Modal */}

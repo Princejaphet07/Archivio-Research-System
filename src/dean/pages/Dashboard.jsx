@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function Dashboard({ activePage }) {
   const { deanData } = useUser();
@@ -321,18 +322,20 @@ export default function Dashboard({ activePage }) {
               </p>
             </div>
             <div className="flex gap-2.5">
-              <button 
+              <PremiumButton 
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-bold text-stone-700 dark:text-stone-300 shadow-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-1.5"
+                variant="outline"
+                className="flex items-center gap-1.5"
               >
                 <span>📤</span> Export
-              </button>
-              <button
+              </PremiumButton>
+              <PremiumButton
                 onClick={() => navigate('/dean/publish-queue')}
-                className="px-4 py-2 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg text-xs font-bold shadow-md hover:bg-[#5a162d] dark:hover:bg-[#b09230] transition-all flex items-center gap-2"
+                variant="primary"
+                className="flex items-center gap-2"
               >
                 <span>📋</span> Publish Queue <span className="bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{stats.approved}</span>
-              </button>
+              </PremiumButton>
             </div>
           </div>
 
@@ -362,7 +365,7 @@ export default function Dashboard({ activePage }) {
           <div className="grid grid-cols-3 gap-6 mb-6">
 
             {/* Research Upload Trend Line Chart */}
-            <div className="col-span-2 bg-white dark:bg-stone-800 p-6 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm flex flex-col justify-between">
+            <Card glass={true} className="col-span-2 p-6 flex flex-col justify-between">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Research Upload Trend</h3>
@@ -419,10 +422,10 @@ export default function Dashboard({ activePage }) {
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Card>
 
             {/* Yearly Summary */}
-            <div className="bg-white dark:bg-stone-800 p-6 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm flex flex-col justify-between">
+            <Card glass={true} className="p-6 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Yearly Summary</h3>
               </div>
@@ -444,14 +447,14 @@ export default function Dashboard({ activePage }) {
                   );
                 })}
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* ================= CATEGORIES AND LEADERBOARD (ROW 3) ================= */}
           <div className="grid grid-cols-3 gap-6 mb-6">
 
             {/* Top Research Categories */}
-            <div className="col-span-2 bg-white dark:bg-stone-800 p-6 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm">
+            <Card glass={true} className="col-span-2 p-6">
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Top Research Categories</h3>
@@ -487,10 +490,10 @@ export default function Dashboard({ activePage }) {
                   <p className="text-xs text-stone-400 text-center">No categories data available yet.</p>
                 )}
               </div>
-            </div>
+            </Card>
 
             {/* Top Research Papers */}
-            <div className="bg-white dark:bg-stone-800 p-6 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm flex flex-col">
+            <Card glass={true} className="p-6 flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Top Research Papers</h3>
                 <div className="flex bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[10px] font-bold">
@@ -522,11 +525,11 @@ export default function Dashboard({ activePage }) {
                   <p className="text-xs text-stone-400 text-center py-4">No published papers yet.</p>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* ================= ADVISER UPLOAD STATISTICS ================= */}
-          <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700/80 shadow-sm overflow-hidden">
+          <Card glass={true} className="overflow-hidden">
             <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Adviser Upload Statistics</h3>
@@ -601,7 +604,7 @@ export default function Dashboard({ activePage }) {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
 
         </main>
       </div>
@@ -613,7 +616,7 @@ export default function Dashboard({ activePage }) {
 
 function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warning }) {
   return (
-    <div className={`p-4 bg-white dark:bg-stone-800 rounded-xl border transition-all hover:shadow-md ${highlight ? 'border-emerald-200 bg-emerald-50/30' : 'border-stone-200 dark:border-stone-700/80'} flex flex-col justify-between`}>
+    <Card glass={true} className={`p-4 transition-all hover:-translate-y-[2px] ${highlight ? 'border-emerald-200 bg-emerald-50/30 dark:bg-emerald-900/20' : ''} flex flex-col justify-between`}>
       <div className="flex justify-between items-center mb-2">
         <span className="text-[9px] font-extrabold text-stone-400 uppercase tracking-wider">{title}</span>
         <span className="text-xs opacity-70">{icon}</span>
@@ -628,13 +631,13 @@ function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warn
         </div>
       )}
       {subtext && <p className="text-[10px] text-stone-400 font-medium">{subtext}</p>}
-    </div>
+    </Card>
   );
 }
 
 function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   return (
-    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${active ? 'border-[#7a1f3d] dark:border-[#f8d070]/50 bg-[#7a1f3d]/10 dark:bg-[#f8d070]/10 ring-1 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/30' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
+    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all hover:-translate-y-[2px] shadow-sm ${active ? 'border-[#7a1f3d] dark:border-[#f8d070]/50 bg-[#7a1f3d]/10 dark:bg-[#f8d070]/10 ring-1 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/30' : 'border-stone-200 dark:border-stone-700 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm hover:bg-stone-50/80 dark:hover:bg-stone-800/80'}`}>
       <span className={`text-xs font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-800 dark:text-stone-200'}`}>{year}</span>
       <span className={`text-lg font-serif font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-900 dark:text-stone-100'} my-0.5`}>{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
       {badge && <span className="text-[9px] text-stone-400 font-bold tracking-tight uppercase">{badge}</span>}
@@ -647,7 +650,7 @@ function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
 
 function PaperRow({ rank, title, author, count, icon, highlight }) {
   return (
-    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]/5' : 'border-stone-100 bg-stone-50 dark:bg-stone-800/30 hover:bg-stone-50 dark:hover:bg-stone-700'}`}>
+    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all hover:-translate-y-[1px] shadow-sm ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d]/10 dark:bg-[#d4af37]/10' : 'border-stone-200/50 dark:border-stone-700/50 bg-white/40 dark:bg-stone-800/40 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-stone-800/60'}`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ${rank === 1 ? 'bg-amber-100 text-amber-700' : rank === 2 ? 'bg-stone-200 text-stone-700 dark:text-stone-300' : 'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'}`}>
           {rank}

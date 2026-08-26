@@ -4,6 +4,7 @@ import { db, auth } from '../../firebase/config';
 import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
+import { Card, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 
 export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role, leaderUid }) {
@@ -84,21 +85,27 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     
     setExtractingKeywords(true);
     try {
-      const res = await fetch('http://localhost:3001/api/ai/extract-keywords', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const res = await fetch(`${backendUrl}/api/ai/extract-keywords`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ abstract: currentAbstract })
       });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to extract keywords');
+      }
+
       const data = await res.json();
+      const parsedKeywords = data.keywords || [];
 
-      if (!res.ok) throw new Error(data.error || 'Failed to extract keywords');
-
-      if (data.keywords && data.keywords.length > 0) {
+      if (parsedKeywords && parsedKeywords.length > 0) {
         // Save to Firestore
         await updateDoc(doc(db, 'submissions', submissionId), {
-          keywords: data.keywords
+          keywords: parsedKeywords
         });
-        Swal.fire({ icon: 'success', title: 'Keywords Updated!', text: `AI extracted ${data.keywords.length} keywords from your abstract.`, confirmButtonColor: '#7B1F35', timer: 2500, showConfirmButton: false });
+        Swal.fire({ icon: 'success', title: 'Keywords Updated!', text: `AI extracted ${parsedKeywords.length} keywords from your abstract.`, confirmButtonColor: '#7B1F35', timer: 2500, showConfirmButton: false });
       } else {
         Swal.fire({ icon: 'warning', title: 'No Keywords Found', text: 'AI could not extract keywords. Try editing your abstract.', confirmButtonColor: '#7B1F35' });
       }
@@ -144,14 +151,19 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             aiBtn.innerHTML = '⏳ Extracting...';
             aiBtn.style.opacity = '0.7';
             try {
-              const res = await fetch('http://localhost:3001/api/ai/extract-keywords', {
+              const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+              const res = await fetch(`${backendUrl}/api/ai/extract-keywords`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ abstract: abstractText })
               });
+              
+              if (!res.ok) throw new Error('API Error');
               const data = await res.json();
-              if (data.keywords && data.keywords.length > 0) {
-                document.getElementById('swal-keywords').value = data.keywords.join(', ');
+              const parsedKeywords = data.keywords || [];
+              
+              if (parsedKeywords && parsedKeywords.length > 0) {
+                document.getElementById('swal-keywords').value = parsedKeywords.join(', ');
                 Swal.resetValidationMessage();
               }
             } catch (err) {
@@ -311,7 +323,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* LEFT COLUMN: Current File */}
-              <div className="lg:col-span-5 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-all">
+              <Card hover className="lg:col-span-5 p-8 flex flex-col">
                 <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-6">Current File</p>
                 
                 {/* PDF Thumbnail Mockup */}
@@ -371,14 +383,14 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   </button>
                 </div>
                 
-                <button onClick={() => setActiveTab('Requirements')} className="w-full bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#63182a] dark:hover:bg-[#5a1831] text-white dark:text-white text-[14px] font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                  {hasManuscript ? 'Replace Manuscript' : 'Upload Manuscript'}
-                </button>
-              </div>
+                  <PremiumButton onClick={() => setActiveTab('Requirements')} className="w-full mt-4">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    {hasManuscript ? 'Replace Manuscript' : 'Upload Manuscript'}
+                  </PremiumButton>
+              </Card>
 
               {/* RIGHT COLUMN: Research Details */}
-              <div className="lg:col-span-7 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-all">
+              <Card hover className="lg:col-span-7 p-8 flex flex-col">
                 <div className="flex justify-between items-start border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
                   <div>
                     <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Research Details</p>
@@ -450,7 +462,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                     )}
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* VERSION HISTORY */}

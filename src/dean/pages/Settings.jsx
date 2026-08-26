@@ -6,6 +6,7 @@ import { collection, query, onSnapshot, updateDoc, doc, addDoc, deleteDoc, setDo
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 export default function Settings({ activePage, onNavigate }) {
   const { user, deanData, deanSettings } = useUser();
@@ -334,14 +335,15 @@ export default function Settings({ activePage, onNavigate }) {
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 w-full max-w-[1400px] mx-auto">
           {/* Page Title */}
           <div className="mb-6">
-            <h1 className="text-3xl font-serif font-bold text-[#1a1a1a] dark:text-[#9e2752]">Settings</h1>
-            <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Configure system preferences and completion requirements</p>
+            <SectionTitle sub="Configure system preferences and completion requirements">
+              Settings
+            </SectionTitle>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             
             {/* Left Column: Navigation Tabs */}
-            <div className="w-full lg:w-[300px] shrink-0 bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden py-2">
+            <Card glass={true} className="w-full lg:w-[300px] shrink-0 py-2">
               <div className="space-y-0.5 px-2">
                 {settingsTabs.map((tab) => (
                   <button 
@@ -359,10 +361,10 @@ export default function Settings({ activePage, onNavigate }) {
                   </button>
                 ))}
               </div>
-            </div>
+            </Card>
 
             {/* Right Column: Tab Content */}
-            <div className="flex-1 w-full bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 p-6 lg:p-8">
+            <Card glass={true} className="flex-1 w-full p-6 lg:p-8">
               
               {/* Completion Requirements Tab */}
               {activeTab === 'completion' && (
@@ -375,12 +377,13 @@ export default function Settings({ activePage, onNavigate }) {
                         <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Global Completion Requirements</h3>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">These apply to ALL research groups department-wide.</p>
                       </div>
-                      <button 
+                      <PremiumButton 
                         onClick={() => setShowAddModal(true)}
-                        className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#631932] text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-sm shrink-0"
+                        variant="primary"
+                        className="shrink-0"
                       >
                         + Add Global Requirement
-                      </button>
+                      </PremiumButton>
                     </div>
 
                     <div className="space-y-3">
@@ -942,7 +945,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <p className="text-stone-500 dark:text-stone-400 font-medium">Select Completion Requirements tab to see the updates.</p>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </main>
       </div>

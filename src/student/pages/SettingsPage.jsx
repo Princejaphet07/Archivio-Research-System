@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../Components/Sidebar';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
-import { db, auth } from '../../firebase/config';
+import { Card, PremiumButton } from '../../components/ui/Card';
+import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 
@@ -137,10 +139,6 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
     }
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'Archivio'); // Cloudinary upload preset
-
       Swal.fire({
         title: 'Uploading...',
         text: 'Please wait while we upload your photo',
@@ -150,17 +148,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         }
       });
 
-      const res = await fetch('https://api.cloudinary.com/v1_1/peqpcqug/image/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      const uid = auth.currentUser?.uid || 'student';
+      const fileExtension = file.name ? file.name.split('.').pop() : 'jpg';
+      const timestamp = Date.now();
+      const storagePath = `avatars/${uid}_${timestamp}.${fileExtension}`;
+      const storageRef = ref(storage, storagePath);
 
-      if (!res.ok) {
-        throw new Error('Cloudinary upload failed');
-      }
-
-      const data = await res.json();
-      const downloadURL = data.secure_url;
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
 
       await updateDoc(doc(db, 'students', docId), {
         profilePhotoUrl: downloadURL
@@ -241,9 +236,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       confirmButtonColor: '#7B1F35',
       denyButtonColor: '#475569',
     }).then((result) => {
-      if (result.isConfirmed) {
+      if (result.confirmed) {
         openCamera();
-      } else if (result.isDenied) {
+      } else if (result.denied) {
         fileInputRef.current?.click();
       }
     });
@@ -359,7 +354,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           <div className="max-w-[1200px] flex flex-col md:flex-row gap-6">
             
             {/* Settings Sidebar */}
-            <div className="w-full md:w-[260px] shrink-0 bg-white dark:bg-stone-900 rounded-xl p-3 h-fit border border-stone-200/80 dark:border-stone-800 shadow-sm transition-colors">
+            <Card className="w-full md:w-[260px] shrink-0 p-3 h-fit">
               <div className="flex flex-col gap-1">
                 {settingsTabs.map((tab) => (
                   <button
@@ -389,10 +384,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </button>
                 ))}
               </div>
-            </div>
+            </Card>
 
             {/* Settings Content Area */}
-            <div className="flex-1 bg-white dark:bg-stone-900 rounded-xl p-8 border border-stone-200/80 dark:border-stone-800 min-h-[600px] shadow-sm hover:shadow-md transition-all">
+            <Card className="flex-1 p-8 min-h-[600px]">
               
               {/* === PROFILE TAB === */}
               {activeSettingsTab === 'Profile' && (
@@ -728,7 +723,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                 </div>
               )}
 
-            </div>
+            </Card>
           </div>
         </div>
       </div>

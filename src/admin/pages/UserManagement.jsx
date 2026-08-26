@@ -9,6 +9,7 @@ import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { Trash2, Eye, Edit2, Ban, Plus } from 'lucide-react';
+import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -501,17 +502,34 @@ export default function UserManagement() {
 
           // Send invitation email to SA portal
           try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/send-super-admin-invitation-email`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: formData.email.toLowerCase().trim(),
-                name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-                invitationLink: saPortalLink,
-                temporaryPassword: temporaryPassword,
-                moduleAccess: formData.moduleAccess,
-              })
+            await addDoc(collection(db, 'mail'), {
+              to: formData.email.toLowerCase().trim(),
+              message: {
+                subject: "Invitation to Join ARCHIVIO as Super Admin",
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                      <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                      <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                    </div>
+                    <div style="padding: 30px; background-color: #ffffff;">
+                      <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName.trim()},</h2>
+                      <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a Super Admin.</p>
+                      
+                      <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Temporary Credentials:</strong></p>
+                        <p style="margin: 0; color: #2d3748;">Email: ${formData.email.toLowerCase().trim()}</p>
+                        <p style="margin: 5px 0 0 0; color: #2d3748;">Password: <strong>${temporaryPassword}</strong></p>
+                        <p style="margin: 10px 0 0 0; color: #e53e3e; font-size: 12px;"><em>Please log in and change your password immediately.</em></p>
+                      </div>
+                      
+                      <div style="text-align: center; margin: 30px 0;">
+                        <a href="${saPortalLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Admin Portal</a>
+                      </div>
+                    </div>
+                  </div>
+                `
+              }
             });
           } catch (emailError) {
             console.warn('Email service error (super admin still created):', emailError);
@@ -678,32 +696,37 @@ export default function UserManagement() {
         }
       }
 
-      // Call email service to send dean invitation
+      // Trigger Firebase Email Extension to send dean invitation
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const emailResponse = await fetch(`${backendUrl}/api/send-dean-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: formData.email.toLowerCase().trim(),
-            deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-            invitationLink: invitationLink,
-            temporaryPassword: temporaryPassword,
-            message: `You have been invited to join ARCHIVIO Research Management System as a Dean. 
-
-Your temporary credentials are:
-Email: ${formData.email.toLowerCase().trim()}
-Temporary Password: ${temporaryPassword}
-
-Please login with these credentials at the link below, and you'll be prompted to create a new password.`
-          })
+        await addDoc(collection(db, 'mail'), {
+          to: formData.email.toLowerCase().trim(),
+          message: {
+            subject: "Invitation to Join ARCHIVIO as a Dean",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName.trim()},</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a Dean.</p>
+                  
+                  <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Temporary Credentials:</strong></p>
+                    <p style="margin: 0; color: #2d3748;">Email: ${formData.email.toLowerCase().trim()}</p>
+                    <p style="margin: 5px 0 0 0; color: #2d3748;">Temporary Password: <strong>${temporaryPassword}</strong></p>
+                    <p style="margin: 10px 0 0 0; color: #e53e3e; font-size: 12px;"><em>Please log in with these credentials and you'll be prompted to create a new password.</em></p>
+                  </div>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Dean Portal</a>
+                  </div>
+                </div>
+              </div>
+            `
+          }
         });
-
-        if (!emailResponse.ok) {
-          console.warn('Email send failed, but dean account saved to database');
-        }
       } catch (emailError) {
         console.warn('Email service error (dean account still created):', emailError);
       }
@@ -771,25 +794,27 @@ Please login with these credentials at the link below, and you'll be prompted to
 
       // Call email service to resend email
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        await fetch(`${backendUrl}/api/send-dean-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: deanEmail,
-            deanName: deanName,
-            invitationLink: invitationLink,
-            temporaryPassword: deanData?.temporaryPassword || 'N/A', // Include stored temp password
-            message: `This is a resend of your invitation to join ARCHIVIO Research Management System as a Dean.
-
-Your temporary credentials are:
-Email: ${deanEmail}
-Temporary Password: ${deanData?.temporaryPassword || '[Password stored in database]'}
-
-Please login with these credentials and set up your account.`
-          })
+        await addDoc(collection(db, 'mail'), {
+          to: deanEmail,
+          message: {
+            subject: "Reminder: Invitation to Join ARCHIVIO as a Dean",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${deanName},</h2>
+                  <p style="color: #4a5568; line-height: 1.6;">This is a reminder that you have been invited to join the ARCHIVIO Research Management System as a Dean.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Dean Portal</a>
+                  </div>
+                </div>
+              </div>
+            `
+          }
         });
       } catch (emailError) {
         console.warn('Email service error:', emailError);
@@ -844,34 +869,24 @@ Please login with these credentials and set up your account.`
         />
 
         {/* PAGE CONTENT */}
-        <div className="flex-1 overflow-auto p-8">
-
-          <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-stone-500">Create and manage user accounts. Assign roles and permissions for the system.</p>
-            </div>
-          </div>
+        <div className="flex-1 overflow-auto p-6 md:p-8">
+          <SectionTitle sub="Create and manage user accounts. Assign roles and permissions for the system.">
+            System Users
+          </SectionTitle>
 
           {/* TABLE CONTAINER */}
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col">
+          <Card className="flex flex-col overflow-hidden mb-6">
 
             {/* Table Header Controls */}
-            <div className="p-4 border-b border-stone-100 flex flex-col sm:flex-row items-center justify-end gap-4">
+            <div className="p-4 border-b border-stone-100 flex flex-col sm:flex-row items-center justify-end gap-4 bg-stone-50/50">
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="flex-1 sm:flex-none bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-                >
-                  <span>+</span> Add User
-                </button>
+                <PremiumButton onClick={() => setIsModalOpen(true)} variant="primary" icon={<Plus className="w-4 h-4" />}>
+                  Add User
+                </PremiumButton>
                 {selectedUsers.size > 0 && (
-                  <button
-                    onClick={handleDeleteSelectedDeans}
-                    disabled={loading}
-                    className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete ({selectedUsers.size})
-                  </button>
+                  <PremiumButton onClick={handleDeleteSelectedDeans} disabled={loading} variant="danger" icon={<Trash2 className="w-4 h-4" />}>
+                    Delete ({selectedUsers.size})
+                  </PremiumButton>
                 )}
               </div>
             </div>
@@ -998,7 +1013,7 @@ Please login with these credentials and set up your account.`
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
 
           {/* PAGINATION */}
           <div className="flex items-center justify-between mt-6 px-1">

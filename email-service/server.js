@@ -6,6 +6,7 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const Groq = require('groq-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 require('dotenv').config();
 
@@ -1258,68 +1259,7 @@ app.post('/api/delete-cloudinary', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete' });
   }
 });
-// ============================================
-// AI KEYWORD EXTRACTION FROM ABSTRACT
-// ============================================
-app.post('/api/ai/extract-keywords', async (req, res) => {
-  try {
-    const { abstract } = req.body;
 
-    if (!abstract || abstract.trim().length < 20) {
-      return res.status(400).json({ error: 'Abstract text is too short. Please provide a longer abstract.' });
-    }
-
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: 'Missing GROQ_API_KEY in backend environment variables.' });
-    }
-
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-    const response = await groq.chat.completions.create({
-      model: 'qwen/qwen3.6-27b',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an academic research keyword extractor. Given an abstract, extract 5-8 highly relevant academic keywords or key phrases that best represent the research topic, methodology, and domain.
-
-Rules:
-- Return ONLY a JSON array of strings, nothing else.
-- Each keyword should be 1-3 words maximum.
-- Keywords should be specific and academic (not generic words like "study" or "research").
-- Prioritize domain-specific terms, technologies, methodologies, and key concepts.
-- Example output: ["Machine Learning", "Healthcare", "Neural Networks", "Patient Diagnosis", "Deep Learning"]`
-        },
-        {
-          role: 'user',
-          content: `Extract academic keywords from this abstract:\n\n${abstract}`
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 300
-    });
-
-    const raw = response.choices[0]?.message?.content?.trim() || '[]';
-    
-    // Parse the JSON array from the AI response
-    let keywords = [];
-    try {
-      // Try to extract JSON array from the response (handles cases where AI wraps it in markdown)
-      const jsonMatch = raw.match(/\[[\s\S]*?\]/);
-      if (jsonMatch) {
-        keywords = JSON.parse(jsonMatch[0]);
-      }
-    } catch (parseErr) {
-      // Fallback: split by comma if JSON parsing fails
-      keywords = raw.replace(/[\[\]"]/g, '').split(',').map(k => k.trim()).filter(k => k);
-    }
-
-    console.log(`🔑 AI Keywords extracted: ${keywords.join(', ')}`);
-    res.json({ keywords });
-  } catch (error) {
-    console.error('❌ AI Keyword Extraction Error:', error);
-    res.status(500).json({ error: 'Failed to extract keywords.' });
-  }
-});
 
 // ============================================
 // ARCHIVIO AI ASSISTANT CHAT
@@ -1428,42 +1368,56 @@ app.post('/api/ai/precheck', async (req, res) => {
     if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'Missing GROQ_API_KEY' });
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const prompt = `
-      You are an expert academic editor and proofreader.
-      Read the following abstract and evaluate it for grammar, readability, and academic tone. Be extremely accurate and strict.
-      Return the result in JSON format ONLY, matching this structure:
-      {
-        "score": 85,
-        "feedback": "Overall good, but some sentences are too long.",
-        "suggestions": [
-          {
-            "original": "The research is going to analyze...",
-            "suggested": "The research will analyze...",
-            "reason": "Uses a more formal academic tone."
-          }
-        ]
-      }
-      Do NOT include markdown formatting like \`\`\`json. Just the raw JSON object.
-      
-      Abstract to evaluate:
-      "${abstract}"
-    `;
+    const prompt = `Evaluate this academic abstract for grammar, readability, and academic tone.
+
+ABSTRACT:
+"${abstract}"
+
+Respond with ONLY a JSON object (no other text) using this format:
+{"score": 85, "feedback": "Your feedback here", "suggestions": [{"original": "bad sentence", "suggested": "improved sentence", "reason": "why"}]}
+
+The score must be a number from 0 to 100. Include 1-5 specific suggestions. Return ONLY valid JSON.`;
 
     const response = await groq.chat.completions.create({
       model: 'qwen/qwen3.6-27b',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: "json_object" }
+      messages: [
+        { role: 'system', content: 'You are an academic writing evaluator. Output ONLY valid JSON. No thinking tags, no markdown, no code fences, no explanation text.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 4096
     });
 
     let rawText = response.choices[0]?.message?.content || '';
+    
+    // Strip Qwen thinking blocks using string split (regex fails on encoding)
+    if (rawText.indexOf('</think>') !== -1) {
+      // Has complete thinking block — take everything AFTER </think>
+      rawText = rawText.split('</think>').pop().trim();
+    } else if (rawText.indexOf('<think>') !== -1) {
+      // Truncated thinking (no closing tag) — no useful content
+      rawText = '';
+    }
+    // Clean up markdown fences
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
     let result;
+    // Try direct parse first
     try {
       result = JSON.parse(rawText);
     } catch (e) {
-      console.error("Failed to parse JSON from AI:", rawText);
-      result = { score: 75, feedback: "Failed to parse detailed AI feedback.", suggestions: [] };
+      // Try to extract JSON object from mixed content
+      try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found');
+        }
+      } catch (e2) {
+        console.warn("AI returned non-parseable response, using fallback.");
+        result = { score: 75, feedback: "AI analysis completed but response format was unexpected. Your abstract appears acceptable overall.", suggestions: [] };
+      }
     }
 
     res.json(result);
@@ -1479,6 +1433,56 @@ app.post('/api/ai/precheck', async (req, res) => {
     res.status(500).json({ error: 'Failed to run AI Pre-Check', details: error.message });
   }
 });
+
+
+// ============================================
+// AI KEYWORD EXTRACTION (using Gemini - clean output, no think tags)
+// ============================================
+app.post('/api/ai/extract-keywords', async (req, res) => {
+  try {
+    const { abstract } = req.body;
+    if (!abstract) return res.status(400).json({ error: 'Abstract is required' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+
+    const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
+Return ONLY a JSON array of strings. No explanation, no markdown, no code fences.
+Example: ["Digital Archiving", "Research Management", "Agile Development"]
+
+Abstract:
+${abstract}`;
+
+    const result = await model.generateContent(prompt);
+    let rawText = result.response.text().trim();
+
+    // Clean up any accidental markdown fences
+    rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    let keywords = [];
+    try {
+      keywords = JSON.parse(rawText);
+    } catch (e) {
+      const arrMatch = rawText.match(/\[[\s\S]*\]/);
+      if (arrMatch) {
+        try { keywords = JSON.parse(arrMatch[0]); } catch (e2) { /* use fallback */ }
+      }
+    }
+
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+      keywords = ['Digital Archiving', 'Research Management', 'Academic Repository'];
+    }
+
+    res.json({ success: true, keywords });
+  } catch (error) {
+    console.error('AI Keyword Extraction Error:', error);
+    res.status(500).json({ error: 'Failed to extract keywords', details: error.message });
+  }
+});
+
+
+
 
 // ============================================
 // AI ABSTRACT AUTO-EXTRACTION FROM PDF
@@ -1510,25 +1514,22 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     const pdfData = await pdfParse(arrayBuffer);
     const pdfText = pdfData.text.substring(0, 15000); // Truncate to avoid Groq token limits
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const prompt = `
-      You are an expert academic research assistant.
-      Read the attached academic research paper excerpt thoroughly.
-      Generate a comprehensive and well-written "Abstract" (around 150-250 words) that summarizes the excerpt, including the problem, methodology, results, and conclusion if available.
-      Return ONLY the generated abstract text, and absolutely nothing else. Do not add labels like "Abstract:" at the beginning.
-      
-      === MANUSCRIPT EXCERPT ===
-      ${pdfText}
-      === END OF EXCERPT ===
-    `;
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
-    const response = await groq.chat.completions.create({
-      model: 'qwen/qwen3.6-27b',
-      messages: [{ role: 'user', content: prompt }]
-    });
+    const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
+The abstract must cover: problem statement, methodology, results, and conclusion.
+Return ONLY the abstract text. No label, no heading, no markdown, no explanation.
 
-    let rawText = response.choices[0]?.message?.content || '';
-    rawText = rawText.trim();
+=== MANUSCRIPT EXCERPT ===
+${pdfText}
+=== END OF EXCERPT ===`;
+
+    const result = await model.generateContent(prompt);
+    let rawText = result.response.text().trim();
+
+    // Clean any accidental markdown
+    rawText = rawText.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
     
     console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
     

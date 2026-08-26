@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
+import { Card, PremiumButton } from '../../components/ui/Card';
 
 export default function ResearchUpload({ onBackToResearch, studentName, initials }) {
   const [formData, setFormData] = useState({
@@ -192,7 +193,7 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
 
       {/* Upload Form Content */}
       <div className="px-6 py-8 max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-stone-900 rounded-lg shadow-lg overflow-hidden transition-colors">
+        <Card className="overflow-hidden">
           {/* Form Header */}
           <div className="bg-gradient-to-r from-[#6B0F1A] to-[#8B2F3A] dark:from-stone-900 dark:to-stone-800 px-8 py-6">
             <h1 className="text-2xl font-bold text-white dark:text-stone-100">Upload a Research</h1>
@@ -373,17 +374,12 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-6 py-2 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white rounded-lg hover:bg-[#8B2F3A] dark:hover:bg-[#5a1831] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <PremiumButton type="submit" disabled={isSubmitting} className="flex-1">
                 {isSubmitting ? 'Uploading...' : 'Upload Research'}
-              </button>
+              </PremiumButton>
             </div>
           </form>
-        </div>
+        </Card>
       </div>
-    </div>
-  );
+    </div>);
 }

@@ -51,7 +51,7 @@ export default function PortalHeader({ title, initials, setSidebarOpen, setActiv
             </svg>
           </div>
         </button>
-        <NotificationBell />
+        <NotificationBell onNavigate={(tab) => setActiveTab && setActiveTab(tab)} />
         <div 
           className="w-10 h-10 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer overflow-hidden hover:ring-2 hover:ring-[#7B1F35]/50 dark:hover:ring-[#7B1F35]/50 transition-all"
           onClick={() => setActiveTab && setActiveTab('Settings')}

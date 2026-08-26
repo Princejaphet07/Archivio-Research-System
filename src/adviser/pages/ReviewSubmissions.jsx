@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -211,16 +212,35 @@ function ReviewSubmissions() {
           
           if (sub.leaderEmail) {
             try {
-              await fetch('http://localhost:3001/api/send-status-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: sub.leaderEmail,
-                  studentName: sub.leaderName,
-                  title: sub.researchTitle,
-                  status: 'approved',
-                  comments: comments
-                })
+              await addDoc(collection(db, 'mail'), {
+                to: sub.leaderEmail,
+                message: {
+                  subject: `Update on your submission: ${sub.researchTitle}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                      </div>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
+                        
+                        ${comments ? `
+                        <div style="background-color: #f7fafc; border-left: 4px solid #541b2f; padding: 15px; margin: 20px 0;">
+                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                          <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
+                        </div>
+                        ` : ''}
+                        
+                        <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                          Best regards,<br>
+                          <strong>ARCHIVIO System</strong>
+                        </p>
+                      </div>
+                    </div>
+                  `
+                }
               });
             } catch (e) {
               console.error('Failed to send status email', e);
@@ -290,16 +310,35 @@ function ReviewSubmissions() {
           
           if (sub.leaderEmail) {
             try {
-              await fetch('http://localhost:3001/api/send-status-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: sub.leaderEmail,
-                  studentName: sub.leaderName,
-                  title: sub.researchTitle,
-                  status: 'revision',
-                  comments: comments
-                })
+              await addDoc(collection(db, 'mail'), {
+                to: sub.leaderEmail,
+                message: {
+                  subject: `Revision required for your submission: ${sub.researchTitle}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                      </div>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #FEEBC8; color: #975A16; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">revision required</span></p>
+                        
+                        ${comments ? `
+                        <div style="background-color: #f7fafc; border-left: 4px solid #D69E2E; padding: 15px; margin: 20px 0;">
+                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                          <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
+                        </div>
+                        ` : ''}
+                        
+                        <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                          Best regards,<br>
+                          <strong>ARCHIVIO System</strong>
+                        </p>
+                      </div>
+                    </div>
+                  `
+                }
               });
             } catch (e) {
               console.error('Failed to send status email', e);
@@ -462,10 +501,9 @@ function ReviewSubmissions() {
   return (
     <Layout title="Review Submissions & Tracking" breadcrumb="ARCHIVIO › Review Submissions & Tracking" showSearch={true} searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-stone-100 mb-1">Review Submissions & Tracking</h1>
-          <p className="text-sm text-gray-500 dark:text-stone-400">Review, approve, or decline your student groups' research submissions</p>
-        </div>
+        <SectionTitle sub="Review, approve, or decline your student groups' research submissions">
+          Review Submissions & Tracking
+        </SectionTitle>
 
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -511,7 +549,7 @@ function ReviewSubmissions() {
         </div>
 
         {/* Submissions Table */}
-        <div className="bg-white dark:bg-stone-900 rounded-xl shadow-sm border border-gray-200 dark:border-stone-800 overflow-hidden mt-6">
+        <Card glass={true} className="mt-6">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -603,26 +641,31 @@ function ReviewSubmissions() {
                       )}
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
+                          <PremiumButton 
                             onClick={() => handleFullReview(item)}
-                            className="px-4 py-1.5 border border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070] rounded-lg font-bold hover:bg-[#7a2e46] hover:text-white dark:hover:bg-[#f8d070] dark:hover:text-stone-900 transition-colors"
+                            variant="ghost"
+                            size="sm"
                           >
                             View
-                          </button>
+                          </PremiumButton>
                           {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
                             <>
-                              <button 
+                              <PremiumButton 
                                 onClick={() => handleApprove(item)}
-                                className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                                variant="primary"
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700"
                               >
                                 Approve
-                              </button>
-                              <button 
+                              </PremiumButton>
+                              <PremiumButton 
                                 onClick={() => handleReject(item)}
-                                className="px-4 py-1.5 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors shadow-sm"
+                                variant="secondary"
+                                size="sm"
+                                className="bg-yellow-500 text-white hover:bg-yellow-600 border-none"
                               >
                                 Revise
-                              </button>
+                              </PremiumButton>
                             </>
                           )}
                         </div>
@@ -642,7 +685,7 @@ function ReviewSubmissions() {
               <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">›</button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
@@ -741,13 +784,21 @@ function ReviewSubmissions() {
                         <div className="flex items-center gap-2 shrink-0">
                           {isUploaded ? (
                             <>
-                              <span className="text-green-700 dark:text-green-500 font-bold text-xs">✓ Submitted</span>
+                              <div className="flex flex-col items-end mr-2">
+                                <span className="text-green-700 dark:text-green-500 font-bold text-xs mb-1">✓ Submitted</span>
+                                {selectedSubmission?.documentApprovals?.[req.id] ? (
+                                  <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Checked</span>
+                                ) : selectedSubmission?.documentRevisions?.[req.id] ? (
+                                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Revision</span>
+                                ) : null}
+                              </div>
                               {docMeta?.url && docMeta.url !== '#' && (
                                 <button
                                   onClick={() => setViewerState({
                                     isOpen: true,
                                     url: docMeta.url,
-                                    title: `${selectedSubmission.groupName} - ${req.id}`
+                                    title: `${selectedSubmission.groupName} - ${req.id}`,
+                                    reqId: req.id
                                   })}
                                   className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
                                 >
@@ -801,13 +852,23 @@ function ReviewSubmissions() {
                 {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && (
                   <>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setShowReviewModal(false);
-                        handleReject(selectedSubmission);
+                        try {
+                          await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
+                            reviewStatus: 'reviewed',
+                            reviewedAt: new Date().toISOString(),
+                            reviewedBy: auth.currentUser?.email
+                          });
+                          Swal.fire({ toast: true, position: 'bottom-end', icon: 'success', title: 'Marked as Reviewed', showConfirmButton: false, timer: 3000 });
+                        } catch (e) {
+                          console.error(e);
+                        }
                       }}
-                      className="bg-yellow-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600 transition"
+                      className="bg-[#ca8a04] hover:bg-[#a16207] text-white px-5 py-2 rounded-lg text-sm font-semibold transition"
+                      title="Move this submission to the Reviewed tab without requesting revisions"
                     >
-                      Request Revision
+                      Mark Reviewed
                     </button>
                     <button
                       onClick={() => {
@@ -843,9 +904,120 @@ function ReviewSubmissions() {
       {/* Document Viewer Modal */}
       <DocumentViewerModal
         isOpen={viewerState.isOpen}
-        onClose={() => setViewerState({ ...viewerState, isOpen: false })}
+        onClose={() => setViewerState({ ...viewerState, isOpen: false, reqId: null })}
         documentUrl={viewerState.url}
         documentTitle={viewerState.title}
+        role="adviser"
+        initialNote={selectedSubmission?.documentRevisions?.[viewerState.reqId] || ''}
+        onSaveNote={async (note, actionType) => {
+          if (!selectedSubmission || !viewerState.reqId) return;
+          try {
+            const currentRevisions = selectedSubmission.documentRevisions || {};
+            const newRevisions = { ...currentRevisions };
+
+            if (actionType === 'revision') {
+              newRevisions[viewerState.reqId] = note;
+            } else {
+              delete newRevisions[viewerState.reqId];
+            }
+
+            const currentApprovals = selectedSubmission.documentApprovals || {};
+            const newApprovals = { ...currentApprovals };
+
+            if (actionType === 'approved') {
+              newApprovals[viewerState.reqId] = true;
+            } else {
+              delete newApprovals[viewerState.reqId];
+            }
+            
+            const uploadedCount = selectedSubmission.uploadedDocs?.length || 0;
+            const approvedCount = Object.keys(newApprovals).length;
+            const isAllApproved = uploadedCount > 0 && approvedCount >= uploadedCount;
+
+            let newStatus = selectedSubmission.reviewStatus;
+            let statusChangedMsg = '';
+            
+            if (actionType === 'revision') {
+              newStatus = 'revision';
+            } else if (isAllApproved && newStatus !== 'revision') {
+              newStatus = 'reviewed';
+              statusChangedMsg = ' All documents checked, submission moved to Reviewed tab.';
+            }
+
+            await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
+              documentRevisions: newRevisions,
+              documentApprovals: newApprovals,
+              reviewStatus: newStatus,
+              reviewedAt: new Date().toISOString(),
+              reviewedBy: auth.currentUser?.email
+            });
+            
+            // Add notification if it is a revision
+            if (actionType === 'revision' && selectedSubmission.studentUid) {
+              await addDoc(collection(db, 'notifications'), {
+                userId: selectedSubmission.studentUid,
+                title: "Revision Required",
+                message: `Your Research Adviser has requested revisions on the document: ${viewerState.title.split(' - ')[1] || 'a document'}. Please check the feedback.`,
+                isRead: false,
+                link: '/student/requirements',
+                createdAt: serverTimestamp()
+              });
+              
+              if (selectedSubmission.leaderEmail) {
+                try {
+                  const commentsMsg = `Revision notes added for document: ${viewerState.title.split(' - ')[1] || 'a document'}.\n\nNote: ${note}`;
+                  await addDoc(collection(db, 'mail'), {
+                    to: selectedSubmission.leaderEmail,
+                    message: {
+                      subject: `Revision required for your submission: ${selectedSubmission.researchTitle}`,
+                      html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                          <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                            <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                          </div>
+                          <div style="padding: 30px; background-color: #ffffff;">
+                            <h2 style="color: #2d3748; margin-top: 0;">Hi ${selectedSubmission.leaderName},</h2>
+                            <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${selectedSubmission.researchTitle}"</strong> has been updated to: <span style="background-color: #FEEBC8; color: #975A16; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">revision required</span></p>
+                            
+                            <div style="background-color: #f7fafc; border-left: 4px solid #D69E2E; padding: 15px; margin: 20px 0;">
+                              <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                              <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${commentsMsg}</p>
+                            </div>
+                            
+                            <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                              Best regards,<br>
+                              <strong>ARCHIVIO System</strong>
+                            </p>
+                          </div>
+                        </div>
+                      `
+                    }
+                  });
+                } catch (e) {
+                  console.error('Failed to send status email', e);
+                }
+              }
+            }
+
+            // Update local state to reflect change immediately
+            selectedSubmission.documentRevisions = newRevisions;
+            selectedSubmission.documentApprovals = newApprovals;
+            selectedSubmission.reviewStatus = newStatus;
+            
+            Swal.fire({
+              toast: true,
+              position: 'bottom-end',
+              icon: 'success',
+              title: actionType === 'revision' ? 'Revision note saved & notified' : 'Document marked as checked.' + statusChangedMsg,
+              showConfirmButton: false,
+              timer: 4000
+            });
+          } catch (error) {
+            console.error("Error saving document review state:", error);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save review action.' });
+          }
+        }}
       />
 
       {/* ── MESSAGE STUDENT MODAL ─────────────────────────────────────────────── */}

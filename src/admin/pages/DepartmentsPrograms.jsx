@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { db } from '../firebase/config';
+import { Card, PremiumButton } from '../../components/ui/Card';
 
 // Program code options for the dropdown
 const programCodeOptions = [
@@ -284,27 +285,21 @@ export default function DepartmentsProgramsTab() {
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Department Button */}
-          <button
-            onClick={() => setActiveModal('department')}
-            className="bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <span>+</span> Department
-          </button>
+          <PremiumButton onClick={() => setActiveModal('department')} variant="primary" icon={<span>+</span>}>
+            Department
+          </PremiumButton>
 
           {/* Programs Button */}
-          <button
-            onClick={() => setActiveModal('program')}
-            className="bg-[#801e38] hover:bg-[#601328] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <span>+</span> Programs
-          </button>
+          <PremiumButton onClick={() => setActiveModal('program')} variant="primary" icon={<span>+</span>}>
+            Programs
+          </PremiumButton>
         </div>
       </div>
 
       {/* GRID CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {departments.map((dept) => (
-          <div key={dept.id} className={`bg-white rounded-2xl border-2 ${dept.borderColor} overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group`}>
+          <Card key={dept.id} className={`border-2 ${dept.borderColor} overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col`}>
             {/* Card Header with Status Badge */}
             <div className="p-5 pb-4 border-b border-stone-100">
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -332,7 +327,7 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Click to View Details Link */}
-            <div className="p-5 pt-3 border-t border-stone-100 group-hover:bg-stone-50 transition-colors flex items-center justify-between">
+            <div className="p-5 pt-3 border-t border-stone-100 group-hover:bg-stone-50 transition-colors flex items-center justify-between mt-auto">
               <a
                 href="#"
                 onClick={(e) => {
@@ -360,7 +355,7 @@ export default function DepartmentsProgramsTab() {
                 </svg>
               </button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 

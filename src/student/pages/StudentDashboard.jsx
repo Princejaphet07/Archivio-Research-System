@@ -5,6 +5,7 @@ import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestor
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
 import StudentDashboardSkeleton from '../components/skeletons/StudentDashboardSkeleton';
+import { Card, CardHeader, CardBody, CardFooter, StatCard, StatusBadge, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
 // ── Progress step config ─────────────────────────────────────────────────────
 const STEPS = ['Account', 'Manuscript', 'Documents', 'Review', 'Published'];
@@ -265,49 +266,54 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             ) : (
               <>
                 {/* ── WHAT'S NEXT CARD ──────────────────────────────── */}
-                <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-xl flex items-center p-6 relative overflow-hidden shadow-sm mt-6 hover:shadow-md transition-shadow">
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#C73D4C] to-[#7B1F35]" />
-
-                  <div className="flex items-center gap-6 w-full">
-                    <div className="w-[60px] h-[60px] bg-[#f8eef1] dark:bg-[#7B1F35]/20 rounded-xl flex items-center justify-center shrink-0 border border-[#f0dee5] dark:border-[#7B1F35]/40 transition-colors">
-                      <svg className="w-8 h-8 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                    </div>
-
-                    <div className="flex-1">
-                      <p className="text-[11px] font-bold text-[#D05353] dark:text-[#D05353] tracking-widest uppercase mb-1">What's Next</p>
-                      <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
-                      <p className="text-gray-600 dark:text-stone-400 text-[14px] mt-0.5">{whatsNextDesc}</p>
-                    </div>
-
-                    {showUploadButton && (
-                      <button
-                        onClick={goToRequirements}
-                        className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-6 py-3 rounded-full text-[14px] font-bold flex items-center gap-2 hover:bg-[#63182a] dark:hover:bg-[#5a1831] transition-colors shrink-0 shadow-sm"
-                      >
-                        Upload Documents
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <Card hover className="mt-6">
+                  {/* left accent bar */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C73D4C] to-[#7B1F35] rounded-l-2xl" />
+                  <CardBody className="pl-8">
+                    <div className="flex items-center gap-6">
+                      <div className="w-14 h-14 bg-[#f8eef1] dark:bg-[#7B1F35]/20 rounded-2xl flex items-center justify-center shrink-0 border border-[#f0dee5] dark:border-[#7B1F35]/30 shadow-inner">
+                        <svg className="w-7 h-7 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                         </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[11px] font-bold text-[#D05353] tracking-widest uppercase mb-1">What's Next</p>
+                        <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
+                        <p className="text-stone-500 dark:text-stone-400 text-[14px] mt-0.5">{whatsNextDesc}</p>
+                      </div>
+                      {showUploadButton && (
+                        <PremiumButton onClick={goToRequirements} className="shrink-0">
+                          Upload Documents
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </PremiumButton>
+                      )}
+                    </div>
+                  </CardBody>
+                </Card>
 
                 {/* ── YOUR PROGRESS CARD ────────────────────────────── */}
-                <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-xl p-8 shadow-sm mt-6 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-end mb-8">
-                    <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">Your Progress</h3>
-                    <span className="text-[#7B1F35] dark:text-[#D05353] font-bold text-[14px]">{progressPercent}% complete</span>
-                  </div>
+                <Card hover className="mt-4">
+                  <CardHeader accent>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                      <h3 className="font-serif text-[18px] font-bold text-[#1A1A1A] dark:text-stone-100">Your Progress</h3>
+                    </div>
+                    <span className="text-[#7B1F35] dark:text-[#D05353] font-bold text-[14px] bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 px-3 py-1 rounded-full">{progressPercent}% complete</span>
+                  </CardHeader>
+                  <CardBody>
 
-                  <div className="relative pt-2 pb-6 px-4">
-                    <div className="absolute top-5 left-0 w-full h-3 bg-stone-100 dark:bg-stone-800 rounded-full" />
-                    <div
-                      className="absolute top-5 left-0 h-3 bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full transition-all duration-700"
-                      style={{ width: `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
-                    />
+                    <div className="relative pt-2 pb-6 px-4">
+                      <div className="absolute top-5 left-0 w-full h-2.5 bg-stone-100 dark:bg-stone-800 rounded-full" />
+                      <div
+                        className="absolute top-5 left-0 h-2.5 bg-gradient-to-r from-[#7B1F35] to-[#C73D4C] rounded-full transition-all duration-700 shadow-sm"
+                        style={{ width: `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
+                      />
                     <div className="relative flex justify-between z-10 text-[12px] font-bold">
                       {STEPS.map((step, idx) => {
                         const isDone    = idx < currentStep;
@@ -349,7 +355,8 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                       })}
                     </div>
                   </div>
-                </div>
+                  </CardBody>
+                </Card>
               </>
             )}
 
@@ -357,28 +364,24 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Manuscript Card */}
-              <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-xl flex flex-col shadow-sm hover:shadow-md transition-shadow">
-                <div className="bg-gradient-to-r from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-stone-100 dark:border-stone-800 transition-colors">
+              <Card hover>
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]" />
+                <CardHeader className="pt-5">
                   <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-gray-500 dark:text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <div className="w-9 h-9 rounded-xl bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
                     <h4 className="font-serif text-[18px] font-bold text-[#1A1A1A] dark:text-stone-100">Manuscript</h4>
                   </div>
-                  {isPublished ? (
-                    <span className="bg-[#1E8E3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">✓ Published</span>
-                  ) : hasManuscript ? (
-                    <span className="bg-[#7B1F35] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">✓ Uploaded</span>
-                  ) : (
-                    <span className="bg-[#CF3645] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">Not Uploaded</span>
-                  )}
-                </div>
-
-                <div className="p-6 flex flex-col flex-1">
+                  <StatusBadge status={isPublished ? 'published' : hasManuscript ? 'uploaded' : 'missing'} />
+                </CardHeader>
+                <CardBody className="flex flex-col flex-1">
                   {hasManuscript ? (
                     <>
-                      <h5 className="text-[#1A1A1A] dark:text-stone-100 font-bold text-[16px] mb-1">{researchTitle}</h5>
-                      <p className="text-gray-500 dark:text-stone-400 text-[13px] mb-8">
+                      <h5 className="text-[#1A1A1A] dark:text-stone-100 font-bold text-[16px] mb-1 line-clamp-2">{researchTitle}</h5>
+                      <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-6">
                         {submission?.manuscriptVersion ? `Version ${submission.manuscriptVersion}` : 'Uploaded'} ·{' '}
                         {submission?.manuscriptUploadedAt
                           ? new Date(submission.manuscriptUploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -388,75 +391,61 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   ) : (
                     <>
                       <h5 className="text-[#1A1A1A] dark:text-stone-100 font-bold text-[16px] mb-1">No manuscript uploaded yet</h5>
-                      <p className="text-gray-500 dark:text-stone-400 text-[13px] mb-8">Upload your final research manuscript to get started.</p>
+                      <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-6">Upload your final research manuscript to get started.</p>
                     </>
                   )}
-
                   <div className="mt-auto flex items-center gap-3">
                     {hasManuscript ? (
                       <>
-                        <button
-                          onClick={goToRequirements}
-                          className="border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-300 text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={goToRequirements}
-                          className="bg-[#7B1F35] dark:bg-stone-800 hover:bg-[#63182a] dark:hover:bg-stone-700 text-white dark:text-stone-200 text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors shadow-sm"
-                        >
-                          View Manuscript
-                        </button>
+                        <PremiumButton onClick={goToRequirements} variant="ghost" size="sm">Edit</PremiumButton>
+                        <PremiumButton onClick={goToRequirements} size="sm">View Manuscript</PremiumButton>
                       </>
                     ) : (
-                      <button
-                        onClick={goToRequirements}
-                        className="bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#63182a] dark:hover:bg-[#5a1831] text-white dark:text-white text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors shadow-sm"
-                      >
-                        Upload Manuscript
-                      </button>
+                      <PremiumButton onClick={goToRequirements} size="sm">Upload Manuscript</PremiumButton>
                     )}
                   </div>
-                </div>
-              </div>
+                </CardBody>
+              </Card>
 
               {/* Documents Card */}
-              <div className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-xl flex flex-col shadow-sm hover:shadow-md transition-shadow">
-                <div className="bg-gradient-to-r from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 px-6 py-4 rounded-t-xl flex justify-between items-center border-b border-stone-100 dark:border-stone-800 transition-colors">
+              <Card hover>
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 to-blue-400" />
+                <CardHeader className="pt-5">
                   <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-gray-500 dark:text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
                     <h4 className="font-serif text-[18px] font-bold text-[#1A1A1A] dark:text-stone-100">Documents</h4>
                   </div>
                   {loadingData ? (
                     <div className="h-7 w-24 bg-stone-200 dark:bg-stone-800 rounded-full animate-pulse" />
                   ) : missingCount > 0 ? (
-                    <span className="bg-[#CF3645] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">
-                      {missingCount} Missing
-                    </span>
+                    <StatusBadge status="missing" />
                   ) : uploadedCount === 0 ? (
-                    <span className="bg-stone-400 text-white text-[11px] font-bold px-3 py-1.5 rounded-full">
-                      None Uploaded
-                    </span>
+                    <span className="inline-flex items-center text-[11px] font-bold px-3 py-1.5 rounded-full border bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700">None Uploaded</span>
                   ) : (
-                    <span className="bg-[#1E8E3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-full">
-                      ✓ Complete
-                    </span>
+                    <StatusBadge status="approved" />
                   )}
-                </div>
-
-                <div className="p-6 flex flex-col flex-1">
+                </CardHeader>
+                <CardBody className="flex flex-col flex-1">
                   {loadingData ? (
-                    <div className="h-8 w-40 bg-stone-200 dark:bg-stone-800 rounded animate-pulse mb-4" />
+                    <div className="h-10 w-40 bg-stone-200 dark:bg-stone-800 rounded animate-pulse mb-4" />
                   ) : (
                     <div className="flex items-baseline gap-2 mb-4">
-                      <span className="font-serif text-[28px] font-bold text-[#7B1F35] dark:text-[#D05353]">{uploadedCount}</span>
-                      <span className="font-serif text-[20px] text-gray-400 dark:text-stone-500">/ {totalRequired}</span>
-                      <span className="text-[13px] text-gray-600 dark:text-stone-400 ml-1">documents submitted</span>
+                      <span className="font-serif text-[40px] font-bold text-blue-600 dark:text-blue-400 leading-none">{uploadedCount}</span>
+                      <span className="font-serif text-[22px] text-stone-400 dark:text-stone-500">/ {totalRequired}</span>
+                      <span className="text-[13px] text-stone-500 dark:text-stone-400 ml-1">documents</span>
                     </div>
                   )}
-
+                  {/* Progress bar mini */}
+                  <div className="w-full h-2 bg-stone-100 dark:bg-stone-800 rounded-full mb-5 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
+                      style={{ width: `${docsPercent}%` }}
+                    />
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-6">
                     {loadingData ? (
                       <>
@@ -464,55 +453,37 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         <div className="h-7 w-24 bg-stone-200 dark:bg-stone-800 rounded-full animate-pulse" />
                       </>
                     ) : missingCount === 0 && uploadedCount === 0 ? (
-                      <p className="text-[13px] text-gray-500 dark:text-stone-400">No documents uploaded yet. Go to Requirements to upload.</p>
+                      <p className="text-[13px] text-stone-500 dark:text-stone-400">No documents uploaded yet. Go to Requirements to upload.</p>
                     ) : missingCount > 0 ? (
-                      missingDocs.map((doc) => (
-                        <span key={doc} className="bg-[#F4DEE5] dark:bg-red-900/30 border border-[#F4DEE5] dark:border-red-900/50 text-[#CF3645] dark:text-red-400 px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-sm">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          {doc}
+                      missingDocs.map((d) => (
+                        <span key={d} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          {d}
                         </span>
                       ))
                     ) : (
-                      <span className="text-[13px] text-[#1E8E3E] dark:text-green-400 font-bold flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-[#1E8E3E] dark:bg-green-400 rounded-full" />
+                      <span className="text-[13px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-green-500 rounded-full" />
                         All documents submitted!
                       </span>
                     )}
                   </div>
-
                   <div className="mt-auto flex items-center gap-3">
-                    <button
-                      onClick={goToRequirements}
-                      className="border border-[#D6CBB8] dark:border-stone-600 hover:bg-black/5 dark:hover:bg-white/5 text-[#1A1A1A] dark:text-stone-300 text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors"
-                    >
-                      View All
-                    </button>
+                    <PremiumButton onClick={goToRequirements} variant="ghost" size="sm">View All</PremiumButton>
                     {missingCount > 0 && (
-                      <button
-                        onClick={goToRequirements}
-                        className="bg-[#CF3645] dark:bg-red-500 hover:bg-[#A92A36] dark:hover:bg-red-600 text-white dark:text-white text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors shadow-sm"
-                      >
-                        Upload Missing
-                      </button>
+                      <PremiumButton onClick={goToRequirements} variant="danger" size="sm">Upload Missing</PremiumButton>
                     )}
                     {uploadedCount === 0 && !loadingData && (
-                      <button
-                        onClick={goToRequirements}
-                        className="bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#63182a] dark:hover:bg-[#5a1831] text-white dark:text-white text-[13px] font-bold px-6 py-2.5 rounded-full transition-colors shadow-sm"
-                      >
-                        Start Uploading
-                      </button>
+                      <PremiumButton onClick={goToRequirements} size="sm">Start Uploading</PremiumButton>
                     )}
                   </div>
-                </div>
-              </div>
+                </CardBody>
+              </Card>
 
               {/* ── PAST PUBLICATIONS ──────────────────────────────────────── */}
               {allSubmissions.filter(s => s.reviewStatus === 'published').length > 0 && (
-                <div className="lg:col-span-3 mt-6">
-                  <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100 mb-4">Past Publications</h3>
+                <div className="lg:col-span-2 mt-4">
+                  <SectionTitle>Past Publications</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {allSubmissions
                       .filter(s => s.reviewStatus === 'published')
@@ -520,40 +491,37 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         const group = myGroups.find(g => g.groupName === pub.groupName || g.researchTitle === (pub.researchTitle || pub.title));
                         const displayTitle = group?.researchTitle || pub.researchTitle || pub.title || 'Research Title';
                         const displayGroup = group?.groupName || pub.groupName || 'Group Name';
-                        
                         return (
-                        <div key={pub.id} className="bg-white dark:bg-stone-900 border border-[#E8DFCB] dark:border-stone-800 rounded-xl p-5 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="bg-[#1E8E3E]/10 dark:bg-green-900/30 text-[#1E8E3E] dark:text-green-400 text-[11px] font-bold px-2.5 py-1 rounded-full border border-[#1E8E3E]/20 dark:border-green-900/50">
-                              PUBLISHED
-                            </span>
-                            {pub.publishedAt && (
-                              <span className="text-[12px] text-gray-500 dark:text-stone-400 font-medium">
-                                {new Date(pub.publishedAt).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-serif font-bold text-[#1A1A1A] dark:text-stone-100 text-[16px] leading-snug mb-1">
-                            {displayTitle}
-                          </h4>
-                          <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-4">{displayGroup}</p>
-                          <div className="mt-auto pt-4 border-t border-gray-100 dark:border-stone-800 flex gap-2">
-                            {pub.manuscriptUrl && (
-                              <a
-                                href={pub.manuscriptUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[#7B1F35] dark:text-[#D05353] text-[12px] font-bold hover:underline flex items-center gap-1"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                View Manuscript
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )})}
+                          <Card key={pub.id} hover>
+                            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-green-500 to-emerald-400" />
+                            <CardBody className="pt-7">
+                              <div className="flex justify-between items-start mb-3">
+                                <StatusBadge status="published" />
+                                {pub.publishedAt && (
+                                  <span className="text-[12px] text-stone-400 dark:text-stone-500 font-medium">
+                                    {new Date(pub.publishedAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-serif font-bold text-[#1A1A1A] dark:text-stone-100 text-[16px] leading-snug mb-1 line-clamp-2">{displayTitle}</h4>
+                              <p className="text-[13px] text-stone-500 dark:text-stone-400 mb-4">{displayGroup}</p>
+                              {pub.manuscriptUrl && (
+                                <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
+                                  <a
+                                    href={pub.manuscriptUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[#7B1F35] dark:text-[#D05353] text-[12px] font-bold hover:underline flex items-center gap-1"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    View Manuscript
+                                  </a>
+                                </div>
+                              )}
+                            </CardBody>
+                          </Card>
+                        );
+                      })}
                   </div>
                 </div>
               )}
