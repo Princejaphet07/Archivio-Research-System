@@ -29,6 +29,19 @@ const reportTypes = [
   },
 ];
 
+const formatDepartment = (deptStr) => {
+  if (!deptStr) return 'N/A';
+  if (deptStr.toLowerCase().includes('information tech')) return 'College of Information Technology';
+  if (deptStr.toLowerCase().includes('business') || deptStr.toLowerCase().includes('accountancy')) return 'College of Business and Accountancy';
+  if (deptStr.toLowerCase().includes('education')) return 'College of Education';
+  if (deptStr.toLowerCase().includes('arts') || deptStr.toLowerCase().includes('sciences')) return 'College of Arts and Sciences';
+  if (deptStr.toLowerCase().includes('criminology')) return 'College of Criminology';
+  if (deptStr.toLowerCase().includes('engineering')) return 'College of Engineering';
+  if (deptStr.toLowerCase().includes('nursing')) return 'College of Nursing';
+  if (deptStr.toLowerCase().includes('maritime')) return 'College of Maritime Education';
+  return deptStr;
+};
+
 export default function Reports() {
   const [selected, setSelected] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,14 +71,14 @@ export default function Reports() {
 
     const formatDate = (dateVal) => {
       if (!dateVal) return 'N/A';
-      if (dateVal.toDate) return dateVal.toDate().toLocaleDateString();
-      return new Date(dateVal).toLocaleDateString();
+      if (dateVal.toDate) return dateVal.toDate().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+      return new Date(dateVal).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
     };
 
     const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Dean', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Dean', dept: formatDepartment(d.data().department || 'N/A'), prog: 'Faculty / Head', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -74,7 +87,7 @@ export default function Reports() {
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       advisersData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Advisor', dept: d.data().department || 'N/A', prog: '—', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Advisor', dept: formatDepartment(d.data().department || 'N/A'), prog: 'Faculty', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -83,7 +96,7 @@ export default function Reports() {
     const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
       studentsData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Student', dept: d.data().course || 'N/A', prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Student', dept: formatDepartment(d.data().course || 'N/A'), prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -105,10 +118,10 @@ export default function Reports() {
           docId: s.id,
           id: (index + 1).toString().padStart(2, '0'),
           title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
-          dept: group?.program || s.program || group?.department || 'Unknown',
+          dept: formatDepartment(group?.program || s.program || group?.department || 'Unknown'),
           cat: group?.category || s.category || 'Uncategorized',
           sy: s.schoolYear || '2025-2026',
-          date: dDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          date: dDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         };
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -128,7 +141,7 @@ export default function Reports() {
     const deptsMap = {};
     filteredSubs.forEach(s => {
       const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
-      const deptName = group?.department || s.program || group?.program || 'Uncategorized';
+      const deptName = formatDepartment(group?.department || s.program || group?.program || 'Uncategorized');
       if (!deptsMap[deptName]) deptsMap[deptName] = { sub: 0, pub: 0, end: 0, pend: 0 };
       
       deptsMap[deptName].sub += 1;
@@ -180,10 +193,10 @@ export default function Reports() {
         csvContent += `${row.id},${cleanTitle},${row.dept},${row.cat},${row.sy},${row.date}\n`;
       });
     } else if (selected === 'users') {
-      csvContent += "ID,Name,Role,Department,Program,Date Registered,Last Login,Status\n";
+      csvContent += "ID,Name,Role,Department,Program,Date Registered,Status\n";
       usersData.forEach(row => {
         const cleanName = (row.name || '').replace(/,/g, '');
-        csvContent += `${row.id},${cleanName},${row.role},${row.dept},${row.prog},${row.date},${row.login},${row.status}\n`;
+        csvContent += `${row.id},${cleanName},${row.role},${row.dept},${row.prog},${row.date},${row.status}\n`;
       });
     } else if (selected === 'dept') {
       csvContent += "Department,Total Submissions,Published,Endorsed to Dean,Pending Approval,Publication Rate,Status\n";
@@ -213,11 +226,11 @@ export default function Reports() {
       Student: 'bg-blue-50 text-blue-600',
       Dean: 'bg-red-50 text-red-600',
     };
-    return <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${colors[role] || 'bg-stone-100 text-stone-600'}`}>{role}</span>;
+    return <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${colors[role] || 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`}>{role}</span>;
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -240,8 +253,8 @@ export default function Reports() {
                 onClick={() => { setSelected(r.id); setCurrentPage(1); }}
                 className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
                   selected === r.id
-                    ? 'border-[#801e38] bg-white shadow-md'
-                    : 'border-transparent bg-white shadow-sm hover:border-stone-300'
+                    ? 'border-[#801e38] bg-white dark:bg-[#1e1e1e] shadow-md'
+                    : 'border-transparent bg-white dark:bg-[#1e1e1e] shadow-sm hover:border-stone-300'
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -250,8 +263,8 @@ export default function Reports() {
                     {selected === r.id && <div className="w-2 h-2 rounded-full bg-[#801e38]"></div>}
                   </div>
                 </div>
-                <h4 className="font-bold text-stone-900 mb-1">{r.title}</h4>
-                <p className="text-xs text-stone-500 leading-relaxed">{r.desc}</p>
+                <h4 className="font-bold text-stone-900 dark:text-stone-50 mb-1">{r.title}</h4>
+                <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">{r.desc}</p>
               </button>
             ))}
           </div>
@@ -263,12 +276,12 @@ export default function Reports() {
               {/* Header & Actions */}
               <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 gap-4">
                 <div>
-                  <h3 className="text-2xl font-serif font-bold text-stone-900 mb-1">
+                  <h3 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50 mb-1">
                     {selected === 'published' && 'Published Papers Report'}
                     {selected === 'users' && 'System Users per School Year'}
                     {selected === 'dept' && 'Department Performance Report'}
                   </h3>
-                  <p className="text-sm text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     {selected === 'published' && `All research papers published to the ARCHIVIO archive (${selectedYear})`}
                     {selected === 'users' && `Registered participants by role, department, and program - sorted alphabetically (${selectedYear})`}
                     {selected === 'dept' && `${selectedYear} • All Departments • Showing: Published, Endorsed, and Pending Approval`}
@@ -291,25 +304,25 @@ export default function Reports() {
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 {selected === 'published' && (
                   <>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Categories</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All SY</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Departments</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Categories</option></select>
                   </>
                 )}
                 {selected === 'users' && (
                   <>
-                    <select className="px-4 py-2 bg-white border border-[#801e38] rounded-lg text-sm text-[#801e38] font-bold outline-none"><option>SY 2025-2026</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Roles</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Status</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-[#801e38] rounded-lg text-sm text-[#801e38] font-bold outline-none"><option>SY 2025-2026</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Roles</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Status</option></select>
                   </>
                 )}
                 {selected === 'dept' && (
                   <>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All SY</option></select>
-                    <select className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 outline-none"><option>All Departments</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All SY</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Departments</option></select>
                   </>
                 )}
-                <button className="px-4 py-2 text-sm font-semibold text-stone-600 bg-white border border-stone-200 rounded-lg hover:bg-stone-50">
+                <button className="px-4 py-2 text-sm font-semibold text-stone-600 dark:text-stone-300 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]">
                   Reset Filters
                 </button>
               </div>
@@ -346,21 +359,21 @@ export default function Reports() {
                 
                 {/* Custom Card Headers based on report */}
                 {selected === 'published' && (
-                  <div className="p-5 border-b border-stone-200 bg-white">
-                    <h4 className="font-bold text-stone-900 text-lg flex items-center gap-2">
+                  <div className="p-5 border-b border-stone-200 dark:border-stone-700 bg-white dark:bg-[#1e1e1e]">
+                    <h4 className="font-bold text-stone-900 dark:text-stone-50 text-lg flex items-center gap-2">
                       <span className="w-1 h-5 bg-[#801e38] rounded-full inline-block"></span>
                       Published Papers
                     </h4>
-                    <p className="text-xs text-stone-500 ml-3">All published research • sorted by most recently published</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 ml-3">All published research • sorted by most recently published</p>
                   </div>
                 )}
                 {selected === 'users' && (
-                  <div className="p-5 border-b border-stone-200 bg-white">
-                    <h4 className="font-bold text-stone-900 text-lg flex items-center gap-2">
+                  <div className="p-5 border-b border-stone-200 dark:border-stone-700 bg-white dark:bg-[#1e1e1e]">
+                    <h4 className="font-bold text-stone-900 dark:text-stone-50 text-lg flex items-center gap-2">
                       <span className="w-1 h-5 bg-[#801e38] rounded-full inline-block"></span>
                       Registered Users • SY 2025–2026
                     </h4>
-                    <p className="text-xs text-stone-500 ml-3">Sorted alphabetically by first name • all roles included</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 ml-3">Sorted alphabetically by first name • all roles included</p>
                   </div>
                 )}
 
@@ -387,7 +400,6 @@ export default function Reports() {
                             <th className="py-3 px-5">Department</th>
                             <th className="py-3 px-5">Program</th>
                             <th className="py-3 px-5">Date Registered</th>
-                            <th className="py-3 px-5">Last Login</th>
                             <th className="py-3 px-5">Status</th>
                           </>
                         )}
@@ -404,7 +416,7 @@ export default function Reports() {
                         )}
                       </tr>
                     </thead>
-                    <tbody className="text-sm text-stone-700 divide-y divide-stone-100">
+                    <tbody className="text-sm text-stone-700 dark:text-stone-200 divide-y divide-stone-100">
                       {/* Render rows based on selected */}
                       {(() => {
                         const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
@@ -414,9 +426,9 @@ export default function Reports() {
                         return (
                           <>
                             {selected === 'published' && paginatedData.map((row) => (
-                        <tr key={row.id} className="hover:bg-stone-50 transition-colors">
+                        <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
                           <td className="py-4 px-5 text-stone-400">{row.id}</td>
-                          <td className="py-4 px-5 font-semibold text-stone-900">{row.title}</td>
+                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.title}</td>
                           <td className="py-4 px-5"><DeptPill text={row.dept} /></td>
                           <td className="py-4 px-5">{row.cat}</td>
                           <td className="py-4 px-5">{row.sy}</td>
@@ -425,7 +437,7 @@ export default function Reports() {
                             <button 
                               onClick={() => handleDeleteResearch(row.docId, row.title)} 
                               title="Delete Permanently" 
-                              className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 inline-flex items-center justify-center bg-white shadow-sm transition-colors cursor-pointer"
+                              className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 inline-flex items-center justify-center bg-white dark:bg-[#1e1e1e] shadow-sm transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -434,21 +446,22 @@ export default function Reports() {
                       ))}
 
                       {selected === 'users' && paginatedData.map((row) => (
-                        <tr key={row.id} className="hover:bg-stone-50 transition-colors">
+                        <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
                           <td className="py-4 px-5 text-stone-400">{row.id}</td>
-                          <td className="py-4 px-5 font-semibold text-stone-900">{row.name}</td>
+                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.name}</td>
                           <td className="py-4 px-5"><RolePill role={row.role} /></td>
                           <td className="py-4 px-5 text-xs">{row.dept}</td>
-                          <td className="py-4 px-5 text-xs text-stone-500">{row.prog}</td>
+                          <td className="py-4 px-5 text-xs text-stone-500 dark:text-stone-400">{row.prog}</td>
                           <td className="py-4 px-5 text-xs">{row.date}</td>
-                          <td className="py-4 px-5 text-xs">{row.login}</td>
-                          <td className="py-4 px-5 text-emerald-600 font-semibold text-xs">{row.status}</td>
+                          <td className={`py-4 px-5 font-semibold text-xs ${row.status.toLowerCase() === 'active' ? 'text-emerald-600' : 'text-stone-400'}`}>
+                            {row.status}
+                          </td>
                         </tr>
                       ))}
 
                       {selected === 'dept' && paginatedData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-stone-50 transition-colors">
-                          <td className="py-4 px-5 font-semibold text-stone-900">{row.dept}</td>
+                        <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.dept}</td>
                           <td className="py-4 px-5">{row.sub}</td>
                           <td className="py-4 px-5 font-bold text-emerald-600">{row.pub}</td>
                           <td className="py-4 px-5 font-bold text-blue-600">{row.end}</td>
@@ -485,22 +498,22 @@ export default function Reports() {
                   const totalPages = Math.max(1, Math.ceil(currentData.length / itemsPerPage));
                   
                   return (selected === 'published' || selected === 'users' || selected === 'dept') && (
-                    <div className="flex items-center justify-between p-4 bg-white border-t border-stone-100">
-                      <p className="text-xs text-stone-500">
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-[#1e1e1e] border-t border-stone-100 dark:border-stone-800/50">
+                      <p className="text-xs text-stone-500 dark:text-stone-400">
                         Showing {currentData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, currentData.length)} of {currentData.length} records
                       </p>
                       <div className="flex gap-1 items-center">
                         <button 
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
-                          className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                          className="px-3 py-1 text-sm border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] disabled:opacity-50 transition-colors"
                         >‹</button>
                         <button className="px-3 py-1 text-sm bg-[#801e38] text-white rounded font-bold">{currentPage}</button>
                         <span className="px-2 py-1 text-stone-400 text-xs">of {totalPages}</span>
                         <button 
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
-                          className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                          className="px-3 py-1 text-sm border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] disabled:opacity-50 transition-colors"
                         >›</button>
                       </div>
                     </div>
@@ -510,20 +523,20 @@ export default function Reports() {
 
               {/* Department Performance - Bar Chart Section */}
               {selected === 'dept' && (
-                <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm mb-6">
+                <div className="bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-xl p-6 shadow-sm mb-6">
                    <div className="mb-6">
-                    <h4 className="font-bold text-stone-900 text-lg flex items-center gap-2">
+                    <h4 className="font-bold text-stone-900 dark:text-stone-50 text-lg flex items-center gap-2">
                       <span className="w-1 h-5 bg-[#801e38] rounded-full inline-block"></span>
                       Published, Endorsed & Pending — Department Breakdown
                     </h4>
-                    <p className="text-xs text-stone-500 ml-3">Clustered bars per department • each bar represents one metric • SY 2025–2026</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 ml-3">Clustered bars per department • each bar represents one metric • SY 2025–2026</p>
                   </div>
 
-                  <div className="relative pl-32 py-4 border-l border-b border-stone-200">
+                  <div className="relative pl-32 py-4 border-l border-b border-stone-200 dark:border-stone-700">
                     {/* Grid lines */}
                     <div className="absolute inset-0 left-32 flex justify-between pointer-events-none">
                       {[0,10,20,30,40,50].map((v, i) => (
-                         <div key={i} className="h-full border-r border-stone-100 flex-1 relative">
+                         <div key={i} className="h-full border-r border-stone-100 dark:border-stone-800/50 flex-1 relative">
                             <span className="absolute -top-6 -right-2 text-[10px] text-stone-400">{v === 0 ? '0' : v}</span>
                          </div>
                       ))}
@@ -540,7 +553,7 @@ export default function Reports() {
                           
                           return (
                             <div key={i} className="relative">
-                              <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 w-28 text-right truncate" title={deptRow.dept}>{deptRow.dept}</span>
+                              <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 dark:text-stone-200 w-28 text-right truncate" title={deptRow.dept}>{deptRow.dept}</span>
                               <div className="space-y-1">
                                 <div className="h-3 bg-[#16a34a] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold min-w-[20px]" style={{ width: getWidth(deptRow.pub) }}>{deptRow.pub}</div>
                                 <div className="h-3 bg-[#2563eb] rounded-r-md flex items-center justify-end pr-2 text-[10px] text-white font-bold min-w-[20px]" style={{ width: getWidth(deptRow.end) }}>{deptRow.end}</div>
@@ -555,9 +568,9 @@ export default function Reports() {
 
                   {/* Chart Legend */}
                   <div className="flex gap-6 mt-6">
-                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#16a34a] rounded-sm"></span><span className="text-xs text-stone-600">Published</span></div>
-                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#2563eb] rounded-sm"></span><span className="text-xs text-stone-600">Endorsed to Dean</span></div>
-                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#801e38] rounded-sm"></span><span className="text-xs text-stone-600">Pending Approval</span></div>
+                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#16a34a] rounded-sm"></span><span className="text-xs text-stone-600 dark:text-stone-300">Published</span></div>
+                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#2563eb] rounded-sm"></span><span className="text-xs text-stone-600 dark:text-stone-300">Endorsed to Dean</span></div>
+                    <div className="flex items-center gap-2"><span className="w-3 h-3 bg-[#801e38] rounded-sm"></span><span className="text-xs text-stone-600 dark:text-stone-300">Pending Approval</span></div>
                   </div>
                 </div>
               )}
@@ -567,14 +580,14 @@ export default function Reports() {
 
           {/* EMPTY STATE */}
           {!selected && (
-            <div className="bg-stone-100/60 border border-stone-200 rounded-2xl min-h-[340px] flex flex-col items-center justify-center p-10 mt-6 relative">
+            <div className="bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl min-h-[340px] flex flex-col items-center justify-center p-10 mt-6 relative">
               <div className="text-center">
                 <div className="flex items-end justify-center gap-2 mb-6 h-20">
                   <div className="w-6 bg-[#d6a0b0] rounded-t-md" style={{ height: '40%' }}></div>
                   <div className="w-6 bg-[#801e38] rounded-t-md" style={{ height: '80%' }}></div>
                   <div className="w-6 bg-[#d6a0b0] rounded-t-md" style={{ height: '55%' }}></div>
                 </div>
-                <h4 className="text-xl font-serif font-bold text-stone-800 mb-2">No Report Selected</h4>
+                <h4 className="text-xl font-serif font-bold text-stone-800 dark:text-stone-100 mb-2">No Report Selected</h4>
                 <p className="text-sm text-stone-400">Select a report type above to generate and view data.</p>
               </div>
               <p className="absolute bottom-10 text-[11px] text-stone-400 italic">

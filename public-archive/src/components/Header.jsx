@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import SettingsModal from './SettingsModal';
 import logo from '../assets/logo.png';
+import Swal from 'sweetalert2';
 
 function Header() {
   const location = useLocation();
@@ -26,12 +27,30 @@ function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: 'Log out',
+      text: 'Are you sure you want to log out?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, log out',
+      background: isDarkMode ? '#1e1e1e' : '#fff',
+      color: isDarkMode ? '#f5f5f5' : '#000',
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
+      setIsLoggingOut(true);
       await signOut();
       navigate('/');
     } catch (error) {
       console.error('Failed to log out', error);
+      setIsLoggingOut(false);
     }
   };
 
@@ -92,10 +111,11 @@ function Header() {
                     setIsProfileDropdownOpen(false);
                     handleLogout();
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-2"
+                  disabled={isLoggingOut}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-2 disabled:opacity-50"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                  Logout
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </div>
             )}
@@ -150,7 +170,13 @@ function Header() {
             {currentUser ? (
               <>
                 <span className="text-stone-300">Welcome, {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}</span>
-                <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-center py-2 border border-white/30 rounded hover:bg-white/10 transition">Logout</button>
+                <button 
+                  onClick={() => { handleLogout(); setIsMenuOpen(false); }} 
+                  disabled={isLoggingOut}
+                  className="w-full text-center py-2 border border-white/30 rounded hover:bg-white/10 transition disabled:opacity-50"
+                >
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </button>
               </>
             ) : (
               <>

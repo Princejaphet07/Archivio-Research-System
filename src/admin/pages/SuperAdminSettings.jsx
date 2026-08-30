@@ -144,7 +144,7 @@ export default function SuperAdminSettings() {
     : 'SA';
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -163,14 +163,14 @@ export default function SuperAdminSettings() {
                 {initials}
               </div>
               <div className="flex-1">
-                <h4 className="text-xl font-bold text-stone-900">{currentUser?.displayName || 'Super Admin'}</h4>
-                <p className="text-sm text-stone-500">{currentUser?.email}</p>
+                <h4 className="text-xl font-bold text-stone-900 dark:text-stone-50">{currentUser?.displayName || 'Super Admin'}</h4>
+                <p className="text-sm text-stone-500 dark:text-stone-400">{currentUser?.email}</p>
               </div>
               <span className="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full mt-2 md:mt-0">⭐ Super Admin</span>
             </Card>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-6 w-fit">
+            <div className="flex gap-1 bg-stone-100 dark:bg-stone-800 rounded-xl p-1 mb-6 w-fit">
               {[
                 { key: 'profile', label: '👤 Profile Info' },
                 { key: 'password', label: '🔐 Change Password' },
@@ -181,8 +181,8 @@ export default function SuperAdminSettings() {
                   onClick={() => setActiveTab(tab.key)}
                   className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                     activeTab === tab.key
-                      ? 'bg-white text-[#801e38] shadow-sm'
-                      : 'text-stone-500 hover:text-stone-700'
+                      ? 'bg-white dark:bg-[#1e1e1e] text-[#801e38] shadow-sm'
+                      : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:text-stone-200'
                   }`}
                 >
                   {tab.label}
@@ -193,40 +193,40 @@ export default function SuperAdminSettings() {
             {/* ===== PROFILE TAB ===== */}
             {activeTab === 'profile' && (
               <Card className="flex flex-col overflow-hidden">
-                <div className="p-5 border-b border-stone-100 bg-stone-50">
-                  <h4 className="font-bold text-stone-900">Personal Information</h4>
-                  <p className="text-xs text-stone-500 mt-0.5">Update your display name shown across the portal.</p>
+                <div className="p-5 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-50">Personal Information</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Update your display name shown across the portal.</p>
                 </div>
                 <form onSubmit={handleUpdateProfile} className="p-6 space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-xs font-semibold text-stone-500 mb-1.5">First Name</label>
+                      <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">First Name</label>
                       <input
                         type="text"
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
                         placeholder="Enter your first name"
-                        className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-stone-500 mb-1.5">Last Name</label>
+                      <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Last Name</label>
                       <input
                         type="text"
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
                         placeholder="Enter your last name"
-                        className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-stone-500 mb-1.5">Email Address</label>
+                    <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Email Address</label>
                     <input
                       type="email"
                       value={currentUser?.email || ''}
                       disabled
-                      className="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-400 cursor-not-allowed"
+                      className="w-full px-4 py-2.5 bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-400 cursor-not-allowed"
                     />
                     <p className="text-[11px] text-stone-400 mt-1">Email address cannot be changed here. Contact the System Administrator.</p>
                   </div>
@@ -260,23 +260,23 @@ export default function SuperAdminSettings() {
             {/* ===== PASSWORD TAB ===== */}
             {activeTab === 'password' && (
               <Card className="flex flex-col overflow-hidden">
-                <div className="p-5 border-b border-stone-100 bg-stone-50">
-                  <h4 className="font-bold text-stone-900">Change Password</h4>
-                  <p className="text-xs text-stone-500 mt-0.5">Set a new password for your account. You'll need your current password to confirm.</p>
+                <div className="p-5 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-50">Change Password</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Set a new password for your account. You'll need your current password to confirm.</p>
                 </div>
                 <form onSubmit={handleChangePassword} className="p-6 space-y-5">
                   {/* Current Password */}
                   <div>
-                    <label className="block text-xs font-semibold text-stone-500 mb-1.5">Current Password</label>
+                    <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Current Password</label>
                     <div className="relative">
                       <input
                         type={showCurrent ? 'text' : 'password'}
                         value={currentPassword}
                         onChange={e => setCurrentPassword(e.target.value)}
                         placeholder="Enter your current password"
-                        className="w-full pl-4 pr-12 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                        className="w-full pl-4 pr-12 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
                       />
-                      <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600">
+                      <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600 dark:text-stone-300">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           {showCurrent
                             ? <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -289,16 +289,16 @@ export default function SuperAdminSettings() {
 
                   {/* New Password */}
                   <div>
-                    <label className="block text-xs font-semibold text-stone-500 mb-1.5">New Password</label>
+                    <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">New Password</label>
                     <div className="relative">
                       <input
                         type={showNew ? 'text' : 'password'}
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
                         placeholder="Enter new password"
-                        className="w-full pl-4 pr-12 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-800 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                        className="w-full pl-4 pr-12 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
                       />
-                      <button type="button" onClick={() => setShowNew(!showNew)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600">
+                      <button type="button" onClick={() => setShowNew(!showNew)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600 dark:text-stone-300">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           {showNew
                             ? <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -313,7 +313,7 @@ export default function SuperAdminSettings() {
                       <div className="mt-2">
                         <div className="flex gap-1 mb-1">
                           {[1, 2, 3, 4].map(i => (
-                            <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-stone-200'}`} />
+                            <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-stone-200 dark:bg-stone-700'}`} />
                           ))}
                         </div>
                         <p className={`text-[11px] font-semibold ${['', 'text-red-500', 'text-amber-500', 'text-blue-500', 'text-emerald-500'][strength]}`}>
@@ -326,7 +326,7 @@ export default function SuperAdminSettings() {
                             { ok: hasNumber, label: 'Number' },
                             { ok: hasSpecial, label: 'Special char' },
                           ].map(r => (
-                            <span key={r.label} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${r.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-400'}`}>
+                            <span key={r.label} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${r.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
                               {r.ok ? '✓' : '○'} {r.label}
                             </span>
                           ))}
@@ -337,20 +337,20 @@ export default function SuperAdminSettings() {
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-xs font-semibold text-stone-500 mb-1.5">Confirm New Password</label>
+                    <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Confirm New Password</label>
                     <div className="relative">
                       <input
                         type={showConfirm ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
                         placeholder="Re-enter new password"
-                        className={`w-full pl-4 pr-12 py-2.5 bg-white border rounded-lg text-sm text-stone-800 outline-none focus:ring-1 transition-all ${
+                        className={`w-full pl-4 pr-12 py-2.5 bg-white dark:bg-[#1e1e1e] border rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:ring-1 transition-all ${
                           confirmPassword && confirmPassword !== newPassword
                             ? 'border-red-400 focus:border-red-400 focus:ring-red-200'
-                            : 'border-stone-200 focus:border-[#801e38] focus:ring-[#801e38]'
+                            : 'border-stone-200 dark:border-stone-700 focus:border-[#801e38] focus:ring-[#801e38]'
                         }`}
                       />
-                      <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600">
+                      <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600 dark:text-stone-300">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           {showConfirm
                             ? <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -393,9 +393,9 @@ export default function SuperAdminSettings() {
             {/* ===== ACCESS TAB ===== */}
             {activeTab === 'access' && (
               <Card className="flex flex-col overflow-hidden">
-                <div className="p-5 border-b border-stone-100 bg-stone-50">
-                  <h4 className="font-bold text-stone-900">My Module Access</h4>
-                  <p className="text-xs text-stone-500 mt-0.5">These are the modules granted to you by the System Administrator. To request additional access, contact the administrator.</p>
+                <div className="p-5 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-50">My Module Access</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">These are the modules granted to you by the System Administrator. To request additional access, contact the administrator.</p>
                 </div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {allModules.map(mod => {
@@ -406,14 +406,14 @@ export default function SuperAdminSettings() {
                         className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                           granted
                             ? 'border-emerald-200 bg-emerald-50'
-                            : 'border-stone-100 bg-stone-50 opacity-50'
+                            : 'border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525] opacity-50'
                         }`}
                       >
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${granted ? 'bg-emerald-100' : 'bg-stone-200'}`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${granted ? 'bg-emerald-100' : 'bg-stone-200 dark:bg-stone-700'}`}>
                           {mod.icon}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-stone-800">{mod.label}</p>
+                          <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{mod.label}</p>
                           <p className={`text-xs font-semibold ${granted ? 'text-emerald-600' : 'text-stone-400'}`}>
                             {granted ? '✅ Access Granted' : '🔒 Not Granted'}
                           </p>

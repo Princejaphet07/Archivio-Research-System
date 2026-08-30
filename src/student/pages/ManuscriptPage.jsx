@@ -241,12 +241,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     }
   };
 
-  const handleAIPreCheck = async () => {
-    if (!abstract || abstract.includes('No abstract')) {
-      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'Please add your abstract first before running the AI Scanner.', confirmButtonColor: '#7B1F35' });
-      return;
-    }
-
+  const runScan = async () => {
     Swal.fire({
       title: 'Running AI Scanner...',
       html: 'Evaluating grammar, tone, and readability...',
@@ -266,39 +261,116 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
       
       if (!res.ok) throw new Error(data.error || 'Failed to scan');
 
-      let color = '#1E8E3E'; // Green
-      if (data.score < 80) color = '#D97706'; // Orange
-      if (data.score < 60) color = '#DC2626'; // Red
+      if (submissionId) {
+        await updateDoc(doc(db, 'submissions', submissionId), {
+          aiScanResult: data
+        });
+      }
 
-      const suggestionsHtml = data.suggestions && data.suggestions.length > 0 
-        ? `<ul style="text-align: left; margin-top: 15px; font-size: 13px; color: #555; list-style-type: none; padding: 0;">
-            ${data.suggestions.map(s => {
-              if (typeof s === 'string') return `<li style="margin-bottom: 8px;">• ${s}</li>`;
-              return `
-              <li style="margin-bottom: 12px; background: #fff; padding: 10px; border-radius: 6px; border-left: 4px solid #D97706; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="text-decoration: line-through; color: #DC2626; margin-bottom: 4px;">"${s.original}"</div>
-                <div style="color: #1E8E3E; font-weight: bold; margin-bottom: 4px;">"${s.suggested}"</div>
-                <div style="font-size: 11px; color: #666; font-style: italic;">Reason: ${s.reason}</div>
-              </li>`;
-            }).join('')}
-           </ul>`
-        : '<p style="text-align: left; margin-top: 15px; font-size: 13px; color: #555;">No major suggestions. Looks great!</p>';
-
-      Swal.fire({
-        title: 'AI Scanner Result',
-        html: `
-          <div style="font-size: 48px; font-weight: bold; color: ${color}; margin-bottom: 10px;">${data.score}/100</div>
-          <p style="font-size: 14px; font-weight: bold; color: #333;">${data.feedback}</p>
-          <hr style="margin: 15px 0;">
-          <div style="text-align: left; font-weight: bold; font-size: 14px;">Suggestions:</div>
-          ${suggestionsHtml}
-        `,
-        confirmButtonColor: '#7B1F35',
-        confirmButtonText: 'Got it!'
-      });
+      showResult(data);
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'Scan Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#7B1F35' });
+    }
+  };
+
+  const showResult = async (data) => {
+    let currentAbstract = abstract;
+    let color = '#1E8E3E'; // Green
+    if (data.score < 80) color = '#D97706'; // Orange
+    if (data.score < 60) color = '#DC2626'; // Red
+
+    const suggestionsHtml = data.suggestions && data.suggestions.length > 0 
+      ? `<ul class="text-left mt-4 text-[13px] text-gray-600 dark:text-stone-300 list-none p-0 overflow-y-auto pr-1" style="max-height: 280px;">
+          ${data.suggestions.map((s, idx) => {
+            if (typeof s === 'string') return `<li class="mb-2">• ${s}</li>`;
+            
+            const isApplied = !currentAbstract.includes(s.original) && currentAbstract.includes(s.suggested);
+            const isNotFound = !currentAbstract.includes(s.original) && !currentAbstract.includes(s.suggested);
+            
+            let btnHtml = '';
+            if (isApplied) {
+              btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" disabled style="position: absolute; right: 10px; top: 10px; background: #1E8E3E; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: default;">Applied!</button>`;
+            } else if (isNotFound) {
+              btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" disabled style="position: absolute; right: 10px; top: 10px; background: #6b7280; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: default;">Not Found</button>`;
+            } else {
+              btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" style="position: absolute; right: 10px; top: 10px; background: #7B1F35; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; transition: background 0.2s;">Apply</button>`;
+            }
+
+            return `
+            <li class="relative mb-3 bg-gray-50/80 dark:bg-stone-800/80 p-3 rounded-md border-l-4 border-[#D97706] shadow-sm">
+              <div class="line-through text-red-600 dark:text-red-400 mb-1 pr-[60px]">"${s.original}"</div>
+              <div class="text-green-700 dark:text-emerald-500 font-bold mb-1 pr-[60px]">"${s.suggested}"</div>
+              <div class="text-[11px] text-gray-500 dark:text-stone-400 italic">Reason: ${s.reason}</div>
+              ${btnHtml}
+            </li>`;
+          }).join('')}
+         </ul>`
+      : '<p class="text-left mt-4 text-[13px] text-gray-500 dark:text-stone-400">No major suggestions. Looks great!</p>';
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const swalRes = await Swal.fire({
+      title: `<span class="text-gray-800 dark:text-stone-100">AI Scanner Result</span>`,
+      background: isDark ? '#1c1917' : '#ffffff',
+      customClass: {
+        popup: 'rounded-xl border border-gray-200 dark:border-stone-700/50 shadow-xl',
+        htmlContainer: 'text-gray-600 dark:text-stone-300'
+      },
+      html: `
+        <div class="text-[52px] font-bold mb-2" style="color: ${color};">${data.score}<span class="text-[24px] text-gray-400 dark:text-stone-600">/100</span></div>
+        <p class="text-[14px] font-bold text-gray-700 dark:text-stone-200">${data.feedback}</p>
+        <hr class="my-4 border-gray-100 dark:border-stone-800">
+        <div class="text-left font-bold text-[14px] text-gray-800 dark:text-stone-100">Suggestions:</div>
+        ${suggestionsHtml}
+      `,
+      showCancelButton: true,
+      confirmButtonColor: '#7B1F35',
+      confirmButtonText: 'Got it!',
+      cancelButtonColor: '#D97706',
+      cancelButtonText: 'Try Again',
+      didOpen: () => {
+        const btns = document.querySelectorAll('.apply-suggestion-btn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const idx = e.target.getAttribute('data-index');
+            const suggestion = data.suggestions[idx];
+            
+            if (suggestion && suggestion.original && suggestion.suggested) {
+              if (currentAbstract.includes(suggestion.original)) {
+                currentAbstract = currentAbstract.replace(suggestion.original, suggestion.suggested);
+                e.target.innerText = 'Applied!';
+                e.target.style.background = '#1E8E3E';
+                e.target.disabled = true;
+
+                if (submissionId) {
+                  await updateDoc(doc(db, 'submissions', submissionId), { abstract: currentAbstract });
+                }
+              } else {
+                e.target.innerText = 'Not Found';
+                e.target.style.background = '#9ca3af';
+                e.target.disabled = true;
+              }
+            }
+          });
+        });
+      }
+    });
+
+    if (swalRes.dismiss === Swal.DismissReason.cancel) {
+      runScan();
+    }
+  };
+
+  const handleAIPreCheck = async () => {
+    if (!abstract || abstract.includes('No abstract')) {
+      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'Please add your abstract first before running the AI Scanner.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+
+    if (submission?.aiScanResult) {
+      showResult(submission.aiScanResult);
+    } else {
+      runScan();
     }
   };
 

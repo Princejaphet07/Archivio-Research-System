@@ -54,7 +54,7 @@ function Dashboard() {
     // Dynamic Mapping of student courses/programs to department names
     const courseToDeptMap = {};
     programs.forEach(p => {
-      if (p.name && p.school) courseToDeptMap[p.name] = p.school;
+      if (p.name && p.school) { courseToDeptMap[p.name] = p.school; if (p.name.startsWith('Bachelor of Science in ')) { courseToDeptMap[p.name.replace('Bachelor of Science in ', 'BS ')] = p.school; } }
       if (p.code && p.school) courseToDeptMap[p.code] = p.school;
     });
     
@@ -101,7 +101,7 @@ function Dashboard() {
     // Dynamic Mapping of student courses/programs to department names
     const courseToDeptMap = {};
     programs.forEach(p => {
-      if (p.name && p.school) courseToDeptMap[p.name] = p.school;
+      if (p.name && p.school) { courseToDeptMap[p.name] = p.school; if (p.name.startsWith('Bachelor of Science in ')) { courseToDeptMap[p.name.replace('Bachelor of Science in ', 'BS ')] = p.school; } }
       if (p.code && p.school) courseToDeptMap[p.code] = p.school;
     });
 
@@ -206,7 +206,7 @@ function Dashboard() {
   }, [filteredSubmissions]);
 
   return (
-    <div className="min-h-screen w-full flex bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="min-h-screen w-full flex bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       
       <Sidebar />
 
@@ -234,7 +234,7 @@ function Dashboard() {
               <div className="flex items-center gap-2 mb-6">
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
-                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Yearly Research Upload Trend</h3>
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Yearly Research Upload Trend</h3>
                 <p className="text-[10px] text-stone-400 mt-0.5">Total submissions recorded per academic school year</p>
               </div>
             </div>
@@ -295,16 +295,16 @@ function Dashboard() {
               <div className="flex items-center gap-2 mb-6">
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
-                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Research Status per Department</h3>
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Research Status per Department</h3>
                 <p className="text-[10px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department ({selectedYear})</p>
               </div>
             </div>
-            <div className="space-y-6 pb-6 border-b border-stone-100">
+            <div className="space-y-6 pb-6 border-b border-stone-100 dark:border-stone-800/50">
               {deptStats.slice(0, 3).map((dept, i) => {
                 const maxVal = Math.max(dept.uploaded, dept.approved, dept.published, 1);
                 return (
                   <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <span className="text-[11px] font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
+                    <span className="text-[11px] font-bold text-stone-800 dark:text-stone-100 w-32 shrink-0">{dept.name}</span>
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2"><div className="bg-[#e2d5de] h-4 rounded-r-md" style={{ width: `${(dept.uploaded/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#801e38]">{dept.uploaded}</span></div>
                       <div className="flex items-center gap-2"><div className="bg-[#64b494] h-4 rounded-r-md" style={{ width: `${(dept.approved/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#64b494]">{dept.approved}</span></div>
@@ -315,7 +315,7 @@ function Dashboard() {
               })}
               {deptStats.filter(d => d.pending).map((dept, i) => (
                 <div key={`pend-${i}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <span className="text-[11px] font-bold text-stone-800 w-32 shrink-0">{dept.name}</span>
+                  <span className="text-[11px] font-bold text-stone-800 dark:text-stone-100 w-32 shrink-0">{dept.name}</span>
                   <div className="flex-1 flex items-center h-16 bg-[#f5ebd9]/30 border border-dashed border-[#801e38]/30 rounded-xl px-4"><span className="text-[10px] text-[#801e38] font-bold">Pending — Invitation has sent</span></div>
                 </div>
               ))}
@@ -329,7 +329,7 @@ function Dashboard() {
               <div className="text-center text-[9px] text-stone-400 font-semibold pl-32">Number of Papers</div>
             </div>
 
-            <div className="flex items-center gap-6 mt-6 justify-start text-[10px] font-bold uppercase tracking-wider text-stone-500">
+            <div className="flex items-center gap-6 mt-6 justify-start text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#e2d5de] rounded-sm"></span><span>Uploaded</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#64b494] rounded-sm"></span><span>Approved</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#9c6e3b] rounded-sm"></span><span>Published</span></div>
@@ -341,23 +341,23 @@ function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <Card className="lg:col-span-2 overflow-x-auto">
               <CardBody>
-                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
+                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
                 <div className="overflow-x-auto min-w-[500px]">
                 <table className="w-full text-left text-xs">
                   <thead><tr className="bg-[#801e38] text-white uppercase text-[9px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
                   <tbody className="divide-y divide-stone-100">
                     {deptStats.map((row, i) => (
-                      <tr key={i} className="hover:bg-stone-50 transition-colors">
-                        <td className="p-3.5 font-bold text-stone-800 flex items-center gap-2">{row.name}{row.pending && <span className="bg-[#f4dee5] text-[#801e38] text-[8px] px-2 py-0.5 rounded-full font-bold">Pending</span>}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.advisers || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.students || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.uploaded || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600'}`}>{row.approved || '—'}</td>
+                      <tr key={i} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                        <td className="p-3.5 font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">{row.name}{row.pending && <span className="bg-[#f4dee5] text-[#801e38] text-[8px] px-2 py-0.5 rounded-full font-bold">Pending</span>}</td>
+                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.advisers || '—'}</td>
+                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.students || '—'}</td>
+                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.uploaded || '—'}</td>
+                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.approved || '—'}</td>
                         <td className={`p-3.5 font-bold ${row.pending ? 'text-stone-300' : 'text-[#801e38]'}`}>{row.published || '—'}</td>
                       </tr>
                     ))}
-                    <tr className="bg-stone-50 font-bold border-t-2 border-stone-200">
-                      <td className="p-3.5 uppercase tracking-wider text-stone-900">Total</td>
+                    <tr className="bg-stone-50 dark:bg-[#252525] font-bold border-t-2 border-stone-200 dark:border-stone-700">
+                      <td className="p-3.5 uppercase tracking-wider text-stone-900 dark:text-stone-50">Total</td>
                       <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.advisers||0),0)}</td>
                       <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.students||0),0)}</td>
                       <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.uploaded||0),0)}</td>
@@ -371,7 +371,7 @@ function Dashboard() {
             </Card>
             <Card>
               <CardBody>
-                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
+                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
                 <div className="flex justify-center mb-4">
                 <div className="w-full h-[220px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -385,7 +385,7 @@ function Dashboard() {
                 </div>
               </div>
               <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
+                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 dark:text-stone-50 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
               </div>
               </CardBody>
             </Card>
@@ -394,8 +394,8 @@ function Dashboard() {
           {/* Row 5: Storage Usage Overview */}
           <Card className="mb-6">
             <CardBody>
-              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600"><span>Total Files Uploaded</span><span className="text-stone-900 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Published Papers</span><span className="text-stone-900 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Supporting Documents</span><span className="text-stone-900 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600"><span>Other Assets</span><span className="text-stone-900 font-bold">136 files</span></div></div></div>
+              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 dark:bg-stone-800 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-700 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Total Files Uploaded</span><span className="text-stone-900 dark:text-stone-50 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Published Papers</span><span className="text-stone-900 dark:text-stone-50 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Supporting Documents</span><span className="text-stone-900 dark:text-stone-50 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Other Assets</span><span className="text-stone-900 dark:text-stone-50 font-bold">136 files</span></div></div></div>
             <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center gap-2 text-xs font-bold text-[#801e38]"><span>⚠️</span><span>Storage above 60% — consider archiving old records.</span></div>
             </CardBody>
           </Card>
@@ -408,3 +408,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

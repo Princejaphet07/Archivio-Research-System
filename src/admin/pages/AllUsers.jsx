@@ -102,7 +102,7 @@ export default function AllUsers() {
           name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
           email: data.email,
           role: 'Student',
-          dept: data.course || 'N/A',
+          dept: data.department || 'N/A',
           status: data.status || 'Active',
           lastLogin: formatDate(data.lastLogin || data.createdAt),
           createdAt: data.createdAt
@@ -282,7 +282,7 @@ export default function AllUsers() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -302,12 +302,12 @@ export default function AllUsers() {
           </SectionTitle>
 
           {/* TABS */}
-          <div className="flex gap-6 border-b border-stone-200 mb-6">
+          <div className="flex gap-6 border-b border-stone-200 dark:border-stone-700 mb-6">
             {tabs.map((tab, i) => (
               <button
                 key={i}
                 onClick={() => setActiveTab(i)}
-                className={`pb-3 text-sm font-semibold transition-colors ${activeTab === i ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-400 hover:text-stone-600'}`}
+                className={`pb-3 text-sm font-semibold transition-colors ${activeTab === i ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-400 hover:text-stone-600 dark:text-stone-300'}`}
               >
                 {tab}
               </button>
@@ -318,7 +318,7 @@ export default function AllUsers() {
           <Card className="flex flex-col overflow-hidden mb-6">
 
             {/* Search + Export */}
-            <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100 bg-stone-50/50">
+            <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]/50">
               <PremiumButton variant="ghost" icon={<Download className="w-4 h-4" />}>
                 Export CSV
               </PremiumButton>
@@ -328,11 +328,11 @@ export default function AllUsers() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="bg-stone-50 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200">
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">NAME ↑</th>
+                  <tr className="bg-stone-50 dark:bg-[#252525] text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">NAME ↑</th>
                     <th className="px-3 py-3">EMAIL</th>
                     <th className="px-3 py-3">ROLE</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">DEPARTMENT ↑</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">DEPARTMENT ↑</th>
                     <th className="px-3 py-3">STATUS</th>
                     <th className="px-3 py-3">LAST LOGIN</th>
                     <th className="px-3 py-3 text-center">ACTIONS</th>
@@ -341,26 +341,26 @@ export default function AllUsers() {
                 <tbody className="divide-y divide-stone-100">
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 font-medium">
+                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 dark:text-stone-400 font-medium">
                         <div className="flex flex-col items-center justify-center">
-                          <div className="w-8 h-8 border-4 border-stone-200 border-t-[#801e38] rounded-full animate-spin mb-3"></div>
+                          <div className="w-8 h-8 border-4 border-stone-200 dark:border-stone-700 border-t-[#801e38] rounded-full animate-spin mb-3"></div>
                           Loading users...
                         </div>
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 font-medium">No users found.</td>
+                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 dark:text-stone-400 font-medium">No users found.</td>
                     </tr>
                   ) : (
                     paginatedUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
-                        <td className="px-3 py-3 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
+                      <tr key={user.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]/50 transition-colors">
+                        <td className="px-3 py-3 font-bold text-stone-800 dark:text-stone-100 whitespace-nowrap">{user.name}</td>
                         <td className="px-3 py-3 text-stone-400 whitespace-nowrap">{user.email}</td>
                         <td className="px-3 py-3">
                           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[user.role]}`}>{user.role}</span>
                         </td>
-                        <td className="px-3 py-3 text-stone-700 font-medium whitespace-nowrap">{user.dept}</td>
+                        <td className="px-3 py-3 text-stone-700 dark:text-stone-200 font-medium whitespace-nowrap">{user.dept}</td>
                         <td className="px-3 py-3">
                           <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{user.status}</span>
                         </td>
@@ -395,15 +395,15 @@ export default function AllUsers() {
             </div>
 
             {/* PAGINATION */}
-            <div className="flex items-center justify-between px-3 py-3 border-t border-stone-100 bg-stone-50/30">
-              <span className="text-[11px] text-stone-500 font-medium">
+            <div className="flex items-center justify-between px-3 py-3 border-t border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]/30">
+              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
                 Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} users
               </span>
               <div className="flex items-center gap-1">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 text-xs font-bold hover:bg-stone-100 dark:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >‹</button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button 
@@ -412,14 +412,14 @@ export default function AllUsers() {
                     className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${
                       currentPage === page 
                         ? 'bg-[#801e38] text-white shadow-sm' 
-                        : 'border border-stone-200 text-stone-600 hover:bg-stone-100'
+                        : 'border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:bg-stone-800'
                     }`}
                   >{page}</button>
                 ))}
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 text-xs font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 text-xs font-bold hover:bg-stone-100 dark:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >›</button>
               </div>
             </div>

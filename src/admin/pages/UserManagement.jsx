@@ -1027,7 +1027,7 @@ export default function UserManagement() {
   const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
 
       <Sidebar />
 
@@ -1052,7 +1052,7 @@ export default function UserManagement() {
           <Card className="flex flex-col overflow-hidden mb-6">
 
             {/* Table Header Controls */}
-            <div className="p-4 border-b border-stone-100 flex flex-col sm:flex-row items-center justify-end gap-4 bg-stone-50/50">
+            <div className="p-4 border-b border-stone-100 dark:border-stone-800/50 flex flex-col sm:flex-row items-center justify-end gap-4 bg-stone-50 dark:bg-[#252525]/50">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <PremiumButton onClick={() => setIsModalOpen(true)} variant="primary" icon={<Plus className="w-4 h-4" />}>
                   Add User
@@ -1074,7 +1074,7 @@ export default function UserManagement() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-stone-50 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200">
+                  <tr className="bg-stone-50 dark:bg-[#252525] text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
                     <th className="px-4 py-4 w-10 text-center">
                       <input
                         type="checkbox"
@@ -1089,25 +1089,25 @@ export default function UserManagement() {
                         className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                       />
                     </th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">NAME ↕</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">NAME ↕</th>
                     <th className="px-3 py-3">EMAIL</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">DEPARTMENT ↕</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">DEPARTMENT ↕</th>
                     <th className="px-3 py-3">ROLE</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">STATUS ↕</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">CREATED ↕</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">STATUS ↕</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">CREATED ↕</th>
                     <th className="px-3 py-3 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-sm">
                   {allUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="px-6 py-12 text-center text-stone-500">
+                      <td colSpan="8" className="px-6 py-12 text-center text-stone-500 dark:text-stone-400">
                         No user accounts yet. Click "+ Add User" to get started.
                       </td>
                     </tr>
                   ) : (
                     paginatedUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-stone-50 transition-colors group">
+                      <tr key={user.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors group">
                         <td className="px-4 py-4 text-center">
                           <input
                             type="checkbox"
@@ -1116,9 +1116,9 @@ export default function UserManagement() {
                             className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                           />
                         </td>
-                        <td className="px-3 py-3 font-bold text-stone-800 whitespace-nowrap">{user.displayName}</td>
-                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{user.email}</td>
-                        <td className="px-3 py-3 text-stone-700 font-medium whitespace-nowrap">{user.department || '—'}</td>
+                        <td className="px-3 py-3 font-bold text-stone-800 dark:text-stone-100 whitespace-nowrap">{user.displayName}</td>
+                        <td className="px-3 py-3 text-stone-500 dark:text-stone-400 whitespace-nowrap">{user.email}</td>
+                        <td className="px-3 py-3 text-stone-700 dark:text-stone-200 font-medium whitespace-nowrap">{user.department || '—'}</td>
                         <td className="px-3 py-3">
                           <div className="flex gap-1.5 flex-wrap">
                             {user.role === 'super-admin' && (
@@ -1207,14 +1207,14 @@ export default function UserManagement() {
 
           {/* PAGINATION */}
           <div className="flex items-center justify-between mt-6 px-1">
-            <span className="text-sm text-stone-500 font-medium">
+            <span className="text-sm text-stone-500 dark:text-stone-400 font-medium">
               Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsersList.length)} of {filteredUsersList.length} users
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-8 h-8 flex items-center justify-center rounded bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors shadow-sm cursor-pointer disabled:opacity-50"
               >‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button
@@ -1222,14 +1222,14 @@ export default function UserManagement() {
                   onClick={() => setCurrentPage(page)}
                   className={`w-8 h-8 flex items-center justify-center rounded font-bold shadow-sm transition-colors cursor-pointer ${currentPage === page
                       ? 'bg-[#801e38] text-white'
-                      : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'
+                      : 'bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]'
                     }`}
                 >{page}</button>
               ))}
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-8 h-8 flex items-center justify-center rounded bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors shadow-sm cursor-pointer disabled:opacity-50"
               >›</button>
             </div>
           </div>
@@ -1239,18 +1239,18 @@ export default function UserManagement() {
         {/* Create Dean Account Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div className="flex items-center justify-between p-6 border-b border-stone-200 dark:border-stone-700">
                 <div>
-                  <h2 className="text-xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                  <h2 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
                     <span className="text-green-600">+</span> Add User
                   </h2>
-                  <p className="text-xs text-stone-500 mt-1">Fill in user's info — activation link will be sent to their email</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Fill in user's info — activation link will be sent to their email</p>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
+                  className="text-stone-400 hover:text-stone-600 dark:text-stone-300 text-2xl leading-none"
                 >
                   ×
                 </button>
@@ -1269,7 +1269,7 @@ export default function UserManagement() {
                 {/* Name Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-2">
+                    <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1277,11 +1277,11 @@ export default function UserManagement() {
                       placeholder="e.g. Maria"
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                      className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-2">
+                    <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1289,14 +1289,14 @@ export default function UserManagement() {
                       placeholder="e.g. Santos"
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                      className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                     />
                   </div>
                 </div>
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                     Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1304,21 +1304,21 @@ export default function UserManagement() {
                     placeholder="e.g., prdo.vender.swu@phinmaed.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                   />
-                  <p className="text-xs text-stone-500 mt-1">Must use @phinmaed.com domain</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Must use @phinmaed.com domain</p>
                 </div>
 
                 {/* Department */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                     Department <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <select
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      className="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                      className="flex-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                     >
                       <option value="">Select department...</option>
                       {departmentsList.map(dept => (
@@ -1338,7 +1338,7 @@ export default function UserManagement() {
 
                 {/* Programs */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                     Programs
                   </label>
                   <div className="relative">
@@ -1346,12 +1346,12 @@ export default function UserManagement() {
                       <button
                         type="button"
                         onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
-                        className="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 text-left flex items-center justify-between"
+                        className="flex-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 text-left flex items-center justify-between"
                       >
-                        <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900'}>
+                        <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900 dark:text-stone-50'}>
                           {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
                         </span>
-                        <svg className={`w-4 h-4 text-stone-500 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-4 h-4 text-stone-500 dark:text-stone-400 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
@@ -1375,15 +1375,15 @@ export default function UserManagement() {
                         p.code.toLowerCase().includes(programSearch.toLowerCase()) || p.name.toLowerCase().includes(programSearch.toLowerCase())
                       );
                       return (
-                        <div className="absolute z-50 mt-1 w-full bg-white border border-stone-300 rounded-lg shadow-lg overflow-hidden">
+                        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg shadow-lg overflow-hidden">
                           {/* Search input */}
-                          <div className="p-2 border-b border-stone-200">
+                          <div className="p-2 border-b border-stone-200 dark:border-stone-700">
                             <input
                               type="text"
                               placeholder="Search or type program code..."
                               value={programSearch}
                               onChange={(e) => setProgramSearch(e.target.value)}
-                              className="w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
+                              className="w-full bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -1404,12 +1404,12 @@ export default function UserManagement() {
                           {/* Program list */}
                           <div className="max-h-44 overflow-y-auto">
                             {filtered.length === 0 ? (
-                              <div className="px-4 py-3 text-sm text-stone-500">No match found. Press <strong>Enter</strong> to add as custom.</div>
+                              <div className="px-4 py-3 text-sm text-stone-500 dark:text-stone-400">No match found. Press <strong>Enter</strong> to add as custom.</div>
                             ) : (
                               filtered.map(prog => (
                                 <label
                                   key={prog.id || prog.code}
-                                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer text-sm"
+                                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] cursor-pointer text-sm"
                                 >
                                   <input
                                     type="checkbox"
@@ -1417,8 +1417,8 @@ export default function UserManagement() {
                                     onChange={() => toggleProgram(prog.code)}
                                     className="w-4 h-4 rounded border-stone-300 text-[#801e38] focus:ring-[#801e38]"
                                   />
-                                  <span className="font-semibold text-stone-800">{prog.code}</span>
-                                  <span className="text-stone-500">— {prog.name}</span>
+                                  <span className="font-semibold text-stone-800 dark:text-stone-100">{prog.code}</span>
+                                  <span className="text-stone-500 dark:text-stone-400">— {prog.name}</span>
                                 </label>
                               ))
                             )}
@@ -1441,13 +1441,13 @@ export default function UserManagement() {
 
                 {/* Role Assignment */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                     Role Assignment <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                   >
                     <option value="">Select role...</option>
                     <option value="super-admin">Super Admin</option>
@@ -1459,10 +1459,10 @@ export default function UserManagement() {
                 {/* Module Access - Show only for Super Admin */}
                 {formData.role === 'super-admin' && (
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-3">
+                    <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-3">
                       Module Access
                     </label>
-                    <p className="text-xs text-stone-500 mb-3">Select modules this Super Admin can access:</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">Select modules this Super Admin can access:</p>
 
                     <div className="space-y-2.5">
                       {/* Dashboard */}
@@ -1477,7 +1477,7 @@ export default function UserManagement() {
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
-                        <label htmlFor="dashboard" className="text-sm text-stone-700 font-medium cursor-pointer">
+                        <label htmlFor="dashboard" className="text-sm text-stone-700 dark:text-stone-200 font-medium cursor-pointer">
                           Dashboard
                         </label>
                       </div>
@@ -1494,7 +1494,7 @@ export default function UserManagement() {
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
-                        <label htmlFor="reports" className="text-sm text-stone-700 font-medium cursor-pointer">
+                        <label htmlFor="reports" className="text-sm text-stone-700 dark:text-stone-200 font-medium cursor-pointer">
                           Reports
                         </label>
                       </div>
@@ -1511,7 +1511,7 @@ export default function UserManagement() {
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
-                        <label htmlFor="allUsers" className="text-sm text-stone-700 font-medium cursor-pointer">
+                        <label htmlFor="allUsers" className="text-sm text-stone-700 dark:text-stone-200 font-medium cursor-pointer">
                           All Users
                         </label>
                       </div>
@@ -1528,7 +1528,7 @@ export default function UserManagement() {
                           })}
                           className="w-4 h-4 text-[#801e38] bg-gray-100 border-gray-300 rounded focus:ring-[#801e38]"
                         />
-                        <label htmlFor="activityLogs" className="text-sm text-stone-700 font-medium cursor-pointer">
+                        <label htmlFor="activityLogs" className="text-sm text-stone-700 dark:text-stone-200 font-medium cursor-pointer">
                           Activity Logs
                         </label>
                       </div>
@@ -1538,7 +1538,7 @@ export default function UserManagement() {
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
@@ -1546,7 +1546,7 @@ export default function UserManagement() {
                     setSuccess('');
                   }}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1566,27 +1566,27 @@ export default function UserManagement() {
       {/* Add Department Modal */}
       {showAddDeptModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-[#801e38] px-3 py-3 flex justify-between items-center">
               <h3 className="text-white font-bold text-lg">Add New Department</h3>
               <button onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             <div className="p-6">
-              <label className="block text-xs font-bold text-stone-700 mb-2">Department Name <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">Department Name <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 placeholder="e.g. College of Engineering"
                 value={newDeptName}
                 onChange={(e) => setNewDeptName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddNewDepartment()}
-                className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                 autoFocus
               />
             </div>
-            <div className="bg-stone-50 px-3 py-3 flex justify-end gap-3 border-t border-stone-200">
+            <div className="bg-stone-50 dark:bg-[#252525] px-3 py-3 flex justify-end gap-3 border-t border-stone-200 dark:border-stone-700">
               <button
                 onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
               >
                 Cancel
               </button>
@@ -1605,7 +1605,7 @@ export default function UserManagement() {
       {/* Add Program Modal */}
       {showAddProgModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-[#801e38] px-3 py-3 flex justify-between items-center">
               <h3 className="text-white font-bold text-lg">Add New Program</h3>
               <button onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
@@ -1616,32 +1616,32 @@ export default function UserManagement() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">Program Code <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">Program Code <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   placeholder="e.g. BSIT"
                   value={newProgCode}
                   onChange={(e) => setNewProgCode(e.target.value)}
-                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 uppercase"
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 uppercase"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">Full Program Name <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">Full Program Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   placeholder="e.g. Bachelor of Science in Information Technology"
                   value={newProgName}
                   onChange={(e) => setNewProgName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddNewProgram()}
-                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                 />
               </div>
             </div>
-            <div className="bg-stone-50 px-3 py-3 flex justify-end gap-3 border-t border-stone-200">
+            <div className="bg-stone-50 dark:bg-[#252525] px-3 py-3 flex justify-end gap-3 border-t border-stone-200 dark:border-stone-700">
               <button
                 onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
               >
                 Cancel
               </button>

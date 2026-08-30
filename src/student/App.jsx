@@ -160,6 +160,14 @@ function App() {
           status: 'Success'
         });
       }
+      if (studentInfo?.uid) {
+        try {
+          await updateDoc(doc(db, 'students', studentInfo.uid), { status: 'offline' });
+          await updateDoc(doc(db, 'users', studentInfo.uid), { status: 'offline' });
+        } catch (err) {
+          console.error("Failed to update status on logout:", err);
+        }
+      }
       await signOut(auth);
       window.location.href = '/';
     } catch (error) {

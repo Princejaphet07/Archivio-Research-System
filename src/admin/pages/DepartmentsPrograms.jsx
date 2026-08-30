@@ -48,8 +48,8 @@ export default function DepartmentsProgramsTab() {
           deansCount: deptDeans.length,
           tags: deptPrograms.map(p => p.code),
           assignedDeans: deptDeans,
-          statusColor: dept.status === 'Active' ? 'bg-emerald-600' : dept.status === 'Pending' ? 'bg-[#801e38]' : 'bg-stone-200 text-stone-600',
-          borderColor: dept.status === 'Active' ? 'border-emerald-500' : dept.status === 'Pending' ? 'border-[#801e38]' : 'border-stone-200'
+          statusColor: dept.status === 'Active' ? 'bg-emerald-600' : dept.status === 'Pending' ? 'bg-[#801e38]' : 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300',
+          borderColor: dept.status === 'Active' ? 'border-emerald-500' : dept.status === 'Pending' ? 'border-[#801e38]' : 'border-stone-200 dark:border-stone-700'
         };
       });
 
@@ -301,14 +301,14 @@ export default function DepartmentsProgramsTab() {
         {departments.map((dept) => (
           <Card key={dept.id} className={`border-2 ${dept.borderColor} overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col`}>
             {/* Card Header with Status Badge */}
-            <div className="p-5 pb-4 border-b border-stone-100">
+            <div className="p-5 pb-4 border-b border-stone-100 dark:border-stone-800/50">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-bold text-stone-900 group-hover:text-[#801e38] transition-colors line-clamp-2">{dept.name}</h3>
+                <h3 className="font-bold text-stone-900 dark:text-stone-50 group-hover:text-[#801e38] transition-colors line-clamp-2">{dept.name}</h3>
                 <span className={`text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${dept.statusColor}`}>
                   {dept.status}
                 </span>
               </div>
-              <p className="text-xs text-stone-500">{dept.programsCount} program{dept.programsCount !== 1 ? 's' : ''} · {dept.deansCount} Dean{dept.deansCount !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400">{dept.programsCount} program{dept.programsCount !== 1 ? 's' : ''} · {dept.deansCount} Dean{dept.deansCount !== 1 ? 's' : ''}</p>
             </div>
 
             {/* Programs Tags */}
@@ -316,7 +316,7 @@ export default function DepartmentsProgramsTab() {
               {dept.tags.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {dept.tags.map((tag, idx) => (
-                    <span key={idx} className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-700">
+                    <span key={idx} className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200">
                       {tag}
                     </span>
                   ))}
@@ -327,7 +327,7 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Click to View Details Link */}
-            <div className="p-5 pt-3 border-t border-stone-100 group-hover:bg-stone-50 transition-colors flex items-center justify-between mt-auto">
+            <div className="p-5 pt-3 border-t border-stone-100 dark:border-stone-800/50 group-hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors flex items-center justify-between mt-auto">
               <a
                 href="#"
                 onClick={(e) => {
@@ -362,15 +362,15 @@ export default function DepartmentsProgramsTab() {
       {/* DEPARTMENT DETAILS MODAL */}
       {activeModal === 'details' && selectedDepartment && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200 dark:border-stone-700">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-stone-900">
+                <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50">
                   {selectedDepartment.name}
                 </h2>
-                <p className="text-xs text-stone-500 mt-1">
-                  Status: <span className={`font-bold ${selectedDepartment.status === 'Active' ? 'text-emerald-600' : selectedDepartment.status === 'Pending' ? 'text-[#801e38]' : 'text-stone-500'}`}>{selectedDepartment.status}</span>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  Status: <span className={`font-bold ${selectedDepartment.status === 'Active' ? 'text-emerald-600' : selectedDepartment.status === 'Pending' ? 'text-[#801e38]' : 'text-stone-500 dark:text-stone-400'}`}>{selectedDepartment.status}</span>
                 </p>
               </div>
               <button
@@ -378,7 +378,7 @@ export default function DepartmentsProgramsTab() {
                   setActiveModal(null);
                   setSelectedDepartment(null);
                 }}
-                className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
+                className="text-stone-400 hover:text-stone-600 dark:text-stone-300 text-2xl leading-none"
               >
                 ×
               </button>
@@ -388,11 +388,11 @@ export default function DepartmentsProgramsTab() {
             <div className="p-6 space-y-6">
               {/* Programs Section */}
               <div>
-                <h3 className="text-lg font-bold text-stone-900 mb-3">Programs ({selectedDepartment.programsCount})</h3>
+                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">Programs ({selectedDepartment.programsCount})</h3>
                 {selectedDepartment.tags && selectedDepartment.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {selectedDepartment.tags.map((tag, idx) => (
-                      <span key={idx} className="text-sm font-semibold px-3 py-1.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200 flex items-center gap-1.5 group">
+                      <span key={idx} className="text-sm font-semibold px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-700 flex items-center gap-1.5 group">
                         {tag}
                         <button
                           onClick={() => handleDeleteProgram(tag, selectedDepartment.name)}
@@ -405,23 +405,23 @@ export default function DepartmentsProgramsTab() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-stone-500">No programs assigned yet</p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">No programs assigned yet</p>
                 )}
               </div>
 
               {/* Assigned Deans Section */}
-              <div className="border-t border-stone-200 pt-6">
-                <h3 className="text-lg font-bold text-stone-900 mb-3">Assigned Deans ({selectedDepartment.deansCount})</h3>
+              <div className="border-t border-stone-200 dark:border-stone-700 pt-6">
+                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">Assigned Deans ({selectedDepartment.deansCount})</h3>
                 {selectedDepartment.assignedDeans && selectedDepartment.assignedDeans.length > 0 ? (
                   <div className="space-y-2">
                     {selectedDepartment.assignedDeans.map((dean, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-3 bg-stone-50 rounded-lg border border-stone-100">
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-stone-50 dark:bg-[#252525] rounded-lg border border-stone-100 dark:border-stone-800/50">
                         <div className="w-10 h-10 rounded-full bg-[#801e38] text-white flex items-center justify-center font-bold text-sm">
                           {dean.displayName.charAt(0)}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-stone-900">{dean.displayName}</p>
-                          <p className="text-xs text-stone-500">{dean.email}</p>
+                          <p className="text-sm font-bold text-stone-900 dark:text-stone-50">{dean.displayName}</p>
+                          <p className="text-xs text-stone-500 dark:text-stone-400">{dean.email}</p>
                         </div>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dean.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-[#f3e6ea] text-[#801e38]'}`}>
                           {dean.status === 'active' ? 'Active' : 'Pending'}
@@ -430,13 +430,13 @@ export default function DepartmentsProgramsTab() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-stone-500">No deans assigned to this department yet</p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">No deans assigned to this department yet</p>
                 )}
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between gap-3 p-6 border-t border-stone-200 bg-stone-50">
+            <div className="flex items-center justify-between gap-3 p-6 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
               <button
                 onClick={() => handleDeleteDepartment(selectedDepartment)}
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition flex items-center gap-2 cursor-pointer"
@@ -451,7 +451,7 @@ export default function DepartmentsProgramsTab() {
                   setActiveModal(null);
                   setSelectedDepartment(null);
                 }}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition cursor-pointer"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition cursor-pointer"
               >
                 Close
               </button>
@@ -463,18 +463,18 @@ export default function DepartmentsProgramsTab() {
       {/* DEPARTMENT MODAL */}
       {activeModal === 'department' && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200 dark:border-stone-700">
               <div>
-                <h2 className="text-xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                <h2 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
                   <span className="text-green-600">+</span> Add School / College
                 </h2>
-                <p className="text-xs text-stone-500 mt-1">Enter a new school or college in the system.</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Enter a new school or college in the system.</p>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
+                className="text-stone-400 hover:text-stone-600 dark:text-stone-300 text-2xl leading-none"
               >
                 ×
               </button>
@@ -500,13 +500,13 @@ export default function DepartmentsProgramsTab() {
 
               {/* School / College Name */}
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   School / College Name <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={departmentForm.name}
                   onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
-                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                 >
                   <option value="">Select School / College...</option>
                   <option value="College of Information Technology">College of Information Technology</option>
@@ -525,13 +525,13 @@ export default function DepartmentsProgramsTab() {
 
               {/* Initial Status */}
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   Initial Status
                 </label>
                 <select
                   value={departmentForm.status}
                   onChange={(e) => setDepartmentForm({ ...departmentForm, status: e.target.value })}
-                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                 >
                   <option value="Upcoming">Upcoming</option>
                   <option value="Pending">Pending</option>
@@ -548,10 +548,10 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
               <button
                 onClick={() => setActiveModal(null)}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
               >
                 Cancel
               </button>
@@ -569,20 +569,20 @@ export default function DepartmentsProgramsTab() {
       {/* PROGRAM MODAL */}
       {activeModal === 'program' && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200 dark:border-stone-700">
               <div>
-                <h2 className="text-xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                <h2 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
                   <span className="text-green-600">+</span> Add New Program
                 </h2>
-                <p className="text-xs text-stone-500 mt-1">
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                   Add a program under {programForm.school || 'selected college'}
                 </p>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="text-stone-400 hover:text-stone-600 text-2xl leading-none"
+                className="text-stone-400 hover:text-stone-600 dark:text-stone-300 text-2xl leading-none"
               >
                 ×
               </button>
@@ -608,13 +608,13 @@ export default function DepartmentsProgramsTab() {
 
               {/* Select School First */}
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   Select College <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={programForm.school}
                   onChange={(e) => setProgramForm({ ...programForm, school: e.target.value })}
-                  className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900"
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
                 >
                   <option value="">Select College / School...</option>
                   {departments.map((dept) => (
@@ -625,13 +625,13 @@ export default function DepartmentsProgramsTab() {
 
               {/* Program Code Dropdown with Checkboxes */}
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-2">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   Program Code <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <button
                     onClick={() => setShowCodeDropdown(!showCodeDropdown)}
-                    className="w-full bg-white border border-stone-300 rounded-lg px-4 py-2.5 text-sm text-left text-stone-900 flex items-center justify-between focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
+                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm text-left text-stone-900 dark:text-stone-50 flex items-center justify-between focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
                   >
                     <span>{programForm.codes.length > 0 ? `${programForm.codes.length} selected` : 'Select program codes...'}</span>
                     <svg className={`w-4 h-4 transition-transform ${showCodeDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -641,22 +641,22 @@ export default function DepartmentsProgramsTab() {
 
                   {/* Dropdown Menu */}
                   {showCodeDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                       {programCodeOptions.map((program) => (
-                        <div key={program.code} className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 border-b border-stone-100 last:border-b-0 cursor-pointer" onClick={() => toggleProgramCode(program.code)}>
-                          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${programForm.codes.includes(program.code) ? 'bg-[#801e38] border-[#801e38]' : 'bg-white border-2 border-stone-300'}`}>
+                        <div key={program.code} className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] border-b border-stone-100 dark:border-stone-800/50 last:border-b-0 cursor-pointer" onClick={() => toggleProgramCode(program.code)}>
+                          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${programForm.codes.includes(program.code) ? 'bg-[#801e38] border-[#801e38]' : 'bg-white dark:bg-[#1e1e1e] border-2 border-stone-300'}`}>
                             {programForm.codes.includes(program.code) && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-stone-900">{program.code}</p>
-                            <p className="text-xs text-stone-500">{program.name}</p>
+                            <p className="text-sm font-bold text-stone-900 dark:text-stone-50">{program.code}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{program.name}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-stone-500 mt-1">Select one or more program codes to add.</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Select one or more program codes to add.</p>
               </div>
 
               {/* Info Box */}
@@ -669,10 +669,10 @@ export default function DepartmentsProgramsTab() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 bg-stone-50">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
               <button
                 onClick={() => setActiveModal(null)}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
               >
                 Cancel
               </button>

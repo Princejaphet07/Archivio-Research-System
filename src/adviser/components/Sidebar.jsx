@@ -3,9 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../../assets/logo.png';
 import { useAdviser } from '../context/AdviserContext';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { logActivity } from '../../firebase/logActivity';
+import Swal from 'sweetalert2';
 
 function Sidebar() {
   const location = useLocation();

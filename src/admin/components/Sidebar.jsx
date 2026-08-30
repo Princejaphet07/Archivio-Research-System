@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { useUser } from '../context/UserContext';
@@ -6,6 +6,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { BookOpen } from 'lucide-react';
 import { logActivity } from '../firebase/logActivity';
+import Swal from 'sweetalert2';
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -21,8 +22,23 @@ function Sidebar() {
     return !!moduleAccess[module];
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: 'Log out',
+      text: 'Are you sure you want to log out?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, log out'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
+      setIsLoggingOut(true);
       const email = auth.currentUser?.email;
       if (email) {
         await logActivity({
@@ -36,6 +52,7 @@ function Sidebar() {
       window.location.href = '/';
     } catch (err) {
       console.error('Logout error:', err);
+      setIsLoggingOut(false);
       window.location.href = '/';
     }
   };
@@ -106,7 +123,7 @@ function Sidebar() {
     : 'SA';
 
   return (
-    <aside className="w-64 bg-[#3b1220] text-white flex flex-col justify-between shrink-0 hidden md:flex border-r border-stone-200/10">
+    <aside className="w-64 bg-[#3b1220] dark:bg-[#121212] text-white flex flex-col justify-between shrink-0 hidden md:flex border-r border-stone-200/10 dark:border-stone-800">
       <div>
         {/* Logo Header */}
         <div className="p-6 border-b border-white/5 flex items-center gap-3">
@@ -256,12 +273,17 @@ function Sidebar() {
         </div>
         <button
           onClick={handleLogout}
+          disabled={isLoggingOut}
           title="Logout"
-          className="w-8 h-8 rounded-lg bg-[#801e38]/10 hover:bg-[#801e38] text-white flex items-center justify-center transition-all cursor-pointer"
+          className="w-8 h-8 rounded-lg bg-[#801e38]/10 hover:bg-[#801e38] text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M19 12H9m10 0l-3-3m3 3l-3 3" />
-          </svg>
+          {isLoggingOut ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M19 12H9m10 0l-3-3m3 3l-3 3" />
+            </svg>
+          )}
         </button>
       </div>
     </aside>

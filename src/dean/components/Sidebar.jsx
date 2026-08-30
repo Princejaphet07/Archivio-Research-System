@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import logo from '../../assets/logo.png';
 import Swal from 'sweetalert2';
@@ -159,11 +159,35 @@ export default function Sidebar({ onNavigate }) {
   const role = deanData?.role || 'dean';
   const isDeanOnly = role === 'dean';
   const isDeanAndAdviser = role === 'dean+adviser';
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: 'Log out',
+      text: 'Are you sure you want to log out?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, log out'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
+      setIsLoggingOut(true);
       const email = auth.currentUser?.email;
       if (email) {
+        try {
+          const deanQ = query(collection(db, 'deans'), where('uid', '==', auth.currentUser.uid));
+          const deanSnap = await getDocs(deanQ);
+          if (!deanSnap.empty) {
+            await updateDoc(deanSnap.docs[0].ref, { status: 'offline' });
+          }
+          await updateDoc(doc(db, 'users', auth.currentUser.uid), { status: 'offline' });
+        } catch (e) {
+          console.error('Failed to update status', e);
+        }
         await logActivity({
           user: deanData?.displayName || email,
           role: 'Dean',
@@ -176,6 +200,7 @@ export default function Sidebar({ onNavigate }) {
     } catch (error) {
       console.error('Logout error:', error);
       Swal.fire('Error', 'Failed to logout. Please try again.', 'error');
+      setIsLoggingOut(false);
     }
   };
 
@@ -328,12 +353,17 @@ export default function Sidebar({ onNavigate }) {
       <div className="px-4 pb-4">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 hover:border-red-600/60 rounded-lg text-red-300 hover:text-red-100 text-sm font-bold transition-all duration-200 shadow-sm"
+          disabled={isLoggingOut}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 hover:border-red-600/60 rounded-lg text-red-300 hover:text-red-100 text-sm font-bold transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Logout
+          {isLoggingOut ? (
+            <div className="w-4 h-4 border-2 border-red-300/30 border-t-red-300 rounded-full animate-spin"></div>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          )}
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </button>
       </div>
 

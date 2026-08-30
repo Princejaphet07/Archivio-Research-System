@@ -16,7 +16,7 @@ const roleColors = {
   'Dean':         'bg-pink-100 text-pink-700 border border-pink-200',
   'Adviser':      'bg-amber-100 text-amber-700 border border-amber-200',
   'Student':      'bg-blue-100 text-blue-700 border border-blue-200',
-  '—':            'bg-stone-100 text-stone-400',
+  '—':            'bg-stone-100 dark:bg-stone-800 text-stone-400',
 };
 
 const statusColors = {
@@ -139,7 +139,7 @@ export default function ActivityLogs() {
     .reduce((acc, p, i, arr) => { if (i > 0 && p - arr[i - 1] > 1) acc.push('...'); acc.push(p); return acc; }, []);
 
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -162,23 +162,23 @@ export default function ActivityLogs() {
           {/* ── Filters ────────────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {/* Search */}
-            <div className="relative flex-1 min-w-[220px] max-w-sm text-stone-500">
+            <div className="relative flex-1 min-w-[220px] max-w-sm text-stone-500 dark:text-stone-400">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search size={16} />
               </span>
               <input
                 type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by user, role, or action..."
-                className="w-full pl-9 pr-8 py-2.5 bg-white border border-stone-200 rounded-lg text-sm outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700 cursor-pointer">✕</button>
+                <button onClick={() => setSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700 dark:text-stone-200 cursor-pointer">✕</button>
               )}
             </div>
 
             {/* Period */}
             <select value={period} onChange={e => setPeriod(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 font-medium outline-none cursor-pointer hover:bg-stone-50 focus:border-[#801e38] transition-all">
+              className="px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 font-medium outline-none cursor-pointer hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] focus:border-[#801e38] transition-all">
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -187,7 +187,7 @@ export default function ActivityLogs() {
 
             {/* Status */}
             <select value={statusFilter} onChange={e => setStatus(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 font-medium outline-none cursor-pointer hover:bg-stone-50 focus:border-[#801e38] transition-all">
+              className="px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 font-medium outline-none cursor-pointer hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] focus:border-[#801e38] transition-all">
               <option value="all">All Status</option>
               <option value="Success">Success</option>
               <option value="Failed">Failed</option>
@@ -196,7 +196,7 @@ export default function ActivityLogs() {
 
             {/* Role */}
             <select value={roleFilter} onChange={e => setRole(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-stone-700 font-medium outline-none cursor-pointer hover:bg-stone-50 focus:border-[#801e38] transition-all">
+              className="px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 font-medium outline-none cursor-pointer hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] focus:border-[#801e38] transition-all">
               <option value="all">All Roles</option>
               <option value="System Admin">System Admin</option>
               <option value="Super Admin">Super Admin</option>
@@ -208,7 +208,7 @@ export default function ActivityLogs() {
             {/* Clear */}
             {hasFilter && (
               <button onClick={clearFilters}
-                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-medium rounded-lg transition-all cursor-pointer">
+                className="px-4 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300 text-sm font-medium rounded-lg transition-all cursor-pointer">
                 Clear
               </button>
             )}
@@ -241,7 +241,7 @@ export default function ActivityLogs() {
                     Array.from({ length: 6 }).map((_, i) => (
                       <tr key={i} className="animate-pulse">
                         {Array.from({ length: 7 }).map((_, j) => (
-                          <td key={j} className="px-6 py-4"><div className="h-3 bg-stone-100 rounded w-20" /></td>
+                          <td key={j} className="px-6 py-4"><div className="h-3 bg-stone-100 dark:bg-stone-800 rounded w-20" /></td>
                         ))}
                       </tr>
                     ))
@@ -250,7 +250,7 @@ export default function ActivityLogs() {
                       <td colSpan="7" className="px-6 py-16 text-center text-stone-400">
                         <div className="flex flex-col items-center gap-2">
                           <span className="text-3xl">📋</span>
-                          <p className="font-medium text-stone-500">
+                          <p className="font-medium text-stone-500 dark:text-stone-400">
                             {logs.length === 0 ? 'No activity logs yet' : 'No logs match your filters'}
                           </p>
                           <p className="text-xs text-stone-400 max-w-xs text-center">
@@ -268,20 +268,20 @@ export default function ActivityLogs() {
                     </tr>
                   ) : (
                     paginated.map(log => (
-                      <tr key={log.id} className="hover:bg-stone-50/60 transition-colors">
+                      <tr key={log.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]/60 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-stone-800 font-semibold text-xs">{formatTime(log.timestamp)}</div>
+                          <div className="text-stone-800 dark:text-stone-100 font-semibold text-xs">{formatTime(log.timestamp)}</div>
                           <div className="text-stone-400 text-[10px]">{formatDate(log.timestamp)}</div>
                         </td>
-                        <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{log.user}</td>
+                        <td className="px-6 py-4 font-bold text-stone-800 dark:text-stone-100 whitespace-nowrap">{log.user}</td>
                         <td className="px-6 py-4">
-                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[log.role] || 'bg-stone-100 text-stone-500'}`}>
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[log.role] || 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'}`}>
                             {log.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-stone-700 max-w-[220px]">{log.action}</td>
+                        <td className="px-6 py-4 text-stone-700 dark:text-stone-200 max-w-[220px]">{log.action}</td>
                         <td className="px-6 py-4">
-                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColors[log.status] || 'bg-stone-100 text-stone-500'}`}>
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColors[log.status] || 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'}`}>
                             {log.status}
                           </span>
                         </td>
@@ -295,8 +295,8 @@ export default function ActivityLogs() {
             </div>
 
             {/* ── Pagination ─────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100">
-              <span className="text-sm text-stone-500 font-medium">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 dark:border-stone-800/50">
+              <span className="text-sm text-stone-500 dark:text-stone-400 font-medium">
                 {filtered.length === 0
                   ? 'No entries'
                   : `Showing ${(page-1)*ROWS_PER_PAGE+1}–${Math.min(page*ROWS_PER_PAGE, filtered.length)} of ${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'}`
@@ -307,7 +307,7 @@ export default function ActivityLogs() {
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >‹</button>
 
                 {/* Page numbers */}
@@ -317,7 +317,7 @@ export default function ActivityLogs() {
                   ) : (
                     <button key={p} onClick={() => setPage(p)}
                       className={`w-8 h-8 flex items-center justify-center rounded font-bold shadow-sm cursor-pointer transition-all text-sm ${
-                        page === p ? 'bg-[#801e38] text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'
+                        page === p ? 'bg-[#801e38] text-white' : 'bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]'
                       }`}
                     >{p}</button>
                   )
@@ -327,7 +327,7 @@ export default function ActivityLogs() {
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded bg-white border border-stone-200 text-stone-500 hover:bg-stone-50 shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >›</button>
               </div>
             </div>

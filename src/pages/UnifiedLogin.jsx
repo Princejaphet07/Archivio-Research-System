@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, getCountFromServer, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getCountFromServer, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { Mail, LockKeyhole, X } from 'lucide-react';
 
@@ -103,10 +103,15 @@ function UnifiedLogin() {
 
       if (!usersSnap.empty) {
         role = usersSnap.docs[0].data().role; // 'admin', 'super-admin', 'dean'
-      } else if (!studentsSnap.empty) {
-        role = 'student';
-      } else if (!advisersSnap.empty) {
-        role = 'adviser';
+        await updateDoc(usersSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+      }
+      if (!studentsSnap.empty) {
+        if (!role) role = 'student';
+        await updateDoc(studentsSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+      }
+      if (!advisersSnap.empty) {
+        if (!role) role = 'adviser';
+        await updateDoc(advisersSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
       }
 
       if (!role) {
@@ -123,11 +128,14 @@ function UnifiedLogin() {
         // Check if this is the first login
         const deansQuery = query(collection(db, 'deans'), where('uid', '==', user.uid));
         const deansSnap = await getDocs(deansQuery);
-        if (!deansSnap.empty && deansSnap.docs[0].data().accountStatus === 'pending_activation') {
-          window.location.href = '/dean-activate';
-        } else {
-          window.location.href = '/dean/';
+        if (!deansSnap.empty) {
+          await updateDoc(deansSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+          if (deansSnap.docs[0].data().accountStatus === 'pending_activation') {
+            window.location.href = '/dean-activate';
+            return;
+          }
         }
+        window.location.href = '/dean/';
       } else if (role === 'adviser') {
         window.location.href = '/adviser/';
       } else if (role === 'student' || role === 'member') {
@@ -310,7 +318,7 @@ function UnifiedLogin() {
               {loading ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Authenticating...
+                  Logging in...
                 </>
               ) : (
                 <>

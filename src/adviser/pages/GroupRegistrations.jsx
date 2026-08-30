@@ -247,7 +247,7 @@ function GroupRegistrations() {
                       <td className="py-3 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.leaderName}</td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.researchTitle}</td>
-                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.program}</td>
+                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.department || item.program}</td>
                       <td className="py-3 px-5">
                         <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
                           }`}>

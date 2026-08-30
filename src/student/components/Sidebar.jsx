@@ -2,9 +2,32 @@ import React, { useState, useEffect } from 'react';
 import swuLogoSeal from '../../assets/new icon.png';
 import { db, auth } from '../../firebase/config';
 import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl, role }) {
   const [missingCount, setMissingCount] = useState(0);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogoutClick = async () => {
+    const result = await Swal.fire({
+      title: 'Log out',
+      text: 'Are you sure you want to log out?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, log out'
+    });
+
+    if (!result.isConfirmed) return;
+
+    setIsLoggingOut(true);
+    try {
+      await onLogout();
+    } catch (e) {
+      setIsLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -182,11 +205,16 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
               </span>
             </div>
             <button 
-              onClick={onLogout}
-              className="p-2 text-gray-400 dark:text-stone-500 hover:bg-[#6b253e]/80 dark:hover:bg-white/10 hover:text-white rounded-lg transition-colors"
+              onClick={handleLogoutClick}
+              disabled={isLoggingOut}
+              className="p-2 text-gray-400 dark:text-stone-500 hover:bg-[#6b253e]/80 dark:hover:bg-white/10 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Log out"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              {isLoggingOut ? (
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              )}
             </button>
           </div>
 

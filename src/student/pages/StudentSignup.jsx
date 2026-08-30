@@ -39,6 +39,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [categoriesList, setCategoriesList] = useState([]); // NEW
+  const [programsList, setProgramsList] = useState([]);
 
   useEffect(() => {
     console.log("Checking invitation data for categories:", invitationData);
@@ -846,3 +847,4 @@ export default function StudentSignup({ onSwitchPage }) {
     </div>
   );
 }
+

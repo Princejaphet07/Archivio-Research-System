@@ -713,14 +713,6 @@ function ReviewSubmissions() {
                               >
                                 Approve
                               </PremiumButton>
-                              <PremiumButton 
-                                onClick={() => handleReject(item)}
-                                variant="secondary"
-                                size="sm"
-                                className="bg-yellow-500 text-white hover:bg-yellow-600 border-none"
-                              >
-                                Revise
-                              </PremiumButton>
                             </>
                           )}
                         </div>

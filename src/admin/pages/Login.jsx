@@ -171,7 +171,7 @@ function Login() {
         />
 
         <div className="flex flex-col items-center text-center space-y-4 max-w-md relative z-30">
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1.5 shadow-lg border border-white/20">
+          <div className="w-24 h-24 bg-white dark:bg-[#1e1e1e] rounded-full flex items-center justify-center p-1.5 shadow-lg border border-white/20">
             <img src={logo} alt="ARCHIVIO Logo" className="w-full h-full object-contain rounded-full" />
           </div>
           <p className="text-[#d6ad60] text-xs font-bold tracking-[0.25em] uppercase mt-2">SWU PHINMA</p>
@@ -182,24 +182,24 @@ function Login() {
           </p>
 
           {/* DYNAMIC STATS SECTION ADDED BACK */}
-          <div className="mt-12 flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl px-8 py-5 w-full max-w-sm backdrop-blur-md shadow-inner">
+          <div className="mt-12 flex items-center justify-between bg-white dark:bg-[#1e1e1e]/[0.04] border border-white/10 rounded-2xl px-8 py-5 w-full max-w-sm backdrop-blur-md shadow-inner">
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.total}
+                {loadingStats ? <div className="h-6 w-8 bg-white dark:bg-[#1e1e1e]/20 animate-pulse rounded" /> : stats.total}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Submissions</span>
             </div>
-            <div className="h-8 w-[1px] bg-white/10"></div>
+            <div className="h-8 w-[1px] bg-white dark:bg-[#1e1e1e]/10"></div>
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif font-semibold">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.pending}
+                {loadingStats ? <div className="h-6 w-8 bg-white dark:bg-[#1e1e1e]/20 animate-pulse rounded" /> : stats.pending}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Pending</span>
             </div>
-            <div className="h-8 w-[1px] bg-white/10"></div>
+            <div className="h-8 w-[1px] bg-white dark:bg-[#1e1e1e]/10"></div>
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.published}
+                {loadingStats ? <div className="h-6 w-8 bg-white dark:bg-[#1e1e1e]/20 animate-pulse rounded" /> : stats.published}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Published</span>
             </div>
@@ -219,14 +219,14 @@ function Login() {
           {view === 'login' && (
             <>
               <div className="mb-8">
-                <h2 className="text-4xl font-serif font-bold text-stone-900 tracking-tight mb-2">Welcome!</h2>
-                <p className="text-stone-600 text-sm">Sign in to your ARCHIVIO account</p>
+                <h2 className="text-4xl font-serif font-bold text-stone-900 dark:text-stone-50 tracking-tight mb-2">Welcome!</h2>
+                <p className="text-stone-600 dark:text-stone-300 text-sm">Sign in to your ARCHIVIO account</p>
                 <div className="w-12 h-[3px] bg-[#d6ad60] mt-3 rounded-full"></div>
               </div>
 
-              <div className="bg-white/95 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.08)] p-8 sm:p-10 border-t-[4px] border-[#3b1220] backdrop-blur-sm">
+              <div className="bg-white dark:bg-[#1e1e1e]/95 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.08)] p-8 sm:p-10 border-t-[4px] border-[#3b1220] backdrop-blur-sm">
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold text-stone-900">Sign In</h3>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-stone-50">Sign In</h3>
                   <p className="text-xs text-stone-400 mt-1">Enter your institutional email and password</p>
                 </div>
 
@@ -240,7 +240,7 @@ function Login() {
                   )}
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">Email Address</label>
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">Email Address</label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">✉️</span>
                       <input 
@@ -250,13 +250,13 @@ function Login() {
                         placeholder="Enter your admin email" 
                         required
                         disabled={loading}
-                        className="w-full pl-10 pr-4 py-3 bg-[#fbfaf8] border border-stone-200 rounded-xl text-sm outline-none focus:border-[#3b1220] focus:ring-1 focus:ring-[#3b1220] focus:bg-white transition-all placeholder:text-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-10 pr-4 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm outline-none focus:border-[#3b1220] focus:ring-1 focus:ring-[#3b1220] focus:bg-white dark:bg-[#1e1e1e] transition-all placeholder:text-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">Password</label>
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">Password</label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 text-sm">🔒</span>
                       <input 
@@ -266,7 +266,7 @@ function Login() {
                         placeholder="Enter your password" 
                         required
                         disabled={loading}
-                        className="w-full pl-10 pr-16 py-3 bg-[#fbfaf8] border border-stone-200 rounded-xl text-sm outline-none focus:border-[#3b1220] focus:ring-1 focus:ring-[#3b1220] focus:bg-white transition-all placeholder:text-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-10 pr-16 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm outline-none focus:border-[#3b1220] focus:ring-1 focus:ring-[#3b1220] focus:bg-white dark:bg-[#1e1e1e] transition-all placeholder:text-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button 
                         type="button" 
@@ -286,7 +286,7 @@ function Login() {
                         onChange={(e) => setRememberMe(e.target.checked)}
                         className="w-4 h-4 rounded border-stone-300 text-[#3b1220] focus:ring-[#3b1220] accent-[#3b1220]" 
                       />
-                      <span className="text-xs text-stone-500 font-medium">Remember me</span>
+                      <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">Remember me</span>
                     </label>
                     <Link to="/admin/forgot-password" className="text-xs text-[#801e38] font-semibold hover:underline">Forgot password?</Link>
                   </div>
