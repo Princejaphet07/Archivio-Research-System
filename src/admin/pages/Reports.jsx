@@ -31,6 +31,7 @@ const reportTypes = [
 
 export default function Reports() {
   const [selected, setSelected] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -105,7 +106,7 @@ export default function Reports() {
           id: (index + 1).toString().padStart(2, '0'),
           title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
           dept: group?.program || s.program || group?.department || 'Unknown',
-          cat: s.category || 'Uncategorized',
+          cat: group?.category || s.category || 'Uncategorized',
           sy: s.schoolYear || '2025-2026',
           date: dDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
         };
@@ -236,7 +237,7 @@ export default function Reports() {
             {reportTypes.map(r => (
               <button
                 key={r.id}
-                onClick={() => setSelected(r.id)}
+                onClick={() => { setSelected(r.id); setCurrentPage(1); }}
                 className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
                   selected === r.id
                     ? 'border-[#801e38] bg-white shadow-md'
@@ -405,7 +406,14 @@ export default function Reports() {
                     </thead>
                     <tbody className="text-sm text-stone-700 divide-y divide-stone-100">
                       {/* Render rows based on selected */}
-                      {selected === 'published' && publishedData.map((row) => (
+                      {(() => {
+                        const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
+                        const itemsPerPage = 10;
+                        const paginatedData = currentData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+                        
+                        return (
+                          <>
+                            {selected === 'published' && paginatedData.map((row) => (
                         <tr key={row.id} className="hover:bg-stone-50 transition-colors">
                           <td className="py-4 px-5 text-stone-400">{row.id}</td>
                           <td className="py-4 px-5 font-semibold text-stone-900">{row.title}</td>
@@ -425,7 +433,7 @@ export default function Reports() {
                         </tr>
                       ))}
 
-                      {selected === 'users' && usersData.map((row) => (
+                      {selected === 'users' && paginatedData.map((row) => (
                         <tr key={row.id} className="hover:bg-stone-50 transition-colors">
                           <td className="py-4 px-5 text-stone-400">{row.id}</td>
                           <td className="py-4 px-5 font-semibold text-stone-900">{row.name}</td>
@@ -438,7 +446,7 @@ export default function Reports() {
                         </tr>
                       ))}
 
-                      {selected === 'dept' && deptData.map((row, idx) => (
+                      {selected === 'dept' && paginatedData.map((row, idx) => (
                         <tr key={idx} className="hover:bg-stone-50 transition-colors">
                           <td className="py-4 px-5 font-semibold text-stone-900">{row.dept}</td>
                           <td className="py-4 px-5">{row.sub}</td>
@@ -462,30 +470,42 @@ export default function Reports() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                            ))}
+                          </>
+                        );
+                      })()}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Pagination / Footer */}
-                {(selected === 'published' || selected === 'users') && (
-                  <div className="flex items-center justify-between p-4 bg-white border-t border-stone-100">
-                    <p className="text-xs text-stone-500">
-                      Showing 1–{selected === 'published' ? `${Math.min(10, publishedData.length)} of ${publishedData.length} published papers` : `${Math.min(10, usersData.length)} of ${usersData.length} registered users this SY`}
-                    </p>
-                    <div className="flex gap-1">
-                      <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-400 hover:bg-stone-50">‹</button>
-                      <button className="px-3 py-1 text-sm bg-[#801e38] text-white rounded font-bold">1</button>
-                      <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50">2</button>
-                      <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50">3</button>
-                      <span className="px-2 py-1 text-stone-400">...</span>
-                      <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50">
-                        {selected === 'published' ? '11' : '24'}
-                      </button>
-                      <button className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50">›</button>
+                {(() => {
+                  const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
+                  const itemsPerPage = 10;
+                  const totalPages = Math.max(1, Math.ceil(currentData.length / itemsPerPage));
+                  
+                  return (selected === 'published' || selected === 'users' || selected === 'dept') && (
+                    <div className="flex items-center justify-between p-4 bg-white border-t border-stone-100">
+                      <p className="text-xs text-stone-500">
+                        Showing {currentData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, currentData.length)} of {currentData.length} records
+                      </p>
+                      <div className="flex gap-1 items-center">
+                        <button 
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                        >‹</button>
+                        <button className="px-3 py-1 text-sm bg-[#801e38] text-white rounded font-bold">{currentPage}</button>
+                        <span className="px-2 py-1 text-stone-400 text-xs">of {totalPages}</span>
+                        <button 
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 text-sm border border-stone-200 rounded text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                        >›</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </Card>
 
               {/* Department Performance - Bar Chart Section */}

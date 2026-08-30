@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import SettingsModal from './SettingsModal';
 import logo from '../assets/logo.png';
 
 function Header() {
@@ -11,6 +12,19 @@ function Header() {
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -42,17 +56,50 @@ function Header() {
           {isDarkMode ? '☀️' : '🌙'}
         </button>
         {currentUser ? (
-          <>
-            <span className="hidden md:block text-stone-300">
-              Welcome, {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}
-            </span>
+          <div className="relative" ref={dropdownRef}>
             <button 
-              onClick={handleLogout}
-              className="px-5 py-2 border border-white/30 rounded hover:bg-white/10 transition cursor-pointer"
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center gap-2 hover:bg-white/5 px-2 py-1.5 rounded-lg transition"
             >
-              Logout
+              <div className="w-8 h-8 rounded-full bg-[#d6ad60] text-[#3d0c1b] flex items-center justify-center font-bold text-sm">
+                {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+              </div>
+              <span className="hidden md:block text-stone-200">
+                {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}
+              </span>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-stone-400 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
-          </>
+
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-stone-800 rounded-lg shadow-xl border border-stone-200 dark:border-stone-700 py-1 text-stone-800 dark:text-stone-200 z-50">
+                <div className="px-4 py-2 border-b border-stone-100 dark:border-stone-700 md:hidden">
+                  <p className="text-sm font-semibold truncate">{currentUser.displayName || currentUser.email?.split('@')[0]}</p>
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setIsProfileDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  Settings
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    setIsProfileDropdownOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <Link to="/login" className="px-5 py-2 border border-white/30 rounded hover:bg-white/10 transition">
@@ -114,6 +161,8 @@ function Header() {
           </div>
         </div>
       )}
+      {/* Settings Modal */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </nav>
   );
 }

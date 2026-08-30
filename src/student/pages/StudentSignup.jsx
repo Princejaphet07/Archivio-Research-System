@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, setDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../firebase/config';
 import { logActivity } from '../../firebase/logActivity';
 import swuLogoSeal from '../../assets/new icon.png';
@@ -15,6 +15,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [invitationData, setInvitationData] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
 
   // Step 1 — Personal Info
@@ -32,10 +33,36 @@ export default function StudentSignup({ onSwitchPage }) {
   const [groupInfo, setGroupInfo] = useState({
     groupName: '',
     researchTitle: '',
+    category: '', // NEW
     members: []
   });
   const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
+  const [categoriesList, setCategoriesList] = useState([]); // NEW
+
+  useEffect(() => {
+    console.log("Checking invitation data for categories:", invitationData);
+    // Fetch categories only when we know the adviser's email
+    if (!invitationData?.sentBy) {
+      console.log("No sentBy found in invitationData");
+      return;
+    }
+    
+    console.log("Fetching categories for adviser:", invitationData.sentBy);
+    const q = query(
+      collection(db, 'categories'),
+      where('createdBy', '==', invitationData.sentBy)
+    );
+    
+    const unsubCats = onSnapshot(q, (snap) => {
+      console.log("Fetched categories count:", snap.docs.length);
+      snap.docs.forEach(d => console.log("Category:", d.data()));
+      setCategoriesList(snap.docs.map(d => d.data().name));
+    }, (error) => {
+      console.error("Error fetching categories:", error);
+    });
+    return () => unsubCats();
+  }, [invitationData?.sentBy]);
 
   // Step 3 — Account Security
   const [securityInfo, setSecurityInfo] = useState({
@@ -152,8 +179,8 @@ export default function StudentSignup({ onSwitchPage }) {
   };
 
   const validateStep2 = () => {
-    if (!groupInfo.groupName || !groupInfo.researchTitle) {
-      setError('Please provide your Group Name and Research Title.');
+    if (!groupInfo.groupName || !groupInfo.researchTitle || !groupInfo.category) {
+      setError('Please provide your Group Name, Research Title, and Category.');
       return false;
     }
     setError('');
@@ -290,6 +317,7 @@ export default function StudentSignup({ onSwitchPage }) {
         await addDoc(collection(db, 'groups'), {
           groupName: groupInfo.groupName.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
+          category: groupInfo.category || 'Uncategorized',
           leaderUid: uid,
           leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
           leaderEmail: email,
@@ -553,6 +581,20 @@ export default function StudentSignup({ onSwitchPage }) {
               </div>
             </div>
 
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Category</label>
+              <div className="relative">
+                <select value={groupInfo.category} onChange={e => setGroupInfo(p => ({ ...p, category: e.target.value }))}
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs text-gray-500 focus:outline-none focus:border-[#6B0F1A] appearance-none">
+                  <option value="">Select Category</option>
+                  {categoriesList.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <span className="absolute right-3 top-2.5 text-gray-300 text-sm pointer-events-none">▼</span>
+              </div>
+            </div>
+
             {/* Team Members */}
             <div className="mb-4">
               <label className="block text-xs font-bold text-[#2A1115] mb-1 uppercase tracking-wide">Team Members</label>
@@ -706,7 +748,7 @@ export default function StudentSignup({ onSwitchPage }) {
                 onChange={e => setSecurityInfo(p => ({ ...p, agreeTerms: e.target.checked }))}
                 className="w-3.5 h-3.5 mt-0.5 text-[#6B0F1A] border-gray-300 rounded" />
               <label htmlFor="agreeTerms" className="text-[11px] text-gray-600">
-                I agree to the <span className="text-[#6B0F1A] font-semibold cursor-pointer hover:underline">Terms and Conditions and Privacy Policy</span>
+                I agree to the <span onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-[#6B0F1A] font-semibold cursor-pointer hover:underline">Terms and Conditions and Privacy Policy</span>
               </label>
             </div>
 
@@ -731,12 +773,76 @@ export default function StudentSignup({ onSwitchPage }) {
       </div>
 
       {/* Footer */}
-      <p className="mt-5 text-xs text-gray-500">
+      <p className="mt-5 text-xs text-gray-500 relative z-10">
         Already have an account?{' '}
         <button onClick={() => onSwitchPage('login')} className="text-[#6B0F1A] font-semibold hover:underline">
           Sign In
         </button>
       </p>
+
+      {/* Terms and Conditions Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#faf6f0] border-2 border-[#d5c9bb] w-full max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all">
+            
+            <div className="bg-gradient-to-r from-[#541b2f] to-[#7a2744] p-5 flex justify-between items-center text-white shrink-0">
+              <div>
+                <h3 className="font-serif font-bold text-xl tracking-wide">ARCHIVIO</h3>
+                <p className="text-xs text-[#f7d2db] uppercase tracking-wider">Terms & Privacy Policy</p>
+              </div>
+              <button onClick={() => setShowTerms(false)} className="text-[#f7d2db] hover:text-white transition-colors text-2xl font-light leading-none">
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-700 leading-relaxed space-y-5 custom-scrollbar">
+              <section>
+                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">1. Acceptance of Terms</h4>
+                <p>By creating an account on the ARCHIVIO Research Management System, you agree to comply with and be bound by these Terms and Conditions. This platform is exclusively designed for students and faculty of Southwestern University PHINMA for the purpose of managing and archiving research projects.</p>
+              </section>
+
+              <section>
+                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">2. User Responsibilities & Conduct</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>You must provide accurate, current, and complete information during the registration process.</li>
+                  <li>You are responsible for safeguarding your password and any activities or actions under your account.</li>
+                  <li>You agree not to upload, share, or transmit any data that infringes upon intellectual property rights, is plagiarized, or violates university academic integrity policies.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">3. Privacy Policy & Data Usage</h4>
+                <p>Your privacy is important to us. The personal information you provide (such as your name, student number, and @phinmaed.com email) will be used solely for platform functionality, academic verification, and communication regarding your research submissions.</p>
+                <p className="mt-2">We implement strict security measures to protect your data. We will not sell, distribute, or lease your personal information to third parties unless required by law or university administrative policies.</p>
+              </section>
+
+              <section>
+                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">4. Intellectual Property</h4>
+                <p>All research papers, documents, and materials uploaded to ARCHIVIO remain the intellectual property of the respective authors. However, by submitting your work, you grant Southwestern University PHINMA a non-exclusive license to archive, preserve, and make the work accessible within the university's academic network for educational purposes.</p>
+              </section>
+
+              <section>
+                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">5. Modifications to the Service</h4>
+                <p>ARCHIVIO reserves the right to modify or discontinue, temporarily or permanently, the service (or any part thereof) with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the service.</p>
+              </section>
+            </div>
+
+            <div className="p-4 border-t border-[#d5c9bb] bg-white/50 shrink-0 flex justify-end">
+              <button 
+                onClick={() => {
+                  setSecurityInfo(p => ({ ...p, agreeTerms: true }));
+                  setShowTerms(false);
+                }}
+                className="px-6 py-2 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition shadow-md"
+              >
+                I Agree & Continue
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

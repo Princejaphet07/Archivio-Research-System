@@ -24,6 +24,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [uploadingItem, setUploadingItem] = useState(null);
   const [requirements, setRequirements] = useState([]);
   const [documentRevisions, setDocumentRevisions] = useState({});
+  const [documentAnnotations, setDocumentAnnotations] = useState({});
+  const [documentResubmissions, setDocumentResubmissions] = useState({});
+  const [reviewStatus, setReviewStatus] = useState('in_progress');
   const [adviserUid, setAdviserUid] = useState(null);
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '', reqId: null });
 
@@ -86,11 +89,17 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setUploadedDocs(subData.uploadedDocs || []);
             setDocumentsMeta(subData.documents || {});
             setDocumentRevisions(subData.documentRevisions || {});
+            setDocumentAnnotations(subData.documentAnnotations || {});
+            setDocumentResubmissions(subData.documentResubmissions || {});
+            setReviewStatus(subData.reviewStatus || subData.status || 'in_progress');
           } else {
             setSubmissionDocId(null);
             setUploadedDocs([]);
             setDocumentsMeta({});
             setDocumentRevisions({});
+            setDocumentAnnotations({});
+            setDocumentResubmissions({});
+            setReviewStatus('in_progress');
           }
           setLoadingData(false);
         }, (err) => {
@@ -302,9 +311,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       };
       if (meta.pageCount) updatePayload.pageCount = meta.pageCount;
 
-      // If this item had a revision request, clear it on re-upload
+      // If this item had a revision request, mark it as resubmitted instead of deleting the note
       if (hadRevision) {
-        updatePayload[`documentRevisions.${itemId}`] = deleteField();
+        updatePayload[`documentResubmissions.${itemId}`] = true;
       }
 
       await updateDoc(docRef, updatePayload);
@@ -421,9 +430,23 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
   // ── Derived values ────────────────────────────────────────────────────────
   const totalCount = requirements.length;
-  const uploadedCount = uploadedDocs.length;
-  const missingCount = totalCount - uploadedCount;
-  const progressPercent = Math.round((uploadedCount / totalCount) * 100);
+  const validUploadedDocs = uploadedDocs.filter(id => requirements.some(r => r.id === id));
+  const uploadedCount = validUploadedDocs.length;
+  const missingCount = Math.max(0, totalCount - uploadedCount);
+  const progressPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
+
+  const hasPendingRevisions = requirements.some(item => !!documentRevisions[item.id] && !documentResubmissions[item.id]);
+  
+  let displayStatus = reviewStatus;
+  if (missingCount === 0) {
+    if (reviewStatus === 'approved' || reviewStatus === 'published') {
+      displayStatus = reviewStatus;
+    } else if (reviewStatus === 'revision' && hasPendingRevisions) {
+      displayStatus = 'revision';
+    } else {
+      displayStatus = 'submitted';
+    }
+  }
 
   // Fallback initials
   const displayInitials = initials || (studentName ? studentName.substring(0, 2).toUpperCase() : 'ST');
@@ -494,7 +517,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 <div className="w-48 flex justify-end">
                   {missingCount === 0 && !loadingData ? (
-                    <StatusBadge status="approved" />
+                    <StatusBadge status={displayStatus} />
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2 rounded-full border bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -515,9 +538,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
-                  const hasRevision = !!documentRevisions[item.id];
+                  const hasRevision = !!documentRevisions[item.id] && !documentResubmissions[item.id];
                   return (
-                    <Card key={item.id} hover className="flex flex-col h-full">
+                    <Card key={item.id} hover className={`flex flex-col h-full ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
                       {/* top accent */}
                       <div className={`absolute top-0 left-0 right-0 h-[3px] ${hasRevision ? 'bg-gradient-to-r from-amber-500 to-orange-400' : 'bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]'}`} />
                       <CardBody className="flex flex-col flex-1 pt-7">
@@ -571,17 +594,30 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             </span>
                           )}
                           <div className="flex items-center gap-3 text-[12px] font-bold">
-                            <button
-                              className="text-[#7B1F35] dark:text-[#D05353] hover:underline"
-                              onClick={() => {
-                                if (item.type === 'url') handleUploadUrl(item);
-                                else fileInputRefs.current[item.id]?.click();
-                              }}
-                            >
-                              Replace
-                            </button>
-                            <span className="text-stone-300 dark:text-stone-600">·</span>
-                            <button className="hover:underline text-stone-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
+                            {isUploadingThis ? (
+                              <div className="flex items-center gap-1.5 text-[#7B1F35] dark:text-[#D05353]">
+                                <div className="w-3.5 h-3.5 border-2 border-[#7B1F35]/30 dark:border-[#D05353]/30 border-t-[#7B1F35] dark:border-t-[#D05353] rounded-full animate-spin" />
+                                <span>Uploading...</span>
+                              </div>
+                            ) : (
+                                <>
+                                  {reviewStatus !== 'published' && (
+                                    <>
+                                      <button
+                                        className="text-[#7B1F35] dark:text-[#D05353] hover:underline"
+                                        onClick={() => {
+                                          if (item.type === 'url') handleUploadUrl(item);
+                                          else fileInputRefs.current[item.id]?.click();
+                                        }}
+                                      >
+                                        Replace
+                                      </button>
+                                      <span className="text-stone-300 dark:text-stone-600">·</span>
+                                      <button className="hover:underline text-stone-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
+                                    </>
+                                  )}
+                                </>
+                            )}
                           </div>
                         </div>
 
@@ -615,8 +651,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-4 flex-1">{item.desc}</p>
 
                       <div
-                        className="border-2 border-dashed border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-red-50/80 dark:hover:bg-red-900/20 transition-all mt-auto"
+                        className={`border-2 border-dashed border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all mt-auto ${reviewStatus === 'published' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-red-50/80 dark:hover:bg-red-900/20'}`}
                         onClick={() => {
+                          if (reviewStatus === 'published') {
+                            Swal.fire('Locked', 'This research is already published. No further changes can be made.', 'info');
+                            return;
+                          }
                           if (item.type === 'url') handleUploadUrl(item);
                           else fileInputRefs.current[item.id]?.click();
                         }}
@@ -670,6 +710,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         documentTitle={viewerState.title}
         role="student"
         initialNote={documentRevisions[viewerState.reqId] || ''}
+        initialAnnotations={documentAnnotations[viewerState.reqId] || {}}
       />
     </div>
   );

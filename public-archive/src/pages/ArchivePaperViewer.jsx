@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -10,7 +11,10 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import ForceGraph2D from 'react-force-graph-2d';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 function ArchivePaperViewer() {
   const { id } = useParams();
   const { currentUser, signOut } = useAuth();
@@ -124,14 +128,7 @@ function ArchivePaperViewer() {
     const unsubSub = onSnapshot(doc(db, 'submissions', id), async (docSnap) => {
       if (docSnap.exists()) {
         const subData = { id: docSnap.id, ...docSnap.data() };
-        
-        // Increment views if not viewed yet
-        if (!localStorage.getItem(`viewed_${id}`)) {
-          localStorage.setItem(`viewed_${id}`, 'true');
-          const { updateDoc, increment } = await import('firebase/firestore');
-          updateDoc(docSnap.ref, { views: (subData.views || 0) + 1 }).catch(e => console.log('View update failed:', e));
-        }
-
+        // Handle group fetching for author details
         if (subData.studentUid) {
           const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', subData.studentUid));
           unsubGroup = onSnapshot(qGroup, (groupSnap) => {
@@ -245,9 +242,12 @@ function ArchivePaperViewer() {
     return { nodes, links };
   }, [paper, relatedPapers]);
 
+  const hasIncremented = useRef(false);
+
   // Increment view count when paper viewer opens
   useEffect(() => {
-    if (id) {
+    if (id && !hasIncremented.current) {
+      hasIncremented.current = true;
       const docRef = doc(db, 'submissions', id);
       updateDoc(docRef, { views: increment(1) }).catch(err => console.error("Failed to increment views:", err));
     }
@@ -584,29 +584,9 @@ function ArchivePaperViewer() {
       
       {/* HEADER - Hidden in Zen Mode */}
       {!isZenMode && (
-        <header className="bg-[#5a1528] text-white flex justify-between items-center px-6 py-3 shadow-md z-20">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
-            <img src={logo} alt="Archivio Logo" className="w-9 h-9 object-contain bg-white rounded-full p-1 shadow-sm" />
-            <span className="font-serif font-bold tracking-widest text-lg text-[#f3e5ab]">ARCHIVIO</span>
-          </Link>
-          <nav className="hidden md:flex gap-8 text-sm font-medium">
-            <Link to="/" className="hover:text-[#d6ad60] transition cursor-pointer">Home</Link>
-            <Link to="/browse" className="hover:text-[#d6ad60] transition cursor-pointer">Browse</Link>
-            <Link to="/bookmarks" className="hover:text-[#d6ad60] transition cursor-pointer">Bookmarks</Link>
-            <Link to="/about" className="hover:text-[#d6ad60] transition cursor-pointer">About</Link>
-          </nav>
-          <div className="flex items-center gap-3 text-sm">
-            <div className="w-8 h-8 bg-[#d6ad60] rounded-full flex items-center justify-center font-bold text-[#5a1528]">
-              {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <span className="hidden md:block">
-              {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User'} ▾
-            </span>
-            <button onClick={() => signOut()} className="ml-4 px-3 py-1 bg-white/10 hover:bg-white/20 rounded cursor-pointer transition">
-              Logout
-            </button>
-          </div>
-        </header>
+        <div className="z-20 relative shadow-md shrink-0">
+          <Header />
+        </div>
       )}
 
       {/* VIEW-ONLY BANNER - Hidden in Zen Mode */}

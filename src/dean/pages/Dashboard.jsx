@@ -42,55 +42,47 @@ export default function Dashboard({ activePage }) {
   useEffect(() => {
     // Wait for deanData to load
     if (!deanData) return;
-    const deanDept = deanData.department || ''; // Fallback to empty string if no department
+    const deanDept = deanData.department || '';
+
+    // Robust department matcher — handles partial matches, college prefix, and program codes
+    const matchesDept = (g) => {
+      if (!deanDept) return false;
+      const deptLower = deanDept.toLowerCase();
+      // Direct match on group's department field
+      if (g.department && g.department.toLowerCase().includes(deptLower)) return true;
+      if (g.department && deptLower.includes(g.department.toLowerCase())) return true;
+      // Match via program field (e.g. BSIT → Information Technology)
+      if (g.program && g.program.toLowerCase().includes(deptLower)) return true;
+      if (deptLower && g.program && deptLower.includes(g.program.toLowerCase())) return true;
+      return false;
+    };
 
     const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       setAllRawSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    
-    let cleanupGroups = () => {};
-    
-    // Fetch advisers first to get their UIDs, which is a robust way to link groups to the department
-    import('firebase/firestore').then(({ getDocs, where }) => {
-       const advQuery = query(collection(db, 'advisers'), where('department', '==', deanDept));
-       getDocs(advQuery).then(advSnap => {
-         const advUids = new Set(advSnap.docs.map(d => d.data().userId));
-         
-         const unsub = onSnapshot(collection(db, 'groups'), (snapshot) => {
-            // DEPARTMENT FILTER: Only count groups belonging to this Dean's department
-            const deptGroups = snapshot.docs
-              .map(doc => ({ id: doc.id, ...doc.data() }))
-              .filter(g => {
-                 if (g.department === deanDept) return true;
-                 if (advUids.has(g.adviserUid)) return true;
-                 // Fallbacks
-                 if (deanDept.includes('IT') && g.program && g.program.includes('Information Technology')) return true;
-                 return false;
-              });
-            setStats(prev => ({ ...prev, totalGroups: deptGroups.length }));
-            setAllGroups(deptGroups);
-            setLoading(false); // Make sure skeleton disappears even if empty
-         }, (error) => {
-            console.error("Error fetching groups:", error);
-            setLoading(false);
-         });
-         cleanupGroups = unsub;
-       }).catch((error) => {
-         console.error("Error fetching advisers:", error);
-         setLoading(false);
-       });
-    }).catch((error) => {
-      console.error("Error importing firestore:", error);
+
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
+      const deptGroups = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(matchesDept);
+      setStats(prev => ({ ...prev, totalGroups: deptGroups.length }));
+      setAllGroups(deptGroups);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching groups:", error);
       setLoading(false);
     });
-    
+
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
-       // DEPARTMENT FILTER: Only count advisers belonging to this Dean's department
-       const deptAdvisers = snapshot.docs.filter(d => d.data().department === deanDept);
+       const deptAdvisers = snapshot.docs.filter(d => {
+         const dept = d.data().department || '';
+         const deptLower = deanDept.toLowerCase();
+         return dept.toLowerCase().includes(deptLower) || deptLower.includes(dept.toLowerCase());
+       });
        setStats(prev => ({ ...prev, totalAdvisers: deptAdvisers.length }));
     });
-    
-    return () => { unsubSubmissions(); cleanupGroups(); unsubAdvisers(); }
+
+    return () => { unsubSubmissions(); unsubGroups(); unsubAdvisers(); }
   }, [deanData]);
 
   // Process stats safely once both groups and submissions are loaded

@@ -22,6 +22,7 @@ export default function Settings({ activePage, onNavigate }) {
   const [showSYModal, setShowSYModal] = useState(false);
   const [showEditSYModal, setShowEditSYModal] = useState(false);
   const [currentSY, setCurrentSY] = useState({ id: '', label: '', status: 'Upcoming' });
+  const [syStats, setSyStats] = useState({});
 
   // Notifications State
   const [notifications, setNotifications] = useState({
@@ -96,14 +97,42 @@ export default function Settings({ activePage, onNavigate }) {
   ];
 
   useEffect(() => {
-    const q = query(collection(db, 'requirements'));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const qReq = query(collection(db, 'requirements'));
+    const unsubReq = onSnapshot(qReq, (snapshot) => {
       const allReqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setRequirements(allReqs);
       setLoading(false);
     });
-    return () => unsub();
-  }, []);
+
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
+      const allGroups = snapshot.docs.map(d => d.data());
+      
+      const unsubSubs = onSnapshot(collection(db, 'submissions'), (subSnapshot) => {
+        const allSubs = subSnapshot.docs.map(d => d.data());
+        
+        const activeSY = deanSettings?.schoolYears?.find(s => s.status === 'Active')?.label || deanSettings?.schoolYear || 'SY 2026-2027';
+        
+        const stats = {};
+        allGroups.forEach(group => {
+          const sy = group.schoolYear || activeSY;
+          if (!stats[sy]) stats[sy] = { groups: 0, published: 0 };
+          stats[sy].groups++;
+          
+          const sub = allSubs.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle));
+          if (sub && sub.reviewStatus === 'published') {
+            stats[sy].published++;
+          }
+        });
+        setSyStats(stats);
+      });
+      
+      return () => { unsubSubs(); unsubGroups(); };
+    });
+
+    return () => {
+      unsubReq();
+    };
+  }, [deanSettings]);
 
   const handleUpdateStatus = async (reqId, newStatus) => {
     try {
@@ -702,8 +731,12 @@ export default function Settings({ activePage, onNavigate }) {
                                   {sy.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-center text-stone-500 dark:text-stone-400">—</td>
-                              <td className="px-6 py-4 text-center text-stone-500 dark:text-stone-400">—</td>
+                              <td className="px-6 py-4 text-center text-stone-700 dark:text-stone-300 font-medium">
+                                {syStats[sy.label]?.groups || 0}
+                              </td>
+                              <td className="px-6 py-4 text-center text-stone-700 dark:text-stone-300 font-medium">
+                                {syStats[sy.label]?.published || 0}
+                              </td>
                               <td className="px-6 py-4">
                                 <div className="flex items-center justify-center gap-2">
                                   {sy.status !== 'Active' && (
@@ -727,10 +760,12 @@ export default function Settings({ activePage, onNavigate }) {
                                   )}
                                   <button 
                                     onClick={() => handleDeleteSY(sy.id)}
-                                    className="px-2 py-1.5 text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                                    className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
                                     title="Delete"
                                   >
-                                    🗑️
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
                                   </button>
                                 </div>
                               </td>

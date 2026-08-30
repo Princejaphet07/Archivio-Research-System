@@ -27,22 +27,28 @@ export default function UserManagement() {
     if (!deanData) return;
     const deanDept = deanData.department || '';
 
-    // Fetch Advisers — filter by this Dean's department
+    const deptLower = deanDept.toLowerCase();
+    const flexMatch = (val) => {
+      const v = (val || '').toLowerCase();
+      return v.includes(deptLower) || deptLower.includes(v);
+    };
+
+    // Fetch Advisers — filter by this Dean's department (flexible match)
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAdvisers(all.filter(a => a.department === deanDept));
+      setAdvisers(all.filter(a => flexMatch(a.department)));
     });
 
-    // Fetch Students — filter by this Dean's department
+    // Fetch Students — filter by this Dean's department (flexible match)
     const unsubStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setStudents(all.filter(s => s.department === deanDept));
+      setStudents(all.filter(s => flexMatch(s.department)));
     });
 
-    // Fetch Groups — filter by this Dean's department
+    // Fetch Groups — filter by this Dean's department (flexible match)
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setGroups(all.filter(g => g.department === deanDept));
+      setGroups(all.filter(g => flexMatch(g.department) || flexMatch(g.program)));
     });
 
     // Fetch Submissions — filter by this Dean's department
@@ -128,7 +134,34 @@ export default function UserManagement() {
     if (res.isConfirmed) {
       try {
         const collectionName = user.role === 'student' ? 'students' : 'advisers';
+        
+        // Update specific collection
         await updateDoc(doc(db, collectionName, user.id), { status: newStatus });
+        
+        // Update global users collection if uid exists
+        if (user.uid) {
+          try {
+            await updateDoc(doc(db, 'users', user.uid), { status: newStatus });
+          } catch (err) {
+            console.warn('Could not update global users collection:', err);
+          }
+        }
+
+        // Toggle Auth via backend
+        if (user.uid || user.email) {
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            const endpoint = newStatus === 'inactive' ? 'disable-auth-user' : 'enable-auth-user';
+            await fetch(`${backendUrl}/api/${endpoint}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: user.uid, email: user.email })
+            });
+          } catch (err) {
+            console.warn('Could not toggle Firebase Auth:', err);
+          }
+        }
+
         Swal.fire({
           title: 'Success!',
           text: `Account has been ${newStatus}d.`,

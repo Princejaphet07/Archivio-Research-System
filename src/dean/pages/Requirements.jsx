@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 export default function Requirements({ activePage, onNavigate }) {
   const [submissions, setSubmissions] = useState([]);
@@ -19,6 +20,7 @@ export default function Requirements({ activePage, onNavigate }) {
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '' });
 
   useEffect(() => {
     // 1. Listen to all groups
@@ -331,14 +333,16 @@ export default function Requirements({ activePage, onNavigate }) {
                           </div>
                         </div>
                         {isUploaded && docMeta?.url && docMeta.url !== '#' && (
-                          <a
-                            href={docMeta.url}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            onClick={() => setViewerState({
+                              isOpen: true,
+                              url: docMeta.url,
+                              title: `${selectedSubmission.researchTitle} - ${req.title}`
+                            })}
                             className="text-xs font-bold text-[#4a1024] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#4a1024]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition"
                           >
                             View File
-                          </a>
+                          </button>
                         )}
                       </div>
                     );
@@ -349,6 +353,14 @@ export default function Requirements({ activePage, onNavigate }) {
           </div>
         </div>
       )}
+
+      <DocumentViewerModal 
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ ...viewerState, isOpen: false })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+        role="dean"
+      />
     </div>
   );
 }

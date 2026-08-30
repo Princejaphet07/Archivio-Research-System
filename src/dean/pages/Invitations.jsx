@@ -5,6 +5,7 @@ import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import Swal from 'sweetalert2';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -161,35 +162,55 @@ Please click the button below to activate your account and set up your credentia
           message: {
             subject: defaultSubject,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #7B1F35; padding: 20px; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
                 </div>
-                <div style="padding: 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName},</h2>
-                  <p style="color: #4a5568; line-height: 1.6;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
+                
+                <div style="padding: 40px 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName}!</h2>
+                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
                   
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${invitationLink}" style="background-color: #7B1F35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set up your account</a>
+                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+                    <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
+                    <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
                   </div>
                   
-                  <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                  <div style="text-align: center; margin: 40px 0 10px 0;">
+                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Set up your account</a>
+                  </div>
+                  
+                  <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
                     Best regards,<br>
                     <strong>${deanData?.displayName || 'Dean'}</strong><br>
                     ${deanData?.department || 'SWU Phinma'}<br>
-                    ARCHIVIO Administrator
                   </p>
+                </div>
+                
+                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
                 </div>
               </div>
             `
           }
         });
 
-        setSuccess(`✅ Invitation sent to ${formData.email}!`);
+        Swal.fire({
+          title: 'Success!',
+          text: `Invitation sent to ${formData.email}!`,
+          icon: 'success',
+          confirmButtonColor: '#801e38'
+        });
       } catch (emailError) {
         console.warn('Email service error (invitation still saved):', emailError);
-        setSuccess('✅ Invitation saved, but email could not be sent.');
+        Swal.fire({
+          title: 'Saved',
+          text: 'Invitation saved, but email could not be sent.',
+          icon: 'warning',
+          confirmButtonColor: '#801e38'
+        });
       }
 
       // Refresh advisers list (handled by onSnapshot)
@@ -201,9 +222,6 @@ Please click the button below to activate your account and set up your credentia
         email: '',
         message: ''
       });
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(''), 3000);
 
     } catch (error) {
       console.error('Error sending invitation:', error);
@@ -247,8 +265,12 @@ Please click the button below to activate your account and set up your credentia
       }
 
 
-      setSuccess(`✅ Invitation resent to ${adviserEmail}`);
-      setTimeout(() => setSuccess(''), 3000);
+      Swal.fire({
+        title: 'Sent!',
+        text: `Invitation resent to ${adviserEmail}`,
+        icon: 'success',
+        confirmButtonColor: '#801e38'
+      });
     } catch (error) {
       setError('Failed to resend invitation');
     } finally {
@@ -284,13 +306,6 @@ Please click the button below to activate your account and set up your credentia
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                     <span className="text-red-500 text-sm">⚠️</span>
                     <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
-
-                {success && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                    <span className="text-green-500 text-sm">✅</span>
-                    <p className="text-sm text-green-700">{success}</p>
                   </div>
                 )}
 

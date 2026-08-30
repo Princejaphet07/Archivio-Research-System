@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
-import { Trash2, Download } from 'lucide-react';
+import { Trash2, Download, ShieldOff, Unlock } from 'lucide-react';
 import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
 
 const roleColors = {
@@ -158,28 +158,80 @@ export default function AllUsers() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedUsers = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleDeleteUser = async (user) => {
+  const handleDeactivateUser = async (user) => {
+    const isInactive = user.status === 'inactive';
+    const actionText = isInactive ? 'Activate' : 'Deactivate';
+
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: `Do you want to permanently delete ${user.name}? This will remove all their data.`,
+      text: `Do you want to ${actionText.toLowerCase()} ${user.name}? ${isInactive ? 'This will allow them to log in again.' : 'This will prevent them from logging in, but keep their data.'}`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: isInactive ? '#10b981' : '#801e38',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, delete!'
+      confirmButtonText: `Yes, ${actionText.toLowerCase()}!`
     });
 
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        // 1. Delete from specific role collection
+        const newStatus = isInactive ? 'active' : 'inactive';
+
+        // 1. Deactivate in specific role collection
+        let colName = 'students';
+        if (user.role === 'Dean') colName = 'deans';
+        if (user.role === 'Advisor' || user.role === 'Adviser') colName = 'advisers';
+        
+        await updateDoc(doc(db, colName, user.id), { status: newStatus });
+
+        // 2. Deactivate in users collection and get UID
+        let uid = null;
+        const qUsers = query(collection(db, 'users'), where('email', '==', user.email));
+        const snapUsers = await getDocs(qUsers);
+        if (!snapUsers.empty) {
+          uid = snapUsers.docs[0].id;
+          await updateDoc(doc(db, 'users', uid), { status: newStatus });
+        }
+
+        // 3. Call backend to disable Auth
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const endpoint = isInactive ? 'enable-auth-user' : 'disable-auth-user';
+        await fetch(`${backendUrl}/api/${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email })
+        });
+
+        Swal.fire(`${actionText}d!`, `User has been ${actionText.toLowerCase()}d.`, 'success');
+      } catch (error) {
+        console.error(`Error ${actionText.toLowerCase()}ing user:`, error);
+        Swal.fire('Error', `Failed to ${actionText.toLowerCase()} user.`, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleHardDeleteUser = async (user) => {
+    const result = await Swal.fire({
+      title: 'Permanently Delete?',
+      text: `Do you want to permanently delete ${user.name}? This will wipe ALL their data (groups, submissions, requirements) from the system.`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, wipe data!'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
         let colName = 'students';
         if (user.role === 'Dean') colName = 'deans';
         if (user.role === 'Adviser') colName = 'advisers';
         
         await deleteDoc(doc(db, colName, user.id));
 
-        // 2. Delete from users collection and get UID
         let uid = null;
         const qUsers = query(collection(db, 'users'), where('email', '==', user.email));
         const snapUsers = await getDocs(qUsers);
@@ -188,27 +240,22 @@ export default function AllUsers() {
           await deleteDoc(doc(db, 'users', uid));
         }
 
-        // 3. Delete related data (Cascading Delete for Fresh Testing)
         try {
           if (user.role === 'Student') {
-            // Delete student's groups
             const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', user.email));
             const snapGroup = await getDocs(qGroup);
             await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
 
-            // Delete student's submissions
             if (uid) {
               const qSub = query(collection(db, 'submissions'), where('studentUid', '==', uid));
               const snapSub = await getDocs(qSub);
               await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
             }
           } else if (user.role === 'Adviser' || user.role === 'Dean') {
-            // Delete adviser's groups
             const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', user.email));
             const snapGroup = await getDocs(qGroup);
             await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
 
-            // Delete adviser's requirements
             const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', user.email));
             const snapReq = await getDocs(qReq);
             await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
@@ -217,9 +264,8 @@ export default function AllUsers() {
           console.error("Error cleaning up related data:", cleanupErr);
         }
 
-        // 4. Call backend to delete Auth
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        await fetch(`${backendUrl}/api/delete-auth-user`, {
+        await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: user.email })
@@ -283,13 +329,13 @@ export default function AllUsers() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-stone-50 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200">
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">NAME ↑</th>
-                    <th className="px-6 py-4">EMAIL</th>
-                    <th className="px-6 py-4">ROLE</th>
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">DEPARTMENT ↑</th>
-                    <th className="px-6 py-4">STATUS</th>
-                    <th className="px-6 py-4">LAST LOGIN</th>
-                    <th className="px-6 py-4 text-center">ACTIONS</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">NAME ↑</th>
+                    <th className="px-3 py-3">EMAIL</th>
+                    <th className="px-3 py-3">ROLE</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">DEPARTMENT ↑</th>
+                    <th className="px-3 py-3">STATUS</th>
+                    <th className="px-3 py-3">LAST LOGIN</th>
+                    <th className="px-3 py-3 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
@@ -309,24 +355,37 @@ export default function AllUsers() {
                   ) : (
                     paginatedUsers.map(user => (
                       <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
-                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.email}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-3 font-bold text-stone-800 whitespace-nowrap">{user.name}</td>
+                        <td className="px-3 py-3 text-stone-400 whitespace-nowrap">{user.email}</td>
+                        <td className="px-3 py-3">
                           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${roleColors[user.role]}`}>{user.role}</span>
                         </td>
-                        <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.dept}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">{user.status}</span>
+                        <td className="px-3 py-3 text-stone-700 font-medium whitespace-nowrap">{user.dept}</td>
+                        <td className="px-3 py-3">
+                          <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{user.status}</span>
                         </td>
-                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{user.lastLogin}</td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <td className="px-3 py-3 text-stone-400 whitespace-nowrap">{user.lastLogin}</td>
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleDeactivateUser(user)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors inline-flex items-center justify-center ${
+                                  user.status === 'inactive'
+                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700'
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
+                                }`}
+                                title={user.status === 'inactive' ? 'Activate User' : 'Deactivate User'}
+                              >
+                                {user.status === 'inactive' ? 'Activate' : 'Deactivate'}
+                              </button>
+                              <button
+                                onClick={() => handleHardDeleteUser(user)}
+                                className="px-2 py-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex items-center justify-center"
+                                title="Permanently Delete User"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -336,7 +395,7 @@ export default function AllUsers() {
             </div>
 
             {/* PAGINATION */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 bg-stone-50/30">
+            <div className="flex items-center justify-between px-3 py-3 border-t border-stone-100 bg-stone-50/30">
               <span className="text-[11px] text-stone-500 font-medium">
                 Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} users
               </span>

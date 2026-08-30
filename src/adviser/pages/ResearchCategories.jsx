@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
@@ -36,7 +36,14 @@ function ResearchCategories() {
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'categories'), (snap) => {
+    if (!auth.currentUser?.email) return;
+
+    const q = query(
+      collection(db, 'categories'),
+      where('createdBy', '==', auth.currentUser.email)
+    );
+    
+    const unsub = onSnapshot(q, (snap) => {
       const fetched = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -189,10 +196,10 @@ function ResearchCategories() {
             filteredCategories.map((cat, i) => (
               <Card key={cat.id || i} className="flex flex-col justify-between h-40 group" hover={true} style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
                 <CardBody className="flex flex-col h-full p-5">
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <div className="text-2xl mb-1 group-hover:scale-110 transition-transform origin-left">{cat.icon || '🔗'}</div>
-                    <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg line-clamp-1">{cat.name}</h3>
-                    <p className="text-xs text-gray-500 dark:text-stone-400">Global Category</p>
+                    <h3 className="font-bold text-[#2A1115] text-lg text-left group-hover:text-[#7a2e46] transition-colors">{cat.name}</h3>
+                    <p className="text-xs text-gray-400 text-left">Adviser Category</p>
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button 

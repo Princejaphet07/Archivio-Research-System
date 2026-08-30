@@ -75,11 +75,8 @@ export default function HomepageChatbot() {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imageBase64, setImageBase64] = useState(null);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const chatEndRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const [systemData, setSystemData] = useState('');
 
@@ -108,28 +105,6 @@ export default function HomepageChatbot() {
     };
     fetchSystemData();
   }, []);
-
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Image must be less than 5MB");
-        return;
-      }
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageBase64(reader.result.split(',')[1]);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImageBase64(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -344,18 +319,16 @@ export default function HomepageChatbot() {
   };
 
   const sendMessage = async (messageText) => {
-    if ((!messageText.trim() && !imageBase64) || isTyping) return;
+    if (!messageText.trim() || isTyping) return;
 
-    const imagePayload = imageBase64 ? { data: imageBase64, mimeType: selectedImage.type } : null;
-    
-    // Clear image immediately for UI
-    setSelectedImage(null);
-    setImageBase64(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-
-    const userMessage = messageText.trim() || "[Attached an image]";
+    const userMessage = messageText.trim();
     setChatInput('');
-    const newHistoryUser = [...chatHistory, { role: 'user', content: userMessage + (imagePayload ? ' 🖼️' : '') }];
+    
+    const newHistoryUser = [...chatHistory, { 
+      role: 'user', 
+      content: userMessage
+    }];
+    
     const savedChatId = await updateAndSaveHistory(newHistoryUser, currentChatId);
     setIsTyping(true);
 
@@ -398,7 +371,7 @@ export default function HomepageChatbot() {
           paperContext,
           chatHistory: chatHistory.slice(1), // Exclude initial greeting
           userMessage,
-          image: imagePayload,
+          image: null,
           pdfUrl: null
         })
       });
@@ -450,10 +423,10 @@ export default function HomepageChatbot() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-80 sm:w-96 h-[500px] mb-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/40 dark:border-gray-700 transition-all origin-bottom-right relative animate-fade-in-up">
+        <div className="w-80 sm:w-96 h-[500px] mb-4 bg-white/10 dark:bg-black/20 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/30 dark:border-white/10 transition-all origin-bottom-right relative animate-fade-in-up">
           
           {/* Header */}
-          <div className="bg-[#7a2039] text-white p-4 flex justify-between items-center shrink-0 z-40 relative shadow-sm">
+          <div className="bg-[#7a2039]/90 backdrop-blur-sm text-white p-4 flex justify-between items-center shrink-0 z-40 relative shadow-sm border-b border-white/10">
             <div className="flex items-center gap-3">
               {currentUser && (
                 <button onClick={() => setShowSidebar(!showSidebar)} className="mr-1 text-white/80 hover:text-white transition cursor-pointer">
@@ -523,8 +496,8 @@ export default function HomepageChatbot() {
             </div>
           )}
 
-          {/* Chat History */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-transparent transition-colors z-10 scrollbar-hide">
+          {/* Chat Body */}
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-transparent relative z-20">
             {!historyLoaded ? (
               <div className="flex-1 flex items-center justify-center">
                 <span className="text-stone-400 dark:text-gray-500 text-sm animate-pulse">Loading...</span>
@@ -536,7 +509,7 @@ export default function HomepageChatbot() {
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
                   <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                    <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white/90 dark:bg-gray-800/90 border border-white/50 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
+                    <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039]/90 text-white rounded-tl-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm' : 'bg-white/80 dark:bg-black/40 border border-white/40 dark:border-white/10 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm'}`}>
                       {msg.role === 'model' && idx === chatHistory.length - 1 ? (
                         <TypewriterWord content={msg.content} />
                       ) : (
@@ -600,36 +573,16 @@ export default function HomepageChatbot() {
             </div>
           )}
 
-          {/* Image Preview Area */}
-          {selectedImage && (
-            <div className="absolute bottom-[72px] left-4 mb-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-stone-200 dark:border-gray-700 z-30 animate-fade-in-up">
-              <div className="relative">
-                <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="h-16 w-16 object-cover rounded-lg" />
-                <button type="button" onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600 cursor-pointer">&times;</button>
-              </div>
-            </div>
-          )}
-
           {/* Input Area */}
-          <form onSubmit={handleChatSubmit} className="p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm shrink-0 transition-colors relative z-20">
+          <form onSubmit={handleChatSubmit} className="p-3 bg-white/10 dark:bg-black/20 backdrop-blur-sm shrink-0 transition-colors relative z-20 border-t border-white/20 dark:border-white/10">
             <div className="flex gap-2">
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isTyping || isListening}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shadow-md shrink-0 disabled:opacity-50 bg-stone-200 dark:bg-gray-700 text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-gray-600"
-                title="Attach Image"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-              </button>
               <input 
                 type="text" 
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={isTyping}
                 placeholder={isListening ? "Listening..." : "Ask me anything..."}
-                className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-stone-50 dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors" 
+                className="flex-1 min-w-0 border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors placeholder-stone-500" 
               />
               <button
                 type="button"

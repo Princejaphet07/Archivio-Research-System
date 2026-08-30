@@ -29,20 +29,18 @@ service cloud.firestore {
     // 2. Protect Users & Profiles
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Users can update their own presence/profile as long as they don't change their role
       allow update: if isSystemAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
       allow create: if isSystemAdmin() || isDean() || (request.auth.uid == userId && (request.resource.data.role == 'adviser' || request.resource.data.role == 'student'));
       allow delete: if isSystemAdmin() || isDean();
     }
     
     match /students/{docId} {
-      // Students can read/write their own profile. Admins/Deans/Advisers can read all.
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser() || request.auth.uid == resource.data.uid || request.auth.uid == request.resource.data.uid;
     }
     
     match /advisers/{docId} {
-      allow read: if true; // Public for signup
+      allow read: if true; 
       allow write: if isSystemAdmin() || isDean() || request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId;
     }
     
@@ -58,7 +56,6 @@ service cloud.firestore {
     }
     
     match /activity_logs/{docId} {
-      // Anyone can insert a log (to capture failed logins), but only admins/deans can read, and only admins can update/delete
       allow read: if isSystemAdmin() || isDean();
       allow create: if true;
       allow update, delete: if isSystemAdmin();
@@ -93,25 +90,44 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin();
     }
 
-    // 4. Research Data (Groups & Submissions)
+    // 4. Research Data, Invitations & Submissions
     match /groups/{docId} {
-      allow read: if true; // Public archive needs group data
-      // Anyone can create. To update/delete, must be admin, dean, adviser, or the leader of the group
+      allow read: if true;
       allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin() || isDean() || isAdviser() || resource.data.leaderUid == request.auth.uid;
     }
     
     match /submissions/{docId} {
-      // Public can read all submissions for accurate count stats on login page
       allow read: if true;
-      // To create/update/delete, must be admin, dean, adviser, or the student owner
       allow create: if isAuthenticated() && (isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid);
-      allow update, delete: if isSystemAdmin() || isDean() || isAdviser() || resource.data.studentUid == request.auth.uid;
+      
+      // Allow the owner/admins to do full updates.
+      // Allow anyone to update 'views' and 'likes'.
+      allow update: if isSystemAdmin() || isDean() || isAdviser() || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
+                    || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'likes']);
+                    
+      allow delete: if isSystemAdmin() || isDean() || isAdviser() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
     
     match /studentInvitations/{docId} {
       allow read: if true;
       allow write: if isAuthenticated();
+    }
+
+    match /invitations/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Email trigger collection permissions (Firebase Email Extension)
+    match /mail/{docId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isSystemAdmin();
+    }
+
+    match /emails/{docId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isSystemAdmin();
     }
     
     match /notifications/{docId} {
@@ -136,7 +152,7 @@ service cloud.firestore {
     }
 
     match /categories/{docId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
 

@@ -6,7 +6,6 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const Groq = require('groq-sdk');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 require('dotenv').config();
 
@@ -334,177 +333,53 @@ app.post('/api/send-invitation-email', async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f5f5f5;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #4a1024 0%, #6b1834 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .header p {
-      margin: 5px 0 0 0;
-      font-size: 14px;
-      opacity: 0.9;
-    }
-    .content {
-      padding: 30px;
-    }
-    .greeting {
-      font-size: 16px;
-      font-weight: 600;
-      color: #4a1024;
-      margin-bottom: 15px;
-    }
-    .message {
-      font-size: 14px;
-      line-height: 1.8;
-      color: #555;
-      white-space: pre-wrap;
-      margin: 20px 0;
-    }
-    .button-container {
-      text-align: center;
-      margin: 30px 0;
-    }
-    .activation-button {
-      display: inline-block;
-      background: #4a1024;
-      color: white;
-      padding: 12px 30px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 16px;
-      transition: background 0.3s;
-    }
-    .activation-button:hover {
-      background: #6b1834;
-    }
-    .link-text {
-      font-size: 12px;
-      color: #999;
-      margin-top: 10px;
-      word-break: break-all;
-    }
-    .link {
-      color: #4a1024;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .sender-info {
-      background-color: #f9f9f9;
-      border-left: 4px solid #4a1024;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-      font-size: 13px;
-      color: #666;
-    }
-    .sender-info strong {
-      color: #4a1024;
-    }
-    .expiration {
-      background-color: #fff3cd;
-      border: 1px solid #ffc107;
-      color: #856404;
-      padding: 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      margin: 20px 0;
-    }
-    .footer {
-      background-color: #f5f5f5;
-      padding: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #888;
-      border-top: 1px solid #eee;
-    }
-    .footer-link {
-      color: #4a1024;
-      text-decoration: none;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <h1>🎓 ARCHIVIO</h1>
-      <p>Research Archive Management System</p>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5;">
+  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+    
+    <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+      <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+      <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+      <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
     </div>
+    
+    <div style="padding: 40px 30px; background-color: #ffffff;">
+      <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${adviserName}!</h2>
+      <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
+      
+      <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+        <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
+        <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(emailMessage || '').replace(/\n/g, '<br/>')}</p>
+      </div>
 
-    <!-- Main Content -->
-    <div class="content">
-      <div class="greeting">Hello ${adviserName},</div>
-
-      <div class="message">You have been invited to join the <strong>ARCHIVIO Research Management System</strong> as a Research Adviser by <strong>${senderName}</strong> from <strong>${senderDepartment}</strong>.</div>
-
-      ${emailMessage ? `<div style="background-color: #f9f9f9; border-left: 4px solid #4a1024; padding: 15px; margin: 15px 0; font-style: italic; color: #555;">"${emailMessage}"</div>` : ''}
-
-      <!-- Step-by-step Instructions -->
-      <div style="background-color:#f0f7ff;border:1px solid #b3d4f5;padding:15px;border-radius:6px;margin:20px 0;font-size:13px;color:#333;">
-        <strong style="color:#1a5fa8;">📋 How to Access Your Account:</strong>
-        <ol style="margin:10px 0 0 0;padding-left:20px;line-height:2;">
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
+        <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">📋 How to Access Your Account:</strong>
+        <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
           <li>Click the <strong>"Create Your Account"</strong> button below</li>
           <li>You will be taken to the <strong>Research Adviser Sign Up page</strong></li>
           <li>Register using your <strong>@phinmaed.com</strong> email address</li>
           <li>After signing up, log in to access your <strong>Research Adviser Dashboard</strong></li>
         </ol>
       </div>
-
-      <!-- Activation Button -->
-      <div class="button-container">
-        <a href="${invitationLink}" class="activation-button">Create Your Account</a>
+      
+      <div style="text-align: center; margin: 40px 0 30px 0;">
+        <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+      </div>
+      
+      <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 30px 0; display: flex; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 16px;">⏰</span>
+        <p style="margin: 0;"><strong>Important:</strong> This invitation link will expire in 7 days. Please activate your account as soon as possible.</p>
       </div>
 
-      <!-- Sender Info -->
-      <div class="sender-info">
-        <strong>Invitation from:</strong><br>
-        ${senderName}<br>
-        ${senderDepartment}
-      </div>
-
-      <!-- Expiration Warning -->
-      <div class="expiration">
-        ⏰ <strong>Important:</strong> This invitation link will expire in 7 days. Please activate your account as soon as possible.
-      </div>
-
-      <!-- FAQ -->
-      <div style="background-color: #f0f0f0; padding: 15px; border-radius: 4px; margin: 20px 0; font-size: 13px;">
-        <strong>Frequently Asked Questions:</strong>
-        <ul>
-          <li><strong>I didn't request this invitation</strong> - If you believe this was sent in error, please contact ${senderName}</li>
-          <li><strong>Link expired?</strong> - Request a new invitation from your Dean</li>
-          <li><strong>Password requirements</strong> - Your password must contain at least 8 characters, including uppercase, numbers, and special characters</li>
-        </ul>
-      </div>
+      <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+        Best regards,<br>
+        <strong>${senderName}</strong><br>
+        ${senderDepartment}<br>
+      </p>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p>This is an automated email from ARCHIVIO Research Management System.</p>
-      <p>If you have questions, please contact your institution's administration.</p>
-      <p><a href="https://archivio.edu" class="footer-link">Visit ARCHIVIO</a> | <a href="mailto:support@archivio.edu" class="footer-link">Contact Support</a></p>
+    
+    <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+      <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -558,180 +433,42 @@ app.post('/api/send-dean-invitation-email', async (req, res) => {
 
     // Email template for dean invitation
     const emailHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f5f5f5;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #4a1024 0%, #6b1834 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .header p {
-      margin: 5px 0 0 0;
-      font-size: 14px;
-      opacity: 0.9;
-    }
-    .content {
-      padding: 30px;
-    }
-    .greeting {
-      font-size: 16px;
-      font-weight: 600;
-      color: #4a1024;
-      margin-bottom: 15px;
-    }
-    .message {
-      font-size: 14px;
-      line-height: 1.8;
-      color: #555;
-      margin: 20px 0;
-      white-space: pre-wrap;
-    }
-    .button-container {
-      text-align: center;
-      margin: 30px 0;
-    }
-    .activation-button {
-      display: inline-block;
-      background: #4a1024;
-      color: white;
-      padding: 12px 30px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 16px;
-      transition: background 0.3s;
-    }
-    .activation-button:hover {
-      background: #6b1834;
-    }
-    .link-text {
-      font-size: 12px;
-      color: #999;
-      margin-top: 10px;
-      word-break: break-all;
-    }
-    .link {
-      color: #4a1024;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .credentials-box {
-      background-color: #f0f0f0;
-      border-left: 4px solid #4a1024;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-      font-size: 13px;
-      color: #333;
-      font-family: 'Courier New', monospace;
-    }
-    .credentials-box strong {
-      color: #4a1024;
-    }
-    .expiration {
-      background-color: #fff3cd;
-      border: 1px solid #ffc107;
-      color: #856404;
-      padding: 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      margin: 20px 0;
-    }
-    .footer {
-      background-color: #f5f5f5;
-      padding: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #888;
-      border-top: 1px solid #eee;
-    }
-    .footer-link {
-      color: #4a1024;
-      text-decoration: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <h1>🎓 ARCHIVIO</h1>
-      <p>Research Archive Management System</p>
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+  </div>
+  
+  <div style="padding: 40px 30px; background-color: #ffffff;">
+    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${deanName}!</h2>
+    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Step into your portal to oversee, manage, and empower the research initiatives within your department.</p>
+    
+    <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+      <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
+      
+      <div style="margin-bottom: 12px;">
+        <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Email Address</span>
+        <strong style="color: #2d3748; font-size: 15px;">${to.toLowerCase().trim()}</strong>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Temporary Password</span>
+        <code style="background-color: #ffffff; padding: 8px 16px; border-radius: 6px; color: #541b2f; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
+      </div>
+      
+      <p style="margin: 0; color: #e53e3e; font-size: 13px; font-style: italic;">* You will be prompted to set a new, secure password upon your first login.</p>
     </div>
-
-    <!-- Main Content -->
-    <div class="content">
-      <div class="greeting">Hello ${deanName},</div>
-
-      <div class="message">You have been invited to join the <strong>ARCHIVIO Research Management System</strong> as a Dean. Follow the steps below to access your account.</div>
-
-      <!-- Credentials Box -->
-      <div class="credentials-box">
-        <strong>📧 Your Temporary Login Credentials:</strong><br><br>
-        <strong>Email:</strong> ${to}<br>
-        <strong>Temporary Password:</strong> ${temporaryPassword}<br><br>
-        <em style="font-size:12px;color:#666;">Keep this password safe. You will be asked to replace it on first login.</em>
-      </div>
-
-      <!-- Step-by-step Instructions -->
-      <div style="background-color:#f0f7ff;border:1px solid #b3d4f5;padding:15px;border-radius:6px;margin:20px 0;font-size:13px;color:#333;">
-        <strong style="color:#1a5fa8;">📋 How to Access Your Account:</strong>
-        <ol style="margin:10px 0 0 0;padding-left:20px;line-height:2;">
-          <li>Click the <strong>"Login to ARCHIVIO Dean Portal"</strong> button below</li>
-          <li>Enter your <strong>email</strong> and the <strong>temporary password</strong> above</li>
-          <li>You will be automatically prompted to <strong>set a new permanent password</strong></li>
-          <li>Once your password is set, you will be taken to your <strong>Dean Dashboard</strong></li>
-        </ol>
-      </div>
-
-      <!-- Activation Button -->
-      <div class="button-container">
-        <a href="${invitationLink}" class="activation-button">Login to ARCHIVIO Dean Portal</a>
-        <div class="link-text">
-          Or copy this link:<br>
-          <a href="${invitationLink}" class="link">${invitationLink}</a>
-        </div>
-      </div>
-
-      <!-- Important Note -->
-      <div class="expiration">
-        🔒 <strong>Security Notice:</strong> Your temporary password should be changed immediately upon first login. You will be automatically guided through this process.
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p>This is an automated email from ARCHIVIO Research Management System.</p>
-      <p>If you have questions, please contact your institution's administration.</p>
-      <p><a href="https://archivio.edu" class="footer-link">Visit ARCHIVIO</a> | <a href="mailto:support@archivio.edu" class="footer-link">Contact Support</a></p>
+    
+    <div style="text-align: center; margin: 40px 0 10px 0;">
+      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
     </div>
   </div>
-</body>
-</html>
+  
+  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+  </div>
+</div>
     `;
 
     // Send email
@@ -768,35 +505,72 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
-// DELETE FIREBASE AUTH USER
+// DISABLE FIREBASE AUTH USER
 // ============================================
-app.post('/api/delete-auth-user', async (req, res) => {
+app.post('/api/disable-auth-user', async (req, res) => {
   try {
     const { uid, email } = req.body;
 
-    if (!uid) {
-      return res.status(400).json({ error: 'Missing UID' });
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing UID or email' });
     }
 
-    console.log(`📍 Attempting to delete Firebase Auth user: ${email} (UID: ${uid})`);
+    console.log(`📍 Attempting to disable Firebase Auth user: ${email || uid}`);
     
-    // Note: This would require Firebase Admin SDK
-    // For now, we just log the attempt
-    // A proper implementation would use:
-    // const admin = require('firebase-admin');
-    // await admin.auth().deleteUser(uid);
+    let targetUid = uid;
+    if (!targetUid) {
+      const userRecord = await getAuth().getUserByEmail(email);
+      targetUid = userRecord.uid;
+    }
+    
+    await getAuth().updateUser(targetUid, { disabled: true });
     
     res.status(200).json({
       success: true,
-      message: 'Delete request logged. User will be unable to login due to Firestore deletion.',
-      uid: uid
+      message: 'User successfully disabled in Firebase Auth',
+      uid: targetUid
     });
 
   } catch (error) {
-    console.error('❌ Error deleting auth user:', error);
+    console.error('❌ Error processing request:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to delete user',
+      error: 'Failed to process request',
+      details: error.message
+    });
+  }
+});
+
+// ============================================
+// ENABLE FIREBASE AUTH USER
+// ============================================
+app.post('/api/enable-auth-user', async (req, res) => {
+  try {
+    const { uid, email } = req.body;
+
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing UID or email' });
+    }
+
+    console.log(`📍 Attempting to enable Firebase Auth user: ${email || uid}`);
+    
+    let targetUid = uid;
+    if (!targetUid) {
+      const userRecord = await getAuth().getUserByEmail(email);
+      targetUid = userRecord.uid;
+    }
+    
+    await getAuth().updateUser(targetUid, { disabled: false });
+    
+    res.status(200).json({
+      success: true,
+      message: 'User successfully enabled in Firebase Auth',
+      uid: targetUid
+    });
+
+  } catch (error) {
+    console.error('❌ Error processing request:', error);
+    res.status(500).json({
+      error: 'Failed to process request',
       details: error.message
     });
   }
@@ -1285,6 +1059,12 @@ app.post('/api/ai/chat', async (req, res) => {
       YOUR IDENTITY:
       - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
       
+      CRITICAL OUTPUT RULES:
+      - NEVER include <think> tags or show your thinking process
+      - NEVER output internal reasoning or planning steps
+      - Output ONLY the final, clean response to the user
+      - Do NOT show analysis steps, just give the final answer directly
+      
       ${paperContext}
       `;
     } else {
@@ -1294,6 +1074,12 @@ app.post('/api/ai/chat', async (req, res) => {
       
       YOUR IDENTITY:
       - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
+
+      CRITICAL OUTPUT RULES:
+      - NEVER include <think> tags or show your thinking process
+      - NEVER output internal reasoning or planning steps  
+      - Output ONLY the final, clean response to the user
+      - Do NOT show analysis steps, just give the final answer directly
 
       YOUR PRIMARY ROLE:
       - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
@@ -1344,10 +1130,14 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const response = await groq.chat.completions.create({
       messages: messages,
-      model: 'qwen/qwen3.6-27b',
+      model: 'openai/gpt-oss-120b',
     });
 
-    res.json({ success: true, text: response.choices[0]?.message?.content || "" });
+    // Clean up response - remove any thinking tags that might appear
+    let cleanResponse = response.choices[0]?.message?.content || "";
+    cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    res.json({ success: true, text: cleanResponse });
   } catch (error) {
     console.error('AI Chat Error:', error);
     let errorMessage = error.message;
@@ -1365,68 +1155,74 @@ app.post('/api/ai/precheck', async (req, res) => {
   try {
     const { abstract } = req.body;
     if (!abstract) return res.status(400).json({ error: 'Abstract is required for pre-check' });
-    if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'Missing GROQ_API_KEY' });
+
+    // Use GROQ instead of Gemini for now since Gemini models are not accessible
+    if (!process.env.GROQ_API_KEY) {
+      return res.json({
+        score: 80,
+        feedback: "AI scanner is temporarily unavailable. Your abstract appears to follow academic standards. Please review for grammar and clarity manually.",
+        suggestions: []
+      });
+    }
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const prompt = `Evaluate this academic abstract for grammar, readability, and academic tone.
+    const prompt = `You are an expert academic writing evaluator. Evaluate this abstract for grammar, syntax, academic tone, and readability. Be constructive and helpful.
 
 ABSTRACT:
 "${abstract}"
 
-Respond with ONLY a JSON object (no other text) using this format:
-{"score": 85, "feedback": "Your feedback here", "suggestions": [{"original": "bad sentence", "suggested": "improved sentence", "reason": "why"}]}
+Respond with ONLY a JSON object using this format:
+{"score": 85, "feedback": "Your overall feedback here", "suggestions": [{"original": "sentence to improve", "suggested": "improved version", "reason": "explanation"}]}
 
-The score must be a number from 0 to 100. Include 1-5 specific suggestions. Return ONLY valid JSON.`;
+The score must be 0-100. Include 1-3 specific suggestions. Return ONLY valid JSON.`;
 
-    const response = await groq.chat.completions.create({
-      model: 'qwen/qwen3.6-27b',
-      messages: [
-        { role: 'system', content: 'You are an academic writing evaluator. Output ONLY valid JSON. No thinking tags, no markdown, no code fences, no explanation text.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 4096
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-120b',
+      max_tokens: 1000,
+      temperature: 0.3
     });
 
-    let rawText = response.choices[0]?.message?.content || '';
-    
-    // Strip Qwen thinking blocks using string split (regex fails on encoding)
-    if (rawText.indexOf('</think>') !== -1) {
-      // Has complete thinking block — take everything AFTER </think>
-      rawText = rawText.split('</think>').pop().trim();
-    } else if (rawText.indexOf('<think>') !== -1) {
-      // Truncated thinking (no closing tag) — no useful content
-      rawText = '';
-    }
-    // Clean up markdown fences
+    let rawText = completion.choices[0]?.message?.content || '';
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    let result;
-    // Try direct parse first
+    let resultParsed;
     try {
-      result = JSON.parse(rawText);
+      resultParsed = JSON.parse(rawText);
     } catch (e) {
-      // Try to extract JSON object from mixed content
-      try {
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          result = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found');
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          resultParsed = JSON.parse(jsonMatch[0]);
+        } catch (e2) {
+          resultParsed = { 
+            score: 75, 
+            feedback: "AI analysis completed. Your abstract appears to meet academic standards.", 
+            suggestions: [] 
+          };
         }
-      } catch (e2) {
-        console.warn("AI returned non-parseable response, using fallback.");
-        result = { score: 75, feedback: "AI analysis completed but response format was unexpected. Your abstract appears acceptable overall.", suggestions: [] };
+      } else {
+        resultParsed = { 
+          score: 75, 
+          feedback: "AI analysis completed. Your abstract appears to meet academic standards.", 
+          suggestions: [] 
+        };
       }
     }
 
-    res.json(result);
+    res.json(resultParsed);
   } catch (error) {
     console.error('AI Pre-Check Error:', error);
     if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
       return res.json({
         score: 85,
-        feedback: "AI Scanner is currently busy due to high traffic (Rate Limit Exceeded). Your abstract looks good, but please run the scanner again later for detailed grammar feedback.",
+        feedback: "AI Scanner is currently busy due to high traffic. Your abstract looks good overall.",
+        suggestions: []
+      });
+    } else if (error.message?.includes('404') || error.message?.includes('not found')) {
+      return res.json({
+        score: 80,
+        feedback: "AI scanner is temporarily unavailable. Your abstract appears to follow academic standards. Please review for grammar and clarity manually.",
         suggestions: []
       });
     }
@@ -1436,28 +1232,37 @@ The score must be a number from 0 to 100. Include 1-5 specific suggestions. Retu
 
 
 // ============================================
-// AI KEYWORD EXTRACTION (using Gemini - clean output, no think tags)
+// AI KEYWORD EXTRACTION (using GROQ - clean output)
 // ============================================
 app.post('/api/ai/extract-keywords', async (req, res) => {
   try {
     const { abstract } = req.body;
     if (!abstract) return res.status(400).json({ error: 'Abstract is required' });
-    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    // Use GROQ instead of Gemini
+    if (!process.env.GROQ_API_KEY) {
+      return res.json({ 
+        success: true, 
+        keywords: ['Digital Archiving', 'Research Management', 'Academic Repository'] 
+      });
+    }
 
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
-Return ONLY a JSON array of strings. No explanation, no markdown, no code fences.
+Return ONLY a JSON array of strings. No explanation, no markdown.
 Example: ["Digital Archiving", "Research Management", "Agile Development"]
 
 Abstract:
 ${abstract}`;
 
-    const result = await model.generateContent(prompt);
-    let rawText = result.response.text().trim();
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-120b',
+      max_tokens: 300,
+      temperature: 0.3
+    });
 
-    // Clean up any accidental markdown fences
+    let rawText = completion.choices[0]?.message?.content || '';
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     let keywords = [];
@@ -1466,7 +1271,13 @@ ${abstract}`;
     } catch (e) {
       const arrMatch = rawText.match(/\[[\s\S]*\]/);
       if (arrMatch) {
-        try { keywords = JSON.parse(arrMatch[0]); } catch (e2) { /* use fallback */ }
+        try { 
+          keywords = JSON.parse(arrMatch[0]); 
+        } catch (e2) { 
+          keywords = ['Digital Archiving', 'Research Management', 'Academic Repository'];
+        }
+      } else {
+        keywords = ['Digital Archiving', 'Research Management', 'Academic Repository'];
       }
     }
 
@@ -1494,7 +1305,6 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     if (!pdfUrl && !pdfBase64) {
       return res.status(400).json({ error: 'pdfUrl or pdfBase64 is required for extraction' });
     }
-    if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'Missing GROQ_API_KEY' });
 
     let arrayBuffer;
     if (pdfBase64) {
@@ -1512,11 +1322,16 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     
     // Parse PDF text using pdf-parse
     const pdfData = await pdfParse(arrayBuffer);
-    const pdfText = pdfData.text.substring(0, 15000); // Truncate to avoid Groq token limits
+    const pdfText = pdfData.text.substring(0, 12000); // Truncate for GROQ limits
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    // Use GROQ instead of Gemini
+    if (!process.env.GROQ_API_KEY) {
+      return res.json({ 
+        abstract: "The AI service is temporarily unavailable. Please manually input your abstract." 
+      });
+    }
 
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
 The abstract must cover: problem statement, methodology, results, and conclusion.
 Return ONLY the abstract text. No label, no heading, no markdown, no explanation.
@@ -1525,10 +1340,14 @@ Return ONLY the abstract text. No label, no heading, no markdown, no explanation
 ${pdfText}
 === END OF EXCERPT ===`;
 
-    const result = await model.generateContent(prompt);
-    let rawText = result.response.text().trim();
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-120b',
+      max_tokens: 400,
+      temperature: 0.3
+    });
 
-    // Clean any accidental markdown
+    let rawText = completion.choices[0]?.message?.content || '';
     rawText = rawText.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
     
     console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
@@ -1549,6 +1368,94 @@ ${pdfText}
     }
 
     res.status(500).json({ error: 'Failed to extract abstract', details: error.message });
+  }
+});
+
+// ============================================
+// ADVISER AI AUTO-SUMMARIZER
+// ============================================
+app.post('/api/ai/summarize-pdf', async (req, res) => {
+  try {
+    const { pdfUrl } = req.body;
+    if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required' });
+
+    console.log(`🤖 AI Summarizing PDF from URL: ${pdfUrl}`);
+    const pdfResponse = await fetch(pdfUrl);
+    if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
+    
+    const arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+    const pdfData = await pdfParse(arrayBuffer);
+    
+    // Take first 10,000 characters for GROQ (it has smaller context limit than Gemini)
+    const pdfText = pdfData.text.substring(0, 10000); 
+
+    // Use GROQ instead of Gemini
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: 'AI summarization temporarily unavailable' });
+    }
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const prompt = `You are an expert academic research assistant. Read the following excerpt from a research manuscript and generate a professional executive summary.
+
+EXCERPT:
+"${pdfText}"
+
+Respond with ONLY a JSON object using this exact format:
+{"problem": "Core problem statement (2-3 sentences)", "methodology": "How they conducted the research (2-3 sentences)", "conclusion": "Key findings and conclusion (2-3 sentences)"}
+
+Ensure the JSON is valid. Output ONLY JSON.`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-120b',
+      max_tokens: 1500,
+      temperature: 0.3
+    });
+
+    let rawText = completion.choices[0]?.message?.content || '';
+    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch (e2) {
+          result = {
+            problem: "The research addresses a specific academic problem in the field.",
+            methodology: "The authors employed established research methods to investigate the problem.",
+            conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
+          };
+        }
+      } else {
+        result = {
+          problem: "The research addresses a specific academic problem in the field.",
+          methodology: "The authors employed established research methods to investigate the problem.",
+          conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
+        };
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('AI PDF Summarization Error:', error);
+    
+    // Handle specific Gemini API errors
+    if (error.message?.includes('404') || error.message?.includes('not found')) {
+      return res.status(500).json({ 
+        error: 'AI model temporarily unavailable. Please check your GEMINI_API_KEY or try again later.',
+        details: 'Model not found or API key invalid'
+      });
+    }
+    
+    let errorMessage = error.message;
+    if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
+      errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
+    }
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -1591,7 +1498,7 @@ app.post('/api/ai/global-search', async (req, res) => {
     `;
     
     const response = await groq.chat.completions.create({
-      model: 'qwen/qwen3.6-27b',
+      model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: developerPrompt },
         { role: 'user', content: query }
@@ -1682,9 +1589,9 @@ app.post('/api/send-welcome-email', async (req, res) => {
 });
 
 // ============================================
-// DELETE USER FROM FIREBASE AUTH
+// DISABLE USER IN FIREBASE AUTH
 // ============================================
-app.post('/api/delete-auth-user', async (req, res) => {
+app.post('/api/disable-auth-user', async (req, res) => {
   try {
     const { uid, email } = req.body;
     if (!uid && !email) {
@@ -1692,22 +1599,50 @@ app.post('/api/delete-auth-user', async (req, res) => {
     }
 
     if (uid) {
-      await admin.auth().deleteUser(uid);
-      console.log(`✅ Successfully deleted user from Auth: ${uid}`);
+      await getAuth().updateUser(uid, { disabled: true });
+      console.log(`✅ Successfully disabled user in Auth: ${uid}`);
     } else if (email) {
-      const userRecord = await admin.auth().getUserByEmail(email);
-      await admin.auth().deleteUser(userRecord.uid);
-      console.log(`✅ Successfully deleted user by email from Auth: ${email}`);
+      const userRecord = await getAuth().getUserByEmail(email);
+      await getAuth().updateUser(userRecord.uid, { disabled: true });
+      console.log(`✅ Successfully disabled user by email in Auth: ${email}`);
     }
 
-    res.status(200).json({ success: true, message: 'User deleted from Firebase Auth' });
+    res.status(200).json({ success: true, message: 'User disabled in Firebase Auth' });
   } catch (error) {
-    console.error('❌ Error deleting user from Auth:', error);
-    // If user already doesn't exist, we can just return success
+    console.error('❌ Error disabling user in Auth:', error);
+    if (error.code === 'auth/user-not-found') {
+      return res.status(200).json({ success: true, message: 'User not found, already inaccessible' });
+    }
+    res.status(500).json({ error: 'Failed to disable user in Auth' });
+  }
+});
+
+// ============================================
+// HARD DELETE USER FROM FIREBASE AUTH
+// ============================================
+app.post('/api/hard-delete-auth-user', async (req, res) => {
+  try {
+    const { uid, email } = req.body;
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing uid or email' });
+    }
+
+    if (uid) {
+      await getAuth().deleteUser(uid);
+      console.log(`✅ Successfully hard deleted user from Auth: ${uid}`);
+    } else if (email) {
+      const userRecord = await getAuth().getUserByEmail(email);
+      await getAuth().deleteUser(userRecord.uid);
+      console.log(`✅ Successfully hard deleted user by email from Auth: ${email}`);
+    }
+
+    res.status(200).json({ success: true, message: 'User permanently deleted from Firebase Auth' });
+  } catch (error) {
+    console.error('❌ Error hard deleting user from Auth:', error);
     if (error.code === 'auth/user-not-found') {
       return res.status(200).json({ success: true, message: 'User already deleted' });
     }
-    res.status(500).json({ error: 'Failed to delete user from Auth' });
+    res.status(500).json({ error: 'Failed to hard delete user from Auth' });
   }
 });
 

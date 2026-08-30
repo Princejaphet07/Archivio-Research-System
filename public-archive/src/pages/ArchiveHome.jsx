@@ -213,9 +213,9 @@ function ArchiveHome() {
           <p className="text-xs md:text-sm text-stone-200 max-w-2xl mx-auto font-sans leading-relaxed mt-4 drop-shadow-md px-4">
             Discover peer-reviewed research, theses, and academic manuscripts from SWU PHINMA students and faculty.
           </p>
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 rounded-xl p-1 mt-6 md:mt-8 max-w-3xl mx-auto shadow-2xl font-sans w-full">
             <div className="flex flex-1 relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-400">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 dark:text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </div>
               <input
@@ -223,10 +223,10 @@ function ArchiveHome() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={placeholderText}
-                className="w-full py-3 pl-12 pr-4 outline-none text-stone-700 dark:text-gray-200 bg-transparent text-sm md:text-base placeholder-stone-400/70 dark:placeholder-gray-500 transition-all"
+                className="w-full py-3 pl-12 pr-4 outline-none text-white dark:text-gray-100 bg-transparent text-sm md:text-base placeholder-white/70 dark:placeholder-gray-400 transition-all font-medium"
               />
             </div>
-            <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0">Search</button>
+            <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0 shadow-sm border border-[#6b142c]/50">Search</button>
           </form>
           <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
             <span className="text-stone-300 w-full md:w-auto text-center mb-1 md:mb-0">Popular:</span>

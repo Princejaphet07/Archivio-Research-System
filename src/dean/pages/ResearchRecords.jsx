@@ -70,12 +70,19 @@ export default function ResearchRecords() {
     if (!deanData) return;
     const deanDept = deanData.department || '';
 
-    // Listen to groups — filter by department
+    // Listen to groups — filter by department (robust partial match)
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
       const allGroupsData = groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      // DEPARTMENT FILTER
-      const groupsData = allGroupsData.filter(g => g.department === deanDept);
+      const deptLower = deanDept.toLowerCase();
+      // DEPARTMENT FILTER: flexible match to support new deans on same department
+      const groupsData = allGroupsData.filter(g => {
+        const gDept = (g.department || '').toLowerCase();
+        const gProg = (g.program || '').toLowerCase();
+        if (!deptLower) return false;
+        return gDept.includes(deptLower) || deptLower.includes(gDept) ||
+               gProg.includes(deptLower) || deptLower.includes(gProg);
+      });
       
       // Listen to submissions
       const unsubSubs = onSnapshot(collection(db, 'submissions'), (subsSnapshot) => {

@@ -261,12 +261,12 @@ export default function UserManagement() {
 
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: `Are you sure you want to delete ${selectedUsers.size} user(s)? This action cannot be undone.`,
+      text: `Are you sure you want to deactivate ${selectedUsers.size} user(s)? This will prevent them from logging in, but keep their data.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, delete!'
+      confirmButtonText: 'Yes, deactivate!'
     });
     if (!result.isConfirmed) return;
 
@@ -276,54 +276,140 @@ export default function UserManagement() {
         const userDoc = allUsers.find(u => u.id === userId);
         if (!userDoc) continue;
 
-        // Delete from the correct Firestore collection
-        await deleteDoc(doc(db, userDoc._collection, userId));
+        // Update status in the specific Firestore collection
+        await updateDoc(doc(db, userDoc._collection, userId), { status: 'inactive' });
 
-        // Delete from users collection
+        // Update status in users collection
         if (userDoc.uid) {
           try {
-            await deleteDoc(doc(db, 'users', userDoc.uid));
+            await updateDoc(doc(db, 'users', userDoc.uid), { status: 'inactive' });
           } catch (userError) {
-            console.warn(`Could not delete user profile:`, userError);
+            console.warn(`Could not update user profile:`, userError);
           }
         }
 
-        // Delete Firebase Auth account via backend
+        // Disable Firebase Auth account via backend
         if (userDoc.uid) {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/delete-auth-user`, {
+            await fetch(`${backendUrl}/api/disable-auth-user`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ uid: userDoc.uid, email: userDoc.email })
             });
           } catch (deleteAuthError) {
-            console.warn(`Could not delete Firebase Auth account:`, deleteAuthError);
+            console.warn(`Could not disable Firebase Auth account:`, deleteAuthError);
           }
         }
       }
 
       Swal.fire({
-        title: 'Success!',
-        text: `${selectedUsers.size} user(s) deleted successfully!`,
         icon: 'success',
-        confirmButtonColor: '#801e38'
+        title: 'Deactivated!',
+        text: `${selectedUsers.size} user(s) deactivated successfully!`,
+        confirmButtonColor: '#7B1F35'
       });
       setSelectedUsers(new Set());
 
-      // 📅 Log deletion
+      // 📅 Log deactivation
       await logActivity({
         user: auth.currentUser?.email || 'System Admin',
         role: 'System Admin',
-        action: `Deleted ${selectedUsers.size} user account(s)`,
-        status: 'Success',
-        details: `UIDs removed from system`,
+        action: `Deactivated ${selectedUsers.size} user account(s)`,
+        details: Array.from(selectedUsers).join(', '),
+        status: 'Success'
+      });
+    } catch (e) {
+      console.error(e);
+      setError('Failed to deactivate user(s). Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHardDeleteSelectedUsers = async () => {
+    if (selectedUsers.size === 0) {
+      setError('Please select users to delete');
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Permanently Delete?',
+      text: `Are you sure you want to permanently delete ${selectedUsers.size} user(s)? This will wipe ALL their data from the system.`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, wipe data!'
+    });
+    if (!result.isConfirmed) return;
+
+    setLoading(true);
+    try {
+      for (const userId of selectedUsers) {
+        const userDoc = allUsers.find(u => u.id === userId);
+        if (!userDoc) continue;
+
+        await deleteDoc(doc(db, userDoc._collection, userId));
+        if (userDoc.uid) await deleteDoc(doc(db, 'users', userDoc.uid));
+
+        // Cascading Delete
+        try {
+          if (userDoc.role === 'Student') {
+            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', userDoc.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            if (userDoc.uid) {
+              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', userDoc.uid));
+              const snapSub = await getDocs(qSub);
+              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
+            }
+          } else if (userDoc.role === 'Adviser' || userDoc.role === 'Dean') {
+            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', userDoc.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', userDoc.email));
+            const snapReq = await getDocs(qReq);
+            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
+          }
+        } catch (cleanupErr) {
+          console.error("Error cleaning up related data:", cleanupErr);
+        }
+
+        if (userDoc.uid) {
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: userDoc.uid, email: userDoc.email })
+            });
+          } catch (deleteAuthError) {
+            console.warn(`Could not hard delete Firebase Auth account:`, deleteAuthError);
+          }
+        }
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: `${selectedUsers.size} user(s) permanently deleted successfully!`,
+        confirmButtonColor: '#7B1F35'
       });
 
-      await fetchDeans();
-    } catch (error) {
-      console.error('Error deleting users:', error);
-      setError('Failed to delete user(s). Please try again.');
+      await logActivity({
+        user: auth.currentUser?.email || 'System Admin',
+        role: 'System Admin',
+        action: `Permanently Deleted ${selectedUsers.size} user account(s)`,
+        details: Array.from(selectedUsers).join(', '),
+        status: 'Success'
+      });
+      setSelectedUsers(new Set());
+    } catch (e) {
+      console.error(e);
+      setError('Failed to permanently delete user(s). Please try again.');
     } finally {
       setLoading(false);
     }
@@ -371,14 +457,56 @@ export default function UserManagement() {
   };
 
   const handleDeleteSingleUser = async (user) => {
+    const isInactive = user.status === 'inactive';
+    const actionText = isInactive ? 'Activate' : 'Deactivate';
+    
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: `Delete ${user.displayName}? This action cannot be undone.`,
+      text: `${actionText} ${user.displayName}? ${isInactive ? 'This will allow them to log in again.' : 'This will prevent them from logging in, but keep their data.'}`,
       icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: isInactive ? '#10b981' : '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, ${actionText.toLowerCase()}!`
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        const newStatus = isInactive ? 'active' : 'inactive';
+        await updateDoc(doc(db, user._collection, user.id), { status: newStatus });
+        if (user.uid) await updateDoc(doc(db, 'users', user.uid), { status: newStatus });
+
+        if (user.uid || user.email) {
+          try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            const endpoint = isInactive ? 'enable-auth-user' : 'disable-auth-user';
+            await fetch(`${backendUrl}/api/${endpoint}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: user.uid, email: user.email })
+            });
+          } catch (err) { }
+        }
+
+        Swal.fire(`${actionText}d!`, `User has been ${actionText.toLowerCase()}d.`, 'success');
+      } catch (e) {
+        Swal.fire('Error', `Could not ${actionText.toLowerCase()} user.`, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleHardDeleteSingleUser = async (user) => {
+    const result = await Swal.fire({
+      title: 'Permanently Delete?',
+      text: `Delete ${user.displayName}? This will wipe ALL their data from the system.`,
+      icon: 'error',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, delete!'
+      confirmButtonText: 'Yes, wipe data!'
     });
 
     if (result.isConfirmed) {
@@ -387,10 +515,35 @@ export default function UserManagement() {
         await deleteDoc(doc(db, user._collection, user.id));
         if (user.uid) await deleteDoc(doc(db, 'users', user.uid));
 
+        // Cascading Delete
+        try {
+          if (user.role === 'Student') {
+            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', user.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            if (user.uid) {
+              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', user.uid));
+              const snapSub = await getDocs(qSub);
+              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
+            }
+          } else if (user.role === 'Adviser' || user.role === 'Dean') {
+            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', user.email));
+            const snapGroup = await getDocs(qGroup);
+            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
+
+            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', user.email));
+            const snapReq = await getDocs(qReq);
+            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
+          }
+        } catch (cleanupErr) {
+          console.error("Error cleaning up related data:", cleanupErr);
+        }
+
         if (user.uid) {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/delete-auth-user`, {
+            await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ uid: user.uid, email: user.email })
@@ -398,7 +551,7 @@ export default function UserManagement() {
           } catch (err) { }
         }
 
-        Swal.fire('Deleted!', 'User has been deleted.', 'success');
+        Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
       } catch (e) {
         Swal.fire('Error', 'Could not delete user.', 'error');
       } finally {
@@ -703,25 +856,40 @@ export default function UserManagement() {
           message: {
             subject: "Invitation to Join ARCHIVIO as a Dean",
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
                 </div>
-                <div style="padding: 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName.trim()},</h2>
-                  <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a Dean.</p>
+                
+                <div style="padding: 40px 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()}!</h2>
+                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Step into your portal to oversee, manage, and empower the research initiatives within your department.</p>
                   
-                  <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Temporary Credentials:</strong></p>
-                    <p style="margin: 0; color: #2d3748;">Email: ${formData.email.toLowerCase().trim()}</p>
-                    <p style="margin: 5px 0 0 0; color: #2d3748;">Temporary Password: <strong>${temporaryPassword}</strong></p>
-                    <p style="margin: 10px 0 0 0; color: #e53e3e; font-size: 12px;"><em>Please log in with these credentials and you'll be prompted to create a new password.</em></p>
+                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+                    <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
+                    
+                    <div style="margin-bottom: 12px;">
+                      <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Email Address</span>
+                      <strong style="color: #2d3748; font-size: 15px;">${formData.email.toLowerCase().trim()}</strong>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                      <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Temporary Password</span>
+                      <code style="background-color: #ffffff; padding: 8px 16px; border-radius: 6px; color: #541b2f; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
+                    </div>
+                    
+                    <p style="margin: 0; color: #e53e3e; font-size: 13px; font-style: italic;">* You will be prompted to set a new, secure password upon your first login.</p>
                   </div>
                   
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Dean Portal</a>
+                  <div style="text-align: center; margin: 40px 0 10px 0;">
+                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
                   </div>
+                </div>
+                
+                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
                 </div>
               </div>
             `
@@ -799,18 +967,24 @@ export default function UserManagement() {
           message: {
             subject: "Reminder: Invitation to Join ARCHIVIO as a Dean",
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #541b2f; padding: 20px; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                  <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
                 </div>
-                <div style="padding: 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0;">Hi ${deanName},</h2>
-                  <p style="color: #4a5568; line-height: 1.6;">This is a reminder that you have been invited to join the ARCHIVIO Research Management System as a Dean.</p>
+                
+                <div style="padding: 40px 30px; background-color: #ffffff;">
+                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${deanName},</h2>
+                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
                   
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Dean Portal</a>
+                  <div style="text-align: center; margin: 40px 0 10px 0;">
+                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
                   </div>
+                </div>
+                
+                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
                 </div>
               </div>
             `
@@ -884,9 +1058,14 @@ export default function UserManagement() {
                   Add User
                 </PremiumButton>
                 {selectedUsers.size > 0 && (
-                  <PremiumButton onClick={handleDeleteSelectedDeans} disabled={loading} variant="danger" icon={<Trash2 className="w-4 h-4" />}>
-                    Delete ({selectedUsers.size})
-                  </PremiumButton>
+                  <>
+                    <PremiumButton onClick={handleDeleteSelectedDeans} disabled={loading} variant="primary" icon={<span className="font-bold text-xs">⊗</span>}>
+                      Deactivate ({selectedUsers.size})
+                    </PremiumButton>
+                    <PremiumButton onClick={handleHardDeleteSelectedUsers} disabled={loading} variant="danger" icon={<Trash2 className="w-4 h-4" />}>
+                      Delete ({selectedUsers.size})
+                    </PremiumButton>
+                  </>
                 )}
               </div>
             </div>
@@ -910,13 +1089,13 @@ export default function UserManagement() {
                         className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                       />
                     </th>
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">NAME ↕</th>
-                    <th className="px-6 py-4">EMAIL</th>
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">DEPARTMENT ↕</th>
-                    <th className="px-6 py-4">ROLE</th>
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">STATUS ↕</th>
-                    <th className="px-6 py-4 cursor-pointer hover:text-stone-600">CREATED ↕</th>
-                    <th className="px-6 py-4 text-center">ACTIONS</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">NAME ↕</th>
+                    <th className="px-3 py-3">EMAIL</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">DEPARTMENT ↕</th>
+                    <th className="px-3 py-3">ROLE</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">STATUS ↕</th>
+                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600">CREATED ↕</th>
+                    <th className="px-3 py-3 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-sm">
@@ -937,10 +1116,10 @@ export default function UserManagement() {
                             className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                           />
                         </td>
-                        <td className="px-6 py-4 font-bold text-stone-800 whitespace-nowrap">{user.displayName}</td>
-                        <td className="px-6 py-4 text-stone-500 whitespace-nowrap">{user.email}</td>
-                        <td className="px-6 py-4 text-stone-700 font-medium whitespace-nowrap">{user.department || '—'}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-3 font-bold text-stone-800 whitespace-nowrap">{user.displayName}</td>
+                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{user.email}</td>
+                        <td className="px-3 py-3 text-stone-700 font-medium whitespace-nowrap">{user.department || '—'}</td>
+                        <td className="px-3 py-3">
                           <div className="flex gap-1.5 flex-wrap">
                             {user.role === 'super-admin' && (
                               <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-700">
@@ -964,14 +1143,14 @@ export default function UserManagement() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-3">
                           <span className={`text-[11px] font-bold px-3 py-1 rounded-full text-white ${user.status === 'active' ? 'bg-emerald-600' : 'bg-[#801e38]'
                             }`}>
-                            {user.status === 'active' ? 'Active' : 'Pending'}
+                            {user.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-stone-400 whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-3 text-stone-400 whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-3">
                           {user.status === 'pending' ? (
                             <div className="flex justify-center">
                               <button
@@ -999,8 +1178,19 @@ export default function UserManagement() {
                               </button>
                               <button
                                 onClick={() => handleDeleteSingleUser(user)}
-                                className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
-                                title="Delete user"
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                                  user.status === 'inactive'
+                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700'
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
+                                }`}
+                                title={user.status === 'inactive' ? 'Activate user' : 'Deactivate user'}
+                              >
+                                {user.status === 'inactive' ? 'Activate' : 'Deactivate'}
+                              </button>
+                              <button
+                                onClick={() => handleHardDeleteSingleUser(user)}
+                                className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Permanently Delete user"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1377,7 +1567,7 @@ export default function UserManagement() {
       {showAddDeptModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#801e38] px-6 py-4 flex justify-between items-center">
+            <div className="bg-[#801e38] px-3 py-3 flex justify-between items-center">
               <h3 className="text-white font-bold text-lg">Add New Department</h3>
               <button onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
             </div>
@@ -1393,7 +1583,7 @@ export default function UserManagement() {
                 autoFocus
               />
             </div>
-            <div className="bg-stone-50 px-6 py-4 flex justify-end gap-3 border-t border-stone-200">
+            <div className="bg-stone-50 px-3 py-3 flex justify-end gap-3 border-t border-stone-200">
               <button
                 onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"
@@ -1416,7 +1606,7 @@ export default function UserManagement() {
       {showAddProgModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#801e38] px-6 py-4 flex justify-between items-center">
+            <div className="bg-[#801e38] px-3 py-3 flex justify-between items-center">
               <h3 className="text-white font-bold text-lg">Add New Program</h3>
               <button onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
             </div>
@@ -1448,7 +1638,7 @@ export default function UserManagement() {
                 />
               </div>
             </div>
-            <div className="bg-stone-50 px-6 py-4 flex justify-end gap-3 border-t border-stone-200">
+            <div className="bg-stone-50 px-3 py-3 flex justify-end gap-3 border-t border-stone-200">
               <button
                 onClick={() => { setShowAddProgModal(false); setNewProgCode(''); setNewProgName(''); }}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 transition"

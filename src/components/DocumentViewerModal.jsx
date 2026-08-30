@@ -1,14 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, Download, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { getDownloadURL, ref } from 'firebase/storage';
+import { storage } from '../firebase/config';
+import AnnotatablePDFViewer from './AnnotatablePDFViewer';
 
-const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role, initialNote, onSaveNote }) => {
+const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role, initialNote, onSaveNote, initialAnnotations = {}, onSaveAnnotations }) => {
   const [iframeError, setIframeError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [note, setNote] = useState(initialNote || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [quickPage, setQuickPage] = useState('');
+  const [quickComment, setQuickComment] = useState('');
+  const [resolvedUrl, setResolvedUrl] = useState('');
+
+  // Automatically resolve Firebase Storage relative paths to full download URLs
+  useEffect(() => {
+    if (!documentUrl) {
+      setResolvedUrl('');
+      return;
+    }
+    if (documentUrl.startsWith('http') || documentUrl.startsWith('data:')) {
+      setResolvedUrl(documentUrl);
+    } else {
+      getDownloadURL(ref(storage, documentUrl))
+        .then(url => setResolvedUrl(url))
+        .catch(err => {
+          console.error("Failed to resolve document URL:", err);
+          setResolvedUrl(documentUrl); // fallback
+        });
+    }
+  }, [documentUrl]);
 
   // Update note if initialNote changes (e.g. when opening a different document)
-  React.useEffect(() => {
+  useEffect(() => {
     setNote(initialNote || '');
   }, [initialNote]);
 
@@ -17,20 +41,21 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
   const showNotesPanel = role === 'adviser' || (role === 'student' && initialNote);
 
   // Determine file type
-  const lowerUrl = documentUrl?.toLowerCase() || '';
+  const lowerUrl = resolvedUrl?.toLowerCase() || '';
   const isDocx = lowerUrl.includes('.docx') || lowerUrl.includes('.doc');
   const isPdf = lowerUrl.includes('.pdf');
 
   // Build the viewer URL
-  // For DOCX: Use Google Docs Viewer which handles cross-origin embedding properly
-  // For PDFs: Use direct URL to utilize native browser PDF viewer and bypass Google Docs size limits
   const getViewerUrl = () => {
-    if (!documentUrl) return '';
+    if (!resolvedUrl) return '';
     if (isDocx) {
-      return `https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+      return `https://docs.google.com/gview?url=${encodeURIComponent(resolvedUrl)}&embedded=true`;
     }
-    // For PDFs, images, or other embeddable content, use directly
-    return documentUrl;
+    if (isPdf) {
+      // Use Mozilla's PDF.js web viewer to reliably render large PDFs without native browser restrictions
+      return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(resolvedUrl)}`;
+    }
+    return resolvedUrl;
   };
 
   const viewerUrl = getViewerUrl();
@@ -65,7 +90,7 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
           
           <div className="flex items-center gap-3">
             <a 
-              href={documentUrl} 
+              href={resolvedUrl || documentUrl} 
               target="_blank" 
               rel="noreferrer"
               className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors"
@@ -76,7 +101,7 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
             </a>
             
             <a 
-              href={documentUrl} 
+              href={resolvedUrl || documentUrl} 
               download
               className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-colors"
               title="Download Document"
@@ -98,11 +123,11 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
 
         {/* Viewer Body & Notes Panel */}
         <div className="flex-1 flex w-full h-full overflow-hidden relative">
-          {/* Main Viewer Area */}
           <div className="flex-1 h-full bg-stone-200 dark:bg-stone-950 relative overflow-hidden">
-            {!documentUrl ? (
-            <div className="absolute inset-0 flex items-center justify-center text-stone-500 dark:text-stone-400">
-              <p>No document URL provided.</p>
+            {!resolvedUrl ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a2e46] dark:border-[#f8d070] mb-4"></div>
+              <p>Loading document...</p>
             </div>
           ) : iframeError ? (
             /* Fallback UI when iframe is blocked */
@@ -123,24 +148,31 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
                   Retry
                 </button>
                 <a
-                  href={documentUrl}
+                  href={resolvedUrl || documentUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Open in New Tab
+                  Open PDF
                 </a>
               </div>
             </div>
+          ) : isPdf ? (
+            <AnnotatablePDFViewer 
+              documentUrl={resolvedUrl} 
+              initialAnnotations={initialAnnotations}
+              onSaveAnnotations={onSaveAnnotations}
+              readOnly={role !== 'adviser'}
+            />
           ) : (
             <iframe 
               key={loadAttempt}
-              src={viewerUrl} 
-              title={documentTitle}
+              src={viewerUrl}
               className="w-full h-full border-0"
-              allow="autoplay"
+              title="Document Viewer"
               onError={handleIframeError}
+              allowFullScreen
             />
           )}
           </div>
@@ -161,8 +193,52 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
                 {role === 'adviser' ? (
                   <div className="flex flex-col h-full gap-3">
                     <p className="text-xs text-stone-500 dark:text-stone-400">
-                      Add specific feedback for this document (e.g. "Page 5 needs formatting", "Update the bibliography").
+                      Add specific feedback for this document (e.g. "Page 5 needs formatting").
                     </p>
+                    
+                    {/* Quick Add Page Note Widget */}
+                    <div className="flex flex-col gap-2 p-3 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700">
+                      <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Quick Page Note</p>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="Pg #"
+                          value={quickPage}
+                          onChange={e => setQuickPage(e.target.value)}
+                          className="w-14 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400"
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="What needs revision?"
+                          value={quickComment}
+                          onChange={e => setQuickComment(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (!quickPage || !quickComment) return;
+                              const newNote = `[Page ${quickPage}]: ${quickComment}`;
+                              setNote(prev => prev ? `${prev}\n${newNote}` : newNote);
+                              setQuickPage('');
+                              setQuickComment('');
+                            }
+                          }}
+                          className="flex-1 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400"
+                        />
+                        <button 
+                          onClick={() => {
+                            if (!quickPage || !quickComment) return;
+                            const newNote = `[Page ${quickPage}]: ${quickComment}`;
+                            setNote(prev => prev ? `${prev}\n${newNote}` : newNote);
+                            setQuickPage('');
+                            setQuickComment('');
+                          }}
+                          className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-lg transition-colors flex items-center justify-center shrink-0"
+                          title="Add Note"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
                     <textarea 
                       value={note}
                       onChange={(e) => setNote(e.target.value)}

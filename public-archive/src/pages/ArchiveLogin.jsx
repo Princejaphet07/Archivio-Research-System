@@ -200,12 +200,12 @@ function ArchiveLogin() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-6 md:p-10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] max-w-md w-full border border-white/40 dark:border-gray-700/50 flex flex-col items-center transition-colors my-auto md:my-auto pb-8 md:pb-10 relative">
+        <div className="bg-white/30 dark:bg-black/40 backdrop-blur-lg p-6 md:p-10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] max-w-md w-full border border-white/40 dark:border-white/10 flex flex-col items-center transition-colors my-auto md:my-auto pb-8 md:pb-10 relative">
           
           {/* Animated Toggle Switch */}
-          <div className="flex bg-stone-200/50 dark:bg-gray-800/50 p-1 rounded-full mb-6 w-full max-w-[240px] relative mt-2 md:mt-0">
+          <div className="flex bg-white/40 dark:bg-black/40 p-1 rounded-full mb-6 w-full max-w-[240px] relative mt-2 md:mt-0 border border-white/30 dark:border-white/10">
             <div 
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-gray-700 rounded-full shadow-sm transition-transform duration-300 ease-in-out"
+              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white/80 dark:bg-gray-700/80 rounded-full shadow-sm transition-transform duration-300 ease-in-out"
               style={{ transform: isLogin ? 'translateX(0)' : 'translateX(100%)', left: '4px' }}
             ></div>
             <button 
@@ -233,39 +233,49 @@ function ArchiveLogin() {
 
           <form onSubmit={handleEmailAuth} className="w-full space-y-4 mb-4 font-sans">
             {!isLogin && (
-              <div>
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Full Name</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
                 <input 
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
-                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
                   placeholder="Juan Dela Cruz"
                 />
               </div>
             )}
             <div>
               <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Email Address</label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
-                placeholder="juan@swu.phinma.edu.ph"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </div>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
+                  placeholder="juan@swu.phinma.edu.ph"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Password</label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
                 <input 
                   type={showPassword ? "text" : "password"} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors pr-10"
-                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
+                  placeholder="••••••••••••"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
                   {showPassword ? (
@@ -312,13 +322,16 @@ function ArchiveLogin() {
               <div>
                 <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Confirm Password</label>
                 <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  </div>
                   <input 
                     type={showPassword ? "text" : "password"} 
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required={!isLogin}
-                    className="w-full px-4 py-2.5 bg-stone-50 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors pr-10"
-                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
+                    placeholder="••••••••••••"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
                     {showPassword ? (
@@ -355,15 +368,16 @@ function ArchiveLogin() {
             </button>
           </form>
 
-          {/* Removed the old text-based toggle button here */}
-
-          <div className="w-full flex items-center my-2">
-            <div className="flex-1 h-[1px] bg-stone-200 dark:bg-gray-600"></div>
-            <span className="px-3 text-xs text-stone-400 dark:text-stone-500 italic">or</span>
-            <div className="flex-1 h-[1px] bg-stone-200 dark:bg-gray-600"></div>
+          <div className="relative flex items-center justify-center w-full mt-6 mb-4">
+            <div className="absolute w-full border-t border-white/40 dark:border-white/10"></div>
+            <span className="bg-transparent backdrop-blur-sm px-3 text-stone-500 dark:text-gray-400 text-xs italic relative z-10 font-sans">or</span>
           </div>
 
-          <button onClick={handleGoogleAuth} className="w-full py-3 px-4 border border-stone-300 dark:border-gray-600 rounded-lg flex items-center justify-center space-x-3 text-sm font-medium text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors mb-4 cursor-pointer shadow-sm">
+          <button 
+            type="button"
+            onClick={handleGoogleAuth}
+            className="w-full py-2.5 flex items-center justify-center gap-3 bg-white/60 dark:bg-black/40 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded font-sans font-medium text-sm text-stone-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-black/60 transition-colors shadow-sm"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>

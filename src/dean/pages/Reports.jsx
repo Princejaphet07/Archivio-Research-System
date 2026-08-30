@@ -35,9 +35,16 @@ export default function Reports() {
 
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
+      const deptLower = deanDept.toLowerCase();
       const groupsData = groupsSnapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(g => g.department === deanDept);
+        .filter(g => {
+          const gDept = (g.department || '').toLowerCase();
+          const gProg = (g.program || '').toLowerCase();
+          if (!deptLower) return false;
+          return gDept.includes(deptLower) || deptLower.includes(gDept) ||
+                 gProg.includes(deptLower) || deptLower.includes(gProg);
+        });
       
       const unsubSubs = onSnapshot(collection(db, 'submissions'), (subsSnapshot) => {
         const subsData = subsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -245,7 +252,7 @@ export default function Reports() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Filters & Export</h3>
                 <div className="flex items-center gap-2 font-bold text-[11px]">
-                  <PremiumButton onClick={() => window.print()} variant="outline" className="flex items-center gap-1.5">
+                  <PremiumButton onClick={() => window.print()} variant="ghost" className="flex items-center gap-1.5">
                     🖨️ Print / PDF
                   </PremiumButton>
                   <PremiumButton onClick={handleExportCSV} variant="primary" className="flex items-center gap-1.5">

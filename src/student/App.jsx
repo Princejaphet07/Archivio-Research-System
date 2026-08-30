@@ -14,6 +14,7 @@ import { logActivity } from '../firebase/logActivity';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -90,6 +91,7 @@ function App() {
             let adviserName = 'Your Adviser';
             let profilePhotoUrl = null;
             let role = 'student';
+            let groupStatus = 'pending';
             
             if (!snapshot.empty) {
               const studentData = snapshot.docs[0].data();
@@ -98,20 +100,25 @@ function App() {
               adviserName = studentData.invitedByName || 'Your Adviser';
               profilePhotoUrl = studentData.profilePhotoUrl || null;
               role = studentData.role || 'student';
+              groupStatus = studentData.groupStatus || 'pending';
             }
             
             const initials = displayName.substring(0, 2).toUpperCase();
-            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl, role });
+            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl, role, groupStatus });
           });
           
           // Only redirect to dashboard if they are on login or an invite route
-          // (This prevents forcing them to dashboard if the listener fires for other reasons)
+          // Or if their group status is pending (to lock them out of other tabs)
           setCurrentPage((prev) => {
-            if (prev === 'login' || prev === 'activate' || prev === 'signup') {
+            if (prev === 'login' || prev === 'activate' || prev === 'signup' || groupStatus === 'pending') {
               return 'dashboard';
             }
             return prev;
           });
+          
+          if (groupStatus === 'pending') {
+            setActiveTab('Dashboard');
+          }
         } catch (error) {
           console.error("Error restoring session:", error);
         }
@@ -163,6 +170,17 @@ function App() {
 
 
   const handleNavigation = (tabName) => {
+    // Lock access if group is still pending
+    if (studentInfo.groupStatus === 'pending' && tabName !== 'Dashboard') {
+      Swal.fire({
+        icon: 'lock',
+        title: 'Dashboard Locked',
+        text: 'Your registration is still pending approval from your adviser. You cannot access this section yet.',
+        confirmButtonColor: '#6B0F1A'
+      });
+      return;
+    }
+
     setActiveTab(tabName);
     if (tabName === 'Dashboard') {
       setCurrentPage('dashboard');
@@ -215,84 +233,93 @@ function App() {
       {currentPage === 'activate' && (
         <StudentActivate />
       )}
-      {currentPage === 'dashboard' && (
-        <StudentDashboard
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          leaderUid={studentInfo.leaderUid}
-          groupName={studentInfo.groupName}
-          adviserName={studentInfo.adviserName}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {currentPage === 'manuscript' && (
-        <ManuscriptPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          leaderUid={studentInfo.leaderUid}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {currentPage === 'requirements' && (
-        <RequirementsPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          leaderUid={studentInfo.leaderUid}
-          studentUid={studentInfo.uid}
-          groupName={studentInfo.groupName}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {currentPage === 'progress' && (
-        <ProgressPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          leaderUid={studentInfo.leaderUid}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {currentPage === 'mygroup' && (
-        <MyGroupPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          leaderUid={studentInfo.leaderUid}
-          groupName={studentInfo.groupName}
-          adviserName={studentInfo.adviserName}
-          studentUid={studentInfo.uid}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
-      )}
-      {/* 3. Added the SettingsPage component to the render list */}
-      {currentPage === 'settings' && (
-        <SettingsPage
-          onLogout={handleLogout}
-          studentName={studentInfo.name}
-          initials={studentInfo.initials}
-          profilePhotoUrl={studentInfo.profilePhotoUrl}
-          role={studentInfo.role}
-          activeTab={activeTab}
-          setActiveTab={handleNavigation}
-        />
+      {/* Authenticated Pages - Render together to preserve state (e.g. active uploads) when switching tabs */}
+      {['dashboard', 'manuscript', 'requirements', 'progress', 'mygroup', 'settings'].includes(currentPage) && (
+        <>
+          <div style={{ display: currentPage === 'dashboard' ? 'block' : 'none' }}>
+            <StudentDashboard
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              leaderUid={studentInfo.leaderUid}
+              groupName={studentInfo.groupName}
+              adviserName={studentInfo.adviserName}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+          
+          <div style={{ display: currentPage === 'manuscript' ? 'block' : 'none' }}>
+            <ManuscriptPage
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              leaderUid={studentInfo.leaderUid}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+          
+          <div style={{ display: currentPage === 'requirements' ? 'block' : 'none' }}>
+            <RequirementsPage
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              leaderUid={studentInfo.leaderUid}
+              studentUid={studentInfo.uid}
+              groupName={studentInfo.groupName}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+          
+          <div style={{ display: currentPage === 'progress' ? 'block' : 'none' }}>
+            <ProgressPage
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              leaderUid={studentInfo.leaderUid}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+          
+          <div style={{ display: currentPage === 'mygroup' ? 'block' : 'none' }}>
+            <MyGroupPage
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              leaderUid={studentInfo.leaderUid}
+              groupName={studentInfo.groupName}
+              adviserName={studentInfo.adviserName}
+              studentUid={studentInfo.uid}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+          
+          <div style={{ display: currentPage === 'settings' ? 'block' : 'none' }}>
+            <SettingsPage
+              onLogout={handleLogout}
+              studentName={studentInfo.name}
+              initials={studentInfo.initials}
+              profilePhotoUrl={studentInfo.profilePhotoUrl}
+              role={studentInfo.role}
+              activeTab={activeTab}
+              setActiveTab={handleNavigation}
+            />
+          </div>
+        </>
       )}
     </div>
   );

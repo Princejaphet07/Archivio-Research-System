@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../Components/Sidebar';
-import { db, auth } from '../../firebase/config';
+import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, getDownloadURL } from 'firebase/storage';
 import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role, leaderUid }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,6 +17,34 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const [submissionId, setSubmissionId] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
   const [extractingKeywords, setExtractingKeywords] = useState(false);
+  const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '' });
+  const [documentResubmissions, setDocumentResubmissions] = useState({});
+
+  const handleOpenViewer = async () => {
+    if (!hasManuscript) return;
+    
+    let finalUrl = manuscript.url;
+    if (finalUrl && !finalUrl.startsWith('http')) {
+      try {
+        Swal.fire({
+          toast: true,
+          position: 'bottom-end',
+          title: 'Loading document...',
+          showConfirmButton: false,
+          didOpen: () => Swal.showLoading()
+        });
+        const storageRef = ref(storage, finalUrl);
+        finalUrl = await getDownloadURL(storageRef);
+        Swal.close();
+      } catch (err) {
+        console.error("Failed to fetch document URL:", err);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load document. It may have been deleted.' });
+        return;
+      }
+    }
+    
+    setViewerState({ isOpen: true, url: finalUrl, title: manuscript.name || 'Final Manuscript' });
+  };
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -50,8 +80,10 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return timeB - timeA;
         });
-        setSubmission(subs[0]);
-        setSubmissionId(subs[0].id);
+        const latestSub = subs[0];
+        setSubmission(latestSub);
+        setSubmissionId(latestSub.id);
+        setDocumentResubmissions(latestSub.documentResubmissions || {});
       } else {
         setSubmission(null);
         setSubmissionId(null);
@@ -66,7 +98,11 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
   const manuscript = submission?.documents?.['Final Manuscript'];
   const hasManuscript = !!manuscript;
+  const isPublished = submission?.reviewStatus === 'published';
   
+  const hasRevision = !!submission?.documentRevisions?.['Final Manuscript'] && !documentResubmissions?.['Final Manuscript'];
+  const revisionNote = submission?.documentRevisions?.['Final Manuscript'];
+
   const researchTitle = studentData?.researchTitle || submission?.title || 'Research Title';
   const groupName = studentData?.groupName || submission?.groupName || 'Your Group';
   const members = studentData?.groupMembers || [];
@@ -327,7 +363,10 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                 <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-6">Current File</p>
                 
                 {/* PDF Thumbnail Mockup */}
-                <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative">
+                <div 
+                  onClick={handleOpenViewer}
+                  className={`bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative ${hasManuscript ? 'cursor-pointer hover:shadow-md hover:border-stone-300 dark:hover:border-stone-600 transition-all' : ''}`}
+                >
                   <div className="w-full bg-[#7B1F35] dark:bg-stone-950/50 rounded-t-lg absolute top-0 left-0 h-12 flex items-center justify-center">
                     <p className="text-white/80 text-[8px] tracking-widest uppercase">Southwestern University</p>
                   </div>
@@ -357,7 +396,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
                 <div className="flex gap-3 mb-4">
                   <button 
-                    onClick={() => hasManuscript && window.open(manuscript.url, '_blank')}
+                    onClick={handleOpenViewer}
                     disabled={!hasManuscript}
                     className={`flex-1 border border-stone-300 dark:border-stone-700 text-[#1A1A1A] dark:text-stone-200 text-[13px] font-bold py-2.5 rounded-full flex items-center justify-center gap-2 transition-colors ${hasManuscript ? 'hover:bg-stone-50 dark:hover:bg-stone-800' : 'opacity-50 cursor-not-allowed'}`}
                   >
@@ -383,10 +422,17 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   </button>
                 </div>
                 
+                {isPublished ? (
+                  <div className="mt-4 px-4 py-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-bold rounded-lg border border-green-200 dark:border-green-800 text-center flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                    Published
+                  </div>
+                ) : (
                   <PremiumButton onClick={() => setActiveTab('Requirements')} className="w-full mt-4">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     {hasManuscript ? 'Replace Manuscript' : 'Upload Manuscript'}
                   </PremiumButton>
+                )}
               </Card>
 
               {/* RIGHT COLUMN: Research Details */}
@@ -396,10 +442,12 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                     <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Research Details</p>
                     <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100">Manuscript Information</h3>
                   </div>
-                  <button onClick={handleEditDetails} className="border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-200 text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    Edit
-                  </button>
+                  {!isPublished && (
+                    <button onClick={handleEditDetails} className="border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-200 text-[12px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      Edit
+                    </button>
+                  )}
                 </div>
 
                 <div className="mb-6">
@@ -500,6 +548,16 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           </div>
         </div>
       </div>
+
+      <DocumentViewerModal 
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ ...viewerState, isOpen: false, reqId: null })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+        role="student"
+        initialNote={submission?.documentRevisions?.['Final Manuscript'] || ''}
+        initialAnnotations={submission?.documentAnnotations?.['Final Manuscript'] || {}}
+      />
     </div>
   );
 }

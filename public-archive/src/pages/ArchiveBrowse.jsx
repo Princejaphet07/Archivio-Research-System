@@ -11,6 +11,7 @@ function ArchiveBrowse() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
+  const [expandedAbstracts, setExpandedAbstracts] = useState({});
   const [sortOption, setSortOption] = useState('Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [location.state.dept] : []);
@@ -21,6 +22,10 @@ function ArchiveBrowse() {
   const toggleYear = (year) => {
     setSelectedYears(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]);
     setCurrentPage(1);
+  };
+
+  const toggleAbstract = (id) => {
+    setExpandedAbstracts(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const toggleDepartment = (dept) => {
@@ -59,6 +64,34 @@ function ArchiveBrowse() {
       await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
     } else {
       await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+    }
+  };
+
+  const handleShare = async (paper) => {
+    const url = `${window.location.origin}/viewer/${paper.id}`;
+    const title = paper.researchTitle || paper.title || 'ARCHIVIO Research Paper';
+    const text = `Check out this research paper on ARCHIVIO: ${title}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text,
+          url
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      Swal.fire({
+        toast: true,
+        position: 'bottom-end',
+        icon: 'success',
+        title: 'Link copied to clipboard!',
+        showConfirmButton: false,
+        timer: 2000
+      });
     }
   };
 
@@ -258,7 +291,7 @@ function ArchiveBrowse() {
 
             <div>
               <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Department</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+              <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
                 {['Computer Science', 'Information Technology', 'Nursing', 'Business', 'Education', 'Engineering', 'Architecture', 'Pharmacy'].map(dept => (
                   <label key={dept} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                     <input 
@@ -348,7 +381,7 @@ function ArchiveBrowse() {
                         {paper.program || 'Research'}
                       </span>
                       <span className="text-xs text-stone-400 dark:text-gray-500 font-medium">
-                        Published: {new Date(paper.publishedAt || Date.now()).getFullYear()}
+                        Published: {new Date(paper.publishedAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                   </div>
@@ -361,9 +394,19 @@ function ArchiveBrowse() {
                     {paper.authorDisplay} • Adviser: {paper.adviserName || 'Unknown'}
                   </p>
                   
-                  <p className="text-sm text-stone-600 dark:text-gray-400 mb-4 line-clamp-3 leading-relaxed">
-                    {paper.abstract || 'No abstract provided.'}
-                  </p>
+                  <div className="mb-4">
+                    <p className={`text-sm text-stone-600 dark:text-gray-400 leading-relaxed ${expandedAbstracts[paper.id] ? '' : 'line-clamp-3'}`}>
+                      {paper.abstract || 'No abstract provided.'}
+                    </p>
+                    {(paper.abstract || '').length > 180 && (
+                      <button 
+                        onClick={() => toggleAbstract(paper.id)}
+                        className="text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline mt-1 focus:outline-none uppercase tracking-wide"
+                      >
+                        {expandedAbstracts[paper.id] ? 'View Less' : 'View More'}
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="flex flex-wrap gap-2 mb-6">
                     {paper.keywords?.slice(0, 4).map((tag, i) => (
@@ -390,7 +433,7 @@ function ArchiveBrowse() {
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-stone-400 dark:text-gray-500"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
                         {paper.views || 0}
                       </span>
-                      <span className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
+                      <span onClick={() => handleShare(paper)} className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
                     </div>
                     <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
                       Read Full Text

@@ -33,6 +33,7 @@ function ReviewSubmissions() {
   const [msgBody, setMsgBody] = useState('');
   const [msgSending, setMsgSending] = useState(false);
   const [msgStatus, setMsgStatus] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
   // Fetch real data from Firebase
@@ -148,6 +149,50 @@ function ReviewSubmissions() {
     const d = new Date(s.submittedDate);
     return isNaN(d.getTime()) ? '' : d.getFullYear().toString();
   }).filter(Boolean))];
+
+  // Handle AI Summarize
+  const handleGenerateAISummary = async (submission) => {
+    let pdfUrl = '';
+    if (submission.documents) {
+       for (const key of Object.keys(submission.documents)) {
+         const d = submission.documents[key];
+         if (d && d.url && d.url !== '#' && typeof d.name === 'string' && d.name.toLowerCase().endsWith('.pdf')) {
+           pdfUrl = d.url;
+           break; // Find the first PDF
+         }
+       }
+    }
+
+    if (!pdfUrl) {
+      Swal.fire('No PDF found', 'The student has not uploaded a valid PDF manuscript to summarize.', 'warning');
+      return;
+    }
+
+    setIsSummarizing(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/ai/summarize-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfUrl })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate summary');
+
+      await updateDoc(doc(db, 'submissions', submission.id), {
+        aiSummary: data
+      });
+
+      setSelectedSubmission({ ...submission, aiSummary: data });
+      setSubmissions(submissions.map(sub => sub.id === submission.id ? { ...sub, aiSummary: data } : sub));
+      
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Summary Generated!', showConfirmButton: false, timer: 3000 });
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.message, 'error');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   // Handle Approve action
   const handleApprove = async (sub) => {
@@ -616,9 +661,19 @@ function ReviewSubmissions() {
                             {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
                           </td>
                           <td className="py-4 px-4 text-center">
-                            <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold border border-purple-100">
-                              Revision Requested
-                            </span>
+                            {item.reviewStatus === 'reviewed' ? (
+                              <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-100">
+                                Ready to Approve
+                              </span>
+                            ) : Object.keys(item.documentResubmissions || {}).length > 0 ? (
+                              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100">
+                                🔄 Resubmitted
+                              </span>
+                            ) : (
+                              <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold border border-purple-100">
+                                Revision Requested
+                              </span>
+                            )}
                           </td>
                         </>
                       ) : (
@@ -736,6 +791,53 @@ function ReviewSubmissions() {
                 </div>
               )}
 
+              {/* Adviser AI Auto-Summarizer */}
+              <div className="bg-gradient-to-br from-[#7a2e46]/5 to-[#f8d070]/10 dark:from-stone-900 dark:to-stone-800 rounded-xl p-5 border border-[#7a2e46]/10 dark:border-stone-700 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-gray-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                    <span className="text-lg">✨</span> Adviser AI Auto-Summarizer
+                  </h4>
+                  {!selectedSubmission.aiSummary && (
+                    <PremiumButton 
+                      onClick={() => handleGenerateAISummary(selectedSubmission)}
+                      variant="primary"
+                      size="sm"
+                      disabled={isSummarizing}
+                      className={isSummarizing ? "opacity-70 cursor-not-allowed" : ""}
+                    >
+                      {isSummarizing ? 'Generating...' : 'Generate Executive Summary'}
+                    </PremiumButton>
+                  )}
+                </div>
+                
+                {selectedSubmission.aiSummary ? (
+                  <div className="space-y-3">
+                    <div className="bg-white/60 dark:bg-stone-950/50 backdrop-blur-sm rounded-lg p-4 border border-gray-100 dark:border-stone-800">
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 mb-1.5 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Core Problem
+                      </h5>
+                      <p className="text-[13px] leading-relaxed text-gray-700 dark:text-stone-300">{selectedSubmission.aiSummary.problem}</p>
+                    </div>
+                    <div className="bg-white/60 dark:bg-stone-950/50 backdrop-blur-sm rounded-lg p-4 border border-gray-100 dark:border-stone-800">
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-1.5 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Methodology
+                      </h5>
+                      <p className="text-[13px] leading-relaxed text-gray-700 dark:text-stone-300">{selectedSubmission.aiSummary.methodology}</p>
+                    </div>
+                    <div className="bg-white/60 dark:bg-stone-950/50 backdrop-blur-sm rounded-lg p-4 border border-gray-100 dark:border-stone-800">
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Conclusion & Findings
+                      </h5>
+                      <p className="text-[13px] leading-relaxed text-gray-700 dark:text-stone-300">{selectedSubmission.aiSummary.conclusion}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-stone-400 italic bg-white/40 dark:bg-stone-950/30 p-3 rounded-lg">
+                    Click the button above to instantly extract and generate a 1-page executive summary of this manuscript (Core Problem, Methodology, Conclusion). This AI assistant saves you hours of reading time.
+                  </p>
+                )}
+              </div>
+
               {/* Group Members */}
               <div>
                 <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
@@ -788,6 +890,8 @@ function ReviewSubmissions() {
                                 <span className="text-green-700 dark:text-green-500 font-bold text-xs mb-1">✓ Submitted</span>
                                 {selectedSubmission?.documentApprovals?.[req.id] ? (
                                   <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Checked</span>
+                                ) : selectedSubmission?.documentResubmissions?.[req.id] ? (
+                                  <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🔄 Resubmitted</span>
                                 ) : selectedSubmission?.documentRevisions?.[req.id] ? (
                                   <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Revision</span>
                                 ) : null}
@@ -909,6 +1013,23 @@ function ReviewSubmissions() {
         documentTitle={viewerState.title}
         role="adviser"
         initialNote={selectedSubmission?.documentRevisions?.[viewerState.reqId] || ''}
+        initialAnnotations={selectedSubmission?.documentAnnotations?.[viewerState.reqId] || {}}
+        onSaveAnnotations={async (annotations) => {
+          if (!selectedSubmission || !viewerState.reqId) return;
+          try {
+            const currentAnnotations = selectedSubmission.documentAnnotations || {};
+            await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
+              documentAnnotations: {
+                ...currentAnnotations,
+                [viewerState.reqId]: annotations
+              }
+            });
+            Swal.fire({ toast: true, position: 'bottom-end', icon: 'success', title: 'Annotations Saved', showConfirmButton: false, timer: 2000 });
+          } catch (e) {
+            console.error(e);
+            Swal.fire('Error', 'Failed to save annotations.', 'error');
+          }
+        }}
         onSaveNote={async (note, actionType) => {
           if (!selectedSubmission || !viewerState.reqId) return;
           try {
@@ -930,6 +1051,10 @@ function ReviewSubmissions() {
               delete newApprovals[viewerState.reqId];
             }
             
+            const currentResubmissions = selectedSubmission.documentResubmissions || {};
+            const newResubmissions = { ...currentResubmissions };
+            delete newResubmissions[viewerState.reqId];
+            
             const uploadedCount = selectedSubmission.uploadedDocs?.length || 0;
             const approvedCount = Object.keys(newApprovals).length;
             const isAllApproved = uploadedCount > 0 && approvedCount >= uploadedCount;
@@ -947,6 +1072,7 @@ function ReviewSubmissions() {
             await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
               documentRevisions: newRevisions,
               documentApprovals: newApprovals,
+              documentResubmissions: newResubmissions,
               reviewStatus: newStatus,
               reviewedAt: new Date().toISOString(),
               reviewedBy: auth.currentUser?.email

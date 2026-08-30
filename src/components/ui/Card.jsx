@@ -88,7 +88,9 @@ export function StatusBadge({ status }) {
   const map = {
     published:   { label: '✓ Published',       cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' },
     approved:    { label: '✓ Approved',         cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' },
+    reviewed:    { label: '✓ Reviewed',         cls: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
     uploaded:    { label: '✓ Uploaded',         cls: 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] border-[#7B1F35]/20' },
+    submitted:   { label: '✓ Submitted',        cls: 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] border-[#7B1F35]/20' },
     pending:     { label: '⏳ Pending',          cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
     missing:     { label: '✗ Missing',          cls: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800' },
     revision:    { label: '⚠ Revision Req.',   cls: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' },

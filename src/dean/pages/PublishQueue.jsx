@@ -34,10 +34,16 @@ export default function PublishQueue({ activePage, onNavigate }) {
       setSubmissions(all);
     });
 
-    // 2. Fetch Groups — filter by department
+    // 2. Fetch Groups — filter by department (robust partial match)
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setGroups(all.filter(g => g.department === deanDept));
+      const deptLower = deanDept.toLowerCase();
+      setGroups(all.filter(g => {
+        const gDept = (g.department || '').toLowerCase();
+        const gProg = (g.program || '').toLowerCase();
+        return gDept.includes(deptLower) || deptLower.includes(gDept) ||
+               gProg.includes(deptLower) || deptLower.includes(gProg);
+      }));
     });
 
     // 3. Fetch Requirements
@@ -176,10 +182,9 @@ export default function PublishQueue({ activePage, onNavigate }) {
   };
 
   const handleViewManuscript = (sub) => {
-    // Attempt to find manuscript
-    const manuscriptDoc = sub.uploadedDocs?.find(d => d.type === 'manuscript');
+    const manuscriptDoc = sub.documents?.['Final Manuscript'];
     
-    if (manuscriptDoc && manuscriptDoc.url) {
+    if (manuscriptDoc && manuscriptDoc.url && manuscriptDoc.url !== '#') {
       setViewerState({
         isOpen: true,
         url: manuscriptDoc.url,
