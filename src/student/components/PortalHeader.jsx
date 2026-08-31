@@ -21,7 +21,7 @@ export default function PortalHeader({ title, initials, setSidebarOpen, setActiv
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   return (
-    <header className="h-[80px] flex items-center justify-between px-8 z-10 shrink-0 bg-white/50 dark:bg-stone-900/50 backdrop-blur-md border-b border-stone-200/50 dark:border-stone-800/50 sticky top-0 transition-colors">
+    <header className="h-[80px] flex items-center justify-between px-8 z-[100] shrink-0 bg-white/50 dark:bg-stone-900/50 backdrop-blur-md border-b border-stone-200/50 dark:border-stone-800/50 sticky top-0 transition-colors">
       <div className="flex items-center gap-3">
         <button
           className="lg:hidden p-2 text-gray-500 dark:text-stone-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"

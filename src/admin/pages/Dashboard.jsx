@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
-import { Building2, GraduationCap, Users, UserPlus, BookOpen } from 'lucide-react';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, PieChart, Pie, Cell } from 'recharts';
+import { Building2, GraduationCap, Users, UserPlus, BookOpen, TrendingUp } from 'lucide-react';
 import { Card, CardBody, StatCard, SectionTitle } from '../../components/ui/Card';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -229,10 +229,12 @@ function Dashboard() {
           </div>
 
           {/* Row 2: Yearly Research Upload Trend */}
-          <Card className="mb-6">
+          <Card className="mb-6 overflow-hidden border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
             <CardBody>
               <div className="flex items-center gap-2 mb-6">
-              <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
+              <div className="p-2 bg-[#7B1F35]/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-[#7B1F35]" />
+              </div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Yearly Research Upload Trend</h3>
                 <p className="text-[10px] text-stone-400 mt-0.5">Total submissions recorded per academic school year</p>
@@ -241,22 +243,42 @@ function Dashboard() {
             <div className="w-full h-64 relative mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={yearlyChartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c', fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#78716c' }} />
+                  <defs>
+                    <linearGradient id="colorUploads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#64b494" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#64b494" stopOpacity={0.3}/>
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e7e5e4', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '12px', 
+                      border: '1px solid rgba(0,0,0,0.05)', 
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      color: '#1f2937',
+                      fontWeight: 'bold',
+                      fontSize: '12px'
+                    }}
                     labelStyle={{ fontWeight: 'bold', color: '#1c1917', marginBottom: '4px' }}
-                    cursor={{ fill: '#f5f5f4' }}
+                    cursor={{ fill: 'rgba(100, 180, 148, 0.05)' }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
-                  <Bar dataKey="uploads" name="Total Uploads" fill="#64b494" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#4b5563', paddingTop: '10px' }} />
+                  <Bar dataKey="uploads" name="Total Uploads" fill="url(#colorUploads)" radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={1500} />
                   <Line 
                     type="monotone" 
                     dataKey="approved" 
                     name="Approved Papers"
                     stroke="#d97706" 
                     strokeWidth={3} 
+                    filter="url(#glow)"
                     dot={{ r: 5, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
                     activeDot={{ r: 7, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
                     animationDuration={1500}
@@ -280,11 +302,6 @@ function Dashboard() {
                   </Line>
                 </ComposedChart>
               </ResponsiveContainer>
-              <div className="absolute right-0 top-1/2 -mt-4 pointer-events-none" style={{ right: '5%' }}>
-                <span className="bg-[#f5ebd9] text-[#801e38] text-[8px] px-2 py-0.5 rounded font-bold shadow-sm">
-                  in progress
-                </span>
-              </div>
             </div>
             </CardBody>
           </Card>
@@ -339,7 +356,7 @@ function Dashboard() {
 
           {/* Row 4: Department Stats Table & Category Donut Pie Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <Card className="lg:col-span-2 overflow-x-auto">
+            <Card className="lg:col-span-2 overflow-x-auto border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
               <CardBody>
                 <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
                 <div className="overflow-x-auto min-w-[500px]">
@@ -369,21 +386,45 @@ function Dashboard() {
               </div>
               </CardBody>
             </Card>
-            <Card>
-              <CardBody>
-                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
-                <div className="flex justify-center mb-4">
-                <div className="w-full h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={categories}>
-                      <PolarGrid stroke="#e5e7eb" />
-                      <PolarAngleAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10, fontWeight: 'bold' }} />
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Radar name="Published Papers" dataKey="count" stroke="#801e38" strokeWidth={2} fill="#801e38" fillOpacity={0.5} activeDot={{ r: 6, fill: '#801e38' }} dot={{ r: 4, fill: '#fff', stroke: '#801e38', strokeWidth: 2 }} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+            <Card className="border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
+                <CardBody>
+                  <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
+                  <div className="flex justify-center mb-4">
+                  <div className="w-full h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categories}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={65}
+                          outerRadius={85}
+                          paddingAngle={4}
+                          dataKey="count"
+                          nameKey="name"
+                          animationDuration={1500}
+                          stroke="none"
+                        >
+                          {categories.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.strokeColor} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                            backdropFilter: 'blur(12px)',
+                            borderRadius: '12px', 
+                            border: '1px solid rgba(0,0,0,0.05)', 
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                            color: '#1f2937',
+                            fontWeight: 'bold',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>            </div>
+              
               <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                 {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 dark:text-stone-50 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
               </div>
@@ -392,7 +433,7 @@ function Dashboard() {
           </div>
 
           {/* Row 5: Storage Usage Overview */}
-          <Card className="mb-6">
+          <Card className="mb-6 border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
             <CardBody>
               <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 dark:bg-stone-800 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-700 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Total Files Uploaded</span><span className="text-stone-900 dark:text-stone-50 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Published Papers</span><span className="text-stone-900 dark:text-stone-50 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Supporting Documents</span><span className="text-stone-900 dark:text-stone-50 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Other Assets</span><span className="text-stone-900 dark:text-stone-50 font-bold">136 files</span></div></div></div>

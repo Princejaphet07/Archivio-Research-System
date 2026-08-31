@@ -82,6 +82,8 @@ export default function PublishQueue({ activePage, onNavigate }) {
         adviserName: group?.adviserName || 'Unknown Adviser',
         adviserUid: group?.adviserUid || '',
         program: group?.program || sub.program || '',
+        leaderEmail: group?.leaderEmail || sub.leaderEmail || '',
+        leaderName: group?.leaderName || sub.studentName || '',
         authorDisplay: group
           ? `${group.leaderName}${group.members && group.members.length > 0 ? ` & ${group.members.length} other(s)` : ''}`
           : sub.studentName || 'Unknown Author',
@@ -113,6 +115,66 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const filteredQueue = eligibleItems.filter(item => 
     adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
   );
+
+  const handleSimilarityCheck = async (submission) => {
+    if (!submission?.abstract || submission.abstract.includes('No abstract')) {
+      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'This submission does not have a valid abstract to check.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Checking Similarity...',
+      html: 'Scanning archive for potential duplicates...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const res = await fetch(`${backendUrl}/api/ai/similarity-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          submissionId: submission.id,
+          title: submission.researchTitle || submission.title || 'Untitled', 
+          abstract: submission.abstract 
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to scan');
+
+      let icon = 'success';
+      let color = '#1E8E3E';
+      let title = 'Safe';
+      
+      if (data.score >= 40 && data.score < 75) {
+        icon = 'warning';
+        color = '#D97706';
+        title = 'Moderate Similarity';
+      } else if (data.score >= 75) {
+        icon = 'error';
+        color = '#DC2626';
+        title = 'High Risk of Duplication';
+      }
+
+      Swal.fire({
+        icon,
+        title,
+        html: `
+          <div style="font-size: 48px; font-weight: bold; color: ${color};">${data.score}%</div>
+          <div style="font-size: 14px; font-weight: bold; margin-top: 10px; color: #1A1A1A;">Most Similar Paper:</div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 15px; font-style: italic;">"${data.matchTitle}"</div>
+          <div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 10px; border-radius: 5px;">${data.analysis}</div>
+        `,
+        confirmButtonColor: '#7B1F35'
+      });
+
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Check Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#7B1F35' });
+    }
+  };
 
   const handlePublish = async (item) => {
     const res = await Swal.fire({
@@ -381,14 +443,23 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
-                        <PremiumButton 
-                          onClick={() => handlePreview(item)}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          Abstract
-                        </PremiumButton>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <PremiumButton 
+                            onClick={() => handleSimilarityCheck(item)}
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1.5"
+                          >
+                            <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            AI Scan
+                          </PremiumButton>
+                          <PremiumButton 
+                            onClick={() => handlePreview(item)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            Abstract
+                          </PremiumButton>
                         <PremiumButton 
                           onClick={() => handleViewManuscript(item)}
                           variant="outline"

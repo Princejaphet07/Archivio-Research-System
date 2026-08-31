@@ -317,6 +317,7 @@ function ArchivePaperViewer() {
     setIsFullscreen(false);
   };
 
+
   const handleToggleAudio = () => {
     if (!paper || !paper.abstract) return;
 
@@ -593,10 +594,12 @@ function ArchivePaperViewer() {
       {!isZenMode && (
         <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center gap-4 text-xs z-10 shadow-sm transition-colors">
           <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer">←</Link>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-[#ff8c00] rounded-full"></span>
-            <span className="font-bold text-white">View-only access</span> 
-            <span className="text-gray-300">—copying and downloading are disabled. This document is protected for academic integrity.</span>
+          <div className="hidden md:flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-[#ff8c00] rounded-full"></span>
+              <span className="font-bold text-white">View-only access</span> 
+              <span className="text-gray-300">—copying and downloading are disabled. This document is protected for academic integrity.</span>
+            </div>
           </div>
         </div>
       )}

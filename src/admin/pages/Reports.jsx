@@ -4,9 +4,10 @@ import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
-import { Building2, Trash2, Printer, Download, FileText } from 'lucide-react';
+import { Building2, Trash2, Printer, Download, FileText, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
 import { Card, SectionTitle, PremiumButton, StatCard } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts';
 
 const reportTypes = [
   {
@@ -156,6 +157,45 @@ export default function Reports() {
     });
   }, [submissions, groups, selectedYear, filterByAcademicYear]);
 
+  // Analytics Data Preparation
+  const COLORS = ['#7B1F35', '#D97706', '#1E8E3E', '#2563EB', '#8B5CF6', '#EC4899', '#059669'];
+
+  const analyticsData = useMemo(() => {
+    const publishedPapers = submissions.filter(s => s.reviewStatus === 'published');
+    
+    // 1. Papers per Year
+    const yearlyMap = {};
+    publishedPapers.forEach(paper => {
+      let year = 'Unknown Year';
+      if (paper.publishedAt) {
+        year = new Date(paper.publishedAt).getFullYear().toString();
+      } else if (paper.createdAt) {
+        year = new Date(paper.createdAt).getFullYear().toString();
+      } else if (paper.schoolYear) {
+        year = paper.schoolYear.split('-')[0]; // Extract 2026 from 2026-2027
+      }
+      
+      yearlyMap[year] = (yearlyMap[year] || 0) + 1;
+    });
+    const yearlyData = Object.keys(yearlyMap).map(year => ({
+      name: year,
+      Papers: yearlyMap[year]
+    })).sort((a, b) => a.name.localeCompare(b.name));
+
+    // 2. Top Departments
+    const deptMap = {};
+    publishedPapers.forEach(paper => {
+      const dept = formatDepartment(paper.department || paper.program);
+      deptMap[dept] = (deptMap[dept] || 0) + 1;
+    });
+    const deptData = Object.keys(deptMap).map(dept => ({
+      name: dept.replace('College of ', ''), // Shorten for chart
+      value: deptMap[dept]
+    })).sort((a, b) => b.value - a.value);
+
+    return { yearlyData, deptData };
+  }, [submissions]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -243,6 +283,113 @@ export default function Reports() {
           <SectionTitle sub="Generate, view, and export reports across the ARCHIVIO system.">
             System Reports
           </SectionTitle>
+
+          {/* GRAPHICAL ANALYTICS DASHBOARD */}
+          {!selected && (
+            <div className="mb-8 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Papers per Year Chart */}
+                <Card className="p-6 relative overflow-hidden group border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-[#7B1F35]/10 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-[#7B1F35]" />
+                    </div>
+                    <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Research Output per Year</h3>
+                  </div>
+                  <div className="h-64">
+                    {analyticsData.yearlyData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={analyticsData.yearlyData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+                          <defs>
+                            <linearGradient id="colorPapers" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#7B1F35" stopOpacity={0.9}/>
+                              <stop offset="95%" stopColor="#7B1F35" stopOpacity={0.4}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            cursor={{ fill: 'rgba(123, 31, 53, 0.05)' }}
+                            contentStyle={{ 
+                              backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                              backdropFilter: 'blur(12px)',
+                              borderRadius: '12px', 
+                              border: '1px solid rgba(0,0,0,0.05)', 
+                              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                              color: '#1f2937',
+                              fontWeight: 'bold',
+                              fontSize: '12px'
+                            }}
+                            itemStyle={{ color: '#7B1F35' }}
+                          />
+                          <Bar dataKey="Papers" fill="url(#colorPapers)" radius={[6, 6, 0, 0]} animationDuration={1500} barSize={40} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-stone-400 italic text-sm">No published papers yet.</div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Top Departments Pie Chart */}
+                <Card className="p-6 relative overflow-hidden group border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-amber-500/10 rounded-lg">
+                      <PieChartIcon className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Published Papers by Department</h3>
+                  </div>
+                  <div className="h-64">
+                    {analyticsData.deptData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={analyticsData.deptData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={65}
+                            outerRadius={85}
+                            paddingAngle={4}
+                            dataKey="value"
+                            animationDuration={1500}
+                            stroke="none"
+                          >
+                            {analyticsData.deptData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                              backdropFilter: 'blur(12px)',
+                              borderRadius: '12px', 
+                              border: '1px solid rgba(0,0,0,0.05)', 
+                              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                              color: '#1f2937',
+                              fontWeight: 'bold',
+                              fontSize: '12px'
+                            }}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={40} 
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#4b5563', paddingTop: '10px' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-stone-400 italic text-sm">No published papers yet.</div>
+                    )}
+                  </div>
+                </Card>
+
+              </div>
+            </div>
+          )}
 
           {/* REPORT TYPE SELECTOR */}
           <p className="text-[10px] font-bold text-stone-400 tracking-widest uppercase mb-4">SELECT REPORT TYPE</p>

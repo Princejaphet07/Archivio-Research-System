@@ -5,14 +5,19 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const Groq = require('groq-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
+const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
+const axios = require('axios');
 require('dotenv').config();
 
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
 const serviceAccount = require('./firebase-service-account.json');
+const { setupCleanupCron } = require('./cleanup-cron');
+const { setupBackupCron } = require('./backup-cron');
+const { setupMailListener } = require('./mail-listener');
 
 initializeApp({
   credential: cert(serviceAccount)
@@ -86,7 +91,7 @@ app.post('/api/send-otp', async (req, res) => {
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 5 * 60000); // 5 minutes
 
     // Store in Firestore
     await getFirestore().collection('password_resets').doc(email).set({
@@ -1042,14 +1047,13 @@ app.post('/api/ai/chat', async (req, res) => {
   try {
     const { paper, chatHistory, userMessage, pdfUrl, image, paperContext } = req.body;
 
-    // Debug log to verify correct paper is being sent
     console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
 
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: "Missing GROQ_API_KEY in backend environment variables." });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     
     let developerPrompt = '';
     
@@ -1077,23 +1081,12 @@ app.post('/api/ai/chat', async (req, res) => {
 
       CRITICAL OUTPUT RULES:
       - NEVER include <think> tags or show your thinking process
-      - NEVER output internal reasoning or planning steps  
       - Output ONLY the final, clean response to the user
-      - Do NOT show analysis steps, just give the final answer directly
 
       YOUR PRIMARY ROLE:
-      - You are a specialized research paper analyst. Your job is to help students understand, summarize, and analyze the specific research paper attached below.
-      - You must read and deeply analyze the manuscript details to provide accurate, detailed, and well-structured answers.
-      - Do NOT make up information. If a specific detail is not in the paper, say so honestly.
+      - You are a specialized research paper analyst. 
+      - Do NOT make up information.
       - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
-
-      RESPONSE FORMATTING RULES:
-      - Use clean, well-structured responses. Use bullet points, numbered lists, and bold text (**like this**) for key terms.
-      - Keep paragraphs short (2-3 sentences max).
-      - When summarizing, follow this structure: **Purpose → Methodology → Key Findings → Conclusion**.
-      - Use simple, clear academic English that a college student can easily understand.
-      - Do NOT use excessive emojis or informal language. Be professional but friendly.
-      - When citing specific parts of the paper, mention the chapter or section if possible.
 
       === THE PAPER YOU ARE ANALYZING ===
       Title: "${paper?.researchTitle || 'Untitled'}"
@@ -1106,35 +1099,30 @@ app.post('/api/ai/chat', async (req, res) => {
     }
     
     let pdfText = "";
-    // Fetch the PDF as a buffer and extract text using pdf-parse
     if (pdfUrl) {
       try {
         const pdfResponse = await fetch(pdfUrl);
         const arrayBuffer = await pdfResponse.arrayBuffer();
         const pdfData = await pdfParse(Buffer.from(arrayBuffer));
-        pdfText = pdfData.text.substring(0, 15000); // Truncate to ~15k chars to avoid token limits on Groq
+        pdfText = pdfData.text.substring(0, 15000); // Truncate for limits
         developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
       } catch (e) {
         console.error("Backend PDF fetch/parse error:", e);
       }
     }
 
-    const messages = [
-      { role: 'system', content: developerPrompt },
-      ...chatHistory.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      })),
-      { role: 'user', content: userMessage }
-    ];
+    const modelWithPrompt = genAI.getGenerativeModel({ model: 'gemini-3.5-flash', systemInstruction: developerPrompt });
+    
+    const contents = chatHistory.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+    contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const response = await groq.chat.completions.create({
-      messages: messages,
-      model: 'openai/gpt-oss-120b',
-    });
-
-    // Clean up response - remove any thinking tags that might appear
-    let cleanResponse = response.choices[0]?.message?.content || "";
+    const resultData = await modelWithPrompt.generateContent({ contents });
+    const responseData = await resultData.response;
+    
+    let cleanResponse = responseData.text() || "";
     cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     res.json({ success: true, text: cleanResponse });
@@ -1156,8 +1144,7 @@ app.post('/api/ai/precheck', async (req, res) => {
     const { abstract } = req.body;
     if (!abstract) return res.status(400).json({ error: 'Abstract is required for pre-check' });
 
-    // Use GROQ instead of Gemini for now since Gemini models are not accessible
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.json({
         score: 80,
         feedback: "AI scanner is temporarily unavailable. Your abstract appears to follow academic standards. Please review for grammar and clarity manually.",
@@ -1165,7 +1152,8 @@ app.post('/api/ai/precheck', async (req, res) => {
       });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic writing evaluator. Evaluate this abstract for grammar, syntax, academic tone, and readability. Be constructive and helpful.
 
 ABSTRACT:
@@ -1176,14 +1164,9 @@ Respond with ONLY a JSON object using this format:
 
 The score must be 0-100. Include 1-3 specific suggestions. Return ONLY valid JSON.`;
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'openai/gpt-oss-120b',
-      max_tokens: 1000,
-      temperature: 0.3
-    });
-
-    let rawText = completion.choices[0]?.message?.content || '';
+    const resultData = await model.generateContent(prompt);
+    const response = await resultData.response;
+    let rawText = response.text();
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
     let resultParsed;
@@ -1202,31 +1185,18 @@ The score must be 0-100. Include 1-3 specific suggestions. Return ONLY valid JSO
           };
         }
       } else {
-        resultParsed = { 
-          score: 75, 
-          feedback: "AI analysis completed. Your abstract appears to meet academic standards.", 
-          suggestions: [] 
-        };
+        resultParsed = { score: 75, feedback: "Abstract scanned successfully.", suggestions: [] };
       }
     }
 
     res.json(resultParsed);
   } catch (error) {
     console.error('AI Pre-Check Error:', error);
-    if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
-      return res.json({
-        score: 85,
-        feedback: "AI Scanner is currently busy due to high traffic. Your abstract looks good overall.",
-        suggestions: []
-      });
-    } else if (error.message?.includes('404') || error.message?.includes('not found')) {
-      return res.json({
-        score: 80,
-        feedback: "AI scanner is temporarily unavailable. Your abstract appears to follow academic standards. Please review for grammar and clarity manually.",
-        suggestions: []
-      });
-    }
-    res.status(500).json({ error: 'Failed to run AI Pre-Check', details: error.message });
+    res.json({
+      score: 85,
+      feedback: "AI service is currently busy. Please review the abstract manually.",
+      suggestions: []
+    });
   }
 });
 
@@ -1240,14 +1210,15 @@ app.post('/api/ai/extract-keywords', async (req, res) => {
     if (!abstract) return res.status(400).json({ error: 'Abstract is required' });
 
     // Use GROQ instead of Gemini
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.json({ 
         success: true, 
         keywords: ['Digital Archiving', 'Research Management', 'Academic Repository'] 
       });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
 Return ONLY a JSON array of strings. No explanation, no markdown.
 Example: ["Digital Archiving", "Research Management", "Agile Development"]
@@ -1255,14 +1226,9 @@ Example: ["Digital Archiving", "Research Management", "Agile Development"]
 Abstract:
 ${abstract}`;
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'openai/gpt-oss-120b',
-      max_tokens: 300,
-      temperature: 0.3
-    });
-
-    let rawText = completion.choices[0]?.message?.content || '';
+    const resultData = await model.generateContent(prompt);
+      const response = await resultData.response;
+      let rawText = response.text();
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     let keywords = [];
@@ -1325,13 +1291,14 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     const pdfText = pdfData.text.substring(0, 12000); // Truncate for GROQ limits
 
     // Use GROQ instead of Gemini
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.json({ 
         abstract: "The AI service is temporarily unavailable. Please manually input your abstract." 
       });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
 The abstract must cover: problem statement, methodology, results, and conclusion.
 Return ONLY the abstract text. No label, no heading, no markdown, no explanation.
@@ -1340,14 +1307,9 @@ Return ONLY the abstract text. No label, no heading, no markdown, no explanation
 ${pdfText}
 === END OF EXCERPT ===`;
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'openai/gpt-oss-120b',
-      max_tokens: 400,
-      temperature: 0.3
-    });
-
-    let rawText = completion.choices[0]?.message?.content || '';
+    const resultData = await model.generateContent(prompt);
+      const response = await resultData.response;
+      let rawText = response.text();
     rawText = rawText.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
     
     console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
@@ -1390,11 +1352,12 @@ app.post('/api/ai/summarize-pdf', async (req, res) => {
     const pdfText = pdfData.text.substring(0, 10000); 
 
     // Use GROQ instead of Gemini
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'AI summarization temporarily unavailable' });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic research assistant. Read the following excerpt from a research manuscript and generate a professional executive summary.
 
 EXCERPT:
@@ -1405,14 +1368,9 @@ Respond with ONLY a JSON object using this exact format:
 
 Ensure the JSON is valid. Output ONLY JSON.`;
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'openai/gpt-oss-120b',
-      max_tokens: 1500,
-      temperature: 0.3
-    });
-
-    let rawText = completion.choices[0]?.message?.content || '';
+    const resultData = await model.generateContent(prompt);
+      const response = await resultData.response;
+      let rawText = response.text();
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
 
     let result;
@@ -1465,11 +1423,12 @@ app.post('/api/ai/global-search', async (req, res) => {
   try {
     const { allPapers, query } = req.body;
 
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: "Missing GROQ_API_KEY in backend environment variables." });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     
     // Inject developer identity prompt and the entire database as context
     const developerPrompt = `
@@ -1497,15 +1456,10 @@ app.post('/api/ai/global-search', async (req, res) => {
     ----------------------------
     `;
     
-    const response = await groq.chat.completions.create({
-      model: 'openai/gpt-oss-120b',
-      messages: [
-        { role: 'system', content: developerPrompt },
-        { role: 'user', content: query }
-      ]
-    });
-
-    res.json({ success: true, text: response.choices[0]?.message?.content || "" });
+    const searchModel = genAI.getGenerativeModel({ model: 'gemini-3.5-flash', systemInstruction: developerPrompt });
+      const resultData = await searchModel.generateContent(query);
+      const responseData = await resultData.response;
+      res.json({ success: true, text: responseData.text() });
   } catch (error) {
     console.error('Global AI Search Error:', error);
     let errorMessage = error.message;
@@ -1662,5 +1616,148 @@ app.listen(PORT, () => {
   console.log('  POST /api/send-student-message');
   console.log('  POST /api/ai/chat');
   console.log('  POST /api/ai/extract-keywords');
+
+  // ==========================================
+  // DYNAMIC PDF WATERMARKING (ENTERPRISE)
+  // ==========================================
+  app.post('/api/watermark-pdf', async (req, res) => {
+    try {
+      const { pdfUrl, userName } = req.body;
+      if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required' });
+
+      // 1. Download the raw PDF into memory buffer
+      const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+      const pdfBytes = response.data;
+
+      // 2. Load PDF into pdf-lib
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const pages = pdfDoc.getPages();
+      
+      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const displayName = userName || 'Guest User';
+      const watermarkText = `Downloaded by ${displayName} on ${dateStr}`;
+
+      // 3. Loop through all pages and stamp watermark
+      pages.forEach((page) => {
+        const { width, height } = page.getSize();
+        const fontSize = 24;
+        const textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
+        
+        // Large diagonal watermark across center
+        page.drawText(watermarkText, {
+          x: (width / 2) - (textWidth / 2) * 0.707,
+          y: height / 2,
+          size: fontSize,
+          font: helveticaFont,
+          color: rgb(0.5, 0.1, 0.2), // SWU Maroon-ish
+          opacity: 0.25,
+          rotate: degrees(45),
+        });
+        
+        // Small footer text for accountability
+        page.drawText(`For Academic Purposes Only - SWU ARCHIVIO - ${displayName}`, {
+          x: 40,
+          y: 25,
+          size: 10,
+          font: helveticaFont,
+          color: rgb(0.4, 0.4, 0.4),
+          opacity: 0.6
+        });
+      });
+
+      // 4. Save and return modified PDF directly to browser
+      const modifiedPdfBytes = await pdfDoc.save();
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="ARCHIVIO_Paper_${Date.now()}.pdf"`);
+      res.send(Buffer.from(modifiedPdfBytes));
+
+    } catch (error) {
+      console.error('PDF Watermarking error:', error);
+      res.status(500).json({ error: 'Failed to generate watermarked PDF' });
+    }
+  });
+
+  // ============================================
+  // AI SIMILARITY CHECKER
+  // ============================================
+  app.post('/api/ai/similarity-check', async (req, res) => {
+    try {
+      const { submissionId, title, abstract } = req.body;
+      if (!title || !abstract) return res.status(400).json({ error: 'Title and abstract are required' });
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+      }
+
+      // Fetch all published papers from Firestore
+      const { getFirestore } = require('firebase-admin/firestore');
+      const db = getFirestore();
+      const snapshot = await db.collection('submissions').where('reviewStatus', '==', 'published').get();
+      
+      const publishedPapers = [];
+      snapshot.forEach(doc => {
+        if (submissionId && doc.id === submissionId) return; // Skip comparing to itself
+        
+        const data = doc.data();
+        publishedPapers.push({
+          id: doc.id,
+          title: data.researchTitle || data.title || '',
+          abstract: data.abstract || ''
+        });
+      });
+
+      if (publishedPapers.length === 0) {
+        return res.json({ score: 0, matchTitle: "None", analysis: "No published papers in the archive to compare against." });
+      }
+
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      
+      const prompt = `You are an expert academic plagiarism and similarity detection system.
+      Compare the NEW PAPER against the DATABASE OF PUBLISHED PAPERS below.
+      Identify the single published paper that is MOST similar in topic, methodology, or context to the new paper.
+      Calculate a similarity score from 0 to 100.
+      
+      NEW PAPER:
+      Title: ${title}
+      Abstract: ${abstract}
+      
+      DATABASE OF PUBLISHED PAPERS:
+      ${JSON.stringify(publishedPapers)}
+      
+      Return ONLY a valid JSON object in this exact format, with no extra text or markdown:
+      {"score": 85, "matchTitle": "Title of the most similar paper", "analysis": "1-2 sentences explaining why they are similar or why the score is low"}`;
+
+      const resultData = await model.generateContent(prompt);
+        const responseData = await resultData.response;
+        let rawText = responseData.text();
+      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      
+      let result;
+      try {
+        result = JSON.parse(rawText);
+      } catch (e) {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('AI returned invalid JSON');
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('AI Similarity Check Error:', error);
+      res.status(500).json({ error: 'Failed to process similarity check', details: error.message, stack: error.stack });
+    }
+  });
+
+  console.log('  POST /api/watermark-pdf');
   console.log('  GET  /api/health');
+  
+  // Start automated cron jobs
+  setupCleanupCron();
+  setupBackupCron();
+  setupMailListener(transporter);
 });

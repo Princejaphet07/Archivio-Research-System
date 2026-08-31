@@ -151,6 +151,66 @@ function ReviewSubmissions() {
   }).filter(Boolean))];
 
   // Handle AI Summarize
+  const handleSimilarityCheck = async (submission) => {
+    if (!submission?.abstract || submission.abstract.includes('No abstract')) {
+      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'This submission does not have a valid abstract to check.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Checking Similarity...',
+      html: 'Scanning archive for potential duplicates...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const res = await fetch(`${backendUrl}/api/ai/similarity-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          submissionId: submission.id,
+          title: submission.researchTitle || submission.title || 'Untitled', 
+          abstract: submission.abstract 
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to scan');
+
+      let icon = 'success';
+      let color = '#1E8E3E';
+      let title = 'Safe';
+      
+      if (data.score >= 40 && data.score < 75) {
+        icon = 'warning';
+        color = '#D97706';
+        title = 'Moderate Similarity';
+      } else if (data.score >= 75) {
+        icon = 'error';
+        color = '#DC2626';
+        title = 'High Risk of Duplication';
+      }
+
+      Swal.fire({
+        icon,
+        title,
+        html: `
+          <div style="font-size: 48px; font-weight: bold; color: ${color};">${data.score}%</div>
+          <div style="font-size: 14px; font-weight: bold; margin-top: 10px; color: #1A1A1A;">Most Similar Paper:</div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 15px; font-style: italic;">"${data.matchTitle}"</div>
+          <div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 10px; border-radius: 5px;">${data.analysis}</div>
+        `,
+        confirmButtonColor: '#7B1F35'
+      });
+
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Check Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#7B1F35' });
+    }
+  };
+
   const handleGenerateAISummary = async (submission) => {
     let pdfUrl = '';
     if (submission.documents) {
@@ -776,7 +836,13 @@ function ReviewSubmissions() {
               {/* Abstract */}
               {selectedSubmission.abstract && (
                 <div>
-                  <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm">Abstract</h4>
+                    <button onClick={() => handleSimilarityCheck(selectedSubmission)} className="text-[#1A1A1A] dark:text-stone-200 hover:text-[#7B1F35] dark:hover:text-[#7B1F35] hover:bg-stone-200 dark:hover:bg-stone-700 text-[10px] font-bold tracking-widest uppercase bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1">
+                      <svg className="w-3 h-3 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      Check Similarity
+                    </button>
+                  </div>
                   <p className="text-gray-600 dark:text-stone-300 text-sm leading-relaxed bg-gray-50 dark:bg-stone-900 rounded-lg p-4 border border-gray-100 dark:border-stone-800">
                     {selectedSubmission.abstract}
                   </p>
