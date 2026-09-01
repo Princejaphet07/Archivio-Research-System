@@ -195,7 +195,7 @@ export default function Requirements({ activePage, onNavigate }) {
                         <td className="py-4 px-4 text-center">
                           <PremiumButton 
                             onClick={() => handleView(row)}
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                           >
                             View
@@ -234,7 +234,7 @@ export default function Requirements({ activePage, onNavigate }) {
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   ‹
                 </button>
@@ -243,7 +243,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   <button 
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-2.5 py-1 rounded font-bold ${currentPage === page ? 'bg-[#4a1024] dark:bg-stone-950 text-white' : 'border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500'}`}
+                    className={`px-2.5 py-1 rounded font-bold ${currentPage === page ? 'bg-[#4a1024] dark:bg-stone-950 text-white' : 'border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300'}`}
                   >
                     {page}
                   </button>
@@ -252,7 +252,7 @@ export default function Requirements({ activePage, onNavigate }) {
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-2 py-1 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   ›
                 </button>

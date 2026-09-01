@@ -35,6 +35,7 @@ export default function Dashboard({ activePage }) {
   const [adviserTableYear, setAdviserTableYear] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   // Derive available years from data
   const availableYears = ['All', ...Array.from(new Set(allPapers.map(p => new Date(p.createdAt || Date.now()).getFullYear().toString())))].sort().reverse();
@@ -255,6 +256,7 @@ export default function Dashboard({ activePage }) {
   
   // Color palette for charts
   const COLORS = ['#7a1f3d', '#2563eb', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
+  const BRAND_COLORS = ['#4a1024', '#7a1f3d', '#9e2752', '#d4af37', '#f8d070', '#8a7a7a', '#d6cfc7'];
 
   const sortedTopPapers = [...allPapers].sort((a, b) => {
     const aScore = topPapersSort === 'likes' ? (a.likes?.length || 0) : (a.views || 0);
@@ -316,7 +318,7 @@ export default function Dashboard({ activePage }) {
             <div className="flex gap-2.5">
               <PremiumButton 
                 onClick={handleExportCSV}
-                variant="outline"
+                variant="ghost"
                 className="flex items-center gap-1.5"
               >
                 <span>📤</span> Export
@@ -382,35 +384,27 @@ export default function Dashboard({ activePage }) {
               <div className="relative h-44 w-full mt-2 flex items-end">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f3f3" />
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7a1f3d" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#7a1f3d" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorPublished" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#d97706" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.2)" />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                      labelStyle={{ fontWeight: 'bold', color: '#1c1917' }}
-                      cursor={{ fill: '#f5f5f4' }}
-                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
-                    <Bar dataKey="count" name="Total Uploads" fill="#7a1f3d" radius={[4, 4, 0, 0]} maxBarSize={40} animationDuration={1500} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="approved" 
-                      name="Approved Papers"
-                      stroke="#059669" 
-                      strokeWidth={3} 
-                      dot={{ r: 5, fill: '#059669', stroke: '#ffffff', strokeWidth: 2 }}
-                      activeDot={{ r: 7, fill: '#059669', stroke: '#ffffff', strokeWidth: 2 }}
-                      animationDuration={1500}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="published" 
-                      name="Published Papers"
-                      stroke="#d97706" 
-                      strokeWidth={3} 
-                      dot={{ r: 5, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
-                      activeDot={{ r: 7, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
-                      animationDuration={1500}
-                    />
+                    <Area type="monotone" dataKey="count" name="Total Uploads" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={1500} />
+                    <Area type="monotone" dataKey="approved" name="Approved Papers" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorApproved)" animationDuration={1500} />
+                    <Area type="monotone" dataKey="published" name="Published Papers" stroke="#d97706" strokeWidth={3} fillOpacity={1} fill="url(#colorPublished)" animationDuration={1500} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -453,31 +447,46 @@ export default function Dashboard({ activePage }) {
                   <p className="text-xs text-stone-400 mt-0.5">Distribution by field of study</p>
                 </div>
               </div>
-              <div className="h-64 mt-4 flex items-center justify-center">
+              <div className="h-64 mt-4 relative flex items-center justify-center">
                 {topCategories.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={topCategories}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={5}
-                        dataKey="count"
-                        nameKey="name"
-                      >
-                        {topCategories.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                        itemStyle={{ fontWeight: 'bold' }}
-                      />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-20px]">
+                      <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest max-w-[120px] text-center truncate">
+                        {activeIndex >= 0 ? topCategories[activeIndex].name : 'Total Papers'}
+                      </span>
+                      <span className="text-3xl font-serif font-extrabold text-[#7a1f3d] dark:text-[#f8d070] leading-none mt-1">
+                        {activeIndex >= 0 ? topCategories[activeIndex].count : topCategories.reduce((acc, curr) => acc + curr.count, 0)}
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={topCategories}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={95}
+                          paddingAngle={3}
+                          dataKey="count"
+                          nameKey="name"
+                          stroke="none"
+                          onMouseEnter={(_, index) => setActiveIndex(index)}
+                          onMouseLeave={() => setActiveIndex(-1)}
+                        >
+                          {topCategories.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={BRAND_COLORS[index % BRAND_COLORS.length]} 
+                              opacity={activeIndex === -1 || activeIndex === index ? 1 : 0.25}
+                              className="transition-all duration-300 outline-none"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </>
                 ) : (
                   <p className="text-xs text-stone-400 text-center">No categories data available yet.</p>
                 )}
@@ -657,4 +666,22 @@ function PaperRow({ rank, title, author, count, icon, highlight }) {
       </div>
     </div>
   );
+}
+
+function CustomTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border border-stone-200 dark:border-stone-700 p-4 rounded-xl shadow-xl">
+        <p className="font-bold text-stone-900 dark:text-stone-100 mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs font-medium mb-1">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color || entry.payload?.fill || '#d4af37' }}></div>
+            <span className="text-stone-600 dark:text-stone-400 capitalize">{entry.name}:</span>
+            <span className="text-stone-900 dark:text-stone-100 font-bold">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
 }

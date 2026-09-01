@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
 import { Trash2, Download, ShieldOff, Unlock } from 'lucide-react';
 import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -341,11 +342,8 @@ export default function AllUsers() {
                 <tbody className="divide-y divide-stone-100">
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-stone-500 dark:text-stone-400 font-medium">
-                        <div className="flex flex-col items-center justify-center">
-                          <div className="w-8 h-8 border-4 border-stone-200 dark:border-stone-700 border-t-[#801e38] rounded-full animate-spin mb-3"></div>
-                          Loading users...
-                        </div>
+                      <td colSpan="7" className="py-8 px-4">
+                        <TableSkeleton rows={5} columns={7} />
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (

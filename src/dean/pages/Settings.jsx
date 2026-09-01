@@ -7,6 +7,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 export default function Settings({ activePage, onNavigate }) {
   const { user, deanData, deanSettings } = useUser();
@@ -417,9 +418,8 @@ export default function Settings({ activePage, onNavigate }) {
 
                     <div className="space-y-3">
                       {loading ? (
-                        <div className="py-12 flex flex-col items-center justify-center">
-                          <div className="w-8 h-8 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-3"></div>
-                          <p className="text-xs font-bold text-[#7a1f3d] dark:text-[#f8d070] tracking-widest uppercase">Loading Requirements...</p>
+                        <div className="py-8 px-4">
+                          <ListSkeleton items={4} />
                         </div>
                       ) : (
                         globalRequirements.map((item) => (

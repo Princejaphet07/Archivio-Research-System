@@ -23,7 +23,7 @@ function ArchivePaperViewer() {
   const [error, setError] = useState(null);
 
   // View state
-  const [activeTab, setActiveTab] = useState('toc');
+  const [activeTab, setActiveTab] = useState(window.innerWidth > 640 ? 'toc' : null);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,6 +42,24 @@ function ArchivePaperViewer() {
     x: 0,
     y: 0
   });
+
+  // Responsive PDF width - fit exactly to available screen space
+  const [pdfWidth, setPdfWidth] = useState(800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const leftNavWidth = (window.innerWidth < 768 && isFullscreen) ? 0 : 56;
+      const padding = 16;
+      const availableWidth = window.innerWidth - leftNavWidth - padding;
+      setPdfWidth(window.innerWidth < 850 ? availableWidth : 800);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isFullscreen]);
+
+  const handleZoomIn = () => setPdfWidth(prev => prev + 150);
+  const handleZoomOut = () => setPdfWidth(prev => Math.max(300, prev - 150));
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -313,7 +331,7 @@ function ArchivePaperViewer() {
   };
 
   const handleTabClick = (tab) => {
-    setActiveTab(tab);
+    setActiveTab(prev => prev === tab ? null : tab);
     setIsFullscreen(false);
   };
 
@@ -607,8 +625,8 @@ function ArchivePaperViewer() {
       {/* MAIN CONTENT WORKSPACE */}
       <div className="flex flex-1 overflow-hidden relative">
         
-        {/* THIN LEFT NAVIGATION (ICONS) */}
-        <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors">
+        {/* THIN LEFT NAVIGATION (ICONS) - Hide on mobile if fullscreen */}
+        <div className={`w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors ${isFullscreen ? 'hidden md:flex' : 'flex'}`}>
           <button onClick={() => handleTabClick('abstract')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'abstract' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Abstract">
             📝
           </button>
@@ -684,8 +702,21 @@ function ArchivePaperViewer() {
         </div>
 
         {/* EXPANDABLE SIDEBAR PANEL */}
-        {!isFullscreen && (
+        {!isFullscreen && activeTab && (
           <div className="w-[calc(100%-3.5rem)] sm:w-64 absolute sm:relative left-14 sm:left-0 h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto z-20 sm:z-10 shadow-xl sm:shadow-none transition-colors">
+            {/* Mobile Close Button */}
+            <div className="sm:hidden flex justify-end p-2 pb-0">
+              <button 
+                onClick={() => setActiveTab(null)}
+                className="text-stone-500 hover:text-[#7a2039] p-1"
+                title="Close Sidebar"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
             {activeTab === 'abstract' && (
               <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
                 <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
@@ -1023,9 +1054,32 @@ function ArchivePaperViewer() {
           onPaste={(e) => e.preventDefault()}
         >
           <div className="w-full h-full flex flex-col relative select-none transition-all duration-300">
+            {/* MOBILE EXIT FULLSCREEN FLOATING BUTTON */}
+            {isFullscreen && (
+              <button 
+                onClick={toggleFullscreen}
+                className="md:hidden absolute top-4 right-4 z-50 bg-[#7a2039] text-white p-2 rounded-full shadow-lg opacity-80 hover:opacity-100 flex items-center justify-center"
+                title="Exit Fullscreen"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                </svg>
+              </button>
+            )}
+
+            {/* ZOOM CONTROLS */}
+            <div className="absolute bottom-24 right-4 z-40 flex flex-col gap-2">
+              <button onClick={handleZoomIn} className="bg-white/90 text-stone-700 shadow-md p-2 rounded-full hover:bg-stone-100 border border-stone-200 transition" title="Zoom In">
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path></svg>
+              </button>
+              <button onClick={handleZoomOut} className="bg-white/90 text-stone-700 shadow-md p-2 rounded-full hover:bg-stone-100 border border-stone-200 transition" title="Zoom Out">
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4"></path></svg>
+              </button>
+            </div>
+
             {/* EMBEDDED MANUSCRIPT VIEWER */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
-              <div className="w-full h-full relative overflow-y-auto flex justify-center custom-scrollbar py-8 pb-32">
+              <div className="w-full h-full relative overflow-auto flex justify-center custom-scrollbar py-8 pb-32">
                 <Document
                   file={paper.documents['Final Manuscript'].url}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -1040,7 +1094,7 @@ function ArchivePaperViewer() {
                     pageNumber={currentPage} 
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
-                    width={800}
+                    width={pdfWidth}
                     className="relative pointer-events-none"
                   />
                   

@@ -24,7 +24,7 @@ export default function Header({ activePage, onMenuClick }) {
   };
 
   return (
-    <header className="bg-white dark:bg-[#121212] border-b border-stone-200 dark:border-stone-800 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10 transition-colors">
+    <header className="bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10 transition-colors">
 
       {/* Left side: Mobile Toggle, Title, and Search */}
       <div className="flex items-center gap-4 lg:gap-6">

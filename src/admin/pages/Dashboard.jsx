@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, PieChart, Pie, Cell } from 'recharts';
+import { ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, PieChart, Pie, Cell } from 'recharts';
 import { Building2, GraduationCap, Users, UserPlus, BookOpen, TrendingUp } from 'lucide-react';
 import { Card, CardBody, StatCard, SectionTitle } from '../../components/ui/Card';
 import Sidebar from '../components/Sidebar';
@@ -7,6 +7,9 @@ import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
+import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
@@ -17,20 +20,26 @@ function Dashboard() {
   const [activityLogs, setActivityLogs] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [programs, setPrograms] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [loading, setLoading] = useState(true);
 
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
   useEffect(() => {
-    const unsubSub = onSnapshot(collection(db, 'submissions'), snap => setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubGroup = onSnapshot(collection(db, 'groups'), snap => setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubDeans = onSnapshot(collection(db, 'deans'), snap => setDeans(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), snap => setAdvisers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubStudents = onSnapshot(collection(db, 'students'), snap => setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    let loadedCount = 0;
+    const totalSnapshots = 8;
+    const markLoaded = () => { loadedCount++; if (loadedCount >= totalSnapshots) setLoading(false); };
+
+    const unsubSub = onSnapshot(collection(db, 'submissions'), snap => { setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
+    const unsubGroup = onSnapshot(collection(db, 'groups'), snap => { setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
+    const unsubDeans = onSnapshot(collection(db, 'deans'), snap => { setDeans(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), snap => { setAdvisers(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
+    const unsubStudents = onSnapshot(collection(db, 'students'), snap => { setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
     const unsubLogs = onSnapshot(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(100)), snap => {
-      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded();
     });
-    const unsubDepts = onSnapshot(collection(db, 'departments'), snap => setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubProgs = onSnapshot(collection(db, 'programs'), snap => setPrograms(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubDepts = onSnapshot(collection(db, 'departments'), snap => { setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
+    const unsubProgs = onSnapshot(collection(db, 'programs'), snap => { setPrograms(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
     return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); unsubDepts(); unsubProgs(); };
   }, []);
 
@@ -120,8 +129,8 @@ function Dashboard() {
       }
     });
 
-    const colors = ['bg-[#801e38]', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-[#9c6e3b]', 'bg-indigo-500', 'bg-purple-500', 'bg-stone-400'];
-    const strokeColors = ['#801e38', '#3b82f6', '#f59e0b', '#10b981', '#9c6e3b', '#6366f1', '#a855f7', '#a8a29e'];
+    const colors = ['bg-[#4a1024]', 'bg-[#7a1f3d]', 'bg-[#9e2752]', 'bg-[#d4af37]', 'bg-[#f8d070]', 'bg-[#8a7a7a]', 'bg-[#d6cfc7]', 'bg-[#1c1917]'];
+    const strokeColors = ['#4a1024', '#7a1f3d', '#9e2752', '#d4af37', '#f8d070', '#8a7a7a', '#d6cfc7', '#1c1917'];
     
     return Object.entries(cats)
       // Only keep departments that exist in DB (or fallback for unknown ones with count > 0)
@@ -205,6 +214,57 @@ function Dashboard() {
     }));
   }, [filteredSubmissions]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+          <Header title="Dashboard" breadcrumbs={['Dashboard']} />
+          <div className="p-6 space-y-6">
+            {/* Skeleton: Quick Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} borderTopColor={['#7B1F35','#3b82f6','#22c55e','#f59e0b','#7B1F35'][i]} />)}
+            </div>
+            {/* Skeleton: Chart Card */}
+            <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 p-6 animate-pulse">
+              <div className="h-5 w-52 bg-stone-200 dark:bg-stone-700 rounded-full mb-4" />
+              <div className="h-64 bg-stone-100 dark:bg-stone-900 rounded-xl" />
+            </div>
+            {/* Skeleton: Bar Chart Card */}
+            <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 p-6 animate-pulse">
+              <div className="h-5 w-60 bg-stone-200 dark:bg-stone-700 rounded-full mb-4" />
+              <div className="space-y-5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4" style={{ opacity: 1 - i * 0.2 }}>
+                    <div className="h-3 w-28 bg-stone-200 dark:bg-stone-700 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-stone-200 dark:bg-stone-700 rounded-full" style={{ width: `${80 - i * 20}%` }} />
+                      <div className="h-4 bg-stone-100 dark:bg-stone-700/50 rounded-full" style={{ width: `${60 - i * 15}%` }} />
+                      <div className="h-4 bg-stone-100 dark:bg-stone-700/40 rounded-full" style={{ width: `${40 - i * 10}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Skeleton: Table + Pie */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2"><TableSkeleton rows={4} /></div>
+              <div><ListSkeleton items={4} /></div>
+            </div>
+            {/* Skeleton: Storage */}
+            <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 p-6 animate-pulse">
+              <div className="h-5 w-44 bg-stone-200 dark:bg-stone-700 rounded-full mb-4" />
+              <div className="flex items-center gap-6">
+                <div className="h-14 w-20 bg-stone-200 dark:bg-stone-700 rounded-lg" />
+                <div className="flex-1 h-4 bg-stone-100 dark:bg-stone-800 rounded-full"><div className="h-full w-2/3 bg-stone-200 dark:bg-stone-700 rounded-full" /></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full flex bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       
@@ -245,61 +305,27 @@ function Dashboard() {
                 <ComposedChart data={yearlyChartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorUploads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#64b494" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#64b494" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#7a1f3d" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#7a1f3d" stopOpacity={0}/>
                     </linearGradient>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="3" result="blur" />
-                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
+                    <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#d97706" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorPublished" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4a1024" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#4a1024" stopOpacity={0}/>
+                    </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.2)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.85)', 
-                      backdropFilter: 'blur(12px)',
-                      borderRadius: '12px', 
-                      border: '1px solid rgba(0,0,0,0.05)', 
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      color: '#1f2937',
-                      fontWeight: 'bold',
-                      fontSize: '12px'
-                    }}
-                    labelStyle={{ fontWeight: 'bold', color: '#1c1917', marginBottom: '4px' }}
-                    cursor={{ fill: 'rgba(100, 180, 148, 0.05)' }}
-                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#4b5563', paddingTop: '10px' }} />
-                  <Bar dataKey="uploads" name="Total Uploads" fill="url(#colorUploads)" radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={1500} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="approved" 
-                    name="Approved Papers"
-                    stroke="#d97706" 
-                    strokeWidth={3} 
-                    filter="url(#glow)"
-                    dot={{ r: 5, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
-                    activeDot={{ r: 7, fill: '#d97706', stroke: '#ffffff', strokeWidth: 2 }}
-                    animationDuration={1500}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="published" 
-                    name="Published Papers"
-                    stroke="#801e38" 
-                    strokeWidth={3} 
-                    dot={{ r: 5, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
-                    activeDot={{ r: 7, fill: '#801e38', stroke: '#ffffff', strokeWidth: 2 }}
-                    animationDuration={1500}
-                  >
-                    <LabelList 
-                      dataKey="published" 
-                      position="top" 
-                      offset={12} 
-                      style={{ fill: '#801e38', fontSize: 11, fontWeight: 'bold' }} 
-                    />
-                  </Line>
+                  
+                  <Area type="monotone" dataKey="uploads" name="Total Uploads" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorUploads)" animationDuration={1500} />
+                  <Area type="monotone" dataKey="approved" name="Approved Papers" stroke="#d97706" strokeWidth={3} fillOpacity={1} fill="url(#colorApproved)" animationDuration={1500} />
+                  <Area type="monotone" dataKey="published" name="Published Papers" stroke="#4a1024" strokeWidth={3} fillOpacity={1} fill="url(#colorPublished)" animationDuration={1500} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -390,7 +416,17 @@ function Dashboard() {
                 <CardBody>
                   <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
                   <div className="flex justify-center mb-4">
-                  <div className="w-full h-[220px]">
+                  <div className="relative w-full h-[220px]">
+                    {categories.length > 0 && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-5px]">
+                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest max-w-[120px] text-center truncate">
+                          {activeIndex >= 0 ? categories[activeIndex].name : 'Total Papers'}
+                        </span>
+                        <span className="text-3xl font-serif font-extrabold text-[#7a1f3d] dark:text-[#f8d070] leading-none mt-1">
+                          {activeIndex >= 0 ? categories[activeIndex].count : categories.reduce((acc, curr) => acc + curr.count, 0)}
+                        </span>
+                      </div>
+                    )}
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -404,23 +440,19 @@ function Dashboard() {
                           nameKey="name"
                           animationDuration={1500}
                           stroke="none"
+                          onMouseEnter={(_, index) => setActiveIndex(index)}
+                          onMouseLeave={() => setActiveIndex(-1)}
                         >
                           {categories.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.strokeColor} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.strokeColor} 
+                              opacity={activeIndex === -1 || activeIndex === index ? 1 : 0.25}
+                              className="transition-all duration-300 outline-none cursor-pointer" 
+                            />
                           ))}
                         </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.85)', 
-                            backdropFilter: 'blur(12px)',
-                            borderRadius: '12px', 
-                            border: '1px solid rgba(0,0,0,0.05)', 
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                            color: '#1f2937',
-                            fontWeight: 'bold',
-                            fontSize: '12px'
-                          }}
-                        />
+                        <Tooltip content={<CustomTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>            </div>
@@ -450,3 +482,21 @@ function Dashboard() {
 
 export default Dashboard;
 
+
+function CustomTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border border-stone-200 dark:border-stone-700 p-4 rounded-xl shadow-xl">
+        <p className="font-bold text-stone-900 dark:text-stone-100 mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs font-medium mb-1">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color || entry.payload?.fill || '#d4af37' }}></div>
+            <span className="text-stone-600 dark:text-stone-400 capitalize">{entry.name}:</span>
+            <span className="text-stone-900 dark:text-stone-100 font-bold">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}

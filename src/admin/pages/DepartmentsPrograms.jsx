@@ -3,6 +3,7 @@ import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where, onS
 import Swal from 'sweetalert2';
 import { db } from '../firebase/config';
 import { Card, PremiumButton } from '../../components/ui/Card';
+import CardSkeleton from '../components/skeletons/CardSkeleton';
 
 // Program code options for the dropdown
 const programCodeOptions = [
@@ -279,6 +280,22 @@ export default function DepartmentsProgramsTab() {
         : [...prev.codes, code]
     }));
   };
+
+  if (loading) {
+    return (
+      <div>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-32 bg-stone-200 dark:bg-stone-800 rounded-lg animate-pulse" />
+            <div className="h-10 w-32 bg-stone-200 dark:bg-stone-800 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

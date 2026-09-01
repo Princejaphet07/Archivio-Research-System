@@ -5,6 +5,7 @@ import ArchiveHome from './pages/ArchiveHome';
 import ArchiveBrowse from './pages/ArchiveBrowse';
 import ArchiveBookmarks from './pages/ArchiveBookmarks';
 import ArchiveAbout from './pages/ArchiveAbout';
+import ArchiveTeam from './pages/ArchiveTeam';
 import ArchivePaperViewer from './pages/ArchivePaperViewer';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -53,6 +54,7 @@ function App() {
           <Route path="/forgot-password" element={<ArchiveForgotPassword />} />
           <Route path="/browse" element={<ArchiveBrowse />} />
           <Route path="/about" element={<ArchiveAbout />} />
+          <Route path="/team" element={<ArchiveTeam />} />
           
           {/* Protected Routes */}
           <Route path="/bookmarks" element={

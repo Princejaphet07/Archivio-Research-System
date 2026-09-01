@@ -7,6 +7,7 @@ import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestor
 import { db, auth } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Search, Download } from 'lucide-react';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 const ROWS_PER_PAGE = 10;
 
@@ -238,13 +239,11 @@ export default function ActivityLogs() {
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={i} className="animate-pulse">
-                        {Array.from({ length: 7 }).map((_, j) => (
-                          <td key={j} className="px-6 py-4"><div className="h-3 bg-stone-100 dark:bg-stone-800 rounded w-20" /></td>
-                        ))}
-                      </tr>
-                    ))
+                    <tr>
+                      <td colSpan="7" className="py-8 px-4">
+                        <TableSkeleton rows={6} columns={7} />
+                      </td>
+                    </tr>
                   ) : paginated.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="px-6 py-16 text-center text-stone-400">

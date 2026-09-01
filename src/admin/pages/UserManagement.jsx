@@ -10,12 +10,14 @@ import Swal from 'sweetalert2';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { Trash2, Eye, Edit2, Ban, Plus } from 'lucide-react';
 import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedUsers, setSelectedUsers] = useState(new Set());
@@ -97,15 +99,35 @@ export default function UserManagement() {
       setAllUsers(merged);
     };
 
+    let deanResolved = false;
+    let saResolved = false;
+    const checkLoading = () => {
+       if (deanResolved && saResolved) {
+         setLoadingUsers(false);
+       }
+    };
+
     const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(d => ({ id: d.id, _collection: 'deans', ...d.data() }));
       mergeUsers();
-    }, (error) => console.error('Error fetching users:', error));
+      deanResolved = true;
+      checkLoading();
+    }, (error) => {
+      console.error('Error fetching users:', error);
+      deanResolved = true;
+      checkLoading();
+    });
 
     const unsubSA = onSnapshot(collection(db, 'super_admins'), (snap) => {
       saData = snap.docs.map(d => ({ id: d.id, _collection: 'super_admins', ...d.data() }));
       mergeUsers();
-    }, (error) => console.error('Error fetching users:', error));
+      saResolved = true;
+      checkLoading();
+    }, (error) => {
+      console.error('Error fetching users:', error);
+      saResolved = true;
+      checkLoading();
+    });
 
     const unsubDepts = onSnapshot(collection(db, 'departments'), (snap) => {
       setDepartmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -1072,10 +1094,10 @@ export default function UserManagement() {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left text-xs border-separate" style={{ borderSpacing: '0 8px' }}>
                 <thead>
-                  <tr className="bg-stone-50 dark:bg-[#252525] text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
-                    <th className="px-4 py-4 w-10 text-center">
+                  <tr className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-4 py-2 w-10 text-center">
                       <input
                         type="checkbox"
                         checked={selectedUsers.size === filteredUsersList.length && filteredUsersList.length > 0}
@@ -1089,26 +1111,41 @@ export default function UserManagement() {
                         className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                       />
                     </th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">NAME ↕</th>
-                    <th className="px-3 py-3">EMAIL</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">DEPARTMENT ↕</th>
-                    <th className="px-3 py-3">ROLE</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">STATUS ↕</th>
-                    <th className="px-3 py-3 cursor-pointer hover:text-stone-600 dark:text-stone-300">CREATED ↕</th>
-                    <th className="px-3 py-3 text-center">ACTIONS</th>
+                    <th className="py-2 px-3 font-bold text-stone-400 cursor-pointer hover:text-stone-600 dark:hover:text-stone-300">NAME ↕</th>
+                    <th className="py-2 px-3 font-bold text-stone-400">EMAIL</th>
+                    <th className="py-2 px-3 font-bold text-stone-400 cursor-pointer hover:text-stone-600 dark:hover:text-stone-300">DEPARTMENT ↕</th>
+                    <th className="py-2 px-3 font-bold text-stone-400">ROLE</th>
+                    <th className="py-2 px-3 font-bold text-stone-400 text-center cursor-pointer hover:text-stone-600 dark:hover:text-stone-300">STATUS ↕</th>
+                    <th className="py-2 px-3 font-bold text-stone-400 cursor-pointer hover:text-stone-600 dark:hover:text-stone-300">CREATED ↕</th>
+                    <th className="py-2 px-3 font-bold text-stone-400 text-center">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 text-sm">
-                  {allUsers.length === 0 ? (
+                <tbody className="px-4">
+                  {loadingUsers ? (
                     <tr>
-                      <td colSpan="8" className="px-6 py-12 text-center text-stone-500 dark:text-stone-400">
-                        No user accounts yet. Click "+ Add User" to get started.
+                      <td colSpan="8" className="py-8 px-4">
+                        <TableSkeleton rows={5} columns={8} />
+                      </td>
+                    </tr>
+                  ) : allUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="py-24">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-4">
+                            <span className="text-2xl opacity-50">👥</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-1">No user accounts found</h3>
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">Click "+ Add User" to get started.</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     paginatedUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors group">
-                        <td className="px-4 py-4 text-center">
+                      <tr 
+                        key={user.id} 
+                        className="group bg-white dark:bg-stone-800/40 hover:bg-stone-50 dark:hover:bg-stone-800/80 transition-all duration-300 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md rounded-xl cursor-default border border-transparent"
+                      >
+                        <td className="px-4 py-4 text-center rounded-l-xl border-y border-l border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           <input
                             type="checkbox"
                             checked={selectedUsers.has(user.id)}
@@ -1116,46 +1153,49 @@ export default function UserManagement() {
                             className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
                           />
                         </td>
-                        <td className="px-3 py-3 font-bold text-stone-800 dark:text-stone-100 whitespace-nowrap">{user.displayName}</td>
-                        <td className="px-3 py-3 text-stone-500 dark:text-stone-400 whitespace-nowrap">{user.email}</td>
-                        <td className="px-3 py-3 text-stone-700 dark:text-stone-200 font-medium whitespace-nowrap">{user.department || '—'}</td>
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-4 font-bold text-stone-900 dark:text-stone-100 text-[13px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.displayName}</td>
+                        <td className="px-3 py-4 text-stone-500 dark:text-stone-400 text-[12px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.email}</td>
+                        <td className="px-3 py-4 text-stone-700 dark:text-stone-200 font-medium border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.department || '—'}</td>
+                        <td className="px-3 py-4 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           <div className="flex gap-1.5 flex-wrap">
                             {user.role === 'super-admin' && (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-700">
+                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200/50 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/30">
                                 Super Admin
                               </span>
                             )}
                             {user.role === 'dean' && (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-pink-100 text-pink-700">
+                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-pink-50 text-pink-700 border border-pink-200/50 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800/30">
                                 Dean
                               </span>
                             )}
                             {user.role === 'dean+adviser' && (
                               <>
-                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-pink-100 text-pink-700">
+                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-pink-50 text-pink-700 border border-pink-200/50 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800/30">
                                   Dean
                                 </span>
-                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30">
                                   Adviser
                                 </span>
                               </>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3">
-                          <span className={`text-[11px] font-bold px-3 py-1 rounded-full text-white ${user.status === 'active' ? 'bg-emerald-600' : 'bg-[#801e38]'
+                        <td className="px-3 py-4 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
+                            user.status === 'active' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
+                              : 'bg-stone-50 text-stone-600 border-stone-200 dark:bg-stone-800/40 dark:text-stone-400 dark:border-stone-700/30'
                             }`}>
                             {user.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-stone-400 whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-4 text-stone-500 dark:text-stone-400 font-medium text-[12px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-4 rounded-r-xl border-y border-r border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           {user.status === 'pending' ? (
                             <div className="flex justify-center">
                               <button
                                 onClick={() => resendInvitation(user.id, user.email, user.displayName)}
-                                className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer"
+                                className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
                               >
                                 Resend
                               </button>
@@ -1164,24 +1204,24 @@ export default function UserManagement() {
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleViewUser(user)}
-                                className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
                                 title="View details"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleEditUser(user)}
-                                className="p-1.5 text-stone-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                className="p-2 text-stone-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
                                 title="Edit user"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteSingleUser(user)}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:-translate-y-0.5 ${
                                   user.status === 'inactive'
-                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700'
-                                    : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
+                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400'
+                                    : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-400'
                                 }`}
                                 title={user.status === 'inactive' ? 'Activate user' : 'Deactivate user'}
                               >
@@ -1189,7 +1229,7 @@ export default function UserManagement() {
                               </button>
                               <button
                                 onClick={() => handleHardDeleteSingleUser(user)}
-                                className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all hover:-translate-y-0.5"
                                 title="Permanently Delete user"
                               >
                                 <Trash2 className="w-4 h-4" />

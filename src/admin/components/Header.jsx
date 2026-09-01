@@ -30,7 +30,9 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
   }, [selectedYear]);
 
   return (
-    <header className="h-20 bg-white dark:bg-[#1a1a1a] border-b border-stone-200 dark:border-stone-800 px-6 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
+    <header className="bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10 transition-colors">
+
+      {/* Left side: Mobile Toggle, Title, and Search */} 
       <div>
         <h2 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">{title}</h2>
         <div className="flex items-center text-[11px] text-stone-500 dark:text-stone-400 font-medium mt-1">

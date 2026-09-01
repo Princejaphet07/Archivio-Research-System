@@ -76,6 +76,40 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1; /* stone-300 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e; /* stone-400 */
+}
+
+/* Global scrollbar styling for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #1c1917; /* stone-900 */
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #44403c; /* stone-700 */
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #57534e; /* stone-600 */
+}
+
 /* Prevent Chrome autofill blue background on login inputs */
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover, 

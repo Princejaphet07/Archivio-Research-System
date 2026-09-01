@@ -123,6 +123,7 @@ export function PremiumButton({ children, onClick, variant = 'primary', size = '
   const variants = {
     primary: 'bg-[#7B1F35] hover:bg-[#63182a] text-white shadow-md hover:shadow-lg active:scale-95',
     ghost:   'border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-300',
+    outline: 'border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-300',
     danger:  'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg active:scale-95',
     success: 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg active:scale-95',
   };

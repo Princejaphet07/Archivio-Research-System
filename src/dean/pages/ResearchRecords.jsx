@@ -30,7 +30,7 @@ const STATUS_STYLES = {
 };
 
 const ACTION_STYLES = {
-  View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700',
+  View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-700',
   Publish: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
   Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
 };
@@ -224,7 +224,7 @@ export default function ResearchRecords() {
             <SectionTitle sub={`All uploaded research within the College of IT · ${records.length} total records`}>
               Research Records
             </SectionTitle>
-            <PremiumButton variant="outline" className="flex items-center gap-2">
+            <PremiumButton variant="ghost" className="flex items-center gap-2">
               <span>📤</span> Export CSV
             </PremiumButton>
           </div>
@@ -271,76 +271,111 @@ export default function ResearchRecords() {
             {/* ---- Table ---- */}
             <div className="overflow-x-auto">
               {loading ? (
-                <div className="mt-2">
+                <div className="mt-2 p-4">
                   <TableSkeleton rows={5} />
                 </div>
               ) : (
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-xs border-separate" style={{ borderSpacing: '0 8px' }}>
                 <thead>
-                  <tr className="bg-stone-50 dark:bg-stone-800/50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
-                    <th className="py-3 px-4 w-12">#</th>
-                    <th className="py-3 px-4">Title</th>
-                    <th className="py-3 px-4">Group</th>
-                    <th className="py-3 px-4">Adviser</th>
-                    <th className="py-3 px-4 text-center">Category</th>
-                    <th className="py-3 px-4 text-center">Year</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-center">Actions</th>
+                  <tr className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="py-2 px-6 w-12 font-bold text-stone-400">#</th>
+                    <th className="py-2 px-6 font-bold text-stone-400">Title</th>
+                    <th className="py-2 px-6 font-bold text-stone-400">Group</th>
+                    <th className="py-2 px-6 font-bold text-stone-400">Adviser</th>
+                    <th className="py-2 px-6 text-center font-bold text-stone-400">Category</th>
+                    <th className="py-2 px-6 text-center font-bold text-stone-400">Year</th>
+                    <th className="py-2 px-6 text-center font-bold text-stone-400">Status</th>
+                    <th className="py-2 px-6 text-center font-bold text-stone-400">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
+                <tbody className="px-4">
                   {paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-16 text-center text-stone-400 text-sm font-medium">
-                        No records match your filters.
+                      <td colSpan={8} className="py-24">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-4">
+                            <span className="text-2xl opacity-50">📂</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-1">No research records found</h3>
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">Try adjusting your search filters or selecting a different academic year to find what you're looking for.</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     paginated.map((record) => (
                       <tr
                         key={record.id}
-                        className={`transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 ${record.adviserSelf ? 'border-l-2 border-l-[#f8d070]' : ''}`}
+                        className={`group bg-white dark:bg-stone-800/40 hover:bg-stone-50 dark:hover:bg-stone-800/80 transition-all duration-300 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md rounded-xl cursor-default
+                        ${record.adviserSelf ? 'border-l-4 border-l-[#f8d070]' : 'border border-transparent'}`}
                       >
                         {/* # */}
-                        <td className="py-3.5 px-4 text-stone-400 font-bold">{record.id}</td>
+                        <td className="py-4 px-6 text-stone-400 font-bold rounded-l-xl border-y border-l border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.id}</td>
 
                         {/* Title */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-4 px-6 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           <span className="font-bold text-stone-900 dark:text-stone-100 text-[13px]">{record.title}</span>
                         </td>
 
                         {/* Group */}
-                        <td className="py-3.5 px-4 text-stone-500 dark:text-stone-400 font-medium">{record.group}</td>
+                        <td className="py-4 px-6 text-stone-500 dark:text-stone-400 font-medium border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.group}</td>
 
                         {/* Adviser */}
-                        <td className="py-3.5 px-4">
-                          <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-600 dark:text-stone-400 font-medium'}>
-                            {record.adviser}
-                          </span>
+                        <td className="py-4 px-6 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${record.adviserSelf ? 'bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-[#4a1024]' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'}`}>
+                              {record.adviser.charAt(0).toUpperCase()}
+                            </div>
+                            <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-600 dark:text-stone-300 font-medium'}>
+                              {record.adviser}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Category */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${CATEGORY_COLORS[record.category] || 'bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400'}`}>
+                        <td className="py-4 px-6 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold border ${
+                            record.category === 'ML' ? 'bg-purple-50/50 text-purple-700 border-purple-200/50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800/30' :
+                            record.category === 'IoT' ? 'bg-teal-50/50 text-teal-700 border-teal-200/50 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800/30' :
+                            record.category === 'Security' ? 'bg-amber-50/50 text-amber-700 border-amber-200/50 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/30' :
+                            record.category === 'Mobile' ? 'bg-blue-50/50 text-blue-700 border-blue-200/50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30' :
+                            record.category === 'Web' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/30' :
+                            'bg-stone-50/50 text-stone-600 border-stone-200/50 dark:bg-stone-800/40 dark:text-stone-400 dark:border-stone-700/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              record.category === 'ML' ? 'bg-purple-500' :
+                              record.category === 'IoT' ? 'bg-teal-500' :
+                              record.category === 'Security' ? 'bg-amber-500' :
+                              record.category === 'Mobile' ? 'bg-blue-500' :
+                              record.category === 'Web' ? 'bg-emerald-500' : 'bg-stone-400'
+                            }`}></span>
                             {record.category}
                           </span>
                         </td>
 
                         {/* Year */}
-                        <td className="py-3.5 px-4 text-center text-stone-500 dark:text-stone-400 font-medium">{record.year}</td>
+                        <td className="py-4 px-6 text-center text-stone-500 dark:text-stone-400 font-bold border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.year}</td>
 
                         {/* Status */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_STYLES[record.status] || 'bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400'}`}>
-                            {formatStatus(record.status)}
+                        <td className="py-4 px-6 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
+                            record.status === 'published' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' :
+                            (record.status === 'approved' || record.status === 'reviewed') ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400' :
+                            'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400'
+                          }`}>
+                            {record.status === 'published' ? '✓' : record.status === 'approved' || record.status === 'reviewed' ? '✦' : '•'} {formatStatus(record.status)}
                           </span>
                         </td>
 
                         {/* Action */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-4 px-6 text-center rounded-r-xl border-y border-r border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           <button 
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors shadow-sm ${ACTION_STYLES[record.action] || ACTION_STYLES.View}`}
-                            onClick={() => {
+                            className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all duration-300 shadow-sm flex items-center gap-2 mx-auto ${
+                              record.action === 'Publish' || record.action === 'Review'
+                              ? 'bg-[#7a1f3d] dark:bg-[#d4af37] text-white dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#f8d070] hover:shadow-md hover:-translate-y-0.5' 
+                              : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-200 hover:border-stone-300 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-700 hover:-translate-y-0.5'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (record.action === 'Publish') {
                                 navigate('/dean/publish-queue');
                               } else {
@@ -348,7 +383,7 @@ export default function ResearchRecords() {
                               }
                             }}
                           >
-                            {record.action}
+                            {record.action === 'Publish' || record.action === 'Review' ? '★' : '👁'} {record.action}
                           </button>
                         </td>
                       </tr>
