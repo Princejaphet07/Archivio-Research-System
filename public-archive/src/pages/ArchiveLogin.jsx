@@ -165,15 +165,15 @@ function ArchiveLogin() {
           {/* PREMIUM FEATURES CHECKLIST */}
           <div className="hidden md:flex flex-col gap-2 mt-4 text-left w-full max-w-sm mx-auto">
             <div className="flex items-center gap-3 text-stone-200 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10 shadow-sm">
-              <span className="text-xl">ðŸ”“</span>
+              <span className="text-xl">📖</span>
               <span className="text-xs font-sans tracking-wide">Read full-text PDF manuscripts</span>
             </div>
             <div className="flex items-center gap-3 text-stone-200 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10 shadow-sm">
-              <span className="text-xl">ðŸ“š</span>
+              <span className="text-xl">📚</span>
               <span className="text-xs font-sans tracking-wide">Create your personal reading list</span>
             </div>
             <div className="flex items-center gap-3 text-stone-200 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10 shadow-sm">
-              <span className="text-xl">ðŸ¤–</span>
+              <span className="text-xl">🤖</span>
               <span className="text-xs font-sans tracking-wide">Access AI "Talk to Research" Assistant</span>
             </div>
           </div>
@@ -420,7 +420,7 @@ function ArchiveLogin() {
           {/* LINK PABALIK SA HOME */}
           <div className="mt-8">
             <Link to="/" className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 flex items-center space-x-1 transition-colors">
-              <span>â†</span>
+              <span>&larr;</span>
               <span>Back to Archive</span>
             </Link>
           </div>
