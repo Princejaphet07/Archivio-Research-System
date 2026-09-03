@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 
 const UserContext = createContext();
 
@@ -25,16 +24,25 @@ export const UserProvider = ({ children }) => {
       if (firebaseUser) {
         setUser(firebaseUser);
 
-        // Fetch dean profile from Firestore
+        // Fetch dean profile from Firestore — query by EMAIL so data persists across re-created accounts
         try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const { collection: col, query: q, where, getDocs, onSnapshot } = await import('firebase/firestore');
+          const advisersQuery = q(col(db, 'advisers'), where('email', '==', firebaseUser.email));
+          const advisersSnap = await getDocs(advisersQuery);
 
-          if (userDocSnap.exists()) {
-            setDeanData(userDocSnap.data());
+          if (!advisersSnap.empty) {
+            const adviserDoc = advisersSnap.docs[0];
+            setDeanData({ ...adviserDoc.data(), docId: adviserDoc.id });
+          } else {
+            // Fallback: try 'users' collection by email
+            const usersQuery = q(col(db, 'users'), where('email', '==', firebaseUser.email));
+            const usersSnap = await getDocs(usersQuery);
+            if (!usersSnap.empty) {
+              setDeanData(usersSnap.docs[0].data());
+            }
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('Error fetching dean data:', error);
         }
 
         // Listen to dean settings

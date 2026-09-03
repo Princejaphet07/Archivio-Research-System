@@ -99,7 +99,14 @@ export default function UserManagement() {
 
   // Process Students Data
   const enrichedStudents = students.map(student => {
-    const group = groups.find(g => g.leaderUid === student.uid || g.members?.some(m => m.email === student.email));
+    // Match by UID first (normal case), then fallback to email (when account was recreated)
+    const group = groups.find(g => 
+      g.leaderUid === student.uid ||
+      g.leaderEmail === student.email ||
+      g.members?.some(m => 
+        (typeof m === 'object' ? m.email : m) === student.email
+      )
+    );
     return {
       ...student,
       groupName: group?.groupName || 'No Group',
