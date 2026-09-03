@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase/config';
@@ -104,7 +104,7 @@ function ArchiveLogin() {
         Swal.fire({
           icon: 'warning',
           title: 'Weak Password',
-          html: `Your password must have:<br><ul style="text-align:left;margin-top:8px">${missingReqs.map(r => `<li>â€¢ ${r}</li>`).join('')}</ul>`,
+          html: `Your password must have:<br><ul style="text-align:left;margin-top:8px">${missingReqs.map(r => `<li>&bull; ${r}</li>`).join('')}</ul>`,
           confirmButtonColor: '#7a2039'
         });
         return;
@@ -148,15 +148,6 @@ function ArchiveLogin() {
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden font-serif">
       
-      {/* THEME TOGGLE (Absolute Top Right) */}
-      <button 
-        onClick={toggleTheme} 
-        className="absolute top-4 right-4 z-[60] p-2.5 bg-black/20 md:bg-white/10 dark:bg-black/40 text-amber-100 hover:bg-black/40 transition rounded-full backdrop-blur-sm border border-white/10 shadow-lg"
-        title="Toggle Dark Mode"
-      >
-        {isDarkMode ? 'â˜€ï¸' : 'ðŸŒ™'}
-      </button>
-
       {/* LEFT SIDE: Maroon Panel */}
       <div className="w-full md:w-[45%] h-[25vh] md:h-full bg-[#24050f] text-white flex flex-col justify-center md:justify-between p-6 md:p-12 relative z-20 shadow-xl md:shadow-[15px_0_30px_-5px_rgba(0,0,0,0.6)]">        <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-6 relative z-30">
           <div className="bg-white/5 p-2 rounded-full mb-1 hidden md:block">
@@ -293,7 +284,7 @@ function ArchiveLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••••••"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
                   {showPassword ? (
@@ -370,7 +361,7 @@ function ArchiveLogin() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required={!isLogin}
                     className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400"
-                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                    placeholder="••••••••••••"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
                     {showPassword ? (
