@@ -436,171 +436,37 @@ function ArchiveLogin() {
         </div>
       </div>
 
-      {/* TERMS MODAL â€” Premium Parchment Design */}
+      {/* TERMS MODAL */}
       {showTermsModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
-          style={{ background: 'rgba(8,2,1,0.82)', backdropFilter: 'blur(12px)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowTermsModal(false); }}
-        >
-          <div
-            className="relative w-full max-w-3xl flex flex-col overflow-hidden"
-            style={{
-              maxHeight: '92vh',
-              borderRadius: '16px',
-              background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"), linear-gradient(145deg, #f7edd8 0%, #f0e1c0 35%, #ead5a8 70%, #e4cfa0 100%)`,
-              boxShadow: '0 40px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(185,145,90,0.4)',
-            }}
-          >
-
-            {/* === HEADER === */}
-            <div className="relative flex-shrink-0 px-6 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(185,145,90,0.35)' }}>
-              {/* Top accent line */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ background: 'linear-gradient(90deg, #7a2039 0%, #c9904e 50%, #7a2039 100%)' }} />
-
-              <div className="flex items-start justify-between gap-4">
-                {/* Left: Logo + Title */}
-                <div className="flex items-center gap-4">
-                  {/* Premium seal */}
-                  <div className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #3d0c1b 0%, #7a2039 100%)', border: '1px solid rgba(201,160,78,0.5)' }}>
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2L14.5 9H22L16 13.5L18.5 20.5L12 16L5.5 20.5L8 13.5L2 9H9.5L12 2Z" fill="#d6ad60" opacity="0.9"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5" style={{ color: '#b87333', fontFamily: 'system-ui, sans-serif' }}>ARCHIVIO Â· SWU PHINMA</p>
-                    <h2 className="text-xl font-bold leading-none" style={{ color: '#1a0608', fontFamily: 'Georgia, serif', letterSpacing: '-0.01em' }}>Terms & Conditions</h2>
-                    <p className="text-[11px] mt-1" style={{ color: '#8a6540', fontFamily: 'system-ui, sans-serif' }}>Effective Academic Year 2026â€“2027</p>
-                  </div>
-                </div>
-
-                {/* Close */}
-                <button
-                  onClick={() => setShowTermsModal(false)}
-                  className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:rotate-90 cursor-pointer"
-                  style={{ background: 'rgba(61,12,27,0.1)', color: '#3d0c1b', border: '1px solid rgba(61,12,27,0.15)' }}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#fdfbf7] dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-6 border-b border-stone-200 dark:border-gray-700">
+              <h2 className="text-2xl font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Terms and Conditions</h2>
+              <button onClick={() => setShowTermsModal(false)} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200 text-2xl leading-none cursor-pointer">&times;</button>
             </div>
+            <div className="p-6 overflow-y-auto font-sans text-sm text-stone-700 dark:text-gray-300 space-y-4">
+              <p>Welcome to <strong>ARCHIVIO</strong>, the Research Archive Management System for SWU PHINMA.</p>
 
-            {/* === BODY === */}
-            <div className="flex flex-1 min-h-0">
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">1. Acceptance of Terms</h3>
+              <p>By creating an account, you agree to abide by these Terms and Conditions. This system is strictly for academic and research purposes.</p>
 
-              {/* Left sidebar â€” TOC */}
-              <div className="hidden sm:flex flex-col w-44 flex-shrink-0 py-5 px-4 gap-1 overflow-y-auto"
-                style={{ borderRight: '1px solid rgba(185,145,90,0.25)', background: 'rgba(0,0,0,0.04)' }}>
-                <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color: '#b87333' }}>Contents</p>
-                {['Acceptance', 'Intellectual Property', 'User Conduct', 'Privacy & Data', 'Amendments'].map((item, i) => (
-                  <a key={i} href={`#tc-section-${i}`}
-                    className="text-[11px] py-1.5 px-2 rounded-lg transition-all duration-150 hover:bg-[#3d0c1b]/10 leading-tight cursor-pointer block"
-                    style={{ color: '#5a3520', fontFamily: 'system-ui, sans-serif' }}>
-                    <span className="font-bold" style={{ color: '#b87333' }}>Â§{i + 1}</span> {item}
-                  </a>
-                ))}
-                <div className="mt-auto pt-4">
-                  <div className="h-px w-full" style={{ background: 'rgba(185,145,90,0.3)' }} />
-                  <p className="text-[9px] mt-3 leading-relaxed" style={{ color: '#9a7040', fontFamily: 'system-ui, sans-serif' }}>
-                    Last revised<br />Sept. 2026
-                  </p>
-                </div>
-              </div>
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">2. Intellectual Property &amp; Plagiarism</h3>
+              <p>All research papers, theses, and capstone projects hosted on ARCHIVIO are the intellectual property of their respective student authors and SWU PHINMA. Users are strictly prohibited from copying, plagiarizing, distributing, or selling any materials found within this archive. The system disables copying and downloading to enforce academic integrity.</p>
 
-              {/* Right scrollable content */}
-              <div className="flex-1 overflow-y-auto py-6 px-6 sm:px-8 space-y-7"
-                style={{ fontFamily: 'system-ui, -apple-system, sans-serif', color: '#2a1408', lineHeight: '1.8', scrollbarWidth: 'thin', scrollbarColor: '#c9a96e transparent' }}>
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">3. User Conduct</h3>
+              <p>You agree to use the platform respectfully. Any unauthorized attempts to scrape data, bypass security measures, or misrepresent your identity will result in immediate account termination.</p>
 
-                <p className="text-sm leading-relaxed p-4 rounded-xl" style={{ background: 'rgba(61,12,27,0.06)', borderLeft: '3px solid #7a2039', color: '#3a1a0a' }}>
-                  Welcome to <strong>ARCHIVIO</strong> â€” the official Research Archive Management System of Southwestern University PHINMA. Please read these terms carefully before creating an account.
-                </p>
-
-                {[
-                  {
-                    num: '01',
-                    title: 'Acceptance of Terms',
-                    icon: 'ðŸ“‹',
-                    body: 'By registering and using this platform, you agree to be fully bound by these Terms and Conditions. Your continued use of ARCHIVIO following any amendments constitutes your acceptance of the revised terms. This system is strictly reserved for academic and research purposes within the SWU PHINMA community.',
-                  },
-                  {
-                    num: '02',
-                    title: 'Intellectual Property & Academic Integrity',
-                    icon: 'ðŸ›ï¸',
-                    body: 'All research papers, theses, and capstone projects hosted on ARCHIVIO are the intellectual property of their respective authors and Southwestern University PHINMA. Copying, plagiarizing, distributing, reproducing, or commercially exploiting any content from this archive is strictly prohibited. Anti-copy and download restrictions are enforced to protect academic integrity.',
-                  },
-                  {
-                    num: '03',
-                    title: 'User Conduct',
-                    icon: 'âš–ï¸',
-                    body: 'You agree to use this platform respectfully and lawfully. Unauthorized attempts to scrape data, circumvent security measures, misrepresent your identity, or otherwise compromise system integrity will result in immediate account suspension or permanent termination without prior notice.',
-                  },
-                  {
-                    num: '04',
-                    title: 'Privacy & Data',
-                    icon: 'ðŸ”’',
-                    body: 'Your email address and display name are collected solely for authentication and to personalize your experience â€” including your reading list, bookmarks, and activity history. We do not sell, share, or disclose your data to third-party advertisers. All data is processed in accordance with applicable data protection regulations.',
-                  },
-                  {
-                    num: '05',
-                    title: 'Amendments',
-                    icon: 'ðŸ“',
-                    body: 'Southwestern University PHINMA reserves the right to amend these Terms at any time. Users will be notified of significant changes through in-app announcements. Continued use of ARCHIVIO following such modifications constitutes your binding agreement to the revised Terms.',
-                  },
-                ].map(({ num, title, icon, body }, i) => (
-                  <div key={num} id={`tc-section-${i}`} className="group">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-base">{icon}</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-bold" style={{ color: '#b87333', fontVariantNumeric: 'tabular-nums' }}>{num}</span>
-                        <h3 className="font-bold text-[15px]" style={{ color: '#1a0608', fontFamily: 'Georgia, serif' }}>{title}</h3>
-                      </div>
-                    </div>
-                    <p className="text-[13px] leading-relaxed pl-8" style={{ color: '#3a2010' }}>{body}</p>
-                    {i < 4 && <div className="mt-6 h-px" style={{ background: 'linear-gradient(to right, rgba(185,145,90,0.4), transparent)' }} />}
-                  </div>
-                ))}
-
-                <div className="text-center py-4">
-                  <p className="text-[11px] italic" style={{ color: '#9a7040' }}>
-                    "Preserving Knowledge, Advancing Scholarship."
-                  </p>
-                  <p className="text-[10px] mt-1" style={{ color: '#b8986a' }}>
-                    Â© 2026 Southwestern University PHINMA Â· ARCHIVIO Research Archive
-                  </p>
-                </div>
-              </div>
+              <h3 className="font-bold text-stone-900 dark:text-gray-100 text-base mt-4">4. Privacy &amp; Data</h3>
+              <p>Your email and name are collected solely for authentication and personalizing your experience (such as your personal reading list). We do not share this data with third-party advertisers.</p>
             </div>
-
-            {/* === FOOTER === */}
-            <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4"
-              style={{ borderTop: '1px solid rgba(185,145,90,0.35)', background: 'rgba(0,0,0,0.04)' }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
-                <p className="text-[11px]" style={{ color: '#6a5030', fontFamily: 'system-ui, sans-serif' }}>
-                  Secured & encrypted by ARCHIVIO
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowTermsModal(false)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer"
-                  style={{ color: '#5a3520', background: 'rgba(61,12,27,0.08)', border: '1px solid rgba(61,12,27,0.15)' }}
-                >
-                  Decline
-                </button>
-                <button
-                  onClick={() => { setAgreedToTerms(true); setShowTermsModal(false); }}
-                  className="px-6 py-2 text-sm font-bold rounded-lg transition-all duration-200 hover:brightness-110 active:scale-95 cursor-pointer shadow-lg"
-                  style={{ background: 'linear-gradient(135deg, #3d0c1b 0%, #7a2039 100%)', color: '#f3e5ab', border: '1px solid rgba(201,160,78,0.4)', letterSpacing: '0.03em' }}
-                >
-                  I Accept & Continue â†’
-                </button>
-              </div>
+            <div className="p-6 border-t border-stone-200 dark:border-gray-700 flex justify-end">
+              <button
+                onClick={() => { setAgreedToTerms(true); setShowTermsModal(false); }}
+                className="px-6 py-2 bg-[#3d0c1b] text-white rounded font-bold hover:bg-[#24050f] transition cursor-pointer"
+              >
+                I Understand
+              </button>
             </div>
-
           </div>
         </div>
       )}
