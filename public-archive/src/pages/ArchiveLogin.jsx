@@ -251,7 +251,7 @@ function ArchiveLogin() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
-                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_1000px_#27272a_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                   placeholder="Juan Dela Cruz"
                 />
               </div>
@@ -267,7 +267,7 @@ function ArchiveLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_1000px_#27272a_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                  className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                   placeholder="juan@swu.phinma.edu.ph"
                 />
               </div>
@@ -283,7 +283,7 @@ function ArchiveLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_1000px_#27272a_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                  className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                   placeholder="••••••••••••"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
@@ -360,7 +360,7 @@ function ArchiveLogin() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required={!isLogin}
-                    className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_1000px_#27272a_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                    className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                     placeholder="••••••••••••"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
