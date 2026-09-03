@@ -24,21 +24,18 @@ const db = getFirestore(app);
 
 // YOUR ADMIN CREDENTIALS
 const ADMIN_EMAIL = 'japhetvender00@gmail.com';
-const ADMIN_PASSWORD = '23571113';
+const ADMIN_PASSWORD = '19991125';
 const ADMIN_NAME = 'Pronce Japhet Vender';
 const ADMIN_DEPARTMENT = 'Information Technology';
-
+const ADMIN_UID = 'liA76ttD3vZaNtw13vsJ89IV87i2';
 async function addAdminProfile() {
   console.log('🔥 Adding Admin Profile to Firestore');
   console.log('====================================\n');
 
   try {
-    // Step 1: Sign in to get the UID
-    console.log('🔐 Signing in to get user UID...');
-    const userCredential = await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-    const user = userCredential.user;
-    
-    console.log('✅ Signed in successfully!');
+    // Step 1: Use known UID (no sign‑in needed)
+    const user = { uid: ADMIN_UID, email: ADMIN_EMAIL };
+    console.log('✅ Using existing admin UID.');
     console.log('   Email:', user.email);
     console.log('   UID:', user.uid);
     console.log('');

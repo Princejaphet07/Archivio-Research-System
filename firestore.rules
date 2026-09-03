@@ -1,15 +1,15 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+    // -----------------------------------------------------------------
     // 1. Helper Functions
+    // -----------------------------------------------------------------
     function isAuthenticated() {
       return request.auth != null;
     }
     function getUserRole() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
         : 'none';
     }
     function isSystemAdmin() {
@@ -23,140 +23,168 @@ service cloud.firestore {
     }
     function isGroupMember(groupId) {
       let groupData = get(/databases/$(database)/documents/groups/$(groupId)).data;
-      return isAuthenticated() && (request.auth.uid == groupData.leaderUid || (groupData.coAuthors != null && request.auth.uid in groupData.coAuthors));
+      return isAuthenticated() && (request.auth.uid == groupData.leaderUid ||
+        (groupData.coAuthors != null && request.auth.uid in groupData.coAuthors));
     }
-
+    // -----------------------------------------------------------------
     // 2. Protect Users & Profiles
+    // -----------------------------------------------------------------
     match /users/{userId} {
+      // Anyone logged in can read user profiles
       allow read: if isAuthenticated();
-      allow update: if isSystemAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
-      allow create: if isSystemAdmin() || isDean() || (request.auth.uid == userId && (request.resource.data.role == 'adviser' || request.resource.data.role == 'student'));
+      // Updates: admin can update any user; a user can update their own doc except the role field
+      allow update: if isSystemAdmin()
+                    || (request.auth.uid == userId &&
+                        !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['role']));
+      // CREATE:
+      // • System admins, deans, or the user themselves (with limited roles) can create as before.
+      // • **Special case** – allow the admin‑profile script (unauthenticated) to create the
+      //   admin user document with the exact UID you generated.
+      allow create: if isSystemAdmin()
+                    || isDean()
+                    || (request.auth.uid == userId &&
+                        (request.resource.data.role == 'adviser' ||
+                         request.resource.data.role == 'student'))
+                    // -----------------------------------------------------------------
+                    // Unauthenticated creation for the known admin UID
+                    // -----------------------------------------------------------------
+                    || (request.auth == null && userId == 'liA76ttD3vZaNtw13vsJ89IV87i2');
+      // DELETE: keep original policy
       allow delete: if isSystemAdmin() || isDean();
     }
-    
+    // -----------------------------------------------------------------
+    // 3. Other collections (unchanged – copied for context)
+    // -----------------------------------------------------------------
     match /students/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isSystemAdmin() || isDean() || isAdviser() || request.auth.uid == resource.data.uid || request.auth.uid == request.resource.data.uid;
+      allow write: if isSystemAdmin() || isDean() || isAdviser()
+                    || request.auth.uid == resource.data.uid
+                    || request.auth.uid == request.resource.data.uid;
     }
-    
     match /advisers/{docId} {
-      allow read: if true; 
-      allow write: if isSystemAdmin() || isDean() || request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId;
+      allow read: if true;
+      allow write: if isSystemAdmin() || isDean()
+                    || request.auth.uid == resource.data.userId
+                    || request.auth.uid == request.resource.data.userId;
     }
-    
     match /deans/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isSystemAdmin() || isDean() || request.auth.uid == resource.data.uid || request.auth.uid == request.resource.data.uid;
+      allow write: if isSystemAdmin() || isDean()
+                    || request.auth.uid == resource.data.uid
+                    || request.auth.uid == request.resource.data.uid;
     }
-
-    // 3. System Config & Logs
+    // -----------------------------------------------------------------
+    // 4. System Config & Logs
+    // -----------------------------------------------------------------
     match /settings/{docId} {
       allow read: if true;
+      // Unauthenticated creation for the exact settings document the script writes
+      allow create: if request.auth == null && docId == 'system';
       allow write: if isSystemAdmin();
     }
-    
     match /activity_logs/{docId} {
       allow read: if isSystemAdmin() || isDean();
       allow create: if true;
       allow update, delete: if isSystemAdmin();
     }
-    
     match /systemLogs/{docId} {
       allow read: if isSystemAdmin() || isDean();
       allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin();
     }
-    
     match /dean_settings/{userId} {
       allow read, write: if request.auth.uid == userId || isSystemAdmin();
     }
-    
     match /requirements/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
-    
     match /departments/{docId} {
       allow read: if true;
+      // Allow the script to create the initial department document
+      allow create: if request.auth == null && docId == 'dept-it';
       allow write: if isSystemAdmin();
     }
-    
     match /programs/{docId} {
       allow read: if true;
       allow write: if isSystemAdmin();
     }
-    
     match /super_admins/{docId} {
       allow read, write: if isSystemAdmin();
     }
-
-    // 4. Research Data, Invitations & Submissions
+    // -----------------------------------------------------------------
+    // 5. Research Data, Invitations & Submissions
+    // -----------------------------------------------------------------
+    // **Added back** – allow the script to create the placeholder research doc
+    match /research/{docId} {
+      allow read: if true;
+      allow create: if request.auth == null && docId == '_init';
+      allow write: if isSystemAdmin();
+    }
     match /groups/{docId} {
       allow read: if true;
       allow create: if isAuthenticated();
-      allow update, delete: if isSystemAdmin() || isDean() || isAdviser() || resource.data.leaderUid == request.auth.uid;
+      allow update, delete: if isSystemAdmin()
+                            || isDean()
+                            || isAdviser()
+                            || resource.data.leaderUid == request.auth.uid;
     }
-    
     match /submissions/{docId} {
       allow read: if true;
-      allow create: if isAuthenticated() && (isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid);
-      
-      // Allow the owner/admins to do full updates.
-      // Allow anyone to update 'views' and 'likes'.
-      allow update: if isSystemAdmin() || isDean() || isAdviser() || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
-                    || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'likes']);
-                    
-      allow delete: if isSystemAdmin() || isDean() || isAdviser() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow create: if isAuthenticated() && (isSystemAdmin() || isDean()
+                     || request.resource.data.studentUid == request.auth.uid);
+      allow update: if isSystemAdmin() || isDean() || isAdviser()
+                     || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
+                     || request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['views', 'likes']);
+      allow delete: if isSystemAdmin() || isDean() || isAdviser()
+                     || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
-    
     match /studentInvitations/{docId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
-
     match /invitations/{docId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
-
     // Email trigger collection permissions (Firebase Email Extension)
     match /mail/{docId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isSystemAdmin();
     }
-
     match /emails/{docId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isSystemAdmin();
     }
-    
     match /notifications/{docId} {
       allow read, update, delete: if request.auth.uid == resource.data.userId;
       allow create: if isAuthenticated();
     }
-    
     match /userChats/{userId}/{document=**} {
       allow read, write: if request.auth.uid == userId;
     }
-    
     match /chats/{groupId}/messages/{messageId} {
-      allow read, write: if isAuthenticated() && (isSystemAdmin() || isDean() || isAdviser() || isGroupMember(groupId));
+      allow read, write: if isAuthenticated()
+                         && (isSystemAdmin() || isDean()
+                             || isAdviser() || isGroupMember(groupId));
     }
-    
     match /user_bookmarks/{userId} {
       allow read, write: if request.auth.uid == userId;
     }
-    
     match /activity_logs_backup/{docId} {
       allow read: if isSystemAdmin();
     }
-
     match /categories/{docId} {
       allow read: if true;
+      // Unauthenticated creation for the initial category the script writes
+      allow create: if request.auth == null && docId == 'cat-ml';
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
-
-    // 5. Fallback Default Deny
+    // -----------------------------------------------------------------
+    // 6. Fallback Default Deny (only system admins may write anything else)
+    // -----------------------------------------------------------------
     match /{document=**} {
       allow read, write: if isSystemAdmin();
     }

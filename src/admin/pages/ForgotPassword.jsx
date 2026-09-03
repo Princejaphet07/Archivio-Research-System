@@ -21,7 +21,7 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  const API_URL = 'http://localhost:3001/api';
+  const API_URL = process.env.REACT_APP_API_URL || '';
 
   const handleChangeOtp = (element, index) => {
     if (isNaN(element.value)) return false;
@@ -64,7 +64,8 @@ export default function ForgotPassword() {
       setTimeout(() => setSuccess(''), 3000);
       setStep(2);
     } catch (err) {
-      setError(err.message);
+      const friendlyMessage = err.message.includes('Failed to fetch') ? 'Unable to connect to the server. Please try again later.' : err.message;
+      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,8 @@ export default function ForgotPassword() {
       navigate('/'); // System Administrator login is at '/'
       
     } catch (err) {
-      setError(err.message);
+      const friendlyMessage = err.message.includes('Failed to fetch') ? 'Unable to connect to the server. Please try again later.' : err.message;
+      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }

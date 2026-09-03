@@ -486,40 +486,38 @@ function ArchivePaperViewer() {
   };
 
   const handleBookmarkToggle = async () => {
+    if (isBookmarked) {
+      Swal.fire({
+        title: 'Already Saved',
+        text: 'This paper is already in your bookmarks.',
+        icon: 'info',
+        confirmButtonColor: '#7a2039'
+      });
+      return;
+    }
+
     if (!currentUser) {
-      // Guest User: Save to LocalStorage
+      // Guest logic
       try {
         let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
         
-        if (isBookmarked) {
-          localBookmarks = localBookmarks.filter(id => id !== paper.id);
-          setIsBookmarked(false);
-          Swal.fire({ title: 'Removed', text: 'Paper removed from your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
-        } else {
-          if (!localBookmarks.includes(paper.id)) {
-            localBookmarks.push(paper.id);
-          }
-          setIsBookmarked(true);
-          Swal.fire({ title: 'Saved!', text: 'Paper saved to your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
+        if (!localBookmarks.includes(paper.id)) {
+          localBookmarks.push(paper.id);
+          localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
         }
-        
-        localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
+        setIsBookmarked(true);
+        Swal.fire({ title: 'Saved!', text: 'Paper saved to your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
       } catch (err) {
         console.error('Guest bookmark error:', err);
       }
       return;
     }
-    
-    // Logged-in User: Save to Firestore
-    const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
+
+    // Authenticated logic
     try {
-      if (isBookmarked) {
-        await setDoc(bookmarkRef, { bookmarks: arrayRemove(paper.id) }, { merge: true });
-        Swal.fire({ title: 'Removed', text: 'Paper removed from your Bookmarks.', icon: 'success', timer: 1500, showConfirmButton: false });
-      } else {
-        await setDoc(bookmarkRef, { bookmarks: arrayUnion(paper.id) }, { merge: true });
-        Swal.fire({ title: 'Saved!', text: 'Paper saved to your Bookmarks.', icon: 'success', timer: 1500, showConfirmButton: false });
-      }
+      const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
+      await setDoc(bookmarkRef, { bookmarks: arrayUnion(paper.id) }, { merge: true });
+      Swal.fire({ title: 'Saved!', text: 'Paper saved to your Bookmarks.', icon: 'success', timer: 1500, showConfirmButton: false });
     } catch (err) {
       console.error('Bookmark error:', err);
       Swal.fire('Error', 'Failed to update bookmarks', 'error');
