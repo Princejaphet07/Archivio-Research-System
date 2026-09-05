@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
-import { doc, getDoc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { doc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Swal from 'sweetalert2';
@@ -17,7 +17,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 function ArchivePaperViewer() {
   const { id } = useParams();
-  const { currentUser, signOut } = useAuth();
+  const { currentUser } = useAuth();
   const [paper, setPaper] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -224,7 +224,7 @@ function ArchivePaperViewer() {
       }
     };
     fetchRelated();
-  }, [paper?.id, paper?.program, paper?.category]);
+  }, [paper]);
 
   const graphData = useMemo(() => {
     if (!paper || relatedPapers.length === 0) return { nodes: [], links: [] };
@@ -278,7 +278,7 @@ function ArchivePaperViewer() {
         { role: 'model', content: `Hi! I'm reading **"${paper.researchTitle || 'Untitled Research'}"**. What would you like to know about it?` }
       ]);
     }
-  }, [paper]);
+  }, [paper, chatHistory.length]);
 
   const handleChatSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -314,7 +314,7 @@ function ArchivePaperViewer() {
       try {
         data = await response.json();
       } catch (jsonErr) {
-        throw new Error("Backend server returned an invalid response. Did you forget to restart the email-service backend?");
+        throw new Error("Backend server returned an invalid response. Did you forget to restart the email-service backend?", { cause: jsonErr });
       }
 
       if (!response.ok) {
@@ -1082,8 +1082,24 @@ function ArchivePaperViewer() {
                   file={paper.documents['Final Manuscript'].url}
                   onLoadSuccess={onDocumentLoadSuccess}
                   loading={
-                    <div className="flex items-center justify-center p-12 text-stone-500">
-                      <div className="w-8 h-8 border-4 border-[#7a2039]/30 border-t-[#7a2039] rounded-full animate-spin"></div>
+                    <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-8 md:p-12 lg:p-20 flex flex-col h-[800px] rounded-sm mt-8">
+                      <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
+                      <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
+                      <div className="space-y-4 mb-8">
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-5/6 rounded animate-shimmer"></div>
+                      </div>
+                      <div className="space-y-4 mb-8">
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-4/6 rounded animate-shimmer"></div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-full rounded animate-shimmer"></div>
+                        <div className="h-4 w-3/4 rounded animate-shimmer"></div>
+                      </div>
                     </div>
                   }
                   className="flex flex-col items-center shadow-2xl bg-white relative"
@@ -1093,7 +1109,28 @@ function ArchivePaperViewer() {
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     width={pdfWidth}
-                    className="relative pointer-events-none"
+                    className="relative pointer-events-none min-h-[800px]"
+                    loading={
+                      <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 md:p-12 lg:p-20 flex flex-col h-[800px] rounded-sm">
+                        <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
+                        <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
+                        <div className="space-y-4 mb-8">
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-5/6 rounded animate-shimmer"></div>
+                        </div>
+                        <div className="space-y-4 mb-8">
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-4/6 rounded animate-shimmer"></div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-full rounded animate-shimmer"></div>
+                          <div className="h-4 w-3/4 rounded animate-shimmer"></div>
+                        </div>
+                      </div>
+                    }
                   />
                   
                   {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}

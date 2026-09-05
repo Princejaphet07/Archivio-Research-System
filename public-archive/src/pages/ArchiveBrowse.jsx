@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -40,6 +40,7 @@ function ArchiveBrowse() {
   const [previewPaper, setPreviewPaper] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const ITEMS_PER_PAGE = 10;
+  const currentDate = useMemo(() => Date.now(), []);
 
   const toggleYear = (year) => {
     setSelectedYears(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]);
@@ -242,7 +243,7 @@ function ArchiveBrowse() {
     const matchesSearch = title.includes(q) || author.includes(q) || keywords.includes(q);
     
     // Year filter logic
-    const pubYear = new Date(paper.publishedAt || paper.createdAt || Date.now()).getFullYear().toString();
+    const pubYear = new Date(paper.publishedAt || paper.createdAt || currentDate).getFullYear().toString();
     const matchesYear = selectedYears.length === 0 || selectedYears.includes(pubYear);
     
     // Department filter logic
@@ -583,7 +584,7 @@ function ArchiveBrowse() {
                         {paper.program || 'Research'}
                       </span>
                       <span className="text-xs text-stone-400 dark:text-gray-500 font-medium">
-                        Published: {new Date(paper.publishedAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        Published: {new Date(paper.publishedAt || currentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                   </div>

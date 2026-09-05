@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase/config';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -19,8 +18,6 @@ function ArchiveLogin() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
-  const { isDarkMode, toggleTheme } = useTheme();
-  
   const navigate = useNavigate();
   const location = useLocation();
   

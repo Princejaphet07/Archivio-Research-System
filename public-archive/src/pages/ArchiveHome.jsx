@@ -4,7 +4,7 @@ import heroBg from '../assets/Hero.png';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, where, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -14,6 +14,7 @@ function ArchiveHome() {
   const [searchInput, setSearchInput] = useState('');
   const [placeholderText, setPlaceholderText] = useState('');
   const navigate = useNavigate();
+  const currentDate = React.useMemo(() => Date.now(), []);
 
   useEffect(() => {
     const phrases = [
@@ -229,9 +230,9 @@ function ArchiveHome() {
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0 shadow-sm border border-[#6b142c]/50">Search</button>
           </form>
           <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
-            <span className="text-stone-300 w-full md:w-auto text-center mb-1 md:mb-0">Popular:</span>
+            <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">Popular:</span>
             {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
-              <span key={tag} onClick={() => handleTagClick(tag)} className="px-3 py-1.5 border border-amber-200/40 text-amber-100 rounded-full cursor-pointer hover:bg-amber-200/20 backdrop-blur-sm whitespace-nowrap">{tag}</span>
+              <span key={tag} onClick={() => handleTagClick(tag)} className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all">{tag}</span>
             ))}
           </div>
         </div>
@@ -249,10 +250,10 @@ function ArchiveHome() {
       <div className="px-4 md:px-16 py-12 md:py-16 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4 md:gap-0">
           <div>
-            <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-1 text-center md:text-left">Recently Approved</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-[#3d0c1b] text-center md:text-left">Latest Research</h2>
+            <p className="text-[#8c7435] dark:text-[#d6ad60] text-xs font-bold tracking-widest uppercase font-sans mb-1 text-center md:text-left">Recently Approved</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] text-center md:text-left">Latest Research</h2>
           </div>
-          <Link to="/browse" className="px-5 py-2 border border-[#3d0c1b] text-[#3d0c1b] text-sm font-sans rounded hover:bg-[#3d0c1b] hover:text-white transition inline-block text-center mx-auto md:mx-0 w-full md:w-auto">
+          <Link to="/browse" className="px-5 py-2 border border-[#3d0c1b] dark:border-[#c25975] text-[#3d0c1b] dark:text-[#c25975] text-sm font-sans rounded hover:bg-[#3d0c1b] dark:hover:bg-[#c25975] hover:text-white dark:hover:text-[#3d0c1b] transition inline-block text-center mx-auto md:mx-0 w-full md:w-auto">
             View All →
           </Link>
         </div>
@@ -277,7 +278,7 @@ function ArchiveHome() {
               </div>
             ))
           ) : (
-            publishedPapers.slice(0, 3).map((paper, idx) => (
+            publishedPapers.slice(0, 3).map((paper) => (
               <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden">
                 {/* Subtle Glow Effect on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -287,7 +288,7 @@ function ArchiveHome() {
                     <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[150px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
                       {paper.program || 'Research'}
                     </span>
-                    <span className="font-medium bg-stone-100 dark:bg-gray-800 px-2 py-1 rounded-md">{new Date(paper.publishedAt || Date.now()).getFullYear()}</span>
+                    <span className="font-medium bg-stone-100 dark:bg-gray-800 px-2 py-1 rounded-md">{new Date(paper.publishedAt || currentDate).getFullYear()}</span>
                   </div>
                   <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3 group-hover:text-[#7a2039] dark:group-hover:text-[#f3e5ab] transition-colors" title={paper.researchTitle || 'Untitled Research'}>
                     {paper.researchTitle || 'Untitled Research'}
@@ -341,10 +342,10 @@ function ArchiveHome() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end gap-4 mb-8">
             <div>
-              <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-1">Explore by Category</p>
-              <h2 className="text-3xl font-bold text-[#3d0c1b] border-b-2 border-[#d6ad60] inline-block pb-1">Browse Categories</h2>
+              <p className="text-[#8c7435] dark:text-[#d6ad60] text-xs font-bold tracking-widest uppercase font-sans mb-1">Explore by Category</p>
+              <h2 className="text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] border-b-2 border-[#d6ad60] inline-block pb-1">Browse Categories</h2>
             </div>
-            <Link to="/browse" className="text-sm text-[#3d0c1b] hover:text-[#8c7435] font-sans font-medium transition mb-1 md:ml-4">
+            <Link to="/browse" className="text-sm text-[#3d0c1b] dark:text-[#c25975] hover:text-[#8c7435] dark:hover:text-[#d6ad60] font-sans font-medium transition mb-1 md:ml-4">
               All Department ↓
             </Link>
           </div>

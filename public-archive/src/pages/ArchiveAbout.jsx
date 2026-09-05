@@ -94,7 +94,7 @@ function ArchiveAbout() {
             <p className="text-[#8c1c38] text-xs font-bold tracking-[0.2em] uppercase font-sans mb-4 flex items-center gap-3">
               <span className="w-10 h-[1px] bg-[#8c1c38]"></span> The Purpose
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-stone-900 dark:text-white mb-8 font-serif">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#8c1c38] dark:text-[#c25975] mb-8 font-serif">
               Our Mission
             </h2>
             <p className="text-stone-600 dark:text-gray-300 font-sans text-lg md:text-xl leading-relaxed font-light">
@@ -114,7 +114,7 @@ function ArchiveAbout() {
             <p className="text-[#6b7c93] text-xs font-bold tracking-[0.2em] uppercase font-sans mb-4 flex items-center gap-3">
               <span className="w-10 h-[1px] bg-[#6b7c93]"></span> The Future
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-stone-900 dark:text-white mb-8 font-serif">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#8c1c38] dark:text-[#c25975] mb-8 font-serif">
               Our Vision
             </h2>
             <p className="text-stone-600 dark:text-gray-300 font-sans text-lg md:text-xl leading-relaxed font-light">
@@ -140,7 +140,7 @@ function ArchiveAbout() {
                 What is ARCHIVIO
               </span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-stone-900 dark:text-white mb-8 font-serif leading-tight tracking-tight">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#8c1c38] dark:text-[#c25975] mb-8 font-serif leading-tight tracking-tight">
               The Research Archive
             </h2>
             <div className="space-y-6 text-stone-600 dark:text-gray-300 font-sans text-lg font-light leading-relaxed">
@@ -206,7 +206,7 @@ function ArchiveAbout() {
               </span>
               <div className="h-[1px] w-8 bg-[#8c1c38]"></div>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-stone-900 dark:text-white font-serif tracking-tight">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#8c1c38] dark:text-[#c25975] font-serif tracking-tight">
               Our Core Values
             </h2>
           </div>
@@ -219,7 +219,7 @@ function ArchiveAbout() {
               <div className="w-14 h-14 mb-8 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-stone-100 dark:border-gray-700 flex items-center justify-center text-[#8c1c38]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
               </div>
-              <h3 className="text-2xl font-bold font-serif text-stone-900 dark:text-gray-100 mb-4">Academic Integrity</h3>
+              <h3 className="text-2xl font-bold font-serif text-[#8c1c38] dark:text-[#c25975] mb-4">Academic Integrity</h3>
               <p className="text-stone-600 dark:text-gray-400 font-sans leading-relaxed text-sm font-light">
                 Ensuring every piece of research is rigorously reviewed, properly attributed, and preserved with the highest institutional standards.
               </p>
@@ -231,7 +231,7 @@ function ArchiveAbout() {
               <div className="w-14 h-14 mb-8 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-stone-100 dark:border-gray-700 flex items-center justify-center text-[#d6ad60]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
               </div>
-              <h3 className="text-2xl font-bold font-serif text-stone-900 dark:text-gray-100 mb-4">Open Accessibility</h3>
+              <h3 className="text-2xl font-bold font-serif text-[#8c1c38] dark:text-[#c25975] mb-4">Open Accessibility</h3>
               <p className="text-stone-600 dark:text-gray-400 font-sans leading-relaxed text-sm font-light">
                 Breaking down barriers to knowledge by providing a secure, seamless, and centralized platform for discovering published studies.
               </p>
@@ -243,7 +243,7 @@ function ArchiveAbout() {
               <div className="w-14 h-14 mb-8 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-stone-100 dark:border-gray-700 flex items-center justify-center text-[#6b7c93]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
               </div>
-              <h3 className="text-2xl font-bold font-serif text-stone-900 dark:text-gray-100 mb-4">Technological Innovation</h3>
+              <h3 className="text-2xl font-bold font-serif text-[#8c1c38] dark:text-[#c25975] mb-4">Technological Innovation</h3>
               <p className="text-stone-600 dark:text-gray-400 font-sans leading-relaxed text-sm font-light">
                 Continuously utilizing modern web capabilities, AI tools, and secure digital rights management to elevate the research experience.
               </p>
@@ -257,28 +257,28 @@ function ArchiveAbout() {
       <div className="py-20 px-4 md:px-16 max-w-7xl mx-auto w-full">
         <div className="text-center mb-12">
           <p className="text-[#8c7435] text-xs font-bold tracking-widest uppercase font-sans mb-2">Powered by Technology</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-gray-100">Premium Features</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#8c1c38] dark:text-[#c25975]">Premium Features</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
             <div className="text-4xl mb-4">🤖</div>
-            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">AI-Powered Assistant</h3>
+            <h3 className="font-bold text-[#8c1c38] dark:text-[#c25975] mb-2">AI-Powered Assistant</h3>
             <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">An intelligent chatbot ready to summarize abstracts, suggest topics, and answer research queries instantly.</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
             <div className="text-4xl mb-4">🔒</div>
-            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Secure Viewer</h3>
+            <h3 className="font-bold text-[#8c1c38] dark:text-[#c25975] mb-2">Secure Viewer</h3>
             <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Advanced anti-screenshot and anti-print measures to protect the intellectual property of student researchers.</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
             <div className="text-4xl mb-4">📑</div>
-            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Instant Citations</h3>
+            <h3 className="font-bold text-[#8c1c38] dark:text-[#c25975] mb-2">Instant Citations</h3>
             <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Automatically generate accurate APA, MLA, and Chicago citations for any published research paper.</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-stone-200 dark:border-gray-700 text-center hover:-translate-y-2 transition-transform duration-300">
             <div className="text-4xl mb-4">🔍</div>
-            <h3 className="font-bold text-stone-900 dark:text-gray-100 mb-2">Advanced Filtering</h3>
+            <h3 className="font-bold text-[#8c1c38] dark:text-[#c25975] mb-2">Advanced Filtering</h3>
             <p className="text-sm text-stone-500 dark:text-gray-400 font-sans">Easily find exactly what you need with fast, categorized searching by department, year, and popularity.</p>
           </div>
         </div>
