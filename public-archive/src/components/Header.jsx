@@ -47,9 +47,26 @@ function Header() {
     try {
       setIsLoggingOut(true);
       await signOut();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Logged Out',
+        text: 'You have been successfully logged out.',
+        timer: 1800,
+        showConfirmButton: false,
+        background: isDarkMode ? '#1e1e1e' : '#fff',
+        color: isDarkMode ? '#f5f5f5' : '#000',
+      });
       navigate('/');
     } catch (error) {
       console.error('Failed to log out', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Logout Failed',
+        text: 'Something went wrong. Please try again.',
+        confirmButtonColor: '#801e38',
+        background: isDarkMode ? '#1e1e1e' : '#fff',
+        color: isDarkMode ? '#f5f5f5' : '#000',
+      });
       setIsLoggingOut(false);
     }
   };
