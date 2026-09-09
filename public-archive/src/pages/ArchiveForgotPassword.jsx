@@ -18,7 +18,7 @@ export default function ArchiveForgotPassword() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
   
   const API_URL = 'http://localhost:3001/api';
 
@@ -32,6 +32,11 @@ export default function ArchiveForgotPassword() {
     // Focus next input
     if (element.value && index < 5) {
       inputRefs.current[index + 1].focus();
+    }
+
+    const codeStr = newOtp.join('');
+    if (codeStr.length === 6) {
+      performVerify(codeStr);
     }
   };
 
@@ -59,9 +64,16 @@ export default function ArchiveForgotPassword() {
         throw new Error(data.error || 'Failed to send OTP');
       }
 
-      setSuccess('A 6-digit verification code has been sent to your email.');
-      setTimeout(() => setSuccess(''), 3000);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Sending code successfully sent',
+        confirmButtonColor: '#24050f',
+        background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+        color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333'
+      });
+      
       setStep(2);
+      setOtpStatus('idle');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,6 +89,42 @@ export default function ArchiveForgotPassword() {
   const strengthCount = [hasEightChars, hasNumber, hasUpper, hasSpecial].filter(Boolean).length;
   const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strengthCount];
   const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'][strengthCount];
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    performVerify(otp.join(''));
+  };
+
+  const performVerify = async (codeStr) => {
+    if (codeStr.length !== 6) return;
+    setError('');
+    setOtpStatus('verifying');
+
+    try {
+      const response = await fetch(`${API_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          code: codeStr
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Incorrect code');
+      }
+
+      setOtpStatus('success');
+      setTimeout(() => {
+        setStep(3);
+      }, 1500); // Wait 1.5s to show green boxes before moving to new password
+    } catch (err) {
+      // Do not set general error to avoid duplicate alerts
+      setOtpStatus('error');
+    }
+  };
 
   const handleVerifyAndReset = async (e) => {
     e.preventDefault();
@@ -158,13 +206,6 @@ export default function ArchiveForgotPassword() {
             </div>
           )}
 
-          {success && (
-            <div className="mb-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-start gap-2">
-              <span className="text-green-500 text-sm">✅</span>
-              <p className="text-xs text-green-700 dark:text-green-300">{success}</p>
-            </div>
-          )}
-
           {step === 1 && (
             <form onSubmit={handleSendOTP}>
               <div className="mb-5">
@@ -193,34 +234,55 @@ export default function ArchiveForgotPassword() {
           )}
 
           {step === 2 && (
-            <form onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
+            <form onSubmit={handleVerifyOTP}>
               <div className="mb-6">
                 <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-3">6-Digit Code</label>
                 <div className="flex justify-between gap-2">
-                  {otp.map((data, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      maxLength={1}
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      value={data}
-                      onChange={(e) => handleChangeOtp(e.target, index)}
-                      onKeyDown={(e) => handleKeyDownOtp(e, index)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-12 h-14 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded text-center text-2xl font-semibold focus:outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-stone-700 dark:text-gray-200 transition-colors"
-                      required
-                    />
-                  ))}
+                  {otp.map((data, index) => {
+                    let boxColorClass = "bg-stone-50 dark:bg-gray-700 border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 focus:border-[#24050f] dark:focus:border-[#f3e5ab]";
+                    if (otpStatus === 'success') {
+                      boxColorClass = "bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-400";
+                    } else if (otpStatus === 'error') {
+                      boxColorClass = "bg-red-50 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-400";
+                    }
+
+                    return (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength={1}
+                        ref={(el) => (inputRefs.current[index] = el)}
+                        value={data}
+                        onChange={(e) => {
+                          setOtpStatus('idle'); // Reset status on typing
+                          setError(''); // Remove the general error if user starts typing again
+                          handleChangeOtp(e.target, index);
+                        }}
+                        onKeyDown={(e) => handleKeyDownOtp(e, index)}
+                        onFocus={(e) => e.target.select()}
+                        className={`w-[14%] h-14 border rounded text-center text-2xl font-bold focus:outline-none transition-colors shadow-sm ${boxColorClass}`}
+                        required
+                        disabled={otpStatus === 'success' || otpStatus === 'verifying'}
+                      />
+                    );
+                  })}
                 </div>
+                {otpStatus === 'success' && (
+                  <p className="text-green-600 dark:text-green-400 text-xs font-bold text-center mt-3">Code Verified!</p>
+                )}
+                {otpStatus === 'error' && (
+                  <p className="text-red-600 dark:text-red-400 text-xs font-bold text-center mt-3">Incorrect code</p>
+                )}
               </div>
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b]"
+                disabled={otpStatus === 'success' || otpStatus === 'verifying' || otp.join('').length !== 6}
+                className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Verify Code
+                {otpStatus === 'verifying' ? 'Verifying...' : 'Verify Code'}
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-stone-500 dark:text-gray-400 font-bold hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
+                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); }} className="text-xs text-stone-500 dark:text-gray-400 font-bold hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
                   Resend Code
                 </button>
               </div>

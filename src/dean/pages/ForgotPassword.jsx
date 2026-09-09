@@ -19,7 +19,7 @@ export default function ForgotPassword() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
   
   const API_URL = 'http://localhost:3001/api';
 
@@ -33,6 +33,11 @@ export default function ForgotPassword() {
     // Focus next input
     if (element.value && index < 5) {
       inputRefs.current[index + 1].focus();
+    }
+
+    const codeStr = newOtp.join('');
+    if (codeStr.length === 6) {
+      performVerify(codeStr);
     }
   };
 
@@ -60,13 +65,56 @@ export default function ForgotPassword() {
         throw new Error(data.error || 'Failed to send OTP');
       }
 
-      setSuccess('A 6-digit verification code has been sent to your email.');
-      setTimeout(() => setSuccess(''), 3000);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Sending code successfully sent',
+        confirmButtonColor: '#7a1f3d',
+        background: '#fff',
+        color: '#333'
+      });
+      
       setStep(2);
+      setOtpStatus('idle');
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    performVerify(otp.join(''));
+  };
+
+  const performVerify = async (codeStr) => {
+    if (codeStr.length !== 6) return;
+    setError('');
+    setOtpStatus('verifying');
+
+    try {
+      const response = await fetch(`${API_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          code: codeStr
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Incorrect code');
+      }
+
+      setOtpStatus('success');
+      setTimeout(() => {
+        setStep(3);
+      }, 1500); // Wait 1.5s to show green boxes before moving to new password
+    } catch (err) {
+      // Do not set general error to avoid duplicate alerts
+      setOtpStatus('error');
     }
   };
 
@@ -153,13 +201,6 @@ export default function ForgotPassword() {
             </div>
           )}
 
-          {success && (
-            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-              <span className="text-green-500 text-sm">✅</span>
-              <p className="text-xs text-green-700">{success}</p>
-            </div>
-          )}
-
           {step === 1 && (
             <form onSubmit={handleSendOTP}>
               <div className="mb-5">
@@ -188,34 +229,55 @@ export default function ForgotPassword() {
           )}
 
           {step === 2 && (
-            <form onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
+            <form onSubmit={handleVerifyOTP}>
               <div className="mb-6">
                 <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3">6-Digit Code</label>
                 <div className="flex justify-between gap-2">
-                  {otp.map((data, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      maxLength={1}
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      value={data}
-                      onChange={(e) => handleChangeOtp(e.target, index)}
-                      onKeyDown={(e) => handleKeyDownOtp(e, index)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-12 h-14 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-center text-2xl font-semibold focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all shadow-sm"
-                      required
-                    />
-                  ))}
+                  {otp.map((data, index) => {
+                    let boxColorClass = "bg-[#faf9f6] border-stone-200 dark:border-stone-700 text-stone-800 focus:border-[#7a1f3d] focus:ring-[#7a1f3d]";
+                    if (otpStatus === 'success') {
+                      boxColorClass = "bg-green-50 border-green-500 text-green-700 focus:border-green-500";
+                    } else if (otpStatus === 'error') {
+                      boxColorClass = "bg-red-50 border-red-500 text-red-700 focus:border-red-500";
+                    }
+
+                    return (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength={1}
+                        ref={(el) => (inputRefs.current[index] = el)}
+                        value={data}
+                        onChange={(e) => {
+                          setOtpStatus('idle');
+                          setError(''); // Remove the general error if user starts typing again
+                          handleChangeOtp(e.target, index);
+                        }}
+                        onKeyDown={(e) => handleKeyDownOtp(e, index)}
+                        onFocus={(e) => e.target.select()}
+                        className={`w-12 h-14 border rounded-lg text-center text-2xl font-semibold focus:outline-none focus:ring-1 transition-all shadow-sm ${boxColorClass}`}
+                        required
+                        disabled={otpStatus === 'success' || otpStatus === 'verifying'}
+                      />
+                    );
+                  })}
                 </div>
+                {otpStatus === 'success' && (
+                  <p className="text-green-600 text-xs font-bold text-center mt-3">Code Verified!</p>
+                )}
+                {otpStatus === 'error' && (
+                  <p className="text-red-600 text-xs font-bold text-center mt-3">Incorrect code</p>
+                )}
               </div>
               <button
                 type="submit"
-                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#b09230] text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md"
+                disabled={otpStatus === 'success' || otpStatus === 'verifying' || otp.join('').length !== 6}
+                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] hover:bg-[#5a162d] dark:hover:bg-[#b09230] text-white dark:text-[#4a1024] font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Verify Code
+                {otpStatus === 'verifying' ? 'Verifying...' : 'Verify Code'}
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a1f3d] dark:text-[#f8d070] font-bold hover:underline">
+                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); }} className="text-xs text-[#7a1f3d] dark:text-[#f8d070] font-bold hover:underline">
                   Resend Code
                 </button>
               </div>

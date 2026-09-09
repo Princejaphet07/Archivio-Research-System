@@ -123,6 +123,30 @@ app.post('/api/send-otp', async (req, res) => {
 });
 
 // ============================================
+// VERIFY OTP (WITHOUT RESETTING)
+// ============================================
+app.post('/api/verify-otp', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: 'Missing required fields' });
+
+    const docRef = getFirestore().collection('password_resets').doc(email);
+    const doc = await docRef.get();
+
+    if (!doc.exists) return res.status(400).json({ error: 'Invalid or expired code' });
+
+    const data = doc.data();
+    if (data.code !== code) return res.status(400).json({ error: 'Incorrect code' });
+    if (data.expiresAt.toDate() < new Date()) return res.status(400).json({ error: 'Code has expired' });
+
+    res.status(200).json({ message: 'Code verified successfully' });
+  } catch (error) {
+    console.error('Verify OTP Error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+});
+
+// ============================================
 // VERIFY OTP & RESET PASSWORD
 // ============================================
 app.post('/api/reset-password', async (req, res) => {
