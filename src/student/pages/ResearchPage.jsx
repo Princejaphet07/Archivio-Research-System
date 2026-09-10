@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Sidebar from '../Components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import swuBuilding from '../../assets/swu-building.png';
@@ -62,7 +62,7 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
     <div className="w-full min-h-screen font-serif flex flex-col bg-[#F5F5F0] dark:bg-stone-950 transition-colors">
       {/* Top Header Bar */}
       <div 
-        className="w-full flex items-center gap-4 px-7 py-3 border-b border-[#b4a078]/30 dark:border-stone-800 z-[1000] transition-colors"
+        className="w-full flex items-center gap-4 px-7 py-3 border-b border-[#b4a078]/30 dark:border-stone-800 z-20 transition-colors"
         style={{ 
           backgroundImage: `url(${parchmentBg})`, 
           backgroundSize: 'cover', 

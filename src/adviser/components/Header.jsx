@@ -5,9 +5,11 @@ import NotificationBell from './NotificationBell';
 import { useNavigate } from 'react-router-dom';
 
 function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", showSearch = true, searchQuery, onSearchChange }) {
-  const { userRole, adviserName, profilePhotoUrl } = useAdviser();
+  const { userRole, adviserName, profilePhotoUrl, adviserData } = useAdviser();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const navigate = useNavigate();
+
+  const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
 
   const handleSwitchToDean = () => {
     window.location.href = '/dean/dashboard';
@@ -39,11 +41,11 @@ function Header({ title = "Dashboard", breadcrumb = "ARCHIVIO › Dashboard", sh
 
       <div className={`flex items-center gap-4 ${!showSearch && 'ml-auto'}`}>
         {/* Role Multi-Select pills - Only show for Dual Role users */}
-        {userRole === 'dean+adviser' && (
-          <div className="hidden md:flex items-center gap-1.5 bg-stone-100 dark:bg-stone-800 rounded-xl p-1 border border-stone-200/60 dark:border-stone-700/60 font-bold text-[11px] transition-all">
+        {isDualRole && (
+          <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 rounded-xl p-1 border border-stone-200/60 dark:border-stone-700/60 font-bold text-[11px] transition-all">
             <button
               onClick={handleSwitchToDean}
-              className="text-stone-400 dark:text-stone-500 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-stone-700 dark:hover:text-stone-200 hover:bg-white/50 dark:hover:bg-stone-700/50 rounded-lg transition-all"
+              className="text-stone-500 dark:text-stone-400 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-red-700 dark:hover:text-red-300 hover:bg-white/60 dark:hover:bg-stone-700/50 rounded-lg transition-all"
               title="Switch to Dean Portal"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span> Dean

@@ -103,6 +103,9 @@ export default function Settings({ activePage, onNavigate }) {
       const allReqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setRequirements(allReqs);
       setLoading(false);
+    }, (err) => {
+      console.warn('Requirements listener notice:', err.message);
+      setLoading(false);
     });
 
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
@@ -125,9 +128,13 @@ export default function Settings({ activePage, onNavigate }) {
           }
         });
         setSyStats(stats);
+      }, (err) => {
+        console.warn('Submissions stats listener notice:', err.message);
       });
       
       return () => { unsubSubs(); unsubGroups(); };
+    }, (err) => {
+      console.warn('Groups stats listener notice:', err.message);
     });
 
     return () => {

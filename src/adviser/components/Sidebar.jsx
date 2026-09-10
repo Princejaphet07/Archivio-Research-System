@@ -12,7 +12,8 @@ function Sidebar() {
   const location = useLocation();
   const path = location.pathname;
   const navigate = useNavigate();
-  const { adviserData } = useAdviser();
+  const { adviserData, userRole } = useAdviser();
+  const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
 
   const [groupCountNew, setGroupCountNew] = useState(0);
   const [groupCountTotal, setGroupCountTotal] = useState(0);
@@ -290,12 +291,31 @@ function Sidebar() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-white truncate">{adviserData?.displayName || 'Research Adviser'}</p>
           <div className="flex gap-1.5 mt-1">
+            {isDualRole && (
+              <span className="text-[8px] bg-[#6b2a3d] border border-[#8c3b53] text-[#f8d070] px-1.5 py-0.5 rounded font-bold tracking-wide">
+                DEAN
+              </span>
+            )}
             <span className="text-[8px] bg-[#1a4a38] border border-[#236b51] text-emerald-400 px-1.5 py-0.5 rounded font-bold tracking-wide">
               ADVISER
             </span>
           </div>
         </div>
       </div>
+
+      {/* PORTAL SWITCHER FOR DUAL ROLE */}
+      {isDualRole && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => window.location.href = '/dean/dashboard'}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#f8d070]/20 hover:bg-[#f8d070]/30 border border-[#f8d070]/40 hover:border-[#f8d070]/60 rounded-xl text-[#f8d070] hover:text-amber-200 text-xs font-bold transition-all duration-200 shadow-md group cursor-pointer"
+            title="Switch to Dean Portal"
+          >
+            <span className="text-base group-hover:scale-125 transition-transform">⇄</span>
+            <span>Switch to Dean Portal</span>
+          </button>
+        </div>
+      )}
 
       {/* LOGOUT BUTTON */}
       <div className="px-4 pb-4">

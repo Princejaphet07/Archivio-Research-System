@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, getCountFromServer, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, getCountFromServer, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { Mail, LockKeyhole, X } from 'lucide-react';
 
@@ -65,11 +65,17 @@ function UnifiedLogin() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
-      if (snap.exists()) {
-        setMaintenanceMode(snap.data().maintenance === true);
+    const unsub = onSnapshot(
+      doc(db, 'settings', 'system_preferences'),
+      (snap) => {
+        if (snap.exists()) {
+          setMaintenanceMode(snap.data().maintenance === true);
+        }
+      },
+      (err) => {
+        console.warn('System preferences listener notice (non-fatal):', err.message);
       }
-    });
+    );
     return () => unsub();
   }, []);
 
@@ -92,26 +98,152 @@ function UnifiedLogin() {
         localStorage.removeItem('archivio_remembered_email');
       }
 
-      // Check all collections simultaneously to find the user's role
-      const [usersSnap, studentsSnap, advisersSnap] = await Promise.all([
-        getDocs(query(collection(db, 'users'), where('uid', '==', user.uid))),
-        getDocs(query(collection(db, 'students'), where('uid', '==', user.uid))),
-        getDocs(query(collection(db, 'advisers'), where('userId', '==', user.uid)))
+      // Safe lookup helper: prevents any single collection permission denial from breaking login
+      const safeFetch = async (fn) => {
+        try {
+          return await fn();
+        } catch (err) {
+          console.warn('Safe lookup notice (non-fatal):', err.message);
+          return null;
+        }
+      };
+
+      // 1. Check users collection (allowed for all authenticated users)
+      const [userDirectDoc, userQuerySnap, userEmailSnap] = await Promise.all([
+        safeFetch(() => getDoc(doc(db, 'users', user.uid))),
+        safeFetch(() => getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)))),
+        safeFetch(() => getDocs(query(collection(db, 'users'), where('email', '==', trimmedEmail))))
       ]);
 
       let role = null;
+      let userDocRef = null;
 
-      if (!usersSnap.empty) {
-        role = usersSnap.docs[0].data().role; // 'admin', 'super-admin', 'dean'
-        await updateDoc(usersSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+      if (userDirectDoc && userDirectDoc.exists()) {
+        role = userDirectDoc.data().role;
+        userDocRef = userDirectDoc.ref;
+      } else if (userQuerySnap && !userQuerySnap.empty) {
+        role = userQuerySnap.docs[0].data().role;
+        userDocRef = userQuerySnap.docs[0].ref;
+      } else if (userEmailSnap && !userEmailSnap.empty) {
+        role = userEmailSnap.docs[0].data().role;
+        userDocRef = userEmailSnap.docs[0].ref;
       }
-      if (!studentsSnap.empty) {
+
+      if (userDocRef) {
+        try {
+          await updateDoc(userDocRef, { lastLogin: serverTimestamp(), status: 'active' });
+        } catch (e) {
+          console.warn('Non-fatal: could not update users lastLogin:', e.message);
+        }
+      }
+
+      // 2. Check students collection by doc ID, uid query, and email query
+      const [stdDirectDoc, stdUidSnap, stdEmailSnap] = await Promise.all([
+        safeFetch(() => getDoc(doc(db, 'students', user.uid))),
+        safeFetch(() => getDocs(query(collection(db, 'students'), where('uid', '==', user.uid)))),
+        safeFetch(() => getDocs(query(collection(db, 'students'), where('email', '==', trimmedEmail))))
+      ]);
+
+      const foundStudentDoc = (stdDirectDoc && stdDirectDoc.exists())
+        ? stdDirectDoc
+        : (stdUidSnap && !stdUidSnap.empty)
+          ? stdUidSnap.docs[0]
+          : (stdEmailSnap && !stdEmailSnap.empty)
+            ? stdEmailSnap.docs[0]
+            : null;
+
+      if (foundStudentDoc) {
         if (!role) role = 'student';
-        await updateDoc(studentsSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+        try {
+          await updateDoc(foundStudentDoc.ref, {
+            lastLogin: serverTimestamp(),
+            status: 'active',
+            uid: user.uid
+          });
+        } catch (e) {
+          console.warn('Non-fatal: could not update student doc:', e.message);
+        }
       }
-      if (!advisersSnap.empty) {
-        if (!role) role = 'adviser';
-        await updateDoc(advisersSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
+
+      // 3. Check deans collection by doc ID, uid query, and email query
+      let deansDocToUse = null;
+      const [deanDirectDoc, deanUidSnap, deanEmailSnap] = await Promise.all([
+        safeFetch(() => getDoc(doc(db, 'deans', user.uid))),
+        safeFetch(() => getDocs(query(collection(db, 'deans'), where('uid', '==', user.uid)))),
+        safeFetch(() => getDocs(query(collection(db, 'deans'), where('email', '==', trimmedEmail))))
+      ]);
+
+      deansDocToUse = (deanDirectDoc && deanDirectDoc.exists())
+        ? deanDirectDoc
+        : (deanUidSnap && !deanUidSnap.empty)
+          ? deanUidSnap.docs[0]
+          : (deanEmailSnap && !deanEmailSnap.empty)
+            ? deanEmailSnap.docs[0]
+            : null;
+
+      if (deansDocToUse) {
+        const dData = deansDocToUse.data();
+        if (!role || dData.role === 'dean+adviser') {
+          role = dData.role || 'dean';
+        }
+        try {
+          await updateDoc(deansDocToUse.ref, { lastLogin: serverTimestamp(), status: 'active', uid: user.uid });
+        } catch (e) {
+          console.warn('Non-fatal: could not update dean doc:', e.message);
+        }
+      }
+
+      // 4. Check advisers collection by doc ID, userId, uid, and email query
+      const [advDirectDoc, advUserIdSnap, advUidSnap, advEmailSnap] = await Promise.all([
+        safeFetch(() => getDoc(doc(db, 'advisers', user.uid))),
+        safeFetch(() => getDocs(query(collection(db, 'advisers'), where('userId', '==', user.uid)))),
+        safeFetch(() => getDocs(query(collection(db, 'advisers'), where('uid', '==', user.uid)))),
+        safeFetch(() => getDocs(query(collection(db, 'advisers'), where('email', '==', trimmedEmail))))
+      ]);
+
+      const foundAdvDoc = (advDirectDoc && advDirectDoc.exists())
+        ? advDirectDoc
+        : (advUserIdSnap && !advUserIdSnap.empty)
+          ? advUserIdSnap.docs[0]
+          : (advUidSnap && !advUidSnap.empty)
+            ? advUidSnap.docs[0]
+            : (advEmailSnap && !advEmailSnap.empty)
+              ? advEmailSnap.docs[0]
+              : null;
+
+      if (foundAdvDoc) {
+        if (!role) role = foundAdvDoc.data().role || 'adviser';
+        try {
+          await updateDoc(foundAdvDoc.ref, { lastLogin: serverTimestamp(), status: 'active', userId: user.uid, uid: user.uid });
+        } catch (e) {
+          console.warn('Non-fatal: could not update adviser doc:', e.message);
+        }
+      }
+
+      // 5. Check super_admins safely if role is admin or not yet determined
+      if (!role || role === 'super-admin' || role === 'admin') {
+        const [saDirectDoc, saUidSnap, saEmailSnap] = await Promise.all([
+          safeFetch(() => getDoc(doc(db, 'super_admins', user.uid))),
+          safeFetch(() => getDocs(query(collection(db, 'super_admins'), where('uid', '==', user.uid)))),
+          safeFetch(() => getDocs(query(collection(db, 'super_admins'), where('email', '==', trimmedEmail))))
+        ]);
+
+        const foundSaDoc = (saDirectDoc && saDirectDoc.exists())
+          ? saDirectDoc
+          : (saUidSnap && !saUidSnap.empty)
+            ? saUidSnap.docs[0]
+            : (saEmailSnap && !saEmailSnap.empty)
+              ? saEmailSnap.docs[0]
+              : null;
+
+        if (foundSaDoc) {
+          role = 'super-admin';
+          try {
+            await updateDoc(foundSaDoc.ref, { lastLogin: serverTimestamp(), status: 'active', uid: user.uid });
+          } catch (e) {
+            console.warn('Non-fatal: could not update super_admin doc:', e.message);
+          }
+        }
       }
 
       if (!role) {
@@ -124,13 +256,11 @@ function UnifiedLogin() {
       // Redirect based on role
       if (role === 'admin' || role === 'super-admin') {
         window.location.href = '/admin/';
-      } else if (role === 'dean') {
+      } else if (role === 'dean' || role === 'dean+adviser') {
         // Check if this is the first login
-        const deansQuery = query(collection(db, 'deans'), where('uid', '==', user.uid));
-        const deansSnap = await getDocs(deansQuery);
-        if (!deansSnap.empty) {
-          await updateDoc(deansSnap.docs[0].ref, { lastLogin: serverTimestamp(), status: 'active' });
-          if (deansSnap.docs[0].data().accountStatus === 'pending_activation') {
+        if (deansDocToUse) {
+          const dData = deansDocToUse.data();
+          if (dData.accountStatus === 'pending_activation') {
             window.location.href = '/dean-activate';
             return;
           }

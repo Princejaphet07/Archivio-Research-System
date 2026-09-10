@@ -17,7 +17,8 @@ import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTi
 import Swal from 'sweetalert2';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [authUser, setAuthUser] = useState(null);
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [studentInfo, setStudentInfo] = useState({ uid: '', name: 'STUDENT', initials: 'ST', groupName: 'Your Group', adviserName: 'Your Adviser' });
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
@@ -25,13 +26,19 @@ function App() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
   React.useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
-      if (snap.exists() && snap.data().maintenance === true) {
-        setIsMaintenanceMode(true);
-      } else {
-        setIsMaintenanceMode(false);
+    const unsub = onSnapshot(
+      doc(db, 'settings', 'system_preferences'),
+      (snap) => {
+        if (snap.exists() && snap.data().maintenance === true) {
+          setIsMaintenanceMode(true);
+        } else {
+          setIsMaintenanceMode(false);
+        }
+      },
+      (err) => {
+        console.warn('System preferences listener notice (non-fatal):', err.message);
       }
-    });
+    );
     return () => unsub();
   }, []);
 
@@ -71,72 +78,116 @@ function App() {
 
   // Persist session with Firebase Auth
   React.useEffect(() => {
+    let studentUnsub = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       const path = window.location.pathname;
       const isInviteRoute = path.includes('signup') || path.includes('student-activate') || window.location.search.includes('token');
 
       if (user) {
-        // Clean URL if they are logged in but stuck on an invite link
+        setAuthUser(user);
         if (isInviteRoute) {
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', '/student/');
         }
 
         try {
-          const studentsRef = collection(db, 'students');
-          const q = query(studentsRef, where('uid', '==', user.uid));
-          
-          onSnapshot(q, (snapshot) => {
-            let displayName = user.displayName || user.email?.split('@')[0] || 'Student';
-            let groupName = 'Your Group';
-            let adviserName = 'Your Adviser';
-            let profilePhotoUrl = null;
-            let role = 'student';
-            let groupStatus = 'pending';
-            
-            if (!snapshot.empty) {
-              const studentData = snapshot.docs[0].data();
-              displayName = studentData.displayName || (studentData.firstName ? studentData.firstName + ' ' + studentData.lastName : null) || displayName;
-              groupName = studentData.groupName || 'Your Group';
-              adviserName = studentData.invitedByName || 'Your Adviser';
-              profilePhotoUrl = studentData.profilePhotoUrl || null;
-              role = studentData.role || 'student';
-              groupStatus = studentData.groupStatus || 'pending';
-            }
-            
+          const processStudentData = (studentData = {}) => {
+            const displayName = studentData.displayName ||
+              (studentData.firstName ? `${studentData.firstName} ${studentData.lastName || ''}`.trim() : null) ||
+              user.displayName ||
+              user.email?.split('@')[0] ||
+              'Student';
+
+            const groupName = studentData.groupName || studentData.groupMembers?.groupName || 'Your Group';
+            const adviserName = studentData.invitedByName || studentData.groupMembers?.invitedByName || 'Your Adviser';
+            const profilePhotoUrl = studentData.profilePhotoUrl || null;
+            const role = studentData.role || 'student';
+            const groupStatus = studentData.groupStatus || studentData.groupMembers?.groupStatus || 'approved';
             const initials = displayName.substring(0, 2).toUpperCase();
-            setStudentInfo({ uid: user.uid, name: displayName, initials, groupName, adviserName, profilePhotoUrl, role, groupStatus });
-          });
-          
-          // Only redirect to dashboard if they are on login or an invite route
-          // Or if their group status is pending (to lock them out of other tabs)
-          setCurrentPage((prev) => {
-            if (prev === 'login' || prev === 'activate' || prev === 'signup' || groupStatus === 'pending') {
-              return 'dashboard';
+
+            setStudentInfo({
+              uid: user.uid,
+              name: displayName,
+              initials,
+              groupName,
+              adviserName,
+              profilePhotoUrl,
+              role,
+              groupStatus
+            });
+
+            setCurrentPage((prev) => {
+              if (prev === 'login' || prev === 'activate' || prev === 'signup') {
+                return 'dashboard';
+              }
+              return prev;
+            });
+
+            if (groupStatus === 'pending') {
+              setActiveTab('Dashboard');
             }
-            return prev;
+
+            setIsInitializing(false);
+          };
+
+          // 1. Listen directly to doc with ID == user.uid
+          const stdDocRef = doc(db, 'students', user.uid);
+          studentUnsub = onSnapshot(stdDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+              processStudentData(docSnap.data());
+            } else {
+              // Fallback: search by uid or email query if document was saved with random ID
+              try {
+                const qUid = query(collection(db, 'students'), where('uid', '==', user.uid));
+                const snapUid = await getDocs(qUid);
+                if (!snapUid.empty) {
+                  processStudentData(snapUid.docs[0].data());
+                } else {
+                  const qEmail = query(collection(db, 'students'), where('email', '==', user.email?.toLowerCase().trim()));
+                  const snapEmail = await getDocs(qEmail);
+                  if (!snapEmail.empty) {
+                    processStudentData(snapEmail.docs[0].data());
+                  } else {
+                    processStudentData({});
+                  }
+                }
+              } catch (qErr) {
+                console.warn('Fallback student query notice:', qErr.message);
+                processStudentData({});
+              }
+            }
+          }, (err) => {
+            console.error("Student snapshot error:", err);
+            processStudentData({});
           });
-          
-          if (groupStatus === 'pending') {
-            setActiveTab('Dashboard');
-          }
+
         } catch (error) {
           console.error("Error restoring session:", error);
+          setCurrentPage('dashboard');
+          setIsInitializing(false);
         }
       } else {
-        // Not logged in. Let them stay on invite route if they are on one.
+        setAuthUser(null);
+        if (studentUnsub) {
+          studentUnsub();
+          studentUnsub = null;
+        }
         if (!isInviteRoute) {
           setCurrentPage('login');
         }
+        setIsInitializing(false);
       }
-      setIsInitializing(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (studentUnsub) studentUnsub();
+    };
   }, []);
 
   const handlePageSwitch = (pageName, data = null) => {
-    if (pageName === 'login' || pageName === 'dashboard') {
-      window.history.replaceState({}, '', '/');
+    if (pageName === 'dashboard') {
+      window.history.replaceState({}, '', '/student/');
     }
     setCurrentPage(pageName);
     if (pageName === 'login' && data?.email) {
@@ -229,7 +280,7 @@ function App() {
 
   return (
     <div className="w-full min-h-screen">
-      {currentPage === 'login' && (
+      {currentPage === 'login' && !authUser && !isInitializing && (
         (() => { window.location.href = '/'; return null; })()
       )}
       {currentPage === 'signup' && (
@@ -242,9 +293,9 @@ function App() {
         <StudentActivate />
       )}
       {/* Authenticated Pages - Render together to preserve state (e.g. active uploads) when switching tabs */}
-      {['dashboard', 'manuscript', 'requirements', 'progress', 'mygroup', 'settings'].includes(currentPage) && (
+      {((authUser && currentPage === 'login') || ['dashboard', 'manuscript', 'requirements', 'progress', 'mygroup', 'settings'].includes(currentPage)) && (
         <>
-          <div style={{ display: currentPage === 'dashboard' ? 'block' : 'none' }}>
+          <div style={{ display: (currentPage === 'dashboard' || currentPage === 'login') ? 'block' : 'none' }}>
             <StudentDashboard
               onLogout={handleLogout}
               studentName={studentInfo.name}

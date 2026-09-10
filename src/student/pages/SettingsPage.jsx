@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '../Components/Sidebar';
-import NotificationBell from '../Components/NotificationBell';
-import PortalHeader from '../Components/PortalHeader';
+import Sidebar from '../components/Sidebar';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -345,17 +345,17 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         />
 
         {/* SUBTITLE */}
-        <div className="px-6 lg:px-10 pb-6">
-          <p className="text-[15px] text-gray-500 dark:text-stone-400 font-medium">Manage your account and preferences</p>
+        <div className="px-4 sm:px-8 lg:px-10 pb-4 sm:pb-6">
+          <p className="text-[14px] sm:text-[15px] text-gray-500 dark:text-stone-400 font-medium">Manage your account and preferences</p>
         </div>
 
         {/* SCROLLABLE ROUTE BODY */}
-        <div className="flex-1 overflow-y-auto px-6 lg:px-10 pb-10">
-          <div className="max-w-[1200px] flex flex-col md:flex-row gap-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 pb-10">
+          <div className="max-w-[1200px] flex flex-col md:flex-row gap-5 sm:gap-6">
             
             {/* Settings Sidebar */}
-            <Card className="w-full md:w-[260px] shrink-0 p-3 h-fit">
-              <div className="flex flex-col gap-1">
+            <Card className="w-full md:w-[260px] shrink-0 p-2 sm:p-3 h-fit">
+              <div className="flex md:flex-col overflow-x-auto pb-1 md:pb-0 gap-1.5 scrollbar-none">
                 {settingsTabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -366,18 +366,18 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         setActiveSettingsTab(tab.id);
                       }
                     }}
-                    className={`flex items-center justify-between text-left px-4 py-3.5 rounded-lg font-medium text-[14px] transition-all ${
+                    className={`flex items-center justify-between text-left px-3.5 sm:px-4 py-2.5 sm:py-3.5 rounded-lg font-medium text-[13px] sm:text-[14px] transition-all whitespace-nowrap shrink-0 md:shrink min-h-[44px] touch-manipulation ${
                       activeSettingsTab === tab.id
-                        ? 'bg-[#f8eef1] dark:bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#D05353]'
+                        ? 'bg-[#f8eef1] dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] font-bold'
                         : 'text-gray-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-[16px] grayscale opacity-70">{tab.icon}</span>
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <span className="text-[15px] sm:text-[16px] grayscale opacity-70">{tab.icon}</span>
                       {tab.id}
                     </div>
                     {activeSettingsTab === tab.id && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <svg className="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     )}
@@ -387,26 +387,26 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             </Card>
 
             {/* Settings Content Area */}
-            <Card className="flex-1 p-8 min-h-[600px]">
+            <Card className="flex-1 p-5 sm:p-8 min-h-[500px] sm:min-h-[600px]">
               
               {/* === PROFILE TAB === */}
               {activeSettingsTab === 'Profile' && (
                 <div className="animate-fade-in flex flex-col h-full">
                   <div className="mb-6">
-                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Profile Information</h2>
-                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Update your personal information</p>
+                    <h2 className="text-[20px] sm:text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Profile Information</h2>
+                    <p className="text-[13px] sm:text-[14px] text-gray-500 dark:text-stone-400">Update your personal information</p>
                   </div>
-                  <hr className="border-stone-100 dark:border-stone-800 mb-8" />
+                  <hr className="border-stone-100 dark:border-stone-800 mb-6 sm:mb-8" />
                   
-                  <div className="flex items-center gap-6 mb-10">
-                    <div className="w-[84px] h-[84px] rounded-full bg-[#7B1F35] dark:bg-stone-800 text-white dark:text-stone-100 flex items-center justify-center font-semibold text-[28px] shadow-sm tracking-wide overflow-hidden relative transition-colors">
+                  <div className="flex items-center gap-4 sm:gap-6 mb-8 sm:mb-10">
+                    <div className="w-[72px] h-[72px] sm:w-[84px] sm:h-[84px] rounded-full bg-[#7B1F35] dark:bg-stone-800 text-white dark:text-stone-100 flex items-center justify-center font-semibold text-[24px] sm:text-[28px] shadow-sm tracking-wide overflow-hidden relative shrink-0 transition-colors">
                       {studentData?.profilePhotoUrl ? (
                         <img src={studentData.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
                         initials || 'ST'
                       )}
                     </div>
-                    <div className="flex flex-col items-start gap-2">
+                    <div className="flex flex-col items-start gap-1.5 sm:gap-2">
                       <div>
                         <h4 className="text-[14px] font-bold text-black dark:text-stone-100">Profile Photo</h4>
                         <p className="text-[12px] text-gray-500 dark:text-stone-400">JPG or PNG. Max 2MB.</p>
@@ -428,14 +428,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                       />
                       <button 
                         onClick={handleChangePhotoClick}
-                        className="px-5 py-1.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors mt-1"
+                        className="min-h-[38px] px-4 sm:px-5 py-1.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors mt-1 touch-manipulation"
                       >
                         Change Photo
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 sm:gap-y-5 mb-6">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">First Name</label>
                       <input 
@@ -443,7 +443,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={firstName} 
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full min-h-[44px] bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-2.5 sm:py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -453,34 +453,34 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={lastName} 
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full min-h-[44px] bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg px-4 py-2.5 sm:py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Student Number</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.studentNumber || studentData?.studentNo || 'N/A'} disabled className="w-full min-h-[44px] bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-2.5 sm:py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Course</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.course || 'N/A'} disabled className="w-full min-h-[44px] bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-2.5 sm:py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5 md:col-span-2">
                       <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">School Email</label>
                       <div className="relative">
-                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none cursor-not-allowed" />
+                        <input type="text" value={studentData?.email || 'N/A'} disabled className="w-full min-h-[44px] bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[14px] text-gray-500 dark:text-stone-500 rounded-lg pl-4 pr-10 py-2.5 sm:py-3 outline-none cursor-not-allowed" />
                         <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 mb-auto">
-                    <svg className="w-3.5 h-3.5 text-gray-400 dark:text-stone-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  <div className="flex items-start sm:items-center gap-2 mt-4 mb-auto">
+                    <svg className="w-3.5 h-3.5 text-gray-400 dark:text-stone-500 shrink-0 mt-0.5 sm:mt-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                     <p className="text-[12px] text-gray-500 dark:text-stone-400 font-medium">Fields marked are managed by your institution and cannot be edited.</p>
                   </div>
 
@@ -488,7 +488,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <button 
                       onClick={handleSaveProfile} 
                       disabled={isSaving}
-                      className="px-6 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50"
+                      className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center"
                     >
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -500,12 +500,12 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
               {activeSettingsTab === 'Password' && (
                 <div className="animate-fade-in flex flex-col h-full max-w-[800px]">
                   <div className="mb-6">
-                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Change Password</h2>
-                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Keep your account secure with a strong password</p>
+                    <h2 className="text-[20px] sm:text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Change Password</h2>
+                    <p className="text-[13px] sm:text-[14px] text-gray-500 dark:text-stone-400">Keep your account secure with a strong password</p>
                   </div>
                   <hr className="border-stone-100 dark:border-stone-800 mb-6" />
                   
-                  <div className="flex flex-col gap-1.5 mb-6">
+                  <div className="flex flex-col gap-1.5 mb-5 sm:mb-6">
                     <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Current Password</label>
                     <div className="relative">
                       <input 
@@ -513,9 +513,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={currentPassword}
                         onChange={e => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password" 
-                        className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
+                        className="w-full min-h-[44px] bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[14px] text-black dark:text-stone-200 rounded-lg pl-4 pr-11 py-2.5 sm:py-3 outline-none focus:ring-2 focus:ring-[#7B1F35]/20 dark:focus:ring-[#7B1F35]/20 transition-all shadow-sm" 
                       />
-                      <button onClick={() => setShowCurrent(!showCurrent)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button onClick={() => setShowCurrent(!showCurrent)} className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-manipulation">
                         {showCurrent ? (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19.5c-4.638 0-8.573-3.007-9.963-7.178.07-.207.07-.431 0-.639C3.423 7.51 7.36 4.5 12 4.5c1.178 0 2.296.22 3.321.614m3.84 2.22c1.472 1.258 2.585 2.87 3.256 4.705-.07.207-.07.431 0 .639-.672 1.838-1.785 3.45-3.257 4.707M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3l18 18" /></svg>
                         ) : (
@@ -533,9 +533,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
                         placeholder="Enter a new password" 
-                        className="w-full bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full min-h-[44px] bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-11 py-2.5 sm:py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
                       />
-                      <button onClick={() => setShowNew(!showNew)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button onClick={() => setShowNew(!showNew)} className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-manipulation">
                         {showNew ? (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19.5c-4.638 0-8.573-3.007-9.963-7.178.07-.207.07-.431 0-.639C3.423 7.51 7.36 4.5 12 4.5c1.178 0 2.296.22 3.321.614m3.84 2.22c1.472 1.258 2.585 2.87 3.256 4.705-.07.207-.07.431 0 .639-.672 1.838-1.785 3.45-3.257 4.707M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3l18 18" /></svg>
                         ) : (
@@ -557,36 +557,36 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
                   <div className="mb-6 ml-1">
                     <p className="text-[12px] font-bold text-gray-800 dark:text-stone-300 mb-2.5">Requirements</p>
-                    <div className="grid grid-cols-2 gap-y-2.5 text-[12px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2.5 gap-x-4 text-[12px]">
                       <div className={`flex items-center gap-2 ${reqLength ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqLength ? (
-                          <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="w-3.5 h-3.5 text-[#2F855A] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
-                          <svg className="w-3 h-3 text-[#D3C7B0] ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
+                          <svg className="w-3 h-3 text-[#D3C7B0] shrink-0 ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
                         )}
                         At least 8 characters
                       </div>
                       <div className={`flex items-center gap-2 ${reqUpper ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqUpper ? (
-                          <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="w-3.5 h-3.5 text-[#2F855A] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
-                          <svg className="w-3 h-3 text-[#D3C7B0] ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
+                          <svg className="w-3 h-3 text-[#D3C7B0] shrink-0 ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
                         )}
                         Contains uppercase letter
                       </div>
                       <div className={`flex items-center gap-2 ${reqNumber ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqNumber ? (
-                          <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="w-3.5 h-3.5 text-[#2F855A] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
-                          <svg className="w-3 h-3 text-[#D3C7B0] ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
+                          <svg className="w-3 h-3 text-[#D3C7B0] shrink-0 ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
                         )}
                         Contains a number
                       </div>
                       <div className={`flex items-center gap-2 ${reqSpecial ? 'text-gray-700 dark:text-stone-300' : 'text-gray-400 dark:text-stone-500'}`}>
                         {reqSpecial ? (
-                          <svg className="w-3.5 h-3.5 text-[#2F855A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="w-3.5 h-3.5 text-[#2F855A] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         ) : (
-                          <svg className="w-3 h-3 text-[#D3C7B0] ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
+                          <svg className="w-3 h-3 text-[#D3C7B0] shrink-0 ml-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><circle cx="12" cy="12" r="10" /></svg>
                         )}
                         Contains special character (!@#$...)
                       </div>
@@ -601,9 +601,9 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         value={confirmNewPassword}
                         onChange={e => setConfirmNewPassword(e.target.value)}
                         placeholder="Re-enter your new password" 
-                        className="w-full bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
+                        className="w-full min-h-[44px] bg-[#FCFBF8] dark:bg-stone-800 border border-[#E3DAC4] dark:border-stone-700 text-[14px] text-black dark:text-stone-200 placeholder:italic placeholder:text-gray-400 dark:placeholder:text-stone-500 rounded-lg pl-4 pr-11 py-2.5 sm:py-3 outline-none focus:ring-2 focus:ring-[#6B0F1A]/20 transition-all shadow-sm" 
                       />
-                      <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button onClick={() => setShowConfirm(!showConfirm)} className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-manipulation">
                         {showConfirm ? (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19.5c-4.638 0-8.573-3.007-9.963-7.178.07-.207.07-.431 0-.639C3.423 7.51 7.36 4.5 12 4.5c1.178 0 2.296.22 3.321.614m3.84 2.22c1.472 1.258 2.585 2.87 3.256 4.705-.07.207-.07.431 0 .639-.672 1.838-1.785 3.45-3.257 4.707M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3l18 18" /></svg>
                         ) : (
@@ -613,17 +613,17 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-4 rounded-xl bg-[#FDF9F1] dark:bg-yellow-600/10 border border-[#E3DAC4] dark:border-yellow-600/50 mb-auto shadow-sm transition-colors">
-                    <svg className="w-6 h-6 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.496 1.509 1.333 1.509 2.316V18" /></svg>
+                  <div className="flex items-start gap-3 sm:gap-4 p-4 rounded-xl bg-[#FDF9F1] dark:bg-yellow-600/10 border border-[#E3DAC4] dark:border-yellow-600/50 mb-auto shadow-sm transition-colors">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.496 1.509 1.333 1.509 2.316V18" /></svg>
                     <div>
                       <p className="text-[13px] text-gray-900 dark:text-stone-200 font-bold mb-0.5">Use a unique password you don't use anywhere else.</p>
-                      <p className="text-[13px] text-gray-500 dark:text-stone-400">Consider using a password manager to keep track.</p>
+                      <p className="text-[12px] sm:text-[13px] text-gray-500 dark:text-stone-400">Consider using a password manager to keep track.</p>
                     </div>
                   </div>
 
-                  <div className="flex justify-end items-center gap-4 mt-8 pt-4">
-                    <button onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="px-7 py-2.5 bg-white dark:bg-stone-900 border border-[#DFD5BE] dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-gray-50 dark:hover:bg-stone-800 transition-colors shadow-sm">Cancel</button>
-                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="px-7 py-2.5 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end items-center gap-3 sm:gap-4 mt-8 pt-4">
+                    <button onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-white dark:bg-stone-900 border border-[#DFD5BE] dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-gray-50 dark:hover:bg-stone-800 transition-colors shadow-sm touch-manipulation flex items-center justify-center">Cancel</button>
+                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center">
                       {isChangingPassword ? 'Updating...' : 'Update Password'}
                     </button>
                   </div>
@@ -635,37 +635,37 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                 <div className="animate-fade-in flex flex-col h-full max-w-[800px]">
                   
                   {/* Header */}
-                  <div className="mb-8">
-                    <h2 className="text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Notification Preferences</h2>
-                    <p className="text-[14px] text-gray-500 dark:text-stone-400">Choose how you want to be notified about updates</p>
+                  <div className="mb-6 sm:mb-8">
+                    <h2 className="text-[20px] sm:text-[24px] font-bold text-black dark:text-stone-100 font-serif mb-1">Notification Preferences</h2>
+                    <p className="text-[13px] sm:text-[14px] text-gray-500 dark:text-stone-400">Choose how you want to be notified about updates</p>
                   </div>
 
                   {/* Email Notifications Section */}
-                  <div className="mb-8">
+                  <div className="mb-6 sm:mb-8">
                     <h3 className="text-[11px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-4 ml-1">Email Notifications</h3>
                     
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-5 sm:gap-6">
                       {emailNotifications.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between group">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm ${item.iconBg}`}>
+                        <div key={item.id} className="flex items-center justify-between gap-3 group">
+                          <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-2">
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0 ${item.iconBg}`}>
                               {item.icon}
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
-                              <span className="text-[13px] text-gray-500 dark:text-stone-400">{item.desc}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[13px] sm:text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
+                              <span className="text-[12px] sm:text-[13px] text-gray-500 dark:text-stone-400 leading-snug">{item.desc}</span>
                             </div>
                           </div>
                           
                           {/* Custom Toggle Switch */}
-                          <label className="relative inline-flex items-center cursor-pointer">
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[40px]">
                             <input 
                               type="checkbox" 
                               className="sr-only peer" 
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
+                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[10px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
@@ -678,28 +678,28 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   <div className="mb-auto">
                     <h3 className="text-[11px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-4 ml-1">In-App Notifications</h3>
                     
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-5 sm:gap-6">
                       {inAppNotifications.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between group">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm ${item.iconBg}`}>
+                        <div key={item.id} className="flex items-center justify-between gap-3 group">
+                          <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-2">
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0 ${item.iconBg}`}>
                               {item.icon}
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
-                              <span className="text-[13px] text-gray-500 dark:text-stone-400">{item.desc}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[13px] sm:text-[14px] font-bold text-gray-900 dark:text-stone-200">{item.title}</span>
+                              <span className="text-[12px] sm:text-[13px] text-gray-500 dark:text-stone-400 leading-snug">{item.desc}</span>
                             </div>
                           </div>
                           
                           {/* Custom Toggle Switch */}
-                          <label className="relative inline-flex items-center cursor-pointer">
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[40px]">
                             <input 
                               type="checkbox" 
                               className="sr-only peer" 
                               checked={notificationPrefs[item.id] ?? item.defaultChecked} 
                               onChange={(e) => setNotificationPrefs(prev => ({ ...prev, [item.id]: e.target.checked }))}
                             />
-                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
+                            <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[10px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B1F35] dark:peer-checked:bg-[#7B1F35]"></div>
                           </label>
                         </div>
                       ))}
@@ -707,15 +707,15 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-end items-center gap-4 mt-12 pt-4">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end items-center gap-3 sm:gap-4 mt-8 sm:mt-12 pt-4">
                     <button onClick={() => {
                       if (studentData?.notificationPrefs) {
                         setNotificationPrefs(studentData.notificationPrefs);
                       }
-                    }} className="px-7 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors shadow-sm cursor-pointer">
+                    }} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors shadow-sm cursor-pointer touch-manipulation flex items-center justify-center">
                       Cancel
                     </button>
-                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="px-7 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer">
+                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer touch-manipulation flex items-center justify-center">
                       {isSaving ? 'Saving...' : 'Save Preferences'}
                     </button>
                   </div>
@@ -730,15 +730,15 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
       {/* CAMERA MODAL */}
       {isCameraOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 max-w-[500px] w-full shadow-2xl transition-colors">
-            <h3 className="text-[20px] font-bold text-gray-900 dark:text-stone-100 mb-4 font-serif">Take a Photo</h3>
-            <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl p-4 sm:p-6 max-w-[500px] w-full max-h-[90vh] flex flex-col shadow-2xl transition-colors overflow-hidden">
+            <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-stone-100 mb-3 sm:mb-4 font-serif shrink-0">Take a Photo</h3>
+            <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center shrink-0">
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeCamera} className="px-5 py-2 text-gray-700 dark:text-stone-300 bg-gray-100 dark:bg-stone-800 rounded-full font-semibold text-[13px] hover:bg-gray-200 dark:hover:bg-stone-700 transition-colors">Cancel</button>
-              <button onClick={capturePhoto} className="px-5 py-2 text-white dark:text-white bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors flex items-center gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 mt-4 sm:mt-6 shrink-0">
+              <button onClick={closeCamera} className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-gray-700 dark:text-stone-300 bg-gray-100 dark:bg-stone-800 rounded-full font-semibold text-[13px] hover:bg-gray-200 dark:hover:bg-stone-700 transition-colors touch-manipulation flex items-center justify-center">Cancel</button>
+              <button onClick={capturePhoto} className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-white dark:text-white bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors flex items-center justify-center gap-2 touch-manipulation">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Capture Photo
               </button>

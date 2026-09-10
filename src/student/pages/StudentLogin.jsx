@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase/config';
 import { logActivity } from '../../firebase/logActivity';
@@ -34,27 +34,45 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      // Fetch student document from Firestore to get full name
-      const studentsRef = collection(db, 'students');
-      
       // Save or remove remembered email
       if (rememberMe) {
         localStorage.setItem('student_remembered_email', trimmedEmail);
       } else {
         localStorage.removeItem('student_remembered_email');
       }
-      const q = query(studentsRef, where('uid', '==', user.uid));
-      const snapshot = await getDocs(q);
+
+      // Fetch student document from Firestore to get full name & group info
+      const studentsRef = collection(db, 'students');
+      let studentData = null;
+      try {
+        const directSnap = await getDoc(doc(db, 'students', user.uid));
+        if (directSnap.exists()) {
+          studentData = directSnap.data();
+        } else {
+          const q = query(studentsRef, where('uid', '==', user.uid));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            studentData = snapshot.docs[0].data();
+          } else {
+            const qEmail = query(studentsRef, where('email', '==', trimmedEmail));
+            const snapshotEmail = await getDocs(qEmail);
+            if (!snapshotEmail.empty) {
+              studentData = snapshotEmail.docs[0].data();
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error reading student doc:', e.message);
+      }
 
       let displayName = user.displayName || trimmedEmail.split('@')[0];
       let groupName = 'Your Group';
       let adviserName = 'Your Adviser';
       
-      if (!snapshot.empty) {
-        const studentData = snapshot.docs[0].data();
-        displayName = studentData.displayName || studentData.firstName + ' ' + studentData.lastName;
-        groupName = studentData.groupName || 'Your Group';
-        adviserName = studentData.invitedByName || 'Your Adviser';
+      if (studentData) {
+        displayName = studentData.displayName || (studentData.firstName ? `${studentData.firstName} ${studentData.lastName || ''}`.trim() : null) || displayName;
+        groupName = studentData.groupName || studentData.groupMembers?.groupName || 'Your Group';
+        adviserName = studentData.invitedByName || studentData.groupMembers?.invitedByName || 'Your Adviser';
       }
 
       const initials = displayName.substring(0, 2).toUpperCase();

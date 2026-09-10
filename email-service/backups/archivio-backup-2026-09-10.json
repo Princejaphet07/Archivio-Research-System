@@ -1,162 +1,171 @@
 {
   "metadata": {
-    "backupDate": "2026-08-31T14:19:06.004Z",
+    "backupDate": "2026-09-10T19:00:00.024Z",
     "collectionsCount": 10
   },
   "data": {
     "students": [
       {
-        "id": "2MUtbQtuwIMWeDN4PRlRqsjtEJQ2",
-        "researchTitle": "Education ai",
-        "email": "japu.isidro.swu@phinmaed.com",
+        "id": "WxugZ40BiIQILWJV2HrFOWVMmYv2",
+        "yearLevel": "4th Year",
+        "department": "College of Information Technology",
+        "email": "jume.utrera.swu@phinmaed.com",
+        "groupName": "Group3",
+        "createdAt": "2026-09-10T03:59:54.296Z",
+        "researchTitle": "BEN10",
         "invitedBy": "anca.perote.swu@phinmaed.com",
-        "uid": "2MUtbQtuwIMWeDN4PRlRqsjtEJQ2",
+        "firstName": "Julie",
+        "uid": "WxugZ40BiIQILWJV2HrFOWVMmYv2",
+        "course": "Bachelor of Science in Information Technology",
+        "lastName": "Utrera",
+        "displayName": "Julie Utrera",
+        "role": "student",
         "studentNumber": "123456789",
+        "middleName": "d",
+        "invitedByName": "Hylla Tejada",
         "groupMembers": [],
-        "course": "BS Information Technology",
-        "yearLevel": "4th Year",
-        "lastName": "Isidro",
-        "middleName": "Lloyd Purgatorio",
-        "createdAt": "2026-08-30T13:21:49.203Z",
-        "displayName": "James Isidro",
-        "role": "student",
-        "department": "College of Information Technology",
-        "firstName": "James",
-        "groupName": "Group21",
-        "invitedByName": "Andrea Perote",
         "groupStatus": "approved",
         "hasSeenApprovalNotification": true,
-        "lastLogin": {
-          "_seconds": 1788101670,
-          "_nanoseconds": 721000000
-        },
-        "status": "active"
-      },
-      {
-        "id": "OpwChha6gicz36Fz70vzrEmANA63",
-        "uid": "OpwChha6gicz36Fz70vzrEmANA63",
-        "firstName": "Jerika",
-        "middleName": "Millondaga",
-        "lastName": "Zamoras",
-        "displayName": "Jerika Zamoras",
-        "studentNumber": "05232344",
-        "email": "jemi.zamoras.swu@phinmaed.com",
-        "yearLevel": "4th Year",
-        "groupName": "Group10",
-        "researchTitle": "Artificial Intelligence & Data",
-        "groupMembers": [],
-        "invitedBy": "anca.perote.swu@phinmaed.com",
-        "invitedByName": "Andrea Perote",
-        "department": "College of Information Technology",
-        "role": "student",
-        "createdAt": "2026-08-27T14:41:38.638Z",
-        "groupStatus": "approved",
-        "hasSeenApprovalNotification": true,
-        "course": "College of Information Technology",
         "status": "active",
         "lastLogin": {
-          "_seconds": 1788182960,
-          "_nanoseconds": 110000000
+          "_seconds": 1789062302,
+          "_nanoseconds": 278000000
         }
       }
     ],
     "advisers": [
       {
-        "id": "u1brKHR1Z9XL4vzKnjOA",
-        "firstName": "Andrea",
-        "lastName": "Perote",
-        "displayName": "Andrea Perote",
-        "email": "anca.perote.swu@phinmaed.com",
-        "invitedBy": "jume.utrera.swu@phinmaed.com",
-        "invitedByName": "Julie Utrera",
-        "department": "College of Information Technology",
-        "invitationToken": "1voabmd1y0cjitoxo1xy2",
-        "invitationLink": "http://localhost:5175/adviser/signup?email=anca.perote.swu%40phinmaed.com",
-        "message": "Dear [Adviser Name],\n\nYou have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.\n\nAs a Research Adviser, you will be able to:\n• Manage your assigned student research groups\n• Review and evaluate submitted manuscripts\n• Track submission requirements and completion status\n• Approve and forward papers to the Dean for publication\n\nPlease click the button below to activate your account and set up your credentials.",
-        "createdAt": "2026-08-27T14:01:16.099Z",
-        "invitationSentAt": "2026-08-27T14:11:28.856Z",
-        "activatedAt": "2026-08-27T14:12:53.649Z",
-        "userId": "clpbth6VDubm6hR0mcEVDQVI2sb2",
+        "id": "awjyLFpw6HVoGPGqQYOf",
+        "invitationDate": "2026-09-10T15:46:11.087Z",
         "status": "active",
+        "accountStatus": "pending_activation",
+        "displayName": "James Isidro",
+        "invitationLink": "http://localhost:5175/",
+        "lastName": "Isidro",
+        "programs": [
+          "BSIT"
+        ],
+        "createdBy": "admin",
+        "firstName": "James",
+        "role": "dean+adviser",
+        "userId": "xVkClNhSfFVNOtvGzDTs9Dg9CDn2",
+        "createdAt": "2026-09-10T15:46:11.087Z",
+        "temporaryPassword": "G#!go7C*QHaW",
+        "invitationSent": true,
+        "uid": "xVkClNhSfFVNOtvGzDTs9Dg9CDn2",
+        "department": "College of Information Technology",
+        "email": "japu.isidro.swu@phinmaed.com",
         "lastLogin": {
-          "_seconds": 1788182962,
-          "_nanoseconds": 781000000
+          "_seconds": 1789055222,
+          "_nanoseconds": 499000000
+        }
+      },
+      {
+        "id": "cqAo15InSBoTreOayiIv",
+        "invitationLink": "http://localhost:5175/adviser/signup?email=anca.perote.swu%40phinmaed.com",
+        "email": "anca.perote.swu@phinmaed.com",
+        "firstName": "Hylla",
+        "department": "College of Information Technology",
+        "lastName": "Tejada",
+        "invitationToken": "14xu3xiuc8qxh5ykz1421k",
+        "createdAt": "2026-09-10T03:42:00.585Z",
+        "message": "Dear [Adviser Name],\n\nYou have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.\n\nAs a Research Adviser, you will be able to:\n• Manage your assigned student research groups\n• Review and evaluate submitted manuscripts\n• Track submission requirements and completion status\n• Approve and forward papers to the Dean for publication\n\nPlease click the button below to activate your account and set up your credentials.",
+        "invitedByName": "Japhet Vender",
+        "displayName": "Hylla Tejada",
+        "invitationSentAt": "2026-09-10T03:42:00.585Z",
+        "invitedBy": "prdo.vender.swu@phinmaed.com",
+        "activatedAt": "2026-09-10T03:43:23.099Z",
+        "userId": "pkboZSJsXzbAhTwdBobhIzTaO5D2",
+        "status": "active",
+        "uid": "pkboZSJsXzbAhTwdBobhIzTaO5D2",
+        "lastLogin": {
+          "_seconds": 1789059026,
+          "_nanoseconds": 61000000
         }
       }
     ],
     "deans": [
       {
-        "id": "axJvJ3LYJtnnWlufiNVs",
-        "firstName": "Julie",
-        "lastName": "Utrera",
-        "displayName": "Julie Utrera",
-        "email": "jume.utrera.swu@phinmaed.com",
+        "id": "7nwz3vhWetbADBjUEjSy",
         "department": "College of Information Technology",
+        "createdAt": "2026-09-10T03:37:49.663Z",
+        "invitationLink": "http://localhost:5175/",
         "programs": [
           "BSIT"
         ],
+        "invitationDate": "2026-09-10T03:37:49.663Z",
+        "firstName": "Japhet",
+        "email": "prdo.vender.swu@phinmaed.com",
+        "lastName": "Vender",
+        "uid": "mRdzpeE3f9TDADWCgUpFjiV5hAo2",
+        "invitationToken": "37nkrb890xs2ktgm7hrva6",
         "role": "dean",
-        "uid": "0bb68WFTOnhrvIkgB6QvWEfQOC13",
-        "invitationToken": "b1elmaqwtnmjji9o4ak8e",
-        "invitationLink": "http://localhost:5175/",
         "invitationSent": true,
-        "invitationDate": "2026-08-27T13:54:00.652Z",
-        "createdAt": "2026-08-27T13:54:00.652Z",
+        "displayName": "Japhet Vender",
         "createdBy": "admin",
         "accountStatus": "activated",
         "temporaryPassword": null,
-        "activatedAt": "2026-08-27T13:59:52.849Z",
-        "updatedAt": "2026-08-27T13:59:52.849Z",
-        "status": "active",
+        "activatedAt": "2026-09-10T03:41:00.389Z",
+        "updatedAt": "2026-09-10T03:41:00.389Z",
         "lastLogin": {
-          "_seconds": 1788182973,
-          "_nanoseconds": 582000000
-        }
+          "_seconds": 1789059381,
+          "_nanoseconds": 598000000
+        },
+        "status": "active"
+      },
+      {
+        "id": "CftV27HsdLniOAbfCSl0",
+        "email": "japu.isidro.swu@phinmaed.com",
+        "invitationToken": "t8u8g1blppro3rz9cfb8td",
+        "invitationDate": "2026-09-10T15:46:08.825Z",
+        "displayName": "James Isidro",
+        "invitationLink": "http://localhost:5175/",
+        "department": "College of Information Technology",
+        "role": "dean+adviser",
+        "status": "active",
+        "createdAt": "2026-09-10T15:46:08.825Z",
+        "createdBy": "admin",
+        "firstName": "James",
+        "invitationSent": true,
+        "programs": [
+          "BSIT"
+        ],
+        "uid": "xVkClNhSfFVNOtvGzDTs9Dg9CDn2",
+        "lastName": "Isidro",
+        "lastLogin": {
+          "_seconds": 1789055222,
+          "_nanoseconds": 878000000
+        },
+        "accountStatus": "activated",
+        "temporaryPassword": null,
+        "activatedAt": "2026-09-10T15:47:33.128Z",
+        "updatedAt": "2026-09-10T15:47:33.128Z"
       }
     ],
     "admins": [],
     "groups": [
       {
-        "id": "YDfqPMIbDHZR5RhrKAVT",
-        "groupName": "Group10",
-        "researchTitle": "Artificial Intelligence & Data",
+        "id": "iuW7NrgZijd2SDYIng5O",
+        "adviserUid": "anca.perote.swu@phinmaed.com",
+        "program": "Bachelor of Science in Information Technology",
+        "createdAt": "2026-09-10T03:59:56.815Z",
+        "groupName": "Group3",
+        "department": "College of Information Technology",
+        "leaderUid": "WxugZ40BiIQILWJV2HrFOWVMmYv2",
+        "adviserName": "Hylla Tejada",
+        "researchTitle": "BEN10",
+        "leaderName": "Julie Utrera",
+        "leaderEmail": "jume.utrera.swu@phinmaed.com",
+        "members": [],
         "category": "Information Technology",
-        "leaderUid": "OpwChha6gicz36Fz70vzrEmANA63",
-        "leaderName": "Jerika Zamoras",
-        "leaderEmail": "jemi.zamoras.swu@phinmaed.com",
-        "department": "College of Information Technology",
-        "members": [],
-        "adviserUid": "anca.perote.swu@phinmaed.com",
-        "adviserName": "Andrea Perote",
-        "createdAt": "2026-08-27T14:41:40.806Z",
         "status": "approved",
-        "updatedAt": "2026-08-27T14:49:51.568Z",
-        "program": "College of Information Technology"
-      },
-      {
-        "id": "jT63CqvHCX3CPx9wHeSD",
-        "createdAt": "2026-08-30T13:21:51.331Z",
-        "leaderEmail": "japu.isidro.swu@phinmaed.com",
-        "category": "Education",
-        "adviserName": "Andrea Perote",
-        "program": "BS Information Technology",
-        "groupName": "Group21",
-        "leaderName": "James Isidro",
-        "members": [],
-        "researchTitle": "Education ai",
-        "adviserUid": "anca.perote.swu@phinmaed.com",
-        "department": "College of Information Technology",
-        "leaderUid": "2MUtbQtuwIMWeDN4PRlRqsjtEJQ2",
-        "status": "approved",
-        "updatedAt": "2026-08-30T13:22:24.283Z"
+        "updatedAt": "2026-09-10T04:02:53.844Z"
       }
     ],
     "submissions": [
       {
-        "id": "JR0ZOzLzybqAket7NQZ6",
-        "studentUid": "OpwChha6gicz36Fz70vzrEmANA63",
-        "studentName": "Jerika Zamoras",
-        "groupName": "Group10",
+        "id": "L0wLcDoodUt2N9ttejXf",
+        "groupName": "Group3",
         "requiredDocs": [
           "Final Manuscript",
           "Approval Sheet",
@@ -166,182 +175,91 @@
           "Upload URL",
           "Signature Page"
         ],
+        "createdAt": "2026-09-10T04:04:21.566Z",
+        "studentUid": "WxugZ40BiIQILWJV2HrFOWVMmYv2",
+        "pageCount": 137,
         "status": "in_progress",
-        "createdAt": "2026-08-27T14:56:02.801Z",
+        "studentName": "Julie Utrera",
+        "abstract": "Traditional manual and unorganized digital archiving methods present significant challenges for undergraduate students and research advisers in locating, retrieving, and managing capstone research manuscripts, thereby hindering overall academic research efficiency. To address these challenges, this study developed and evaluated a web-based digital archiving system using an Agile software development methodology. Employing a mixed-methods research design, data were collected from students and research advisers through open-ended and closed-ended surveys, alongside document analysis. Quantitative data were analyzed using percentage distribution and weighted means, while qualitative feedback was interpreted through thematic mapping and word clouds. The baseline assessment highlighted widespread difficulties in manuscript retrieval and current storage practices. In response, the developed system integrated advanced modules including role-based dashboards for deans and advisers, content management tools, a publish queue, and requirements tracking. The evaluation of the proposed platform demonstrated a high level of acceptability among users, proving that the digital repository successfully streamlines manuscript submission, tracking, and discovery. This study concludes that the web-based digital archiving system offers an efficient, accessible, and organized solution for managing undergraduate student research, substantially improving institutional knowledge management and research accessibility.",
+        "keywords": [
+          "Digital Archiving",
+          "Knowledge Management",
+          "Institutional Repository",
+          "Agile Software Development",
+          "Research Management",
+          "Information Retrieval"
+        ],
+        "documentResubmissions": {},
         "reviewedBy": "anca.perote.swu@phinmaed.com",
-        "pageCount": 175,
-        "abstract": "This study addresses the persistent inefficiencies in academic and non‑academic space management at Southwestern University‑PHINMA, where manual reservation processes and fragmented coordination lead to suboptimal room utilization, scheduling conflicts, and inadequate tagging of facilities to curricula. A mixed‑methods approach was employed: semi‑structured interviews and paper‑based surveys captured stakeholder challenges, while thematic and statistical analyses quantified pain points. Findings informed the design of a data‑driven Integrated Room Scheduling and Reservation (CONRES) framework, which was prototyped using an agile software development cycle. The system incorporates modules for dashboard monitoring, course scheduling, room availability, building management, and a chatbot assistance interface, all underpinned by constraint‑based optimization algorithms. User‑acceptance testing involving registrars and college deans demonstrated statistically significant improvements in scheduling accuracy (p < 0.01), reduction of reservation turnaround time by 38 %, and heightened satisfaction scores (mean increase from 3.2 to 4.5 on a 5‑point Likert scale). The research concludes that the implemented platform markedly enhances campus resource allocation, offering a scalable solution for higher‑education institutions seeking to modernize facility management through data‑centric decision support.",
+        "documentAnnotations": {
+          "Final Manuscript": {
+            "2": [
+              {
+                "points": [
+                  {
+                    "y": 122.4375,
+                    "x": 550
+                  }
+                ],
+                "type": "text",
+                "text": "HUHU"
+              }
+            ]
+          }
+        },
         "documentApprovals": {
           "Final Manuscript": true
         },
-        "documentResubmissions": {},
         "documentRevisions": {},
         "documents": {
           "Final Manuscript": {
-            "name": "Copy of [RING BIND FINAL] SWU-010_Capstone 1 Manuscript.docx.pdf",
-            "size": "13.6 MB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FFinal%20Manuscript_1787845299052.pdf?alt=media&token=e6d2fdc3-5c69-457c-a8d2-6e9e74be02e9",
             "type": "file",
-            "pageCount": 175
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FFinal%20Manuscript_1789012999630.pdf?alt=media&token=78dd759a-0eba-4238-b19e-e1845f37c90f",
+            "name": "Copy-of-SWU008_MANUSCRIPT_Final.pdf",
+            "date": "Sep 10, 2026",
+            "size": "22.1 MB",
+            "pageCount": 137
           },
           "Approval Sheet": {
-            "name": "APPROVAL-SHET.pdf",
-            "size": "20.1 KB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FApproval%20Sheet_1787845791901.pdf?alt=media&token=b7b77f04-e356-4d6f-b63c-ba76fd85098e",
-            "type": "file"
+            "date": "Sep 10, 2026",
+            "size": "4.9 KB",
+            "type": "file",
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FApproval%20Sheet_1789013762452.pdf?alt=media&token=ff581c8c-61a3-4805-b1bd-894e643aab45",
+            "name": "diploma-certificate-amor-dorotan.pdf"
           },
           "Dataset Files": {
-            "name": "Datasets (1).zip",
-            "size": "8.6 KB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FDataset%20Files_1787845814212.zip?alt=media&token=0f30c1d3-d8f5-40fb-8259-c13b4009265f",
-            "type": "file"
+            "type": "file",
+            "name": "APPROVAL-SHET.zip",
+            "size": "19.3 KB",
+            "date": "Sep 10, 2026",
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FDataset%20Files_1789013788896.zip?alt=media&token=22322f89-0d97-4d01-835c-c64c55e70fe6"
           },
           "Video Pitch": {
-            "name": "2026-04-26-23-06-42.mp4",
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FVideo%20Pitch_1789013809939.mp4?alt=media&token=be41dd4b-2bf8-49bf-8bab-ff2a84016c86",
             "size": "8.1 MB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FVideo%20Pitch_1787845828233.mp4?alt=media&token=0c04d8a9-2935-4eae-98f8-10428c723ac9",
-            "type": "file"
-          },
-          "User Manual": {
-            "name": "4c70e90e-caac-4c65-9896-a8f247f3ffe0.jpg",
-            "size": "87.8 KB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FUser%20Manual_1787845896083.jpg?alt=media&token=9ddc8e9f-b666-4bb9-9641-ea14453a000d",
-            "type": "file"
-          },
-          "Upload URL": {
-            "name": "http://localhost:5175/student/",
-            "size": "Link",
-            "date": "Aug 27, 2026",
-            "url": "http://localhost:5175/student/",
-            "type": "url"
-          },
-          "Signature Page": {
-            "name": "Signature-page.pdf",
-            "size": "152.1 KB",
-            "date": "Aug 27, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FOpwChha6gicz36Fz70vzrEmANA63%2FSignature%20Page_1787845927995.pdf?alt=media&token=c462144c-28f6-4b38-a5b1-0f3e91fcd7bd",
-            "type": "file"
-          }
-        },
-        "uploadedDocs": [
-          "Final Manuscript",
-          "Approval Sheet",
-          "Dataset Files",
-          "Video Pitch",
-          "User Manual",
-          "Upload URL",
-          "Signature Page"
-        ],
-        "updatedAt": "2026-08-27T15:52:12.022Z",
-        "adviserComments": "goodjob",
-        "reviewedAt": "2026-08-27T16:00:42.594Z",
-        "publishedAt": "2026-08-27T16:09:09.216Z",
-        "researchTitle": "Artificial Intelligence & Data",
-        "adviserName": "Andrea Perote",
-        "reviewStatus": "published",
-        "authorDisplay": "Jerika Zamoras",
-        "adviserUid": "anca.perote.swu@phinmaed.com",
-        "likes": [
-          "532LnbZXwseF1A9YDArDZTqHMfJ3"
-        ],
-        "aiSummary": {
-          "problem": "",
-          "methodology": "",
-          "conclusion": ""
-        },
-        "program": "College of Information Technology",
-        "department": "College of Information Technology",
-        "keywords": [
-          "Integrated Room Scheduling",
-          "Constraint-based Optimization",
-          "Mixed-Methods Research",
-          "User Acceptance Testing",
-          "Campus Resource Allocation",
-          "Data-driven Decision Support",
-          "Agile Software Development"
-        ],
-        "views": 18
-      },
-      {
-        "id": "T2b2q5APYwhW2EXPIHeB",
-        "createdAt": "2026-08-30T13:43:25.390Z",
-        "studentName": "James Isidro",
-        "groupName": "Group21",
-        "pageCount": 11,
-        "status": "in_progress",
-        "requiredDocs": [
-          "Final Manuscript",
-          "Approval Sheet",
-          "Dataset Files",
-          "Video Pitch",
-          "User Manual",
-          "Upload URL",
-          "Signature Page"
-        ],
-        "studentUid": "2MUtbQtuwIMWeDN4PRlRqsjtEJQ2",
-        "keywords": [
-          "Mobile-Assisted Language Learning",
-          "Learner Autonomy",
-          "Advanced EFL Learners",
-          "Mobile Devices",
-          "Semi-Structured Interviews",
-          "Mixed Methods",
-          "Pedagogical Guidance"
-        ],
-        "documents": {
-          "Final Manuscript": {
-            "name": "EJ1172284.pdf",
-            "size": "370.4 KB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FFinal%20Manuscript_1788097399224.pdf?alt=media&token=69407735-5a4d-4bd2-99d9-7b274abe36bf",
+            "date": "Sep 10, 2026",
             "type": "file",
-            "pageCount": 11
-          },
-          "Approval Sheet": {
-            "name": "APPROVAL-SHET.pdf",
-            "size": "20.1 KB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FApproval%20Sheet_1788097445229.pdf?alt=media&token=3d947fcd-32d0-4294-a2ee-6f9eaba1e66f",
-            "type": "file"
-          },
-          "Dataset Files": {
-            "name": "Datasets (1).zip",
-            "size": "8.6 KB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FDataset%20Files_1788097453271.zip?alt=media&token=b7369fa6-6778-4851-975b-d4cfd5a0d8e9",
-            "type": "file"
-          },
-          "Video Pitch": {
-            "name": "Screen Recording 2026-08-01 201335.mp4",
-            "size": "3.1 MB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FVideo%20Pitch_1788097462514.mp4?alt=media&token=3ed13fd2-3acb-4eb9-8fe8-4a2a7dccf42c",
-            "type": "file"
-          },
-          "User Manual": {
-            "name": "4c70e90e-caac-4c65-9896-a8f247f3ffe0.jpg",
-            "size": "87.8 KB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FUser%20Manual_1788097468609.jpg?alt=media&token=c26ffa4a-9406-4b4b-9d9b-f5ec07e6559a",
-            "type": "file"
+            "name": "2026-04-26-23-06-42.mp4"
           },
           "Upload URL": {
-            "name": "http://localhost:5175/",
+            "url": "http://localhost:5175/student/",
+            "date": "Sep 10, 2026",
             "size": "Link",
-            "date": "Aug 30, 2026",
-            "url": "http://localhost:5175/",
+            "name": "http://localhost:5175/student/",
             "type": "url"
           },
+          "User Manual": {
+            "name": "795286388_1437581858340655_1705679306327656778_n.png",
+            "type": "file",
+            "date": "Sep 10, 2026",
+            "size": "64.7 KB",
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FUser%20Manual_1789013845710.png?alt=media&token=f062cf02-2720-47d9-9c4f-cf09c5234ac1"
+          },
           "Signature Page": {
-            "name": "Signature-page.pdf",
             "size": "152.1 KB",
-            "date": "Aug 30, 2026",
-            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2F2MUtbQtuwIMWeDN4PRlRqsjtEJQ2%2FSignature%20Page_1788097492841.pdf?alt=media&token=ff8dc99a-6747-497d-8160-b7115612e394",
+            "date": "Sep 10, 2026",
+            "url": "https://firebasestorage.googleapis.com/v0/b/archivio-research-system.firebasestorage.app/o/requirements%2FWxugZ40BiIQILWJV2HrFOWVMmYv2%2FSignature%20Page_1789013867967.pdf?alt=media&token=b4f4fae8-924a-4805-9e9b-eb4b94e1c8b8",
+            "name": "Signature-page.pdf",
             "type": "file"
           }
         },
@@ -350,52 +268,41 @@
           "Approval Sheet",
           "Dataset Files",
           "Video Pitch",
-          "User Manual",
           "Upload URL",
+          "User Manual",
           "Signature Page"
         ],
-        "updatedAt": "2026-08-30T13:44:55.962Z",
+        "updatedAt": "2026-09-10T04:17:53.442Z",
+        "adviserComments": "GOOD JOB",
+        "reviewedAt": "2026-09-10T04:18:26.162Z",
+        "publishedAt": "2026-09-10T04:19:09.260Z",
+        "researchTitle": "BEN10",
+        "adviserName": "Hylla Tejada",
+        "reviewStatus": "published",
+        "authorDisplay": "Julie Utrera",
+        "program": "Bachelor of Science in Information Technology",
+        "adviserUid": "anca.perote.swu@phinmaed.com",
         "aiScanResult": {
-          "score": 88,
-          "feedback": "The abstract is clear, well‑structured, and maintains an appropriate academic tone. Grammar and syntax are generally strong, and the content effectively conveys the study’s purpose, methodology, and implications. Minor improvements can enhance precision and readability, particularly in methodological description and phrasing of key findings.",
           "suggestions": [
             {
-              "original": "The interview data were analysed through a mixed qualitative‑quantitative approach, coding participants’ descriptions of device usage, perceived affordances, and learning strategies, and then quantifying the frequency of identified themes.",
-              "suggested": "The interview data were analysed using a mixed‑methods approach: participants’ descriptions of device usage, perceived affordances, and learning strategies were coded, and the frequency of the resulting themes was quantified.",
-              "reason": "\"Mixed qualitative‑quantitative\" is unconventional; \"mixed‑methods\" is the standard term. The revised sentence also improves flow and clarity."
+              "original": "The evaluation of the proposed platform demonstrated a high level of acceptability among users, proving that the digital repository successfully streamlines manuscript submission, tracking, and discovery.",
+              "reason": "In academic writing, 'proving' is generally avoided unless dealing with strict mathematical proofs. Words like 'suggesting', 'demonstrating', or 'indicating' are preferred to maintain scientific objectivity.",
+              "suggested": "The evaluation of the proposed platform demonstrated a high level of acceptability among users, suggesting that the digital repository successfully streamlines manuscript submission, tracking, and discovery."
             },
             {
-              "original": "Findings reveal a dual pattern: participants demonstrate a sophisticated awareness of mobile devices’ potential to locate appropriate tools, retrieve contextual information, and tailor learning to personal styles, yet their classroom use remains largely intuitive, ad‑hoc, and unstructured.",
-              "suggested": "Findings reveal a twofold pattern: participants demonstrate sophisticated awareness of mobile devices’ potential to locate appropriate tools, retrieve contextual information, and tailor learning to personal styles, yet their classroom use remains largely intuitive, ad hoc, and unstructured.",
-              "reason": "\"Dual pattern\" is less common in academic writing; \"twofold pattern\" is clearer. Removing the hyphen in \"ad‑hoc\" aligns with standard usage."
-            },
-            {
-              "original": "The paper concludes that educators should integrate targeted instruction on mobile‑enabled strategies to bridge the gap between learners’ perceived benefits and their actual, purposeful use of mobile technology in advanced language learning contexts.",
-              "suggested": "The paper concludes that educators should provide targeted instruction on mobile‑enabled strategies to bridge the gap between learners’ perceived benefits and their purposeful use of mobile technology in advanced language‑learning contexts.",
-              "reason": "Simplifies wording for readability and adds a hyphen to \"language‑learning\" for consistency."
+              "original": "Quantitative data were analyzed using percentage distribution and weighted means, while qualitative feedback was interpreted through thematic mapping and word clouds.",
+              "suggested": "Quantitative data were analyzed using descriptive statistics, including percentage distributions and weighted means, while qualitative feedback was analyzed using thematic analysis.",
+              "reason": "Grouping percentage distributions and weighted means under 'descriptive statistics' elevates the academic tone. Additionally, 'thematic analysis' is the formal methodology, whereas 'thematic mapping' and 'word clouds' are visual representations of that analysis."
             }
-          ]
+          ],
+          "score": 93,
+          "feedback": "The abstract is exceptionally well-structured, clear, and maintains a highly professional academic tone. It perfectly follows the standard academic progression: background, problem statement, methodology, results, and conclusion. Grammar and syntax are strong, with only minor opportunities to temper strong claims (such as 'proving') and refine methodological terminology."
         },
-        "abstract": "This study investigates how advanced English as a foreign language (EFL) learners employ mobile devices—smartphones and tablets—to support autonomous language study. Although mobile technologies are widely recognised for offering individualized, anytime‑anywhere access to linguistic resources, little is known about the specific practices of learners at higher proficiency levels and the extent to which these practices align with autonomous learning principles. To address this gap, semi‑structured interviews were conducted with twenty advanced EFL students at a Polish university. The interview data were analysed using a mixed‑methods approach: participants’ descriptions of device usage, perceived affordances, and learning strategies were coded, and the frequency of the resulting themes was quantified. Findings reveal a twofold pattern: participants demonstrate sophisticated awareness of mobile devices’ potential to locate appropriate tools, retrieve contextual information, and tailor learning to personal styles, yet their classroom use remains largely intuitive, ad hoc, and unstructured. The results suggest that while mobile devices can foster learner autonomy, explicit pedagogical guidance is required to translate this awareness into systematic, effective classroom practices. The paper concludes that educators should provide targeted instruction on mobile‑enabled strategies to bridge the gap between learners’ perceived benefits and their purposeful use of mobile technology in advanced language‑learning contexts.",
-        "aiSummary": {
-          "problem": "No problem statement provided in the excerpt.",
-          "methodology": "No methodology details provided in the excerpt.",
-          "conclusion": "No conclusions provided in the excerpt."
-        },
-        "adviserComments": "nice",
-        "reviewedAt": "2026-08-30T14:14:15.551Z",
-        "reviewedBy": "anca.perote.swu@phinmaed.com",
-        "publishedAt": "2026-08-30T14:14:37.100Z",
-        "researchTitle": "Education ai",
-        "adviserName": "Andrea Perote",
-        "reviewStatus": "published",
-        "authorDisplay": "James Isidro",
-        "program": "BS Information Technology",
-        "adviserUid": "anca.perote.swu@phinmaed.com",
         "likes": [
-          "532LnbZXwseF1A9YDArDZTqHMfJ3"
+          "liA76ttD3vZaNtw13vsJ89IV87i2",
+          "mRdzpeE3f9TDADWCgUpFjiV5hAo2"
         ],
-        "views": 5
+        "views": 15
       }
     ],
     "requirements": [
@@ -522,6 +429,16 @@
         "timestamp": "2026-08-22T11:06:53.356Z"
       },
       {
+        "id": "0tUyc0cfR4IefHaTWbPJ",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "action": "Uploaded requirement document",
+        "status": "Success",
+        "timestamp": "2026-09-10T04:16:32.296Z",
+        "details": "Dataset Files: APPROVAL-SHET.zip",
+        "ip": "N/A"
+      },
+      {
         "id": "0uNQNdYqsnX7yClVC3dL",
         "user": "anca.perote.swu@phinmaed.com",
         "role": "Dean",
@@ -540,6 +457,16 @@
         "details": "",
         "ip": "N/A",
         "timestamp": "2026-08-27T04:09:12.170Z"
+      },
+      {
+        "id": "1GTrLlYZchyW2IlwtY8J",
+        "timestamp": "2026-09-10T04:17:15.690Z",
+        "status": "Success",
+        "ip": "N/A",
+        "action": "Uploaded requirement document",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "details": "Video Pitch: 2026-04-26-23-06-42.mp4"
       },
       {
         "id": "1UsrCigbAceCLo3sDGHk",
@@ -572,6 +499,26 @@
         "timestamp": "2026-08-07T13:03:57.605Z"
       },
       {
+        "id": "1fw8khju3rmbamHFnIhL",
+        "action": "Uploaded requirement document",
+        "user": "Jerika Zamoras",
+        "ip": "N/A",
+        "timestamp": "2026-08-31T15:47:13.289Z",
+        "status": "Success",
+        "details": "Dataset Files: APPROVAL-SHET.zip",
+        "role": "Student"
+      },
+      {
+        "id": "1vDfejQq6EAESlJARHQr",
+        "action": "Removed requirement document",
+        "user": "Jerika Zamoras",
+        "details": "Dataset Files",
+        "timestamp": "2026-08-31T15:46:58.332Z",
+        "ip": "N/A",
+        "status": "Success",
+        "role": "Student"
+      },
+      {
         "id": "281QuJLX4W4GPvBl6Dto",
         "user": "Pronce Japhet Vender",
         "timestamp": "2026-08-30T14:31:06.489Z",
@@ -600,6 +547,16 @@
         "details": "Andrea Canete — College of Information Technology",
         "ip": "N/A",
         "timestamp": "2026-08-06T17:22:36.626Z"
+      },
+      {
+        "id": "336myz1c9iHgLy9A2kLh",
+        "action": "Uploaded requirement document",
+        "user": "Jerika Zamoras",
+        "timestamp": "2026-08-31T15:44:23.912Z",
+        "details": "Approval Sheet: APPROVAL-SHET.pdf",
+        "status": "Success",
+        "role": "Student",
+        "ip": "N/A"
       },
       {
         "id": "3nfTveacOCkmq3cT7TG3",
@@ -662,6 +619,16 @@
         "timestamp": "2026-08-25T17:44:27.938Z"
       },
       {
+        "id": "4ybeXjKp1pM4VgIzGagP",
+        "timestamp": "2026-09-10T04:17:55.907Z",
+        "details": "Signature Page: Signature-page.pdf",
+        "status": "Success",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "action": "Uploaded requirement document"
+      },
+      {
         "id": "54UgvAFqLCn65nhDtk9d",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -692,6 +659,26 @@
         "timestamp": "2026-08-25T03:00:27.996Z"
       },
       {
+        "id": "5aQA693PBcGHoq7OExrJ",
+        "user": "Jerika Zamoras",
+        "timestamp": "2026-08-31T15:48:15.248Z",
+        "action": "Added requirement URL",
+        "details": "Upload URL: http://localhost:5175/student/",
+        "ip": "N/A",
+        "role": "Student",
+        "status": "Success"
+      },
+      {
+        "id": "5uHstgDGeryzfNsRQbXO",
+        "details": "Approval Sheet: APPROVAL-SHET.pdf",
+        "timestamp": "2026-09-02T16:08:29.231Z",
+        "ip": "N/A",
+        "status": "Success",
+        "user": "Julie Anne Utrera",
+        "action": "Uploaded requirement document",
+        "role": "Student"
+      },
+      {
         "id": "67g6DPFSg55En67Z4jGX",
         "user": "John Singco",
         "role": "Student",
@@ -700,6 +687,16 @@
         "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-27T04:38:22.819Z"
+      },
+      {
+        "id": "6CAHp10mHmFaSdJB9q71",
+        "user": "Julie Utrera",
+        "ip": "N/A",
+        "status": "Success",
+        "action": "Log out",
+        "details": "",
+        "timestamp": "2026-09-10T04:09:18.055Z",
+        "role": "Student"
       },
       {
         "id": "6K4QklQbFFYeg4WEhoOK",
@@ -712,6 +709,16 @@
         "timestamp": "2026-08-26T12:36:05.854Z"
       },
       {
+        "id": "6NHeVIkugvb5x7rQzXxj",
+        "user": "prdo.vender.swu@phinmaed.com",
+        "timestamp": "2026-09-09T14:00:15.552Z",
+        "ip": "N/A",
+        "role": "Student",
+        "status": "Failed",
+        "action": "Failed student account registration",
+        "details": "auth/email-already-in-use"
+      },
+      {
         "id": "6NWF9DxnZe6WHJKbjenI",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -720,6 +727,16 @@
         "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-26T16:22:51.981Z"
+      },
+      {
+        "id": "6sW83zCOs1K4IfBviPAG",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "timestamp": "2026-09-10T04:17:35.044Z",
+        "details": "Upload URL: http://localhost:5175/student/",
+        "action": "Added requirement URL",
+        "status": "Success"
       },
       {
         "id": "6w5N2iENbkEUBKpycQPR",
@@ -742,6 +759,16 @@
         "role": "Student"
       },
       {
+        "id": "7UTmqVFwPhMGA38MUGsf",
+        "action": "Uploaded requirement document",
+        "status": "Success",
+        "role": "Student",
+        "details": "Final Manuscript: SWU 008 MANUSCRIPT.docx (1).pdf",
+        "ip": "N/A",
+        "user": "Julie Anne Utrera",
+        "timestamp": "2026-09-02T16:09:18.672Z"
+      },
+      {
         "id": "7jd6os99uO2ldsBamSrG",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -762,6 +789,36 @@
         "timestamp": "2026-08-07T12:27:22.446Z"
       },
       {
+        "id": "7ovxVbh13OlYTCSwS7ap",
+        "timestamp": "2026-09-10T15:46:13.496Z",
+        "details": "James Isidro — College of Information Technology",
+        "user": "japhetvender00@gmail.com",
+        "role": "System Admin",
+        "ip": "N/A",
+        "action": "Created Dean + Adviser account",
+        "status": "Success"
+      },
+      {
+        "id": "8bBsCeqPHkwbSlnI3Wu9",
+        "role": "Student",
+        "user": "Julie Anne Utrera",
+        "details": "",
+        "status": "Success",
+        "timestamp": "2026-09-03T01:27:28.636Z",
+        "action": "Log out",
+        "ip": "N/A"
+      },
+      {
+        "id": "8w05Nqc3g3AAGtPxlPCf",
+        "ip": "N/A",
+        "details": "Group: Team Ryza | Title: Kaen tayo",
+        "status": "Success",
+        "role": "Research Adviser",
+        "user": "anca.perote.swu@phinmaed.com",
+        "action": "Approved submission",
+        "timestamp": "2026-09-02T16:27:04.176Z"
+      },
+      {
         "id": "90E5zgwRe3ptDSCb0oWn",
         "action": "Log out",
         "status": "Success",
@@ -780,6 +837,16 @@
         "details": "Dataset Files: APPROVAL-SHET.zip",
         "ip": "N/A",
         "timestamp": "2026-08-07T12:26:15.220Z"
+      },
+      {
+        "id": "9wNEHQl1QhDyT7nEEL9i",
+        "action": "Added requirement URL",
+        "role": "Student",
+        "status": "Success",
+        "details": "Upload URL: http://localhost:5175/",
+        "ip": "N/A",
+        "timestamp": "2026-09-02T16:15:16.444Z",
+        "user": "Julie Anne Utrera"
       },
       {
         "id": "ACF1V3FgG05CEcky37j8",
@@ -842,6 +909,16 @@
         "timestamp": "2026-08-26T12:30:26.565Z"
       },
       {
+        "id": "BMH6ULO8NmphPLXAT4nt",
+        "status": "Success",
+        "ip": "N/A",
+        "timestamp": "2026-09-02T16:01:47.744Z",
+        "user": "jume.utrera.swu@phinmaed.com",
+        "action": "Registered student account",
+        "role": "Student",
+        "details": "Julie Anne Utrera — BS Information Technology | Group: Team Ryza"
+      },
+      {
         "id": "BPYppPtXBzjNXotjXs8h",
         "user": "anca.perote.swu@phinmaed.com",
         "role": "Dean",
@@ -850,6 +927,16 @@
         "details": "Title: BRAND NEW DAY",
         "ip": "N/A",
         "timestamp": "2026-08-07T13:06:53.239Z"
+      },
+      {
+        "id": "BZ99zoojEwDGsVWLHqqB",
+        "status": "Success",
+        "role": "Dean",
+        "timestamp": "2026-09-10T04:19:11.220Z",
+        "action": "Published research to public archive",
+        "details": "Title: BEN10",
+        "user": "prdo.vender.swu@phinmaed.com",
+        "ip": "N/A"
       },
       {
         "id": "BpPE2RsJfWFUov3e6J2Q",
@@ -922,6 +1009,16 @@
         "action": "Log out"
       },
       {
+        "id": "DJjdRE4Xxq4DH8MOn6D4",
+        "role": "System Admin",
+        "status": "Success",
+        "timestamp": "2026-09-10T03:35:11.305Z",
+        "action": "Created Dean account",
+        "ip": "N/A",
+        "details": "Prince Japhet Vender — College of Information Technology",
+        "user": "japhetvender00@gmail.com"
+      },
+      {
         "id": "DWyNLxTPA5HUILKgzF1w",
         "user": "Unknown",
         "role": "Student",
@@ -932,6 +1029,16 @@
         "timestamp": "2026-08-25T15:16:11.657Z"
       },
       {
+        "id": "DX7asCzak74zViPLg8AB",
+        "status": "Success",
+        "user": "Japhet Vender",
+        "action": "Log out",
+        "timestamp": "2026-09-10T06:49:29.455Z",
+        "role": "Dean",
+        "details": "",
+        "ip": "N/A"
+      },
+      {
         "id": "DbgSticdLEArEB7T9BSD",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -940,6 +1047,16 @@
         "details": "Signature Page: rxogcdiq6sk8jqxzhmfu.zip",
         "ip": "N/A",
         "timestamp": "2026-08-06T17:50:24.384Z"
+      },
+      {
+        "id": "DnnIw0c8N5eMEfpTaW5p",
+        "action": "Log out",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "timestamp": "2026-09-10T17:43:07.182Z",
+        "status": "Success",
+        "details": ""
       },
       {
         "id": "Dv79uj4aCvIsLU8becgS",
@@ -1082,6 +1199,36 @@
         "action": "Log out"
       },
       {
+        "id": "H6Rm0HF2V3RiT8Gy7xy7",
+        "ip": "N/A",
+        "status": "Success",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-09T14:52:59.872Z",
+        "details": "Approval Sheet: diploma-certificate-amor-dorotan.pdf"
+      },
+      {
+        "id": "HKzCRswKTqEHbFrBrNkJ",
+        "user": "Jerika Zamoras",
+        "status": "Success",
+        "details": "User Manual: cat.jpg",
+        "role": "Student",
+        "action": "Uploaded requirement document",
+        "ip": "N/A",
+        "timestamp": "2026-08-31T15:48:11.855Z"
+      },
+      {
+        "id": "I1vwTDl0xRwZ4aaftA3I",
+        "user": "Jerika Zamoras",
+        "status": "Success",
+        "role": "Student",
+        "timestamp": "2026-08-31T15:40:21.302Z",
+        "ip": "N/A",
+        "action": "Start New Research",
+        "details": "Created new group: Group 008"
+      },
+      {
         "id": "IGMjgxbRCcZERq1sYocc",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1110,6 +1257,46 @@
         "role": "admin",
         "action": "Log out",
         "details": ""
+      },
+      {
+        "id": "IbXLvqovNy4AxWeqImGP",
+        "user": "japhetvender00@gmail.com",
+        "ip": "N/A",
+        "role": "—",
+        "details": "auth/invalid-credential",
+        "timestamp": "2026-09-09T04:52:37.939Z",
+        "action": "Failed login attempt",
+        "status": "Failed"
+      },
+      {
+        "id": "J2z0zLVoLdHp7JzjdioK",
+        "action": "Deleted 1 user account(s)",
+        "role": "System Admin",
+        "ip": "N/A",
+        "status": "Success",
+        "details": "UIDs removed from system",
+        "timestamp": "2026-09-09T05:07:50.919Z",
+        "user": "japhetvender00@gmail.com"
+      },
+      {
+        "id": "J6CvqPZtvKCXYrvb1Wgz",
+        "status": "Success",
+        "action": "Uploaded requirement document",
+        "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "timestamp": "2026-09-09T14:50:57.147Z",
+        "ip": "N/A"
+      },
+      {
+        "id": "JDFhMVobHXXX7kDgHL7H",
+        "details": "Hylla Mi Tejada — College of Business Administration",
+        "action": "Created Dean + Adviser account",
+        "role": "System Admin",
+        "status": "Success",
+        "user": "japhetvender00@gmail.com",
+        "timestamp": "2026-09-02T14:45:38.912Z",
+        "ip": "N/A"
       },
       {
         "id": "JJq7JklbGMwWheR7gRRB",
@@ -1162,6 +1349,16 @@
         "timestamp": "2026-08-25T13:59:25.251Z"
       },
       {
+        "id": "KX982bxIYrxoBnvKUXba",
+        "details": "Signature Page: Signature-page.pdf",
+        "timestamp": "2026-09-09T14:56:01.406Z",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "action": "Uploaded requirement document",
+        "ip": "N/A",
+        "status": "Success"
+      },
+      {
         "id": "KXDTu8kB9gBpDrv6BSYp",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1170,6 +1367,16 @@
         "details": "Final Manuscript: Chapter-2-V2_RRL.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-06T17:48:06.014Z"
+      },
+      {
+        "id": "KdReW36o93v75WqcBgqa",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "prdo.vender.swu@phinmaed.com",
+        "details": "Hylla Tejada — Bachelor of Science in Information Technology | Group: Group21",
+        "status": "Success",
+        "timestamp": "2026-09-09T14:48:49.719Z",
+        "action": "Registered student account"
       },
       {
         "id": "Kgu9yVaWNNbIlx2wn2Tq",
@@ -1202,6 +1409,16 @@
         "timestamp": "2026-08-27T03:50:30.802Z"
       },
       {
+        "id": "L7RRPwBdGmjun0yFjfpx",
+        "timestamp": "2026-09-10T03:37:53.579Z",
+        "user": "japhetvender00@gmail.com",
+        "status": "Success",
+        "action": "Created Dean account",
+        "role": "System Admin",
+        "ip": "N/A",
+        "details": "Japhet Vender — College of Information Technology"
+      },
+      {
         "id": "LdmHqEl5Lf5GxWGEgxD8",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1222,6 +1439,36 @@
         "timestamp": "2026-08-10T11:08:40.672Z"
       },
       {
+        "id": "MgMpHHB0oPvdOVEYRe3l",
+        "user": "Julie Anne Utrera",
+        "details": "User Manual: USER MANUAL.docx",
+        "ip": "N/A",
+        "status": "Success",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-02T16:16:44.197Z",
+        "role": "Student"
+      },
+      {
+        "id": "MwASuaIdzQnHhnHb8oRv",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "details": "Dataset Files: APPROVAL-SHET.zip",
+        "status": "Success",
+        "timestamp": "2026-09-09T14:53:39.746Z",
+        "action": "Uploaded requirement document"
+      },
+      {
+        "id": "N2evOt7bIZNFR2wIbdjc",
+        "role": "—",
+        "timestamp": "2026-09-09T04:54:24.822Z",
+        "user": "japhetvender00@gmail.com",
+        "details": "auth/invalid-credential",
+        "status": "Failed",
+        "ip": "N/A",
+        "action": "Failed login attempt"
+      },
+      {
         "id": "NHF0pLTFCUfRCXf5DuRR",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1230,6 +1477,16 @@
         "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-27T15:30:50.929Z"
+      },
+      {
+        "id": "NUzyfuuZyPrRXNzZCWRx",
+        "role": "System Admin",
+        "user": "japhetvender00@gmail.com",
+        "action": "Logged in to System Administrator portal",
+        "details": "Role: admin",
+        "ip": "N/A",
+        "status": "Success",
+        "timestamp": "2026-09-09T04:54:32.631Z"
       },
       {
         "id": "NiPfTUwwgHzwavU0Ev8B",
@@ -1252,6 +1509,16 @@
         "timestamp": "2026-08-27T14:41:41.399Z"
       },
       {
+        "id": "OlxOYMvBoFMzdvQN3JeU",
+        "user": "Jerika Zamoras",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-08-31T15:46:31.884Z",
+        "status": "Success",
+        "ip": "N/A",
+        "details": "Dataset Files: rainy-petals-neverness-to-everness-nte-moewalls-com.mp4",
+        "role": "Student"
+      },
+      {
         "id": "P700A1ubetZ3I507h2UA",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1260,6 +1527,16 @@
         "details": "Final Manuscript: SWU 008 MANUSCRIPT.docx.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-10T12:42:09.733Z"
+      },
+      {
+        "id": "PBEi9fRxZXoIe85jTw8s",
+        "ip": "N/A",
+        "details": "Approval Sheet: diploma-certificate-amor-dorotan.pdf",
+        "timestamp": "2026-09-10T04:16:06.957Z",
+        "status": "Success",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "action": "Uploaded requirement document"
       },
       {
         "id": "PSYaVomXT2LUVuP1f68m",
@@ -1292,6 +1569,16 @@
         "user": "Jerika Zamoras"
       },
       {
+        "id": "QmEllewAILh0jZ8F7Zo5",
+        "role": "Student",
+        "action": "Uploaded requirement document",
+        "details": "Final Manuscript: SWU 008 MANUSCRIPT.docx.pdf",
+        "ip": "N/A",
+        "user": "Jerika Zamoras",
+        "timestamp": "2026-08-31T15:42:30.141Z",
+        "status": "Success"
+      },
+      {
         "id": "R4fWjDHMjpErNNeNrjOm",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1312,6 +1599,16 @@
         "timestamp": "2026-08-11T10:00:27.158Z"
       },
       {
+        "id": "RDBQ631TKRstp8cm82sG",
+        "status": "Success",
+        "details": "",
+        "role": "Dean",
+        "timestamp": "2026-09-10T16:56:13.171Z",
+        "ip": "N/A",
+        "action": "Log out",
+        "user": "Japhet Vender"
+      },
+      {
         "id": "RQ40kWF3Roc1St3CPViA",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1320,6 +1617,16 @@
         "details": "Final Manuscript",
         "ip": "N/A",
         "timestamp": "2026-08-10T11:19:12.696Z"
+      },
+      {
+        "id": "RSZ5I5pllnXOSyEUnZhX",
+        "role": "Dean",
+        "user": "Jireka Zamoras",
+        "ip": "N/A",
+        "status": "Success",
+        "timestamp": "2026-09-09T14:25:14.532Z",
+        "action": "Log out",
+        "details": ""
       },
       {
         "id": "SkEejX5jT0MHvPz9cf7t",
@@ -1352,6 +1659,26 @@
         "timestamp": "2026-08-07T13:05:39.260Z"
       },
       {
+        "id": "TP5LSNvHsOCp1uiN8Qa7",
+        "ip": "N/A",
+        "action": "Unknown action",
+        "details": "",
+        "timestamp": "2026-09-10T06:49:28.081Z",
+        "role": "Student",
+        "user": "Unknown",
+        "status": "Success"
+      },
+      {
+        "id": "U1XipEy3sDHXTco4nSd7",
+        "status": "Failed",
+        "action": "Failed student account registration",
+        "timestamp": "2026-09-09T13:59:28.923Z",
+        "role": "Student",
+        "ip": "N/A",
+        "details": "auth/email-already-in-use",
+        "user": "prdo.vender.swu@phinmaed.com"
+      },
+      {
         "id": "UbsGJwZ2GuSCcpDYwoOC",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1380,6 +1707,16 @@
         "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-27T14:56:03.631Z"
+      },
+      {
+        "id": "WlW2ttMYuc8njesuWNXX",
+        "status": "Success",
+        "timestamp": "2026-09-10T03:51:01.080Z",
+        "ip": "N/A",
+        "role": "Student",
+        "action": "Unknown action",
+        "user": "Unknown",
+        "details": ""
       },
       {
         "id": "XFrsunkS2HnH6WvG7ApR",
@@ -1422,6 +1759,16 @@
         "timestamp": "2026-08-11T10:11:53.809Z"
       },
       {
+        "id": "ZN9XLHhhXvzPOtBCwbwa",
+        "status": "Success",
+        "action": "Approved submission",
+        "user": "anca.perote.swu@phinmaed.com",
+        "timestamp": "2026-08-31T15:48:52.306Z",
+        "details": "Group: Group 008 | Title: Archivio",
+        "role": "Research Adviser",
+        "ip": "N/A"
+      },
+      {
         "id": "ZftWnR4tsnFYbh6T77Yp",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1440,6 +1787,16 @@
         "details": "Signature Page: Signature-page.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-11T10:12:02.783Z"
+      },
+      {
+        "id": "a0IFStpXcocnxH9EP16b",
+        "timestamp": "2026-09-09T14:55:46.968Z",
+        "details": "Upload URL: http://localhost:5175/",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "action": "Added requirement URL",
+        "ip": "N/A",
+        "status": "Success"
       },
       {
         "id": "a0JVriGFIYtZZpERKVLW",
@@ -1480,6 +1837,36 @@
         "details": "Final Manuscript",
         "ip": "N/A",
         "timestamp": "2026-08-10T11:07:04.402Z"
+      },
+      {
+        "id": "cQcHzCUCvo9QvhY4fv1c",
+        "status": "Success",
+        "action": "Log out",
+        "timestamp": "2026-09-10T07:48:25.778Z",
+        "details": "",
+        "user": "Julie Utrera",
+        "ip": "N/A",
+        "role": "Student"
+      },
+      {
+        "id": "cfgscA1xh3sWfoCtZvi5",
+        "status": "Success",
+        "details": "Video Pitch: 2026-04-26-23-06-42.mp4",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "ip": "N/A",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-09T14:54:12.907Z"
+      },
+      {
+        "id": "ciXCpflm1wVn3mCOP3hT",
+        "details": "Jireka Zamoras — College of Information Technology",
+        "action": "Created Dean account",
+        "ip": "N/A",
+        "timestamp": "2026-09-09T13:50:58.035Z",
+        "role": "System Admin",
+        "user": "japhetvender00@gmail.com",
+        "status": "Success"
       },
       {
         "id": "cxpSPldRKGgDefLJKWol",
@@ -1542,6 +1929,16 @@
         "user": "James Isidro"
       },
       {
+        "id": "e7BEP2KQHpQMlxBcEgP1",
+        "details": "Title: Kaen tayo",
+        "ip": "N/A",
+        "role": "Dean",
+        "status": "Success",
+        "timestamp": "2026-09-02T16:30:02.005Z",
+        "user": "jemi.zamoras.swu@phinmaed.com",
+        "action": "Published research to public archive"
+      },
+      {
         "id": "eAkYnBqtWGwTxEDJi7Vu",
         "details": "",
         "user": "Jerika Zamoras",
@@ -1562,6 +1959,16 @@
         "status": "Success"
       },
       {
+        "id": "eYIfClFmtE0IS4ijpX08",
+        "status": "Success",
+        "user": "Julie Anne Utrera",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-02T16:13:29.895Z",
+        "ip": "N/A",
+        "details": "Video Pitch: Screen Recording 2026-08-01 201335.mp4",
+        "role": "Student"
+      },
+      {
         "id": "ebxfVrFGWjYO9AFq6yOs",
         "user": "James Isidro",
         "status": "Success",
@@ -1580,6 +1987,16 @@
         "details": "Julie Utrera — BS Information Technology | Group: Group mamacoco",
         "ip": "N/A",
         "timestamp": "2026-08-22T13:49:28.294Z"
+      },
+      {
+        "id": "fUszvROzzfZ4UfdU1Qs4",
+        "status": "Success",
+        "user": "Julie Anne Utrera",
+        "details": "Dataset Files: Dataset Files_1787845814212.zip",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-02T16:13:09.151Z",
+        "ip": "N/A",
+        "role": "Student"
       },
       {
         "id": "fm8sQhE7vmUJBeKpusJM",
@@ -1672,6 +2089,16 @@
         "details": "Category: Education"
       },
       {
+        "id": "iWe4ohWrebr8TmuCTBZN",
+        "timestamp": "2026-09-10T08:23:11.672Z",
+        "ip": "N/A",
+        "status": "Success",
+        "details": "",
+        "role": "Dean",
+        "action": "Log out",
+        "user": "Japhet Vender"
+      },
+      {
         "id": "iX2soFc23JQrulohNeS3",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -1690,6 +2117,16 @@
         "timestamp": "2026-08-30T13:44:46.534Z",
         "ip": "N/A",
         "status": "Success"
+      },
+      {
+        "id": "ijkPBtMropQAjISEjX2R",
+        "details": "",
+        "user": "Unknown",
+        "action": "Unknown action",
+        "status": "Success",
+        "role": "Student",
+        "timestamp": "2026-09-10T03:44:29.906Z",
+        "ip": "N/A"
       },
       {
         "id": "jeq1bmrYVcHGIkmdUf9U",
@@ -1772,6 +2209,26 @@
         "timestamp": "2026-08-10T12:23:17.503Z"
       },
       {
+        "id": "l2DcthOfm4fSuu3ln56H",
+        "action": "Uploaded requirement document",
+        "role": "Student",
+        "status": "Success",
+        "ip": "N/A",
+        "timestamp": "2026-09-02T16:15:01.806Z",
+        "details": "Signature Page: Signature-page.pdf",
+        "user": "Julie Anne Utrera"
+      },
+      {
+        "id": "lB9U1PCZAfagpEmc0vHz",
+        "timestamp": "2026-08-31T15:51:00.556Z",
+        "status": "Success",
+        "user": "jume.utrera.swu@phinmaed.com",
+        "details": "Title: Archivio",
+        "ip": "N/A",
+        "role": "Dean",
+        "action": "Published research to public archive"
+      },
+      {
         "id": "lLAm6kmay8poPlzZZTJn",
         "user": "prdo.vender.swu@phinmaed.com",
         "role": "Adviser",
@@ -1802,6 +2259,36 @@
         "timestamp": "2026-08-25T17:45:01.954Z"
       },
       {
+        "id": "ltzgaRmCcEFy4rTB91wh",
+        "action": "Log out",
+        "details": "",
+        "role": "Dean",
+        "timestamp": "2026-09-10T06:13:45.642Z",
+        "ip": "N/A",
+        "status": "Success",
+        "user": "Japhet Vender"
+      },
+      {
+        "id": "luGmzS09czB6K7ppoj9k",
+        "role": "Dean",
+        "user": "Sana Minatozaki",
+        "timestamp": "2026-09-06T16:33:00.137Z",
+        "ip": "N/A",
+        "status": "Success",
+        "action": "Log out",
+        "details": ""
+      },
+      {
+        "id": "mGSvpIMnW9gDX02TULdJ",
+        "timestamp": "2026-09-02T16:08:58.493Z",
+        "role": "Student",
+        "user": "Julie Anne Utrera",
+        "action": "Uploaded requirement document",
+        "status": "Success",
+        "ip": "N/A",
+        "details": "Final Manuscript: SWU 008 MANUSCRIPT.docx (1).pdf"
+      },
+      {
         "id": "mU9wgKGTUD2T8IvX9YV9",
         "action": "Approved submission",
         "ip": "N/A",
@@ -1820,6 +2307,16 @@
         "details": "Upload URL: http://localhost:5175/student/",
         "ip": "N/A",
         "timestamp": "2026-08-07T12:26:55.597Z"
+      },
+      {
+        "id": "msp3U6KkgKU5ZT4bf4S0",
+        "details": "",
+        "action": "Unknown action",
+        "ip": "N/A",
+        "timestamp": "2026-09-10T03:46:33.619Z",
+        "status": "Success",
+        "role": "Student",
+        "user": "Unknown"
       },
       {
         "id": "n14WB4m9UZgP6OoYn8d2",
@@ -1882,6 +2379,16 @@
         "timestamp": "2026-08-27T13:24:30.575Z"
       },
       {
+        "id": "oSsQNUtH3HCdJ5SlCNja",
+        "role": "System Admin",
+        "status": "Success",
+        "action": "Created Dean account",
+        "ip": "N/A",
+        "user": "japhetvender00@gmail.com",
+        "timestamp": "2026-09-02T12:48:53.398Z",
+        "details": "Sana Minatozaki — College of Information Technology"
+      },
+      {
         "id": "oc5C2ZOJeqU0LvVYm2Tf",
         "timestamp": "2026-08-30T14:45:41.691Z",
         "details": "",
@@ -1910,6 +2417,16 @@
         "details": "Final Manuscript: SWU 008 MANUSCRIPT.docx (1).pdf",
         "ip": "N/A",
         "timestamp": "2026-08-27T04:38:51.035Z"
+      },
+      {
+        "id": "ox2u486LZIZmGQJlU1UJ",
+        "role": "Student",
+        "timestamp": "2026-09-10T07:48:04.923Z",
+        "details": "",
+        "ip": "N/A",
+        "user": "Unknown",
+        "status": "Success",
+        "action": "Unknown action"
       },
       {
         "id": "pdhL6X2tquchHvYLXxDp",
@@ -1960,6 +2477,16 @@
         "details": "",
         "ip": "N/A",
         "timestamp": "2026-08-22T11:28:59.244Z"
+      },
+      {
+        "id": "qWjm3HwnpqdTPWROw1eC",
+        "action": "Uploaded requirement document",
+        "details": "Signature Page: Signature-page.pdf",
+        "timestamp": "2026-08-31T15:48:28.026Z",
+        "role": "Student",
+        "user": "Jerika Zamoras",
+        "ip": "N/A",
+        "status": "Success"
       },
       {
         "id": "qYMtLMggdgYSP5r7Wyix",
@@ -2042,6 +2569,26 @@
         "timestamp": "2026-08-25T04:02:22.930Z"
       },
       {
+        "id": "ruToKsM7k6pt4ERa4ztM",
+        "status": "Success",
+        "timestamp": "2026-09-02T16:09:19.382Z",
+        "action": "Uploaded requirement document",
+        "details": "Approval Sheet: APPROVAL-SHET.pdf",
+        "user": "Julie Anne Utrera",
+        "ip": "N/A",
+        "role": "Student"
+      },
+      {
+        "id": "ryhJZqXJCsfKMpVW6gke",
+        "action": "Uploaded requirement document",
+        "user": "Jerika Zamoras",
+        "ip": "N/A",
+        "status": "Success",
+        "details": "Video Pitch: 2026-04-26-23-06-42.mp4",
+        "timestamp": "2026-08-31T15:47:47.854Z",
+        "role": "Student"
+      },
+      {
         "id": "sHCxqaZsdSxn19QphUUI",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -2052,6 +2599,16 @@
         "timestamp": "2026-08-22T16:36:00.167Z"
       },
       {
+        "id": "sHDuchtsFol0vtDbBzuX",
+        "status": "Success",
+        "timestamp": "2026-09-09T14:58:19.894Z",
+        "ip": "N/A",
+        "role": "Dean",
+        "details": "Title: Artificial Intelligence & Machine Learning",
+        "user": "jemi.zamoras.swu@phinmaed.com",
+        "action": "Published research to public archive"
+      },
+      {
         "id": "sTUUmbTRKZYGEngMAx0Y",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -2060,6 +2617,26 @@
         "details": "Final Manuscript: Chapter-2-V2_RRL.pdf",
         "ip": "N/A",
         "timestamp": "2026-08-11T10:01:01.967Z"
+      },
+      {
+        "id": "sTjrY8CbVJdZyyVx10lm",
+        "role": "System Admin",
+        "ip": "N/A",
+        "status": "Success",
+        "action": "Created Dean + Adviser account",
+        "timestamp": "2026-09-02T14:52:01.861Z",
+        "user": "japhetvender00@gmail.com",
+        "details": "Julei Anne Utrera — College of Business Administration"
+      },
+      {
+        "id": "sTmNsl0Reul9aSRy2sMZ",
+        "status": "Success",
+        "timestamp": "2026-09-09T04:53:47.482Z",
+        "ip": "N/A",
+        "details": "Role: admin",
+        "user": "japhetvender00@gmail.com",
+        "action": "Logged in to System Administrator portal",
+        "role": "System Admin"
       },
       {
         "id": "tbrLvKmnoUdSvKR897YO",
@@ -2092,6 +2669,16 @@
         "user": "James Isidro"
       },
       {
+        "id": "u9X5VpITl2Hzw3UdLl2q",
+        "status": "Success",
+        "action": "Uploaded requirement document",
+        "ip": "N/A",
+        "role": "Student",
+        "user": "Hylla Tejada",
+        "details": "User Manual: dreamina-2026-09-08-2270-Authentic scanned 2000 vintage high scho....png",
+        "timestamp": "2026-09-09T14:54:35.832Z"
+      },
+      {
         "id": "uPx411jwKC1oGmlT3fz5",
         "user": "Jerika Zamoras",
         "role": "Student",
@@ -2100,6 +2687,16 @@
         "details": "Video Pitch: 2026-04-26-23-06-42.mp4",
         "ip": "N/A",
         "timestamp": "2026-08-27T15:50:47.698Z"
+      },
+      {
+        "id": "uTgRQNPBHxmeJpFZg3mR",
+        "ip": "N/A",
+        "role": "Research Adviser",
+        "details": "Group: Group3 | Title: BEN10",
+        "action": "Approved submission",
+        "status": "Success",
+        "user": "anca.perote.swu@phinmaed.com",
+        "timestamp": "2026-09-10T04:18:26.524Z"
       },
       {
         "id": "uXb6atF2ro3JkZvvdrbd",
@@ -2140,6 +2737,26 @@
         "details": "User Manual: a1ac4825-dbfb-42e6-894d-a58983288331.jpg",
         "ip": "N/A",
         "timestamp": "2026-08-10T12:23:03.540Z"
+      },
+      {
+        "id": "w3g4wySDsIk9waIjWTjX",
+        "details": "Final Manuscript: Copy-of-SWU008_MANUSCRIPT_Final.pdf",
+        "ip": "N/A",
+        "role": "Student",
+        "status": "Success",
+        "action": "Uploaded requirement document",
+        "timestamp": "2026-09-10T04:04:22.578Z",
+        "user": "Julie Utrera"
+      },
+      {
+        "id": "w7ecAfI5S4imGrU8bS01",
+        "details": "Group: Group21 | Title: Artificial Intelligence & Machine Learning",
+        "ip": "N/A",
+        "action": "Approved submission",
+        "role": "Research Adviser",
+        "status": "Success",
+        "timestamp": "2026-09-09T14:57:13.690Z",
+        "user": "anca.perote.swu@phinmaed.com"
       },
       {
         "id": "wC45y4X3ZlN71r02oFC2",
@@ -2202,6 +2819,16 @@
         "timestamp": "2026-08-06T17:48:46.165Z"
       },
       {
+        "id": "wY0L6vaXE6L00zaXhHLK",
+        "timestamp": "2026-09-10T04:17:35.942Z",
+        "role": "Student",
+        "user": "Julie Utrera",
+        "action": "Uploaded requirement document",
+        "ip": "N/A",
+        "status": "Success",
+        "details": "User Manual: 795286388_1437581858340655_1705679306327656778_n.png"
+      },
+      {
         "id": "x9YsPsIfPS82Doa4pGmv",
         "action": "Log out",
         "timestamp": "2026-08-30T14:35:58.370Z",
@@ -2240,6 +2867,16 @@
         "details": "Final Manuscript",
         "ip": "N/A",
         "timestamp": "2026-08-26T12:32:06.257Z"
+      },
+      {
+        "id": "yTGlpQ69sqndbQHm5sYO",
+        "details": "Julie Utrera — Bachelor of Science in Information Technology | Group: Group3",
+        "status": "Success",
+        "action": "Registered student account",
+        "user": "jume.utrera.swu@phinmaed.com",
+        "ip": "N/A",
+        "role": "Student",
+        "timestamp": "2026-09-10T03:59:57.741Z"
       },
       {
         "id": "yvn20io90DpZHudhCOVX",
@@ -2282,29 +2919,12 @@
         "timestamp": "2026-08-18T06:55:28.107Z"
       }
     ],
-    "password_resets": [
-      {
-        "id": "japhetvender00@gmail.com",
-        "code": "253324",
-        "expiresAt": {
-          "_seconds": 1786289853,
-          "_nanoseconds": 51000000
-        }
-      },
-      {
-        "id": "jemi.zamoras.swu@phinmaed.com",
-        "code": "154485",
-        "expiresAt": {
-          "_seconds": 1787678950,
-          "_nanoseconds": 572000000
-        }
-      }
-    ],
+    "password_resets": [],
     "user_bookmarks": [
       {
         "id": "532LnbZXwseF1A9YDArDZTqHMfJ3",
         "bookmarks": [
-          "JR0ZOzLzybqAket7NQZ6",
+          "xvbFOSFuSgOu8zmkJL4h",
           "T2b2q5APYwhW2EXPIHeB"
         ]
       },
@@ -2319,6 +2939,14 @@
         "bookmarks": [
           "p3Mhc0NtED1K5scFOt8b",
           "1yg8JkM5A0BNVOk20HRN"
+        ]
+      },
+      {
+        "id": "liA76ttD3vZaNtw13vsJ89IV87i2",
+        "bookmarks": [
+          "ElWO5iOD8TbCdeqeCm85",
+          "Qx8N3x7tP6zDZNYXAhOj",
+          "L0wLcDoodUt2N9ttejXf"
         ]
       },
       {

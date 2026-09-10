@@ -279,10 +279,11 @@ export default function ChatWidget({ role, leaderUid }) {
             await updateDoc(doc(db, 'groups', groupId), { studentUnreadCount: 0 });
           }
         }}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#7B1F35] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#5a1626] transition-all z-50 hover:scale-105 active:scale-95"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 bg-[#7B1F35] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#5a1626] transition-all z-50 hover:scale-105 active:scale-95 touch-manipulation"
+        aria-label="Open group chat"
       >
         {(groupData?.studentUnreadCount > 0) && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
             {groupData.studentUnreadCount > 99 ? '99+' : groupData.studentUnreadCount}
           </span>
         )}
@@ -294,9 +295,9 @@ export default function ChatWidget({ role, leaderUid }) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-[350px] h-[500px] bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 dark:border-stone-800 overflow-hidden transition-colors">
+    <div className="fixed inset-x-3 bottom-3 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[360px] h-[82vh] sm:h-[520px] max-h-[640px] bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 dark:border-stone-800 overflow-hidden transition-colors">
       {/* Header */}
-      <div className="bg-[#7B1F35] dark:bg-stone-800 p-4 flex items-center justify-between text-white shadow-md z-10 transition-colors">
+      <div className="bg-[#7B1F35] dark:bg-stone-800 p-3.5 sm:p-4 flex items-center justify-between text-white shadow-md z-10 transition-colors shrink-0">
         <div>
           <h3 className="font-bold text-sm tracking-wide">{groupData?.leaderName || groupData?.groupName || 'Group Chat'}</h3>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -310,7 +311,7 @@ export default function ChatWidget({ role, leaderUid }) {
             </div>
           </div>
         </div>
-        <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white transition rounded-full hover:bg-white/10 p-1">
+        <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white transition rounded-full hover:bg-white/10 p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation" aria-label="Close chat">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
@@ -428,8 +429,9 @@ export default function ChatWidget({ role, leaderUid }) {
                   <div className={`relative flex items-center gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                     <button 
                       onClick={() => hoveredMsgId === msg.id ? setHoveredMsgId(null) : setHoveredMsgId(msg.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-sm shadow-sm"
+                      className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-sm shadow-sm touch-manipulation"
                       title="React"
+                      aria-label="Add reaction"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-stone-500 dark:text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -442,8 +444,9 @@ export default function ChatWidget({ role, leaderUid }) {
                         {msg.text && (
                           <button 
                             onClick={() => startEditing(msg)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-sm shadow-sm"
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-sm shadow-sm touch-manipulation"
                             title="Edit"
+                            aria-label="Edit message"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-stone-500 dark:text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -452,8 +455,9 @@ export default function ChatWidget({ role, leaderUid }) {
                         )}
                         <button 
                           onClick={() => handleDeleteMessage(msg)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center justify-center text-sm shadow-sm"
+                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center justify-center text-sm shadow-sm touch-manipulation"
                           title="Delete"
+                          aria-label="Delete message"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -493,7 +497,7 @@ export default function ChatWidget({ role, leaderUid }) {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="p-3 bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 flex gap-2 items-center relative transition-colors">
+      <form onSubmit={handleSend} className="p-3 bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 flex gap-2 items-center relative transition-colors shrink-0">
         <input 
           type="file" 
           ref={fileInputRef} 

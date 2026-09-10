@@ -67,6 +67,40 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     };
   }, []);
   
+  // Auto-close sidebar if window resized to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [setIsOpen]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, setIsOpen]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const menuItems = [
     { 
       name: 'Dashboard', 
@@ -102,35 +136,35 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
       <button
         type="button"
         onClick={() => { setActiveTab(name); setIsOpen(false); }}
-        className={`group relative w-full flex items-center justify-between px-4 py-3 mb-1 rounded-xl text-xs font-bold transition-all duration-300 ease-out overflow-hidden ${
+        className={`group relative w-full flex items-center justify-between px-4 py-3 min-h-[46px] mb-1.5 rounded-xl text-xs font-bold transition-all duration-200 ease-out overflow-hidden touch-manipulation active:scale-[0.98] ${
           isActive
-            ? 'text-white shadow-lg shadow-black/20'
-            : 'text-gray-300 dark:text-stone-300 hover:text-white'
+            ? 'text-white shadow-lg shadow-black/25 bg-gradient-to-r from-white/15 to-transparent border border-white/15'
+            : 'text-gray-300 dark:text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
         }`}
       >
         <div 
-          className={`absolute inset-0 rounded-xl transition-all duration-300 ease-out ${
+          className={`absolute inset-0 rounded-xl transition-all duration-200 ease-out ${
             isActive 
-              ? 'bg-gradient-to-r from-white/15 to-transparent border border-white/10 opacity-100 translate-x-0' 
-              : 'bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4'
+              ? 'opacity-100' 
+              : 'opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 bg-white/5'
           }`} 
         />
         
         <div 
-          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#d0a36e] ${
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#d0a36e] ${
             isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
           }`}
         />
 
-        <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-300 group-hover:translate-x-1">
-          <div className={`transition-all duration-300 ${isActive ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' : 'text-gray-300 dark:text-stone-300 group-hover:text-white'}`}>
+        <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-200 group-hover:translate-x-1">
+          <div className={`transition-all duration-200 ${isActive ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' : 'text-gray-300 dark:text-stone-300 group-hover:text-white'}`}>
             {icon}
           </div>
           <span className="tracking-wide text-[13px]">{name}</span>
         </div>
         
         {badge && (
-          <span className={`relative z-10 text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full shadow-sm transition-all duration-300 ${
+          <span className={`relative z-10 text-[10px] font-bold min-w-[18px] h-4.5 px-1.5 flex items-center justify-center rounded-full shadow-sm transition-all duration-200 ${
             isActive ? 'bg-[#d0a36e] text-[#541b2f]' : 'bg-[#CF3645] text-white'
           }`}>
             {badge}
@@ -142,27 +176,50 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
 
   return (
     <>
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Mobile Backdrop */}
+      <div 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] lg:hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      />
 
-      <div className={`fixed lg:static top-0 left-0 h-screen w-[260px] bg-[#541b2f] dark:bg-stone-950 flex flex-col justify-between z-50 transition-colors duration-300 font-sans border-r border-[#6b253e] dark:border-stone-800 overflow-y-auto scrollbar-hide ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* Sidebar Drawer Container */}
+      <aside 
+        className={`fixed lg:static top-0 left-0 h-[100dvh] lg:h-screen w-[290px] max-w-[84vw] lg:w-[260px] bg-[#541b2f] dark:bg-stone-950 flex flex-col justify-between z-[100] lg:z-auto transition-transform duration-300 ease-in-out font-sans border-r border-[#6b253e] dark:border-stone-800 shadow-2xl lg:shadow-none overflow-y-auto scrollbar-hide will-change-transform ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+        aria-label="Sidebar Navigation"
+      >
         
         <div>
-          <div className="flex items-center gap-3 px-6 pt-8 pb-8">
-            <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center overflow-hidden w-11 h-11">
-              <img src={swuLogoSeal} alt="ARCHIVIO" className="w-full h-full object-cover rounded-full" />
+          {/* Drawer Top Header */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 lg:px-6 lg:pt-8 lg:pb-8 border-b border-white/10 lg:border-none">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center overflow-hidden w-11 h-11 shrink-0 shadow-sm">
+                <img src={swuLogoSeal} alt="ARCHIVIO" className="w-full h-full object-cover rounded-full" />
+              </div>
+              <div>
+                <span className="text-[17px] font-bold text-white tracking-wide block leading-tight">ARCHIVIO</span>
+                <span className="text-[11px] text-[#d0a36e] font-medium uppercase tracking-wider block mt-0.5">Student Portal</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[16px] font-bold text-white tracking-wide block leading-none mb-0.5">ARCHIVIO</span>
-              <span className="text-[11px] text-[#d0a36e] font-medium uppercase tracking-wider">Student Portal</span>
-            </div>
+            {/* Mobile close button (✕) */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="lg:hidden p-2 text-white/80 hover:text-white rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all touch-manipulation flex items-center justify-center w-9 h-9"
+              aria-label="Close menu"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
-          <div className="flex flex-col gap-1 px-4">
+          {/* Navigation Items */}
+          <div className="flex flex-col gap-1 px-4 mt-3 lg:mt-0">
             {menuItems.map((item) => (
               <NavButton
                 key={item.name}
@@ -175,18 +232,23 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         </div>
         
         {/* Bottom Section (Need Help & Profile) */}
-        <div className="px-5 pb-6 flex flex-col gap-4 mt-8">
+        <div className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 flex flex-col gap-3.5 mt-auto border-t border-white/10 lg:border-none">
           
           {/* Need help box */}
           <div 
-            className="bg-[#6b253e]/40 dark:bg-white/5 p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#d0a36e]/20 dark:border-white/5"
-            onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))}
+            className="bg-[#6b253e]/40 dark:bg-white/5 p-3.5 rounded-xl flex flex-col gap-1 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all border border-[#d0a36e]/20 dark:border-white/5 touch-manipulation"
+            onClick={() => {
+              setIsOpen(false);
+              window.dispatchEvent(new CustomEvent('open-chat'));
+            }}
           >
-            <div className="w-8 h-8 bg-[#d0a36e] rounded-full flex items-center justify-center text-[#541b2f] shadow-sm mb-1">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-[#d0a36e] rounded-full flex items-center justify-center text-[#541b2f] shadow-sm shrink-0">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              </div>
+              <h4 className="text-white font-bold text-[13px]">Need help?</h4>
             </div>
-            <h4 className="text-white font-bold text-[13px]">Need help?</h4>
-            <p className="text-gray-300 dark:text-stone-300 text-[11px] leading-tight font-medium">Contact your<br/>Research Adviser</p>
+            <p className="text-gray-300 dark:text-stone-300 text-[11px] leading-tight font-medium pl-9">Contact your Research Adviser</p>
           </div>
 
           {/* User Profile */}
@@ -198,17 +260,18 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
                 initials || 'ST'
               )}
             </div>
-            <div className="flex flex-col flex-1 truncate">
+            <div className="flex flex-col flex-1 truncate min-w-0">
               <span className="text-[13px] font-bold text-white truncate">{studentName || 'Student Name'}</span>
-              <span className="text-[11px] text-gray-400 dark:text-stone-400">
+              <span className="text-[11px] text-gray-400 dark:text-stone-400 truncate">
                 {role === 'member' ? 'Group Member' : 'Group Leader'}
               </span>
             </div>
             <button 
               onClick={handleLogoutClick}
               disabled={isLoggingOut}
-              className="p-2 text-gray-400 dark:text-stone-500 hover:bg-[#6b253e]/80 dark:hover:bg-white/10 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-gray-400 dark:text-stone-500 hover:bg-[#6b253e]/80 dark:hover:bg-white/10 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
               title="Log out"
+              aria-label="Log out"
             >
               {isLoggingOut ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -220,7 +283,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
 
         </div>
 
-      </div>
+      </aside>
     </>
   );
 }

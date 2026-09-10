@@ -37,24 +37,33 @@ export default function UserManagement() {
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setAdvisers(all.filter(a => flexMatch(a.department)));
+    }, (err) => {
+      console.warn('Advisers listener notice:', err.message);
     });
 
     // Fetch Students — filter by this Dean's department (flexible match)
     const unsubStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setStudents(all.filter(s => flexMatch(s.department)));
+    }, (err) => {
+      console.warn('Students listener notice:', err.message);
     });
 
     // Fetch Groups — filter by this Dean's department (flexible match)
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setGroups(all.filter(g => flexMatch(g.department) || flexMatch(g.program)));
+    }, (err) => {
+      console.warn('Groups listener notice:', err.message);
     });
 
     // Fetch Submissions — filter by this Dean's department
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setSubmissions(all);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Submissions listener notice:', err.message);
       setLoading(false);
     });
 

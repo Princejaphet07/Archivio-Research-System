@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '../Components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { logActivity } from '../../firebase/logActivity';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
-import NotificationBell from '../Components/NotificationBell';
-import PortalHeader from '../Components/PortalHeader';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
@@ -477,31 +477,31 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           profilePhotoUrl={profilePhotoUrl} role={role}
         />
         {/* SCROLLABLE BODY */}
-        <div className="flex-1 overflow-y-auto px-8 pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-10">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pt-2">
 
             {/* PAGE TITLE */}
             <div>
-              <h2 className="font-serif font-bold text-[28px] text-[#1A1A1A] dark:text-stone-100 mb-1">Supporting Documents</h2>
-              <p className="text-gray-500 dark:text-stone-400 text-[14px]">Submit all required documents for your research</p>
+              <h2 className="font-serif font-bold text-[24px] sm:text-[28px] text-[#1A1A1A] dark:text-stone-100 mb-1 leading-tight">Supporting Documents</h2>
+              <p className="text-gray-500 dark:text-stone-400 text-[13px] sm:text-[14px]">Submit all required documents for your research</p>
             </div>
 
             {/* PROGRESS BAR CARD */}
             <Card hover className="w-full">
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]" />
-              <CardBody className="flex items-center justify-between pt-8">
-                <div className="w-48">
+              <CardBody className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:p-8 pt-6 sm:pt-8">
+                <div className="w-full sm:w-48">
                   {loadingData ? (
                     <div className="h-8 w-28 bg-stone-200 dark:bg-stone-800 animate-pulse rounded mb-1" />
                   ) : (
-                    <h3 className="text-[30px] font-serif font-bold text-[#7B1F35] dark:text-[#D05353] leading-none">
-                      {uploadedCount} <span className="text-[18px] text-stone-400 dark:text-stone-500">of {totalCount}</span>
+                    <h3 className="text-[26px] sm:text-[30px] font-serif font-bold text-[#7B1F35] dark:text-[#D05353] leading-none">
+                      {uploadedCount} <span className="text-[16px] sm:text-[18px] text-stone-400 dark:text-stone-500">of {totalCount}</span>
                     </h3>
                   )}
                   <p className="text-[13px] text-stone-500 dark:text-stone-400 mt-1">documents submitted</p>
                 </div>
 
-                <div className="flex-1 px-8">
+                <div className="w-full sm:flex-1 sm:px-8">
                   <div className="w-full bg-stone-100 dark:bg-stone-800 h-2.5 rounded-full overflow-hidden mb-2">
                     <div
                       className="bg-gradient-to-r from-[#7B1F35] to-[#C73D4C] h-full rounded-full transition-all duration-700"
@@ -515,11 +515,11 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                   )}
                 </div>
 
-                <div className="w-48 flex justify-end">
+                <div className="w-full sm:w-48 flex justify-start sm:justify-end">
                   {missingCount === 0 && !loadingData ? (
                     <StatusBadge status={displayStatus} />
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2 rounded-full border bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full border bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       {missingCount} missing
                     </span>
@@ -573,7 +573,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                               {hasRevision && (
                                 <button
                                   onClick={() => setViewerState({ isOpen: true, url: meta.url, title: item.title, reqId: item.id })}
-                                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/60 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold rounded-lg border border-amber-200 dark:border-amber-800/50 hover:bg-amber-200/60 transition-colors"
+                                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] bg-amber-100/60 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold rounded-lg border border-amber-200 dark:border-amber-800/50 hover:bg-amber-200/60 transition-colors touch-manipulation"
                                 >
                                   <AlertTriangle className="w-3.5 h-3.5" />
                                   View Revision Notes
@@ -583,7 +583,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-auto">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mt-auto">
                           {hasRevision ? (
                             <span className="flex items-center gap-1.5 text-[12px] font-bold text-amber-600 dark:text-amber-400">
                               <AlertTriangle className="w-3.5 h-3.5" /> Revision Required
@@ -593,7 +593,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                               <span className="w-2 h-2 bg-green-500 rounded-full" /> Submitted
                             </span>
                           )}
-                          <div className="flex items-center gap-3 text-[12px] font-bold">
+                          <div className="flex items-center gap-2 text-[12px] font-bold">
                             {isUploadingThis ? (
                               <div className="flex items-center gap-1.5 text-[#7B1F35] dark:text-[#D05353]">
                                 <div className="w-3.5 h-3.5 border-2 border-[#7B1F35]/30 dark:border-[#D05353]/30 border-t-[#7B1F35] dark:border-t-[#D05353] rounded-full animate-spin" />
@@ -604,7 +604,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                                   {reviewStatus !== 'published' && (
                                     <>
                                       <button
-                                        className="text-[#7B1F35] dark:text-[#D05353] hover:underline"
+                                        className="min-h-[36px] py-1.5 px-3 rounded-lg bg-stone-100 dark:bg-stone-800 text-[#7B1F35] dark:text-[#D05353] hover:underline font-bold text-xs touch-manipulation"
                                         onClick={() => {
                                           if (item.type === 'url') handleUploadUrl(item);
                                           else fileInputRefs.current[item.id]?.click();
@@ -612,8 +612,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                                       >
                                         Replace
                                       </button>
-                                      <span className="text-stone-300 dark:text-stone-600">·</span>
-                                      <button className="hover:underline text-stone-500 dark:text-stone-400" onClick={() => handleDelete(item)}>Delete</button>
+                                      <button 
+                                        className="min-h-[36px] py-1.5 px-3 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-red-500 hover:underline font-bold text-xs touch-manipulation" 
+                                        onClick={() => handleDelete(item)}
+                                      >
+                                        Delete
+                                      </button>
                                     </>
                                   )}
                                 </>

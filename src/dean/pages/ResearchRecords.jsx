@@ -103,25 +103,35 @@ export default function ResearchRecords() {
             const category = g.category || sub.category || 'Uncategorized';
             const action = status === 'reviewed' ? 'Publish' : 'View';
 
-            // Find requirements applicable to this group (global + their adviser's)
-            const applicableReqs = activeReqs.filter(r => 
-              r.scope === 'global' || 
-              (r.scope === 'adviser' && r.adviserUid === g.adviserUid)
-            );
+            // Calculate progress based on requirements
+            const uploadedCount = (sub.documents || []).length;
+            const totalCount = activeReqs.length;
+            const progress = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
 
             return {
-              id: String(index + 1).padStart(3, '0'),
-              rawId: sub.id || g.id,
-              title: g.researchTitle || sub.title || 'Untitled',
+              id: g.id || `REC-${index + 1}`,
+              groupDocId: g.id,
+              subDocId: sub.id,
+              title: sub.title || sub.researchTitle || g.researchTitle || 'Untitled Research',
               group: g.groupName || 'Unknown Group',
-              adviser: g.adviserName || g.adviserUid || 'Unknown',
-              category,
+              department: g.department || deanDept,
+              adviser: g.adviserName || 'Not Assigned',
               year,
+              category,
               status,
+              progress,
               action,
+              manuscriptUrl: sub.manuscriptUrl || null,
+              documents: sub.documents || [],
+              panelists: g.panelists || [],
+              plagiarismScore: sub.plagiarismScore || null,
+              grammarScore: sub.grammarScore || null,
               originalSub: sub,
               originalGroup: g,
-              applicableReqs
+              applicableReqs: activeReqs.filter(r => 
+                r.scope === 'global' || 
+                (r.scope === 'adviser' && r.adviserUid === g.adviserUid)
+              )
             };
           });
 
@@ -141,12 +151,20 @@ export default function ResearchRecords() {
           setAllCategories(['All Categories', ...categories]);
 
           setLoading(false);
+        }, (err) => {
+          console.warn('Requirements listener notice:', err.message);
+          setLoading(false);
         });
         
         return () => unsubReqs();
+      }, (err) => {
+        console.warn('Submissions listener notice:', err.message);
       });
 
       return () => unsubSubs();
+    }, (err) => {
+      console.warn('Groups listener notice:', err.message);
+      setLoading(false);
     });
 
     return () => unsubGroups();

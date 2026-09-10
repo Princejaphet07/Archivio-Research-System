@@ -229,6 +229,7 @@ export default function UserManagement() {
   const selectProgram = (code) => {
     setSelectedPrograms([code]);
     setFormData(f => ({ ...f, programs: code }));
+    setFormErrors(prev => ({ ...prev, programs: '' }));
     setShowProgramsDropdown(false);
     setProgramSearch('');
   };
@@ -521,22 +522,125 @@ export default function UserManagement() {
   };
 
   const handleEditUser = async (user) => {
+    const currentRole = user.role || (user._collection === 'super_admins' ? 'super-admin' : 'dean');
     const { value: formValues } = await Swal.fire({
-      title: 'Edit Department',
-      html: `<input id="swal-input1" class="swal2-input" value="${user.department || ''}" placeholder="Enter new department name">`,
+      title: 'Edit User Account',
+      html: `
+        <div style="text-align: left; font-family: inherit;">
+          <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #4a5568;">Department</label>
+          <input id="swal-input-dept" class="swal2-input" value="${user.department || ''}" placeholder="Enter department" style="width: 100%; margin: 0 0 16px 0; font-size: 14px;">
+          
+          <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #4a5568;">Role Assignment</label>
+          <select id="swal-input-role" class="swal2-select" style="width: 100%; margin: 0; font-size: 14px; padding: 8px 12px; border: 1px solid #d2d6dc; border-radius: 6px;">
+            <option value="super-admin" ${currentRole === 'super-admin' ? 'selected' : ''}>Super Admin — System-wide monitoring access</option>
+            <option value="dean" ${currentRole === 'dean' ? 'selected' : ''}>Dean Only — Access Dean Dashboard only</option>
+            <option value="dean+adviser" ${currentRole === 'dean+adviser' ? 'selected' : ''}>Dean + Research Adviser — Dual role (Access both dashboards)</option>
+          </select>
+        </div>
+      `,
       focusConfirm: false,
       showCancelButton: true,
-      preConfirm: () => document.getElementById('swal-input1').value
+      confirmButtonText: 'Save Changes',
+      confirmButtonColor: '#801e38',
+      cancelButtonColor: '#718096',
+      preConfirm: () => {
+        const deptEl = document.getElementById('swal-input-dept');
+        const roleEl = document.getElementById('swal-input-role');
+        return {
+          department: deptEl ? deptEl.value.trim() : user.department,
+          role: roleEl ? roleEl.value : currentRole
+        };
+      }
     });
 
-    if (formValues !== undefined) {
+    if (formValues) {
       setLoading(true);
       try {
-        await updateDoc(doc(db, user._collection, user.id), { department: formValues });
-        if (user.uid) await updateDoc(doc(db, 'users', user.uid), { department: formValues });
-        Swal.fire('Saved!', 'User department has been updated.', 'success');
+        const targetCollection = user._collection || 'deans';
+        await updateDoc(doc(db, targetCollection, user.id), {
+          department: formValues.department,
+          role: formValues.role
+        });
+
+        const targetUid = user.uid || user.userId || user.id;
+        try {
+          await updateDoc(doc(db, 'users', targetUid), {
+            department: formValues.department,
+            role: formValues.role
+          });
+        } catch (_) {}
+
+        // If assigned dual role (dean+adviser), ensure an advisers record exists
+        if (formValues.role === 'dean+adviser' && user.email) {
+          const advQ = query(collection(db, 'advisers'), where('email', '==', user.email.toLowerCase().trim()));
+          const advSnap = await getDocs(advQ);
+          if (advSnap.empty) {
+            await addDoc(collection(db, 'advisers'), {
+              firstName: user.firstName || user.displayName?.split(' ')[0] || 'Dean',
+              lastName: user.lastName || user.displayName?.split(' ').slice(1).join(' ') || 'Adviser',
+              displayName: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+              email: user.email.toLowerCase().trim(),
+              department: formValues.department,
+              programs: user.programs || [],
+              role: 'dean+adviser',
+              status: 'active',
+              userId: targetUid,
+              uid: targetUid,
+              createdAt: new Date().toISOString(),
+              createdBy: 'admin'
+            });
+          } else {
+            await updateDoc(advSnap.docs[0].ref, {
+              department: formValues.department,
+              role: 'dean+adviser',
+              status: 'active'
+            });
+          }
+        }
+
+        // If assigned super-admin, ensure super_admins record exists
+        if (formValues.role === 'super-admin' && user.email) {
+          const saQ = query(collection(db, 'super_admins'), where('email', '==', user.email.toLowerCase().trim()));
+          const saSnap = await getDocs(saQ);
+          if (saSnap.empty) {
+            await addDoc(collection(db, 'super_admins'), {
+              firstName: user.firstName || user.displayName?.split(' ')[0] || 'Super',
+              lastName: user.lastName || user.displayName?.split(' ').slice(1).join(' ') || 'Admin',
+              displayName: user.displayName || 'Super Admin',
+              email: user.email.toLowerCase().trim(),
+              department: formValues.department || user.department || '',
+              role: 'super-admin',
+              moduleAccess: user.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true },
+              status: 'active',
+              uid: targetUid,
+              createdAt: new Date().toISOString(),
+              createdBy: 'admin'
+            });
+          } else {
+            await updateDoc(saSnap.docs[0].ref, {
+              department: formValues.department || user.department || '',
+              role: 'super-admin',
+              status: 'active'
+            });
+          }
+        }
+
+        await logActivity({
+          user: auth.currentUser?.email || 'System Admin',
+          role: 'System Admin',
+          action: `Updated user profile (${user.email})`,
+          details: `Role: ${formValues.role}, Dept: ${formValues.department}`,
+          status: 'Success'
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved!',
+          text: 'User profile and roles have been updated.',
+          confirmButtonColor: '#801e38'
+        });
       } catch (e) {
-        console.error(e);
+        console.error('Failed to update user:', e);
         Swal.fire('Error', 'Failed to update user.', 'error');
       } finally {
         setLoading(false);
@@ -625,6 +729,7 @@ export default function UserManagement() {
       errors.email = 'Must use @phinmaed.com domain (e.g., prdo.vender.swu@phinmaed.com)';
     }
     if (!formData.department) errors.department = 'Please select a department';
+    if (selectedPrograms.length === 0 && !formData.programs) errors.programs = 'Please select a program';
     if (!formData.role) errors.role = 'Please select a role';
 
     if (Object.keys(errors).length > 0) {
@@ -691,8 +796,9 @@ export default function UserManagement() {
             displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
             email: formData.email.toLowerCase().trim(),
             department: formData.department,
+            programs: selectedPrograms,
             role: 'super-admin',
-            moduleAccess: formData.moduleAccess,
+            moduleAccess: formData.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true },
             status: 'active',
             uid: newUid,
             temporaryPassword: temporaryPassword,
@@ -710,8 +816,10 @@ export default function UserManagement() {
             uid: newUid,
             email: formData.email.toLowerCase().trim(),
             displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+            department: formData.department,
+            programs: selectedPrograms,
             role: 'super-admin',
-            moduleAccess: formData.moduleAccess,
+            moduleAccess: formData.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true },
             status: 'active',
             createdAt: new Date().toISOString()
           });
@@ -757,11 +865,9 @@ export default function UserManagement() {
             role: 'System Admin',
             action: `Created Super Admin account`,
             status: 'Success',
-            details: `${formData.firstName.trim()} ${formData.lastName.trim()} (${formData.email.toLowerCase().trim()}) — ${formData.department || 'No dept'}`,
+            details: `${formData.firstName.trim()} ${formData.lastName.trim()} (${formData.email.toLowerCase().trim()}) — ${formData.department}`,
           });
 
-          await fetchDeans();
-          
           Swal.fire({
             title: 'Success!',
             text: `Super Admin invitation sent to ${formData.email}!`,
@@ -839,6 +945,30 @@ export default function UserManagement() {
           createdAt: new Date().toISOString()
         });
 
+        // If Dual Role (Dean + Research Adviser), create/sync in advisers collection too
+        if (formData.role === 'dean+adviser') {
+          const adviserData = {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+            email: formData.email.toLowerCase().trim(),
+            department: formData.department,
+            programs: formData.programs ? formData.programs.split(',').map(p => p.trim()) : [],
+            role: 'dean+adviser',
+            status: 'active',
+            accountStatus: 'pending_activation',
+            userId: newUid,
+            uid: newUid,
+            temporaryPassword: temporaryPassword,
+            invitationLink: invitationLink,
+            invitationSent: true,
+            invitationDate: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            createdBy: 'admin'
+          };
+          await addDoc(collection(db, 'advisers'), adviserData);
+        }
+
       } catch (authError) {
         if (authError.code === 'auth/email-already-in-use') {
           setError('This email is already registered. Please use a different email.');
@@ -914,10 +1044,12 @@ export default function UserManagement() {
 
       // Trigger Firebase Email Extension to send dean invitation
       try {
+        const isDualRole = formData.role === 'dean+adviser';
+        const roleTitle = isDualRole ? "Dean & Research Adviser (Dual Role)" : "Dean";
         await addDoc(collection(db, 'mail'), {
           to: formData.email.toLowerCase().trim(),
           message: {
-            subject: "Invitation to Join ARCHIVIO as a Dean",
+            subject: `Invitation to Join ARCHIVIO as a ${roleTitle}`,
             html: `
               <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
                 <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
@@ -928,7 +1060,12 @@ export default function UserManagement() {
                 
                 <div style="padding: 40px 30px; background-color: #ffffff;">
                   <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()}!</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Step into your portal to oversee, manage, and empower the research initiatives within your department.</p>
+                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
+                    You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
+                    ${isDualRole 
+                      ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
+                      : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
+                  </p>
                   
                   <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
                     <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
@@ -947,7 +1084,7 @@ export default function UserManagement() {
                   </div>
                   
                   <div style="text-align: center; margin: 40px 0 10px 0;">
-                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
+                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
                   </div>
                 </div>
                 
@@ -1064,7 +1201,6 @@ export default function UserManagement() {
         timer: 2000,
         showConfirmButton: false
       });
-      fetchDeans();
     } catch (error) {
       console.error('Error resending invitation:', error);
       Swal.fire('Error', 'Failed to resend invitation', 'error');
@@ -1461,105 +1597,115 @@ export default function UserManagement() {
                 {/* Programs */}
                 <div>
                   <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
-                    Programs
+                    Programs <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
-                        className="flex-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 text-left flex items-center justify-between"
-                      >
-                        <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900 dark:text-stone-50'}>
-                          {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
-                        </span>
-                        <svg className={`w-4 h-4 text-stone-500 dark:text-stone-400 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!formData.department) {
-                            Swal.fire('Oops!', 'Please select a Department first before adding a Program.', 'warning');
-                            return;
-                          }
-                          setShowAddProgModal(true);
-                        }}
-                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#801e38] text-white hover:bg-[#6a1830] transition shadow-sm shrink-0"
-                        title="Add new program"
-                      >
-                        <Plus size={18} />
-                      </button>
-                    </div>
-                    {showProgramsDropdown && (() => {
-                      const filtered = programsList.filter(p =>
-                        p.code.toLowerCase().includes(programSearch.toLowerCase()) || p.name.toLowerCase().includes(programSearch.toLowerCase())
-                      );
-                      return (
-                        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg shadow-lg overflow-hidden">
-                          {/* Search input */}
-                          <div className="p-2 border-b border-stone-200 dark:border-stone-700">
-                            <input
-                              type="text"
-                              placeholder="Search or type program code..."
-                              value={programSearch}
-                              onChange={(e) => setProgramSearch(e.target.value)}
-                              className="w-full bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = programSearch.trim().toUpperCase();
-                                  if (val) {
-                                    selectProgram(val);
+                    <div className="relative">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          id="add-user-programs"
+                          onClick={() => setShowProgramsDropdown(!showProgramsDropdown)}
+                          className={`flex-1 bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 text-left flex items-center justify-between transition-colors ${
+                            formErrors.programs
+                              ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                              : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                          }`}
+                        >
+                          <span className={selectedPrograms.length === 0 ? 'text-stone-400' : 'text-stone-900 dark:text-stone-50'}>
+                            {selectedPrograms.length === 0 ? 'Select programs...' : selectedPrograms.join(', ')}
+                          </span>
+                          <svg className={`w-4 h-4 text-stone-500 dark:text-stone-400 transition-transform ${showProgramsDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!formData.department) {
+                              Swal.fire('Oops!', 'Please select a Department first before adding a Program.', 'warning');
+                              return;
+                            }
+                            setShowAddProgModal(true);
+                          }}
+                          className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#801e38] text-white hover:bg-[#6a1830] transition shadow-sm shrink-0"
+                          title="Add new program"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+                      {showProgramsDropdown && (() => {
+                        const filtered = programsList.filter(p =>
+                          p.code.toLowerCase().includes(programSearch.toLowerCase()) || p.name.toLowerCase().includes(programSearch.toLowerCase())
+                        );
+                        return (
+                          <div className="absolute z-50 mt-1 w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg shadow-lg overflow-hidden">
+                            {/* Search input */}
+                            <div className="p-2 border-b border-stone-200 dark:border-stone-700">
+                              <input
+                                type="text"
+                                placeholder="Search or type program code..."
+                                value={programSearch}
+                                onChange={(e) => setProgramSearch(e.target.value)}
+                                className="w-full bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const val = programSearch.trim().toUpperCase();
+                                    if (val) {
+                                      selectProgram(val);
+                                    }
                                   }
-                                }
-                              }}
-                            />
+                                }}
+                              />
+                            </div>
+                            {/* Program list */}
+                            <div className="max-h-44 overflow-y-auto">
+                              {filtered.length === 0 ? (
+                                <div className="px-4 py-3 text-sm text-stone-500 dark:text-stone-400">No match found. Press <strong>Enter</strong> to add as custom.</div>
+                              ) : (
+                                filtered.map(prog => (
+                                  <button
+                                    key={prog.id || prog.code}
+                                    type="button"
+                                    onClick={() => selectProgram(prog.code)}
+                                    className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors text-left ${
+                                      selectedPrograms.includes(prog.code)
+                                        ? 'bg-[#f3e6ea] dark:bg-[#3a1520] text-[#801e38] dark:text-[#f3c6d0]'
+                                        : 'hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] text-stone-800 dark:text-stone-100'
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      <span className="font-semibold">{prog.code}</span>
+                                      <span className="text-stone-500 dark:text-stone-400 text-xs">— {prog.name}</span>
+                                    </span>
+                                    {selectedPrograms.includes(prog.code) && (
+                                      <span className="text-[#801e38] dark:text-[#f3c6d0] font-bold text-base leading-none">✓</span>
+                                    )}
+                                  </button>
+                                ))
+                              )}
+                            </div>
                           </div>
-                          {/* Program list */}
-                          <div className="max-h-44 overflow-y-auto">
-                            {filtered.length === 0 ? (
-                              <div className="px-4 py-3 text-sm text-stone-500 dark:text-stone-400">No match found. Press <strong>Enter</strong> to add as custom.</div>
-                            ) : (
-                              filtered.map(prog => (
-                                <button
-                                  key={prog.id || prog.code}
-                                  type="button"
-                                  onClick={() => selectProgram(prog.code)}
-                                  className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors text-left ${
-                                    selectedPrograms.includes(prog.code)
-                                      ? 'bg-[#f3e6ea] dark:bg-[#3a1520] text-[#801e38] dark:text-[#f3c6d0]'
-                                      : 'hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] text-stone-800 dark:text-stone-100'
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <span className="font-semibold">{prog.code}</span>
-                                    <span className="text-stone-500 dark:text-stone-400 text-xs">— {prog.name}</span>
-                                  </span>
-                                  {selectedPrograms.includes(prog.code) && (
-                                    <span className="text-[#801e38] dark:text-[#f3c6d0] font-bold text-base leading-none">✓</span>
-                                  )}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  {selectedPrograms.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {selectedPrograms.map(code => (
-                        <span key={code} className="inline-flex items-center gap-1 bg-[#f3e6ea] text-[#801e38] text-xs font-bold px-2.5 py-1 rounded-full">
-                          {code}
-                          <button type="button" onClick={() => { setSelectedPrograms([]); setFormData(f => ({ ...f, programs: '' })); }} className="hover:text-red-700 text-[#801e38]/60">×</button>
-                        </span>
-                      ))}
+                        );
+                      })()}
                     </div>
-                  )}
-                </div>
+                    {selectedPrograms.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {selectedPrograms.map(code => (
+                          <span key={code} className="inline-flex items-center gap-1 bg-[#f3e6ea] text-[#801e38] text-xs font-bold px-2.5 py-1 rounded-full">
+                            {code}
+                            <button type="button" onClick={() => { setSelectedPrograms([]); setFormData(f => ({ ...f, programs: '' })); }} className="hover:text-red-700 text-[#801e38]/60">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {formErrors.programs && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.programs}
+                      </p>
+                    )}
+                  </div>
 
                 {/* Role Assignment */}
                 <div>
@@ -1569,7 +1715,17 @@ export default function UserManagement() {
                   <select
                     id="add-user-role"
                     value={formData.role}
-                    onChange={(e) => { setFormData({ ...formData, role: e.target.value }); setFormErrors(prev => ({ ...prev, role: '' })); }}
+                    onChange={(e) => {
+                      const newRole = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        role: newRole,
+                        moduleAccess: newRole === 'super-admin'
+                          ? { dashboard: true, reports: true, allUsers: true, activityLogs: true }
+                          : prev.moduleAccess
+                      }));
+                      setFormErrors(prev => ({ ...prev, role: '' }));
+                    }}
                     className={`w-full bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
                       formErrors.role
                         ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
@@ -1591,9 +1747,29 @@ export default function UserManagement() {
                 {/* Module Access - Show only for Super Admin */}
                 {formData.role === 'super-admin' && (
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-3">
-                      Module Access
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-stone-700 dark:text-stone-200">
+                        Module Access
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allChecked = formData.moduleAccess?.dashboard && formData.moduleAccess?.reports && formData.moduleAccess?.allUsers && formData.moduleAccess?.activityLogs;
+                          setFormData(prev => ({
+                            ...prev,
+                            moduleAccess: {
+                              dashboard: !allChecked,
+                              reports: !allChecked,
+                              allUsers: !allChecked,
+                              activityLogs: !allChecked
+                            }
+                          }));
+                        }}
+                        className="text-xs font-bold text-[#801e38] dark:text-amber-400 hover:underline cursor-pointer"
+                      >
+                        {formData.moduleAccess?.dashboard && formData.moduleAccess?.reports && formData.moduleAccess?.allUsers && formData.moduleAccess?.activityLogs ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
                     <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">Select modules this Super Admin can access:</p>
 
                     <div className="space-y-2.5">

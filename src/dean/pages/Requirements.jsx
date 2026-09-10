@@ -27,12 +27,16 @@ export default function Requirements({ activePage, onNavigate }) {
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (snapshot) => {
       setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.warn('Requirements groups listener notice:', err.message);
     });
 
     // 2. Listen to all submissions
     const submissionsQuery = query(collection(db, 'submissions'));
     const unsubSubs = onSnapshot(submissionsQuery, (snapshot) => {
       setSubmissions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.warn('Requirements submissions listener notice:', err.message);
     });
 
     // 3. Listen to active requirements
@@ -41,6 +45,9 @@ export default function Requirements({ activePage, onNavigate }) {
       const allReqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const activeReqs = allReqs.filter(r => r.status === 'approved');
       setRequirements(activeReqs);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Requirements active listener notice:', err.message);
       setLoading(false);
     });
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../Components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { db, auth } from '../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
-import NotificationBell from '../Components/NotificationBell';
-import PortalHeader from '../Components/PortalHeader';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 import { Card, CardBody, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
@@ -384,12 +384,12 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         />
 
         {/* SCROLLABLE BODY */}
-        <div className="flex-1 overflow-y-auto px-6 lg:px-8 pb-8">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-8">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6">
 
             <div>
-              <h2 className="text-[28px] font-bold text-[#1A1A1A] dark:text-stone-100 font-serif tracking-tight mb-1">My Research Group</h2>
-              <p className="text-[14px] text-gray-500 dark:text-stone-400 font-medium">Your team members and group information</p>
+              <h2 className="text-[24px] sm:text-[28px] font-bold text-[#1A1A1A] dark:text-stone-100 font-serif tracking-tight mb-1">My Research Group</h2>
+              <p className="text-[13px] sm:text-[14px] text-gray-500 dark:text-stone-400 font-medium">Your team members and group information</p>
             </div>
 
             {/* ── GROUP BANNER ────────────────────────────────────────── */}
@@ -398,47 +398,47 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                 <Shimmer />
               </div>
             ) : (
-              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[24px] p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-md border border-[#7B1F35]/20 relative overflow-hidden">
+              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[24px] p-5 sm:p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-md border border-[#7B1F35]/20 relative overflow-hidden">
                 <div className="absolute right-0 top-0 h-full w-[40%] bg-white/5 rounded-l-[100px] pointer-events-none" />
 
-                <div className="relative z-10 text-white flex flex-col gap-4">
+                <div className="relative z-10 text-white flex flex-col gap-3 sm:gap-4 max-w-full">
                   <div>
                     <span className="text-[10px] font-bold tracking-[0.15em] text-white/60 uppercase">Group Name</span>
-                    <h2 className="text-[28px] lg:text-[32px] font-serif font-bold mt-1">{groupTitle}</h2>
+                    <h2 className="text-[22px] sm:text-[28px] lg:text-[32px] font-serif font-bold mt-1 break-words">{groupTitle}</h2>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold tracking-[0.15em] text-white/60 uppercase">Research Title</span>
-                    <p className="text-[17px] font-semibold mt-1">{researchTitle}</p>
+                    <p className="text-[15px] sm:text-[17px] font-semibold mt-1 break-words">{researchTitle}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="bg-white/10 border border-white/10 px-3 py-1.5 rounded-full text-xs font-medium">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
+                    <span className="bg-white/10 border border-white/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium">
                       👥 {totalCount} {totalCount === 1 ? 'member' : 'members'}
                     </span>
                     {course && (
-                      <span className="bg-white/10 border border-white/10 px-3 py-1.5 rounded-full text-xs font-medium">
+                      <span className="bg-white/10 border border-white/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium">
                         🎓 {course}
                       </span>
                     )}
                     {department && (
-                      <span className="bg-white/10 border border-white/10 px-3 py-1.5 rounded-full text-xs font-medium">
+                      <span className="bg-white/10 border border-white/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium">
                         🏢 {department}
                       </span>
                     )}
-                    <span className="bg-white/10 border border-white/10 px-3 py-1.5 rounded-full text-xs font-medium">
+                    <span className="bg-white/10 border border-white/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium">
                       📅 S.Y. 2026–2027
                     </span>
                   </div>
                 </div>
 
                 {/* Adviser Box */}
-                <div className="relative z-10 mt-6 md:mt-0 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-5 min-w-[240px]">
-                  <span className="text-[10px] font-bold tracking-wider text-white/60 uppercase block mb-3">Your Adviser</span>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-white dark:bg-stone-900 text-[#7B1F35] dark:text-[#D05353] flex items-center justify-center font-bold text-lg shadow-sm">
+                <div className="relative z-10 w-full md:w-auto min-w-0 md:min-w-[240px] mt-2 md:mt-0 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5">
+                  <span className="text-[10px] font-bold tracking-wider text-white/60 uppercase block mb-2 sm:mb-3">Your Adviser</span>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white dark:bg-stone-900 text-[#7B1F35] dark:text-[#D05353] flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-sm">
                       {adviserInitials}
                     </div>
-                    <div>
-                      <h4 className="text-white font-bold text-[15px]">{adviserName}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-white font-bold text-[14px] sm:text-[15px] truncate">{adviserName}</h4>
                       <p className="text-white/70 text-[12px] mt-0.5">Research Adviser</p>
                     </div>
                   </div>
@@ -448,17 +448,17 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
             {/* ── TEAM MEMBERS SECTION ────────────────────────────────── */}
             <Card hover className="mt-2">
-              <CardBody className="p-8">
-                <div className="flex justify-between items-start mb-6">
+              <CardBody className="p-5 sm:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="text-[22px] font-serif font-bold text-[#1A1A1A] dark:text-stone-100 mb-1">Team Members</h3>
-                    <p className="text-[14px] text-gray-500 dark:text-stone-400">
+                    <h3 className="text-[20px] sm:text-[22px] font-serif font-bold text-[#1A1A1A] dark:text-stone-100 mb-1">Team Members</h3>
+                    <p className="text-[13px] sm:text-[14px] text-gray-500 dark:text-stone-400">
                       {loading ? 'Loading members…' : `${totalCount} ${totalCount === 1 ? 'member' : 'members'} in this research group`}
                     </p>
                   </div>
                   
                   {leaderCard.isYou && (
-                    <PremiumButton onClick={handleAddMember}>
+                    <PremiumButton onClick={handleAddMember} className="w-full sm:w-auto min-h-[44px] touch-manipulation justify-center">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                       </svg>
@@ -467,7 +467,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 {loading ? (
                   <>
                     <SkeletonCard /><SkeletonCard />
@@ -478,23 +478,23 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                     <Card
                       hover
                       key={idx}
-                      className="flex items-start gap-4 p-6"
+                      className="flex items-start gap-3.5 sm:gap-4 p-4 sm:p-6"
                       glass={!member.isYou && member.pending}
                     >
                       {/* Avatar */}
-                      <div className={`w-14 h-14 rounded-full ${member.color} text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm`}>
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full ${member.color} text-white flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-sm`}>
                         {member.initials}
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-[16px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{member.name}</h4>
+                        <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <h4 className="text-[15px] sm:text-[16px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{member.name}</h4>
                             {member.isYou && (
-                              <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
+                              <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0">YOU</span>
                             )}
-                            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
                               member.isYou
                                 ? 'bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#D05353]'
                                 : member.pending
@@ -508,7 +508,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                           {leaderCard.isYou && !member.isYou && (
                             <button
                               onClick={() => handleRemoveMember(member)}
-                              className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1 text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                              className="min-h-[36px] px-2.5 py-1 bg-stone-100 hover:bg-red-50 dark:bg-stone-800 dark:hover:bg-red-950/40 text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 text-xs rounded-lg transition-colors flex items-center gap-1.5 touch-manipulation cursor-pointer shrink-0"
                               title="Remove member and clear invitation data"
                             >
                               <span>🗑️</span>
@@ -517,13 +517,13 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                           )}
                         </div>
 
-                        <div className="text-[13px] text-gray-500 dark:text-stone-400 flex flex-col gap-1.5 mt-3 font-medium">
+                        <div className="text-[12px] sm:text-[13px] text-gray-500 dark:text-stone-400 flex flex-col gap-1.5 mt-2.5 sm:mt-3 font-medium">
                           {member.studentId && member.studentId !== '—' && (
                             <div className="flex items-center gap-2">
                               <svg className="w-4 h-4 text-gray-400 dark:text-stone-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5" />
                               </svg>
-                              <span>{member.studentId}</span>
+                              <span className="truncate">{member.studentId}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 min-w-0">

@@ -60,6 +60,8 @@ export default function Dashboard({ activePage }) {
 
     const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       setAllRawSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.warn("Submissions listener notice:", err.message);
     });
 
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
@@ -70,7 +72,7 @@ export default function Dashboard({ activePage }) {
       setAllGroups(deptGroups);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching groups:", error);
+      console.warn("Error fetching groups:", error.message);
       setLoading(false);
     });
 
@@ -81,6 +83,8 @@ export default function Dashboard({ activePage }) {
          return dept.toLowerCase().includes(deptLower) || deptLower.includes(dept.toLowerCase());
        });
        setStats(prev => ({ ...prev, totalAdvisers: deptAdvisers.length }));
+    }, (err) => {
+       console.warn("Advisers listener notice:", err.message);
     });
 
     return () => { unsubSubmissions(); unsubGroups(); unsubAdvisers(); }

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../Components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { db, auth } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, addDoc, onSnapshot, getDocs, query, where, arrayUnion } from 'firebase/firestore';
 import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
-import NotificationBell from '../Components/NotificationBell';
-import PortalHeader from '../Components/PortalHeader';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -172,8 +172,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     currentStep === 4 ? 'Your adviser approved your work. Waiting for Dean to publish.' :
     'Your research is now live in the public archive!';
 
-  // Stroke calculation for circular progress (circumference of r=42 is ~264)
-  const circumference = 264;
+  // Stroke calculation for circular progress (radius=40, circumference ~251.33)
+  const circleRadius = 40;
+  const circumference = Math.round(2 * Math.PI * circleRadius);
   const strokeOffset  = circumference - (progressPercent / 100) * circumference;
 
   // ── Timeline step config ────────────────────────────────────────────────────
@@ -378,39 +379,56 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         />
 
         {/* SCROLLABLE BODY */}
-        <div className="flex-1 overflow-y-auto px-8 pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-10">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pt-2">
 
             {/* PAGE TITLE */}
             <div>
-              <h2 className="font-serif font-bold text-[28px] text-[#1A1A1A] dark:text-stone-100 mb-1">Submission Progress</h2>
-              <p className="text-gray-500 dark:text-stone-400 text-[14px]">Track your research from upload to publication</p>
+              <h2 className="font-serif font-bold text-[24px] sm:text-[28px] text-[#1A1A1A] dark:text-stone-100 mb-1 leading-tight">Submission Progress</h2>
+              <p className="text-gray-500 dark:text-stone-400 text-[13px] sm:text-[14px]">Track your research from upload to publication</p>
             </div>
 
             {/* STATUS BANNER */}
             {loading ? (
               <div className="w-full bg-[#7B1F35]/20 dark:bg-stone-900 rounded-[20px] h-[120px] animate-pulse" />
             ) : (
-              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[20px] p-8 flex items-center justify-between shadow-md border border-[#7B1F35]/20 relative overflow-hidden text-white">
+              <div className="w-full bg-gradient-to-br from-[#7B1F35] to-[#5a1831] rounded-[20px] p-5 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left shadow-md border border-[#7B1F35]/20 relative overflow-hidden text-white">
                 <div className="relative z-10">
                   <p className="text-[11px] font-bold tracking-widest text-white/70 uppercase mb-2">Overall Status</p>
-                  <h3 className="text-[28px] font-serif font-bold mb-1">{bannerTitle}</h3>
-                  <p className="text-white/80 text-[14px]">{bannerSub}</p>
+                  <h3 className="text-[22px] sm:text-[28px] font-serif font-bold mb-1">{bannerTitle}</h3>
+                  <p className="text-white/80 text-[13px] sm:text-[14px]">{bannerSub}</p>
                 </div>
 
-                <div className="relative z-10 flex items-center justify-center shrink-0">
-                  <svg className="w-24 h-24 transform -rotate-90">
-                    <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/20" />
-                    <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="4" fill="transparent"
+                <div className="relative z-10 flex items-center justify-center shrink-0 w-20 h-20 sm:w-24 sm:h-24">
+                  <svg viewBox="0 0 96 96" className="w-full h-full transform -rotate-90 overflow-visible">
+                    <circle 
+                      cx="48" 
+                      cy="48" 
+                      r={circleRadius} 
+                      stroke="currentColor" 
+                      strokeWidth="5" 
+                      fill="none" 
+                      className="text-white/20" 
+                    />
+                    <circle 
+                      cx="48" 
+                      cy="48" 
+                      r={circleRadius} 
+                      stroke="currentColor" 
+                      strokeWidth="5" 
+                      strokeLinecap="round"
+                      fill="none"
                       strokeDasharray={circumference}
                       strokeDashoffset={strokeOffset}
-                      className="text-white drop-shadow-md transition-all duration-700"
+                      className="text-white drop-shadow-md transition-all duration-700 ease-out"
                     />
                   </svg>
-                  <span className="absolute text-[20px] font-serif font-bold">{progressPercent}%</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[17px] sm:text-[20px] font-serif font-bold text-white select-none">
+                    {progressPercent}%
+                  </span>
                 </div>
 
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent" />
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
               </div>
             )}
 
@@ -418,7 +436,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
               {/* LEFT COLUMN: TIMELINE */}
-              <Card hover className="lg:col-span-2 p-8">
+              <Card hover className="lg:col-span-2 p-5 sm:p-8">
                 <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100 mb-8">Your Research Journey</h3>
 
@@ -474,33 +492,33 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     <div className="absolute left-[23px] top-6 bottom-12 w-[2px] bg-stone-200 dark:bg-stone-800" />
 
                     {/* Step 1: Account */}
-                    <div className="relative flex gap-5 mb-5 z-10">
+                    <div className="relative flex gap-3 sm:gap-5 mb-5 z-10">
                       <DoneNode />
-                      <div className="flex-1 bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="flex-1 bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm hover:shadow-md transition-all">
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">Account Approved</h4>
-                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-1 mb-2">{adviserName} (Adviser)</p>
-                          <p className="text-[13px] text-gray-600 dark:text-stone-400 italic">Welcome to ARCHIVIO! You can now upload your research.</p>
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Account Approved</h4>
+                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">{adviserName} (Adviser)</p>
+                          <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-stone-400 italic">Welcome to ARCHIVIO! You can now upload your research.</p>
                         </div>
                         <DoneTag />
                       </div>
                     </div>
 
                     {/* Step 2: Manuscript */}
-                    <div className="relative flex gap-5 mb-5 z-10">
+                    <div className="relative flex gap-3 sm:gap-5 mb-5 z-10">
                       {currentStep >= 2 ? <DoneNode /> : <ActiveNode />}
-                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-all ${
+                      <div className={`flex-1 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm hover:shadow-md transition-all ${
                         currentStep >= 2
                           ? 'bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700'
                           : 'bg-[#f8eef1] dark:bg-[#7B1F35]/20 border border-[#ebd0da] dark:border-[#7B1F35]/40 relative overflow-hidden'
                       }`}>
                         {currentStep < 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />}
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">Manuscript Uploaded</h4>
-                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-1 mb-2">
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Manuscript Uploaded</h4>
+                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">
                             {hasManuscript && manuscriptDate ? `Uploaded · ${manuscriptDate}` : 'Not yet uploaded'}
                           </p>
-                          <p className="text-[13px] text-gray-600 dark:text-stone-400 italic">
+                          <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-stone-400 italic">
                             {hasManuscript ? `"${researchTitle}" uploaded successfully.` : 'Upload your manuscript PDF to proceed.'}
                           </p>
                         </div>
@@ -509,9 +527,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
 
                     {/* Step 3: Supporting Documents */}
-                    <div className="relative flex gap-5 mb-5 z-10">
+                    <div className="relative flex gap-3 sm:gap-5 mb-5 z-10">
                       {currentStep >= 3 ? <DoneNode /> : currentStep === 2 ? <ActiveNode /> : <PendingNode num={3} />}
-                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                      <div className={`flex-1 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm transition-all ${
                         currentStep >= 3
                           ? 'bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 hover:shadow-md'
                           : currentStep === 2
@@ -520,11 +538,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       }`}>
                         {currentStep === 2 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />}
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">Supporting Documents</h4>
-                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-1 mb-2">
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Supporting Documents</h4>
+                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">
                             {uploadedCount} of {requiredCount} submitted
                           </p>
-                          <p className={`text-[13px] italic font-medium ${currentStep >= 3 ? 'text-gray-600 dark:text-stone-400' : 'text-[#7B1F35] dark:text-[#D05353]'}`}>
+                          <p className={`text-[12px] sm:text-[13px] italic font-medium ${currentStep >= 3 ? 'text-gray-600 dark:text-stone-400' : 'text-[#7B1F35] dark:text-[#D05353]'}`}>
                             {currentStep >= 3
                               ? '✓ All requirements submitted.'
                               : missingDocs.length > 0
@@ -537,9 +555,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
 
                     {/* Step 4: Adviser Review */}
-                    <div className={`relative flex gap-5 mb-5 z-10 ${currentStep < 3 ? 'opacity-60' : ''}`}>
+                    <div className={`relative flex gap-3 sm:gap-5 mb-5 z-10 ${currentStep < 3 ? 'opacity-60' : ''}`}>
                       {currentStep >= 4 ? <DoneNode /> : currentStep === 3 ? <ActiveNode /> : <PendingNode num={4} />}
-                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                      <div className={`flex-1 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm transition-all ${
                         currentStep >= 4
                           ? 'bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 hover:shadow-md'
                           : currentStep === 3
@@ -548,11 +566,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       }`}>
                         {currentStep === 3 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />}
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">Adviser Review</h4>
-                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-1 mb-2">
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Adviser Review</h4>
+                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">
                             {adviserName} · {currentStep >= 4 ? 'Approved' : 'Awaiting documents'}
                           </p>
-                          <p className="text-[13px] text-gray-600 dark:text-stone-400 italic">
+                          <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-stone-400 italic">
                             {currentStep >= 4
                               ? 'Your adviser has approved your submission!'
                               : 'Your adviser will review once all documents are submitted.'}
@@ -563,9 +581,9 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
 
                     {/* Step 5: Published */}
-                    <div className={`relative flex gap-5 mb-5 z-10 ${currentStep < 4 ? 'opacity-60' : ''}`}>
+                    <div className={`relative flex gap-3 sm:gap-5 mb-5 z-10 ${currentStep < 4 ? 'opacity-60' : ''}`}>
                       {currentStep >= 5 ? <DoneNode /> : currentStep === 4 ? <ActiveNode /> : <PendingNode num={5} />}
-                      <div className={`flex-1 rounded-xl p-5 flex items-start justify-between shadow-sm transition-all ${
+                      <div className={`flex-1 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm transition-all ${
                         currentStep >= 5
                           ? 'bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 hover:shadow-md'
                           : currentStep === 4
@@ -574,11 +592,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                       }`}>
                         {currentStep === 4 && !isPublished && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />}
                         <div>
-                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">Published in Archive</h4>
-                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-1 mb-2">
+                          <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Published in Archive</h4>
+                          <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">
                             {isPublished && publishedDate ? `Published · ${publishedDate}` : 'Public Access · Pending Dean approval'}
                           </p>
-                          <p className="text-[13px] text-gray-600 dark:text-stone-400 italic">
+                          <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-stone-400 italic">
                             {isPublished
                               ? '🎉 Your research is now searchable by the public!'
                               : 'After adviser approval, the Dean reviews for final publication.'}
@@ -597,14 +615,14 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
                 {/* Action Card — only show if not published */}
                 {!isPublished && !loading && (
-                  <Card hover className="bg-[#FCF9F2] dark:bg-red-950/30 p-6 border-t-4 border-[#CF3645]">
+                  <Card hover className="bg-[#FCF9F2] dark:bg-red-950/30 p-5 sm:p-6 border-t-4 border-[#CF3645]">
                     <p className="text-[10px] font-bold text-[#CF3645] dark:text-red-400 tracking-widest uppercase mb-1">Action Needed</p>
                     {currentStep <= 2 ? (
                       <>
-                        <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">
+                        <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">
                           {hasManuscript ? 'Complete your documents' : 'Upload your manuscript'}
                         </h3>
-                        <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-6">
+                        <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-5">
                           {hasManuscript && missingDocs.length > 0
                             ? `Upload ${missingDocs.slice(0, 2).join(' and ')} to move to adviser review.`
                             : hasManuscript
@@ -613,14 +631,14 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                         </p>
                         <PremiumButton
                           onClick={() => setActiveTab && setActiveTab('Requirements')}
-                          className="w-full bg-[#CF3645] dark:bg-red-500 hover:bg-[#B02A38] dark:hover:bg-red-600"
+                          className="w-full min-h-[44px] touch-manipulation bg-[#CF3645] dark:bg-red-500 hover:bg-[#B02A38] dark:hover:bg-red-600 justify-center"
                         >
                           Upload Now
                         </PremiumButton>
                       </>
                     ) : (
                       <>
-                        <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Awaiting Review</h3>
+                        <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Awaiting Review</h3>
                         <p className="text-[13px] text-gray-600 dark:text-stone-400">Your submission is complete. You will be notified when your adviser or dean takes action.</p>
                       </>
                     )}
@@ -630,19 +648,19 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 {/* Congrats card if published */}
                 {isPublished && !loading && (
                   <>
-                    <Card hover className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 p-6 border-t-4 border-[#7B1F35]">
-                      <p className="text-4xl mb-3 text-center">🎉</p>
-                      <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2 text-center">Research Published!</h3>
+                    <Card hover className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 p-5 sm:p-6 border-t-4 border-[#7B1F35]">
+                      <p className="text-3xl sm:text-4xl mb-3 text-center">🎉</p>
+                      <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2 text-center">Research Published!</h3>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 text-center">Your research is now live in the public archive and searchable by anyone.</p>
                     </Card>
 
-                    <Card hover className="p-6">
+                    <Card hover className="p-5 sm:p-6">
                       <p className="text-[10px] font-bold text-[#7B1F35] dark:text-[#D05353] tracking-widest uppercase mb-2">Next Steps</p>
-                      <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Start Another Project</h3>
+                      <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Start Another Project</h3>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-5">You can now begin uploading documents for a new research project under the same adviser.</p>
                       <PremiumButton
                         onClick={() => setShowNewResearchModal(true)}
-                        className="w-full bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#5D1627] dark:hover:bg-[#5a1831]"
+                        className="w-full min-h-[44px] touch-manipulation bg-[#7B1F35] dark:bg-[#7B1F35] hover:bg-[#5D1627] dark:hover:bg-[#5a1831] justify-center"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -654,7 +672,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 )}
 
                 {/* Adviser Card */}
-                <Card hover className="p-6">
+                <Card hover className="p-5 sm:p-6">
                   <p className="text-[10px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-4">Your Adviser</p>
                   {loading ? (
                     <div className="animate-pulse flex gap-4 mb-5">
@@ -666,11 +684,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
                   ) : (
                     <div className="flex items-center gap-4 mb-6">
-                      <div className="w-14 h-14 bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full text-white dark:text-white font-bold text-xl flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full text-white dark:text-white font-bold text-lg sm:text-xl flex items-center justify-center shrink-0 shadow-sm">
                         {adviserInitials}
                       </div>
-                      <div>
-                        <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{adviserName}</h4>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px] truncate">{adviserName}</h4>
                         <p className="text-[12px] text-gray-500 dark:text-stone-400 mb-0.5">Research Adviser</p>
                         {adviserEmail && (
                           <p className="text-[12px] text-gray-500 dark:text-stone-400 hover:text-[#7B1F35] dark:hover:text-[#7B1F35] cursor-pointer transition-colors truncate">{adviserEmail}</p>
@@ -680,7 +698,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   )}
                   <PremiumButton
                     onClick={handleSendMessage}
-                    className="w-full bg-[#7B1F35] dark:bg-stone-800 hover:bg-[#5D1627] dark:hover:bg-stone-700"
+                    className="w-full min-h-[44px] touch-manipulation bg-[#7B1F35] dark:bg-stone-800 hover:bg-[#5D1627] dark:hover:bg-stone-700 justify-center"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -690,20 +708,20 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 </Card>
 
                 {/* Helpful Tips */}
-                <Card hover className="p-6 bg-stone-50 dark:bg-stone-900">
+                <Card hover className="p-5 sm:p-6 bg-stone-50 dark:bg-stone-900">
                   <p className="text-[10px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Helpful Tips</p>
-                  <h3 className="font-serif font-bold text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-5">Did you know?</h3>
-                  <ul className="flex flex-col gap-4">
+                  <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-4">Did you know?</h3>
+                  <ul className="flex flex-col gap-3.5">
                     <li className="flex gap-3 items-start">
-                      <span className="text-[14px] mt-0.5">⏱️</span>
+                      <span className="text-[14px] mt-0.5 shrink-0">⏱️</span>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 leading-snug">Average review takes 5–7 days after all docs are submitted.</p>
                     </li>
                     <li className="flex gap-3 items-start">
-                      <span className="text-[14px] mt-0.5">📝</span>
+                      <span className="text-[14px] mt-0.5 shrink-0">📝</span>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 leading-snug">You can update your manuscript anytime before adviser review starts.</p>
                     </li>
                     <li className="flex gap-3 items-start">
-                      <span className="text-[14px] mt-0.5">💬</span>
+                      <span className="text-[14px] mt-0.5 shrink-0">💬</span>
                       <p className="text-[13px] text-gray-600 dark:text-stone-400 leading-snug">Adviser feedback will appear in your dashboard notifications.</p>
                     </li>
                   </ul>
@@ -716,16 +734,16 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       </div>
       {/* ── NEW RESEARCH MODAL ─────────────────────────────────────────────── */}
       {showNewResearchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#4a1024] dark:bg-[#7B1F35] px-6 py-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-[#4a1024] dark:bg-[#7B1F35] px-5 sm:px-6 py-4 sm:py-5 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-white/70 dark:text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">New Project</p>
-                <h3 className="text-white dark:text-white font-serif font-bold text-[18px]">Start New Research</h3>
+                <h3 className="text-white dark:text-white font-serif font-bold text-[17px] sm:text-[18px]">Start New Research</h3>
               </div>
               <button
                 onClick={() => setShowNewResearchModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-white"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-white touch-manipulation"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -733,7 +751,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
               </button>
             </div>
 
-            <form onSubmit={handleStartNewResearch} className="px-6 py-5 space-y-4">
+            <form onSubmit={handleStartNewResearch} className="overflow-y-auto px-5 sm:px-6 py-4 sm:py-5 space-y-4">
               <p className="text-[13px] text-gray-600 dark:text-stone-400 mb-2">
                 This will reset your dashboard to Step 1 so you can upload a new manuscript. 
                 Your published research will remain safely in the archive and your Dashboard's Past Publications.
@@ -747,7 +765,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   onChange={e => setNewResearchTitle(e.target.value)}
                   required
                   placeholder="e.g. AI in Education..."
-                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition"
+                  className="w-full min-h-[44px] border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition"
                 />
               </div>
 
@@ -759,7 +777,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   onChange={e => setNewGroupName(e.target.value)}
                   required
                   placeholder="e.g. Group 4 - IT4A"
-                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition"
+                  className="w-full min-h-[44px] border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition"
                 />
               </div>
 
@@ -769,7 +787,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   value={newCategory}
                   onChange={e => setNewCategory(e.target.value)}
                   required
-                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition appearance-none"
+                  className="w-full min-h-[44px] border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] dark:focus:border-[#7B1F35] transition appearance-none"
                 >
                   <option value="" disabled>Select a Category...</option>
                   {categoriesList.map(cat => (
@@ -782,7 +800,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 <button
                   type="submit"
                   disabled={isSubmittingNewResearch || !newResearchTitle.trim() || !newGroupName.trim() || !newCategory}
-                  className="w-full bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] dark:hover:bg-[#5a1831] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] touch-manipulation bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] dark:hover:bg-[#5a1831] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {isSubmittingNewResearch ? 'Initializing...' : 'Confirm & Start New Project'}
                 </button>
@@ -793,16 +811,16 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       )}
       {/* ── MESSAGE ADVISER MODAL ─────────────────────────────────────────────── */}
       {showMsgModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#4a1024] dark:bg-[#7B1F35] px-6 py-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-[#4a1024] dark:bg-[#7B1F35] px-5 sm:px-6 py-4 sm:py-5 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-white/70 dark:text-white/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Direct Message</p>
-                <h3 className="text-white dark:text-white font-serif font-bold text-[18px]">Message Your Adviser</h3>
+                <h3 className="text-white dark:text-white font-serif font-bold text-[17px] sm:text-[18px]">Message Your Adviser</h3>
               </div>
               <button
                 onClick={() => setShowMsgModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-white"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 flex items-center justify-center transition-colors text-white dark:text-white touch-manipulation"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -810,7 +828,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
               </button>
             </div>
 
-            <form onSubmit={submitMessageToAdviser} className="px-6 py-5 space-y-4">
+            <form onSubmit={submitMessageToAdviser} className="overflow-y-auto px-5 sm:px-6 py-4 sm:py-5 space-y-4">
               {msgStatus === 'success' && (
                 <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-3 rounded-xl text-sm font-medium border border-green-200 dark:border-green-800">
                   Message sent successfully! Your adviser will receive an email.
@@ -830,7 +848,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   onChange={e => setMsgSubject(e.target.value)}
                   required
                   placeholder="What is this about?"
-                  className="w-full border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition"
+                  className="w-full min-h-[44px] border border-[#E8DFCB] dark:border-stone-700 bg-[#FDFAF5] dark:bg-stone-800 rounded-xl px-4 py-2.5 text-sm text-[#1A1A1A] dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/30 focus:border-[#7a1f3d] transition"
                 />
               </div>
 
@@ -850,7 +868,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 <button
                   type="submit"
                   disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
-                  className="w-full bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] touch-manipulation bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {msgSending ? 'Sending...' : 'Send Message via Email'}
                   {!msgSending && (

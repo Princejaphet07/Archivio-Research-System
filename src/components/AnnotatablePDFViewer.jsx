@@ -30,6 +30,50 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
+  // Responsive page width to fit mobile screens perfectly
+  const [containerWidth, setContainerWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const padding = window.innerWidth < 640 ? 16 : 48;
+      return Math.min(850, Math.max(280, window.innerWidth - padding));
+    }
+    return 800;
+  });
+
+  const measureWidth = useCallback(() => {
+    const container = readOnly ? scrollContainerRef.current : containerRef.current;
+    if (container) {
+      const clientW = container.clientWidth;
+      if (clientW > 0) {
+        // Leave 16px padding on mobile so manuscript text occupies full readable width
+        const padding = window.innerWidth < 640 ? 16 : 48;
+        const available = clientW - padding;
+        setContainerWidth(Math.min(850, Math.max(260, available)));
+        return;
+      }
+    }
+    const padding = window.innerWidth < 640 ? 16 : 64;
+    setContainerWidth(Math.min(850, Math.max(260, window.innerWidth - padding)));
+  }, [readOnly]);
+
+  useEffect(() => {
+    measureWidth();
+    window.addEventListener('resize', measureWidth);
+
+    let ro = null;
+    const target = readOnly ? scrollContainerRef.current : containerRef.current;
+    if (target && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        measureWidth();
+      });
+      ro.observe(target);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measureWidth);
+      if (ro) ro.disconnect();
+    };
+  }, [measureWidth, readOnly]);
+
   // Settings for tools
   const tools = {
     pen: { color: '#ef4444', size: 2, globalCompositeOperation: 'source-over', opacity: 1 },
@@ -299,51 +343,62 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     <div className="flex flex-col h-full bg-stone-200 dark:bg-stone-950 overflow-hidden relative select-none">
 
       {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between p-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 shrink-0 shadow-sm z-10">
+      <div className="flex items-center justify-between p-2 sm:p-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 shrink-0 shadow-sm z-10 gap-2">
 
         {/* Pagination & Zoom */}
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
 
-          {/* Page indicator + inline Prev/Next (always visible in toolbar) */}
-          <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
+          {/* Page indicator + inline Prev/Next */}
+          <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 sm:p-1">
             <button
               onClick={goToPrev}
               disabled={pageNumber <= 1}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all"
+              className="p-1 sm:p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all touch-manipulation min-w-[30px] min-h-[30px] flex items-center justify-center"
               title="Previous page"
+              aria-label="Previous page"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <span className="px-3 text-sm font-medium text-stone-700 dark:text-stone-300 font-mono">
+            <span className="px-2 sm:px-3 text-xs sm:text-sm font-medium text-stone-700 dark:text-stone-300 font-mono select-none whitespace-nowrap">
               {pageNumber} / {numPages || '-'}
             </span>
             <button
               onClick={goToNext}
               disabled={pageNumber >= (numPages || 1)}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all"
+              className="p-1 sm:p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all touch-manipulation min-w-[30px] min-h-[30px] flex items-center justify-center"
               title="Next page"
+              aria-label="Next page"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
-          <div className="h-6 w-px bg-stone-300 dark:bg-stone-700 hidden sm:block"></div>
+          <div className="h-5 sm:h-6 w-px bg-stone-300 dark:bg-stone-700"></div>
 
-          <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1 hidden sm:flex">
+          {/* Zoom controls: accessible on mobile */}
+          <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 sm:p-1">
             <button
-              onClick={() => setScale(s => Math.max(0.5, s - 0.25))}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors"
+              onClick={() => setScale(s => Math.max(0.6, parseFloat((s - 0.15).toFixed(2))))}
+              className="p-1 sm:p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
+              title="Zoom out"
+              aria-label="Zoom out"
             >
-              <ZoomOut className="w-4 h-4" />
+              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-            <span className="px-2 text-xs font-medium text-stone-700 dark:text-stone-300 w-12 text-center">
-              {Math.round(scale * 100)}%
-            </span>
             <button
-              onClick={() => setScale(s => Math.min(3.0, s + 0.25))}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors"
+              onClick={() => setScale(1.0)}
+              className="px-1.5 sm:px-2 text-[11px] sm:text-xs font-semibold text-stone-700 dark:text-stone-300 min-w-[36px] sm:w-12 text-center hover:bg-white dark:hover:bg-stone-700 rounded py-0.5 transition-colors"
+              title="Reset to Fit Width (100%)"
             >
-              <ZoomIn className="w-4 h-4" />
+              {Math.round(scale * 100)}%
+            </button>
+            <button
+              onClick={() => setScale(s => Math.min(2.5, parseFloat((s + 0.15).toFixed(2))))}
+              className="p-1 sm:p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
+              title="Zoom in"
+              aria-label="Zoom in"
+            >
+              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
@@ -413,7 +468,7 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
           <div
             ref={scrollContainerRef}
             onScroll={handleScrollActivity}
-            className="flex-1 overflow-y-auto overflow-x-auto bg-stone-200 dark:bg-stone-950 flex flex-col items-center py-6 gap-4"
+            className="flex-1 overflow-y-auto overflow-x-auto bg-stone-200 dark:bg-stone-950 flex flex-col items-center py-3 sm:py-6 px-1 sm:px-4 gap-3 sm:gap-4"
           >
             <Document
               file={documentUrl}
@@ -426,21 +481,20 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
                   key={pg}
                   ref={el => setPageRef(pg, el)}
                   data-page={pg}
-                  className="shadow-2xl bg-white"
-                  style={{ transform: `scale(${scale})`, transformOrigin: 'top center', marginBottom: scale > 1 ? `${(scale - 1) * 600}px` : '0' }}
+                  className="shadow-md sm:shadow-xl bg-white max-w-full overflow-hidden transition-all rounded-sm"
                 >
                   <Page
                     pageNumber={pg}
                     renderTextLayer={true}
                     renderAnnotationLayer={false}
-                    width={800}
+                    width={Math.round(containerWidth * scale)}
                   />
                 </div>
               ))}
             </Document>
 
             {/* Spacer so last page isn't flush to bottom */}
-            <div className="h-24 shrink-0" />
+            <div className="h-16 sm:h-24 shrink-0" />
           </div>
         ) : (
           /* ══ SINGLE-PAGE MODE (annotation): one page at a time ══ */
@@ -462,7 +516,7 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
                   renderAnnotationLayer={false}
                   onRenderSuccess={onPageRenderSuccess}
                   className="pointer-events-none bg-white"
-                  width={800}
+                  width={Math.min(800, containerWidth)}
                 />
               </Document>
 
@@ -540,10 +594,10 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
         </div>
       )}
 
-      {/* ── Floating Prev / Next bar (scroll mode only) ───────────────────── */}
+      {/* ── Floating Prev / Next bar (scroll mode only, hidden on mobile so it doesn't block text) ── */}
       {readOnly && numPages && (
         <div
-          className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-stone-900/85 dark:bg-stone-950/90 backdrop-blur-md rounded-full px-3 py-1.5 shadow-2xl ring-1 ring-white/10 transition-all duration-500 group/bar ${
+          className={`hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-30 items-center gap-1 bg-stone-900/85 dark:bg-stone-950/90 backdrop-blur-md rounded-full px-3 py-1.5 shadow-2xl ring-1 ring-white/10 transition-all duration-500 group/bar ${
             isScrolling
               ? 'opacity-0 pointer-events-none translate-y-2'
               : 'opacity-100 pointer-events-auto translate-y-0'

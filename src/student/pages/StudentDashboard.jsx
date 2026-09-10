@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../Components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { db, auth } from '../../firebase/config';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import NotificationBell from '../Components/NotificationBell';
-import PortalHeader from '../Components/PortalHeader';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import NotificationBell from '../components/NotificationBell';
+import PortalHeader from '../components/PortalHeader';
 import StudentDashboardSkeleton from '../components/skeletons/StudentDashboardSkeleton';
 import { Card, CardHeader, CardBody, CardFooter, StatCard, StatusBadge, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
@@ -43,12 +43,23 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
     setLoadingData(true);
 
     // 1. Real-time listener for student doc
-    const studentQuery = query(collection(db, 'students'), where('uid', '==', uid));
-    const unsubscribeStudent = onSnapshot(studentQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        setStudentData(snapshot.docs[0].data());
+    const stdDocRef = doc(db, 'students', uid);
+    const unsubscribeStudent = onSnapshot(stdDocRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        setStudentData({ id: docSnap.id, ...docSnap.data() });
+        setLoadingData(false);
+      } else {
+        try {
+          const studentQuery = query(collection(db, 'students'), where('uid', '==', uid));
+          const snap = await getDocs(studentQuery);
+          if (!snap.empty) {
+            setStudentData({ id: snap.docs[0].id, ...snap.docs[0].data() });
+          }
+        } catch (e) {
+          console.warn('Student query error:', e.message);
+        }
+        setLoadingData(false);
       }
-      setLoadingData(false);
     }, (err) => {
       console.error('Student real-time fetch error:', err);
       setLoadingData(false);
@@ -105,9 +116,9 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   }, [role, leaderUid]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
-  const displayName       = studentData?.displayName || studentName || 'Student';
-  const displayGroupName  = studentData?.groupName   || groupName   || 'Your Group';
-  const displayAdviser    = studentData?.invitedByName || adviserName || 'Your Adviser';
+  const displayName       = studentData?.displayName || (studentData?.firstName ? `${studentData.firstName} ${studentData.lastName || ''}`.trim() : null) || studentName || 'Student';
+  const displayGroupName  = studentData?.groupName   || studentData?.groupMembers?.groupName || groupName   || 'Your Group';
+  const displayAdviser    = studentData?.invitedByName || studentData?.groupMembers?.invitedByName || adviserName || 'Your Adviser';
   const researchTitle     = studentData?.researchTitle || submission?.title || '—';
 
   const hasManuscript     = !!submission?.manuscriptUrl || docsUploaded.includes('Final Manuscript');
@@ -192,7 +203,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
         />
 
         {/* SCROLLABLE BODY */}
-        <div className="flex-1 overflow-y-auto px-8 pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-10">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pt-2">
 
             {/* ── WELCOME BANNER ────────────────────────────────── */}
@@ -200,28 +211,28 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
               <div className="absolute top-0 right-0 h-full w-[40%] bg-white/5 rounded-l-[100px] pointer-events-none" />
               <div className="absolute -top-10 right-20 h-[150%] w-[20%] bg-white/5 rounded-full pointer-events-none transform rotate-12" />
 
-              <div className="p-8 flex justify-between items-start relative z-10">
+              <div className="p-5 sm:p-8 flex flex-col sm:flex-row justify-between items-start gap-4 relative z-10">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2">
-                    {getGreeting()}, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-6xl animate-wave origin-bottom-right inline-block">👋</span>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-white mb-2 leading-tight">
+                    {getGreeting()}, {(displayName && displayName !== 'STUDENT') ? displayName.split(' ')[0] : 'Student'} <span className="text-3xl sm:text-4xl md:text-6xl animate-wave origin-bottom-right inline-block">👋</span>
                   </h1>
-                  <p className="text-white/80 text-[15px]">Welcome back to your research portal</p>
+                  <p className="text-white/80 text-[13px] sm:text-[15px]">Welcome back to your research portal</p>
                 </div>
 
-                <div className="text-right">
+                <div className="text-left sm:text-right w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
                   <p className="text-white/60 text-[10px] tracking-[0.2em] font-bold uppercase mb-1">Your Group</p>
                   {loadingData ? (
-                    <div className="h-6 w-40 bg-white/20 rounded animate-pulse ml-auto mb-1" />
+                    <div className="h-6 w-40 bg-white/20 rounded animate-pulse sm:ml-auto mb-1" />
                   ) : (
-                    <h3 className="text-white font-serif text-[22px] font-bold leading-tight">{displayGroupName}</h3>
+                    <h3 className="text-white font-serif text-[18px] sm:text-[22px] font-bold leading-tight">{displayGroupName}</h3>
                   )}
                   {loadingData ? (
-                    <div className="h-4 w-32 bg-white/20 rounded animate-pulse ml-auto mt-1" />
+                    <div className="h-4 w-32 bg-white/20 rounded animate-pulse sm:ml-auto mt-1" />
                   ) : (
                     <>
-                      <p className="text-white/80 text-[13px] mt-1">Adviser: {displayAdviser}</p>
+                      <p className="text-white/80 text-[12px] sm:text-[13px] mt-1">Adviser: {displayAdviser}</p>
                       {studentData?.adviserUid && (
-                        <p className="text-white/60 text-[11px] mt-0.5 truncate max-w-[200px] ml-auto" title="Contact via Email">
+                        <p className="text-white/60 text-[11px] mt-0.5 truncate max-w-[240px] sm:ml-auto" title="Contact via Email">
                           ✉️ {studentData.adviserUid}
                         </p>
                       )}
@@ -230,11 +241,11 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                 </div>
               </div>
 
-              <div className="w-full border-t border-white/10 px-8 py-4 relative z-10">
+              <div className="w-full border-t border-white/10 px-5 sm:px-8 py-3.5 sm:py-4 relative z-10">
                 {loadingData ? (
                   <div className="h-4 w-64 bg-white/20 rounded animate-pulse" />
                 ) : (
-                  <p className="text-white/80 text-[14px]">
+                  <p className="text-white/80 text-[13px] sm:text-[14px]">
                     Your submission is <span className="text-white font-bold">
                       {isPublished ? 'Published ✓'
                         : isReviewed ? 'Under Review · Step 4 of 5'
@@ -251,14 +262,14 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             {loadingData ? (
               <StudentDashboardSkeleton />
             ) : studentData?.groupStatus === 'pending' ? (
-              <div className="bg-[#fff7ed] dark:bg-orange-950/30 border border-[#fed7aa] dark:border-orange-900/50 rounded-xl p-10 flex flex-col items-center justify-center text-center shadow-sm mt-4 transition-colors">
-                <div className="w-20 h-20 bg-[#ffedd5] dark:bg-orange-900/50 text-[#c2410c] dark:text-orange-400 rounded-full flex items-center justify-center mb-5">
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <div className="bg-[#fff7ed] dark:bg-orange-950/30 border border-[#fed7aa] dark:border-orange-900/50 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center text-center shadow-sm mt-4 transition-colors">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#ffedd5] dark:bg-orange-900/50 text-[#c2410c] dark:text-orange-400 rounded-full flex items-center justify-center mb-5">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <h3 className="font-serif text-[28px] font-bold text-[#9a3412] dark:text-orange-400 mb-2">Group Pending Approval</h3>
-                <p className="text-[#9a3412]/80 dark:text-orange-400/80 text-[16px] max-w-md">
+                <h3 className="font-serif text-[22px] sm:text-[28px] font-bold text-[#9a3412] dark:text-orange-400 mb-2">Group Pending Approval</h3>
+                <p className="text-[#9a3412]/80 dark:text-orange-400/80 text-[14px] sm:text-[16px] max-w-md">
                   Your research adviser (<strong>{displayAdviser}</strong>) has not yet approved your group registration. 
                   You will be able to start your research and upload documents once approved.
                 </p>
@@ -266,23 +277,23 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
             ) : (
               <>
                 {/* ── WHAT'S NEXT CARD ──────────────────────────────── */}
-                <Card hover className="mt-6">
+                <Card hover className="mt-4 sm:mt-6">
                   {/* left accent bar */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C73D4C] to-[#7B1F35] rounded-l-2xl" />
-                  <CardBody className="pl-8">
-                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-[#f8eef1] dark:bg-[#7B1F35]/20 rounded-2xl flex items-center justify-center shrink-0 border border-[#f0dee5] dark:border-[#7B1F35]/30 shadow-inner">
-                        <svg className="w-7 h-7 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <CardBody className="p-5 sm:p-6 pl-6 sm:pl-8">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#f8eef1] dark:bg-[#7B1F35]/20 rounded-2xl flex items-center justify-center shrink-0 border border-[#f0dee5] dark:border-[#7B1F35]/30 shadow-inner">
+                        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#7B1F35] dark:text-[#D05353]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                         </svg>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-bold text-[#D05353] tracking-widest uppercase mb-1">What's Next</p>
-                        <h3 className="font-serif text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
-                        <p className="text-stone-500 dark:text-stone-400 text-[14px] mt-0.5">{whatsNextDesc}</p>
+                        <h3 className="font-serif text-[18px] sm:text-[22px] font-bold text-[#1A1A1A] dark:text-stone-100">{whatsNextTitle}</h3>
+                        <p className="text-stone-500 dark:text-stone-400 text-[13px] sm:text-[14px] mt-0.5">{whatsNextDesc}</p>
                       </div>
                       {showUploadButton && (
-                        <PremiumButton onClick={goToRequirements} className="shrink-0">
+                        <PremiumButton onClick={goToRequirements} className="w-full sm:w-auto justify-center shrink-0 touch-manipulation">
                           Upload Documents
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -308,13 +319,13 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   </CardHeader>
                   <CardBody>
 
-                    <div className="relative pt-2 pb-6 px-4">
+                    <div className="relative pt-2 pb-6 px-1 sm:px-4 overflow-x-auto scrollbar-none">
                       <div className="absolute top-5 left-0 w-full h-2.5 bg-stone-100 dark:bg-stone-800 rounded-full" />
                       <div
                         className="absolute top-5 left-0 h-2.5 bg-gradient-to-r from-[#7B1F35] to-[#C73D4C] rounded-full transition-all duration-700 shadow-sm"
                         style={{ width: `${Math.max(2, (Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100)}%` }}
                       />
-                    <div className="relative flex justify-between z-10 text-[12px] font-bold">
+                    <div className="relative flex justify-between z-10 text-[10px] sm:text-[12px] font-bold min-w-[280px]">
                       {STEPS.map((step, idx) => {
                         const isDone    = idx < currentStep;
                         const isCurrent = idx === currentStep;
@@ -322,7 +333,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         return (
                           <div
                             key={step}
-                            className={`flex flex-col items-center gap-3 w-20 ${idx === 0 ? '-ml-4' : ''} ${idx === STEPS.length - 1 ? '-mr-4' : ''}`}
+                            className={`flex flex-col items-center gap-2 sm:gap-3 w-16 sm:w-20 shrink-0 sm:shrink ${idx === 0 ? '-ml-2 sm:-ml-4' : ''} ${idx === STEPS.length - 1 ? '-mr-2 sm:-mr-4' : ''}`}
                           >
                             <div className="relative">
                               {/* Outer Ripple Effect for Current Step */}
@@ -330,24 +341,24 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                                 <div className="absolute inset-0 rounded-full bg-[#7B1F35] opacity-20 animate-ping" />
                               )}
                               
-                              <div className={`relative w-[34px] h-[34px] rounded-full ring-[6px] ring-white dark:ring-stone-900 flex items-center justify-center transition-all duration-500 z-10 ${
+                              <div className={`relative w-7 h-7 sm:w-[34px] sm:h-[34px] rounded-full ring-4 sm:ring-[6px] ring-white dark:ring-stone-900 flex items-center justify-center transition-all duration-500 z-10 ${
                                 isDone
                                   ? 'bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white shadow-md'
                                   : isCurrent
                                     ? 'bg-white dark:bg-stone-900 border-[3px] border-[#7B1F35] dark:border-[#7B1F35] shadow-md'
-                                    : 'bg-white dark:bg-stone-900 border-[5px] border-stone-200 dark:border-stone-700'
+                                    : 'bg-white dark:bg-stone-900 border-4 sm:border-[5px] border-stone-200 dark:border-stone-700'
                               }`}>
                                 {isDone && (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
                                 )}
                                 {isCurrent && (
-                                  <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35] animate-pulse" />
+                                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#7B1F35] animate-pulse" />
                                 )}
                               </div>
                             </div>
-                            <span className={isPending ? 'text-gray-400 dark:text-stone-500 font-medium' : 'text-[#1A1A1A] dark:text-stone-300'}>
+                            <span className={`text-center ${isPending ? 'text-gray-400 dark:text-stone-500 font-medium' : 'text-[#1A1A1A] dark:text-stone-300'}`}>
                               {step}
                             </span>
                           </div>
@@ -394,14 +405,14 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                       <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-6">Upload your final research manuscript to get started.</p>
                     </>
                   )}
-                  <div className="mt-auto flex items-center gap-3">
+                  <div className="mt-auto flex flex-wrap items-center gap-2 sm:gap-3 pt-4">
                     {hasManuscript ? (
                       <>
-                        <PremiumButton onClick={goToRequirements} variant="ghost" size="sm">Edit</PremiumButton>
-                        <PremiumButton onClick={goToRequirements} size="sm">View Manuscript</PremiumButton>
+                        <PremiumButton onClick={goToRequirements} variant="ghost" size="sm" className="min-h-[40px] touch-manipulation">Edit</PremiumButton>
+                        <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">View Manuscript</PremiumButton>
                       </>
                     ) : (
-                      <PremiumButton onClick={goToRequirements} size="sm">Upload Manuscript</PremiumButton>
+                      <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">Upload Manuscript</PremiumButton>
                     )}
                   </div>
                 </CardBody>
@@ -468,13 +479,13 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                       </span>
                     )}
                   </div>
-                  <div className="mt-auto flex items-center gap-3">
-                    <PremiumButton onClick={goToRequirements} variant="ghost" size="sm">View All</PremiumButton>
+                  <div className="mt-auto flex flex-wrap items-center gap-2 sm:gap-3 pt-4">
+                    <PremiumButton onClick={goToRequirements} variant="ghost" size="sm" className="min-h-[40px] touch-manipulation">View All</PremiumButton>
                     {missingCount > 0 && (
-                      <PremiumButton onClick={goToRequirements} variant="danger" size="sm">Upload Missing</PremiumButton>
+                      <PremiumButton onClick={goToRequirements} variant="danger" size="sm" className="min-h-[40px] touch-manipulation">Upload Missing</PremiumButton>
                     )}
                     {uploadedCount === 0 && !loadingData && (
-                      <PremiumButton onClick={goToRequirements} size="sm">Start Uploading</PremiumButton>
+                      <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">Start Uploading</PremiumButton>
                     )}
                   </div>
                 </CardBody>

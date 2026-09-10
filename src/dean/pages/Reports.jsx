@@ -86,10 +86,16 @@ export default function Reports() {
           setAllYears(years);
           const advisers = [...new Set(merged.map(r => r.adviser))].filter(Boolean).sort();
           setAllAdvisers(advisers);
+        }, (err) => {
+          console.warn('Requirements listener notice:', err.message);
         });
         return () => unsubReqs();
+      }, (err) => {
+        console.warn('Submissions listener notice:', err.message);
       });
       return () => unsubSubs();
+    }, (err) => {
+      console.warn('Groups listener notice:', err.message);
     });
     return () => unsubGroups();
   }, [deanData]);

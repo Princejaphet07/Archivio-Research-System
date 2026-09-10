@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 const UserContext = createContext();
 
@@ -24,29 +25,65 @@ export const UserProvider = ({ children }) => {
       if (firebaseUser) {
         setUser(firebaseUser);
 
-        // Fetch dean profile from Firestore — query by EMAIL so data persists across re-created accounts
+        // Fetch dean profile from Firestore:
+        // 1. Try 'deans' collection first (by email or uid)
+        // 2. Try 'users' collection
+        // 3. Fallback to 'advisers' collection
         try {
-          const { collection: col, query: q, where, getDocs, onSnapshot } = await import('firebase/firestore');
-          const advisersQuery = q(col(db, 'advisers'), where('email', '==', firebaseUser.email));
-          const advisersSnap = await getDocs(advisersQuery);
+          let profile = null;
 
-          if (!advisersSnap.empty) {
-            const adviserDoc = advisersSnap.docs[0];
-            setDeanData({ ...adviserDoc.data(), docId: adviserDoc.id });
+          // Check deans collection (direct doc, email query, uid query)
+          const deansDirectSnap = await getDoc(doc(db, 'deans', firebaseUser.uid));
+          if (deansDirectSnap.exists()) {
+            profile = { ...deansDirectSnap.data(), docId: deansDirectSnap.id };
           } else {
-            // Fallback: try 'users' collection by email
-            const usersQuery = q(col(db, 'users'), where('email', '==', firebaseUser.email));
-            const usersSnap = await getDocs(usersQuery);
-            if (!usersSnap.empty) {
-              setDeanData(usersSnap.docs[0].data());
+            const deansEmailQuery = query(collection(db, 'deans'), where('email', '==', firebaseUser.email));
+            const deansEmailSnap = await getDocs(deansEmailQuery);
+            if (!deansEmailSnap.empty) {
+              const dDoc = deansEmailSnap.docs[0];
+              profile = { ...dDoc.data(), docId: dDoc.id };
+            } else {
+              const deansUidQuery = query(collection(db, 'deans'), where('uid', '==', firebaseUser.uid));
+              const deansUidSnap = await getDocs(deansUidQuery);
+              if (!deansUidSnap.empty) {
+                const dDoc = deansUidSnap.docs[0];
+                profile = { ...dDoc.data(), docId: dDoc.id };
+              }
             }
           }
+
+          // Check users collection if not found in deans
+          if (!profile) {
+            const usersQuery = query(collection(db, 'users'), where('email', '==', firebaseUser.email));
+            const usersSnap = await getDocs(usersQuery);
+            if (!usersSnap.empty) {
+              const uDoc = usersSnap.docs[0];
+              profile = { ...uDoc.data(), docId: uDoc.id };
+            } else {
+              const userDirectSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+              if (userDirectSnap.exists()) {
+                profile = { ...userDirectSnap.data(), docId: userDirectSnap.id };
+              }
+            }
+          }
+
+          // Fallback to advisers collection
+          if (!profile) {
+            const advisersQuery = query(collection(db, 'advisers'), where('email', '==', firebaseUser.email));
+            const advisersSnap = await getDocs(advisersQuery);
+            if (!advisersSnap.empty) {
+              const aDoc = advisersSnap.docs[0];
+              profile = { ...aDoc.data(), docId: aDoc.id };
+            }
+          }
+
+          setDeanData(profile);
         } catch (error) {
           console.error('Error fetching dean data:', error);
         }
 
         // Listen to dean settings
-        import('firebase/firestore').then(({ onSnapshot }) => {
+        try {
           settingsUnsub = onSnapshot(doc(db, 'dean_settings', firebaseUser.uid), (docSnap) => {
             if (docSnap.exists()) {
               setDeanSettings(docSnap.data());
@@ -69,8 +106,12 @@ export const UserProvider = ({ children }) => {
                 }
               });
             }
+          }, (err) => {
+            console.warn('Dean settings listener notice:', err.message);
           });
-        });
+        } catch (e) {
+          console.error('Error subscribing to dean settings:', e);
+        }
       } else {
         setUser(null);
         setDeanData(null);

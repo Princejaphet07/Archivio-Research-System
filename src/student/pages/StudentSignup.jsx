@@ -440,13 +440,13 @@ export default function StudentSignup({ onSwitchPage }) {
             >
               {step > s ? '✓' : s}
             </div>
-            <span className="text-[10px] mt-1 font-medium" style={{ color: step >= s ? '#6B0F1A' : '#9ca3af' }}>
-              {['Personal Info', 'Group Info', 'Account Security'][i]}
+            <span className="text-[10px] mt-1 font-medium text-center" style={{ color: step >= s ? '#6B0F1A' : '#9ca3af' }}>
+              {['Personal Info', 'Group Info', 'Security'][i]}
             </span>
           </div>
           {i < 2 && (
             <div
-              className="w-20 h-0.5 mb-4 mx-1 transition-all duration-300"
+              className="w-8 sm:w-16 h-0.5 mb-4 mx-1 transition-all duration-300"
               style={{ backgroundColor: step > s ? '#6B0F1A' : '#d1d5db' }}
             />
           )}
@@ -457,19 +457,19 @@ export default function StudentSignup({ onSwitchPage }) {
 
   return (
     <div
-      className="w-full min-h-screen bg-cover bg-center font-serif flex flex-col items-center justify-center py-10 px-4 relative"
+      className="w-full min-h-screen bg-cover bg-center font-serif flex flex-col items-center justify-center py-6 sm:py-10 px-3 sm:px-4 relative"
       style={{ backgroundImage: `url(${parchmentBg})` }}
     >
       {/* Logo & Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-full border-2 border-[#6B0F1A] p-0.5 bg-white shadow-sm flex items-center justify-center">
-          <img src={swuLogoSeal} alt="SWU Logo" className="w-9 h-9 object-contain" />
+      <div className="flex items-center gap-2.5 sm:gap-3 mb-5 sm:mb-6 text-center">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#6B0F1A] p-0.5 bg-white shadow-sm flex items-center justify-center shrink-0">
+          <img src={swuLogoSeal} alt="SWU Logo" className="w-7 h-7 sm:w-9 sm:h-9 object-contain" />
         </div>
-        <span className="text-[#2A1115] text-lg font-bold tracking-wide">Research Archive Management System</span>
+        <span className="text-[#2A1115] text-base sm:text-lg font-bold tracking-wide">Research Archive Management System</span>
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-lg bg-[#fdfaf4] rounded-2xl shadow-xl p-8 border border-[#ddd5c8]">
+      <div className="w-full max-w-lg bg-[#fdfaf4] rounded-2xl shadow-xl p-5 sm:p-8 border border-[#ddd5c8]">
 
         <StepIndicator />
 
@@ -567,7 +567,7 @@ export default function StudentSignup({ onSwitchPage }) {
               <button
                 type="button" onClick={handleContinueFromStep1}
                 disabled={loading}
-                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition disabled:opacity-50">
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition disabled:opacity-50 flex items-center justify-center">
                 {loading ? 'Checking...' : 'Continue ›'}
               </button>
             </div>
@@ -660,7 +660,7 @@ export default function StudentSignup({ onSwitchPage }) {
                     className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
                 </div>
                 <button type="button" onClick={handleAddMember}
-                  className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition self-stretch">
+                  className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition self-stretch min-h-[44px] touch-manipulation flex items-center justify-center">
                   Add
                 </button>
               </div>
@@ -668,11 +668,11 @@ export default function StudentSignup({ onSwitchPage }) {
 
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(1)}
-                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition">
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
                 ‹ Back
               </button>
               <button type="button" onClick={() => { if (validateStep2()) setStep(3); }}
-                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition">
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
                 Continue ›
               </button>
             </div>
@@ -787,13 +787,13 @@ export default function StudentSignup({ onSwitchPage }) {
 
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(2)}
-                className="flex-1 py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition">
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
                 ‹ Back
               </button>
               <button
                 type="submit"
                 disabled={loading || !securityInfo.agreeTerms}
-                className="flex-1 py-2.5 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 style={{
                   backgroundColor: securityInfo.agreeTerms && !loading ? '#6B0F1A' : '#9ca3af',
                   color: 'white'

@@ -263,7 +263,7 @@ export default function NotificationBell({ onNavigate }) {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700/50 overflow-hidden z-[9999] transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-x-3 sm:inset-x-auto sm:absolute sm:right-0 top-16 sm:top-auto sm:mt-3 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700/50 overflow-hidden z-[9999] transform sm:origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-gradient-to-r from-[#7B1F35] to-[#9a2843] dark:from-stone-800 dark:to-stone-800 text-white px-5 py-4 flex justify-between items-center shadow-inner">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-[15px] tracking-wide">Notifications</h3>
@@ -349,15 +349,16 @@ export default function NotificationBell({ onNavigate }) {
                         )}
                       </div>
                     </div>
-                    <div className="absolute right-4 top-5 flex flex-col items-end gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="absolute right-3 top-4 flex flex-col items-end gap-2 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <button 
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteNotification(n.id, e);
                         }}
-                        className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors touch-manipulation"
                         title="Delete notification"
+                        aria-label="Delete notification"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

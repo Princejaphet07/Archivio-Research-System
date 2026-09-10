@@ -39,6 +39,8 @@ export default function PublishQueue({ activePage, onNavigate }) {
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setSubmissions(all);
+    }, (err) => {
+      console.warn('PublishQueue submissions listener notice:', err.message);
     });
 
     // 2. Fetch Groups — filter by department (robust partial match)
@@ -51,11 +53,16 @@ export default function PublishQueue({ activePage, onNavigate }) {
         return gDept.includes(deptLower) || deptLower.includes(gDept) ||
                gProg.includes(deptLower) || deptLower.includes(gProg);
       }));
+    }, (err) => {
+      console.warn('PublishQueue groups listener notice:', err.message);
     });
 
     // 3. Fetch Requirements
     const unsubReqs = onSnapshot(collection(db, 'requirements'), (snapshot) => {
       setRequirements(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.warn('PublishQueue requirements listener notice:', err.message);
       setLoading(false);
     });
 

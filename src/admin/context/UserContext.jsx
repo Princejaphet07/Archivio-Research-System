@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 const UserContext = createContext(null);
 
@@ -16,23 +16,42 @@ export function UserProvider({ children }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          let userData = null;
+          let role = null;
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.role === 'admin' || userData.role === 'super-admin') {
-              setCurrentUser({
-                uid: user.uid,
-                email: user.email,
-                displayName: userData.displayName || userData.email,
-                role: userData.role,
-                moduleAccess: userData.moduleAccess || {}
-              });
+            userData = userDoc.data();
+            role = userData.role;
+          }
+
+          if (role !== 'admin' && role !== 'super-admin') {
+            // Check super_admins collection by uid
+            const saQuery = query(collection(db, 'super_admins'), where('uid', '==', user.uid));
+            const saSnap = await getDocs(saQuery);
+            if (!saSnap.empty) {
+              userData = saSnap.docs[0].data();
+              role = 'super-admin';
             } else {
-              // Not an admin, kick them out
-              await signOut(auth);
-              window.location.href = '/';
+              // Check super_admins collection by email
+              const saEmailQuery = query(collection(db, 'super_admins'), where('email', '==', user.email));
+              const saEmailSnap = await getDocs(saEmailQuery);
+              if (!saEmailSnap.empty) {
+                userData = saEmailSnap.docs[0].data();
+                role = 'super-admin';
+              }
             }
+          }
+
+          if (role === 'admin' || role === 'super-admin') {
+            setCurrentUser({
+              uid: user.uid,
+              email: user.email,
+              displayName: userData?.displayName || user.displayName || user.email,
+              role: role,
+              moduleAccess: userData?.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true }
+            });
           } else {
+            // Not an admin, kick them out
             await signOut(auth);
             window.location.href = '/';
           }

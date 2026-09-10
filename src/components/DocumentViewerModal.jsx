@@ -70,30 +70,30 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm">
       {/* Modal Container */}
-      <div className="bg-white dark:bg-stone-900 w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 relative transform transition-all">
+      <div className="bg-white dark:bg-stone-900 w-full max-w-6xl h-[100dvh] sm:h-[92vh] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 relative transform transition-all">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#7a2e46]/10 dark:bg-[#f8d070]/10 flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070]">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-full bg-[#7a2e46]/10 dark:bg-[#f8d070]/10 flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-stone-100 text-[15px]">{documentTitle || 'Document Viewer'}</h3>
-              <p className="text-xs text-gray-500 dark:text-stone-400">Secure Preview</p>
+            <div className="min-w-0">
+              <h3 className="font-bold text-gray-900 dark:text-stone-100 text-[14px] sm:text-[15px] truncate max-w-[140px] xs:max-w-[220px] sm:max-w-none">{documentTitle || 'Document Viewer'}</h3>
+              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Secure Preview</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <a 
               href={resolvedUrl || documentUrl} 
               target="_blank" 
               rel="noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors"
+              className="flex items-center gap-1.5 p-2 sm:px-4 sm:py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors touch-manipulation"
               title="Open in new tab"
             >
               <ExternalLink className="w-4 h-4" />
@@ -103,18 +103,19 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
             <a 
               href={resolvedUrl || documentUrl} 
               download
-              className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-colors"
+              className="flex items-center gap-1.5 p-2 sm:px-4 sm:py-2 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-colors touch-manipulation"
               title="Download Document"
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Download</span>
             </a>
 
-            <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-1"></div>
+            <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-0.5 sm:mx-1"></div>
 
             <button 
               onClick={onClose}
-              className="p-2 text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors"
+              className="p-2 text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors touch-manipulation"
+              aria-label="Close modal"
             >
               <X className="w-5 h-5" />
             </button>

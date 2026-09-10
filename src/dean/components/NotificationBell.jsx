@@ -48,6 +48,8 @@ export default function NotificationBell() {
         const data = docSnap.data();
         setPrefs(data.notificationPrefs || {});
       }
+    }, (err) => {
+      console.warn('User notification prefs notice:', err.message);
     });
 
     return () => unsubUser();
@@ -58,12 +60,10 @@ export default function NotificationBell() {
     const email = auth.currentUser?.email;
     if (!uid && !email) return;
 
-    const userIds = [uid, email].filter(Boolean);
-
     // Fetch notifications without orderBy to avoid needing a composite index
     const q = query(
       collection(db, 'notifications'), 
-      where('userId', 'in', userIds)
+      where('userId', '==', uid)
     );
 
     const unsub = onSnapshot(q, (snap) => {
@@ -85,6 +85,8 @@ export default function NotificationBell() {
       });
 
       setNotifications(notifs);
+    }, (err) => {
+      console.warn('Dean notifications listener notice:', err.message);
     });
 
     return () => unsub();

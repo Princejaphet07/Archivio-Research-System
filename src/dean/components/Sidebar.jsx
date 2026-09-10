@@ -118,7 +118,10 @@ export default function Sidebar({ onNavigate }) {
       
       const newCount = Math.max(0, currentCount - lastSeen);
       setCounts(prev => ({ ...prev, researchRecordsNew: newCount, researchRecordsTotal: currentCount }));
+    }, (err) => {
+      console.warn('Sidebar groups listener notice:', err.message);
     });
+
     const unsubSubs = onSnapshot(collection(db, 'submissions'), (snap) => {
       // DEPARTMENT FILTER
       const approvedCount = snap.docs.filter(doc => {
@@ -126,7 +129,10 @@ export default function Sidebar({ onNavigate }) {
         return data.reviewStatus === 'approved' && (data.program || data.department) === deanDept;
       }).length;
       setCounts(prev => ({ ...prev, publishQueue: approvedCount }));
+    }, (err) => {
+      console.warn('Sidebar submissions listener notice:', err.message);
     });
+
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       // DEPARTMENT FILTER
       const inactiveCount = snap.docs.filter(doc => {
@@ -134,6 +140,8 @@ export default function Sidebar({ onNavigate }) {
         return data.status === 'inactive' && data.department === deanDept;
       }).length;
       setCounts(prev => ({ ...prev, userManagement: inactiveCount }));
+    }, (err) => {
+      console.warn('Sidebar advisers listener notice:', err.message);
     });
     
     return () => {
@@ -151,9 +159,9 @@ export default function Sidebar({ onNavigate }) {
     }
   }, [activePage, counts.researchRecordsTotal]);
 
-  // Extract initials from displayName
-  const deanName = deanData?.displayName || 'Dean';
-  const initials = deanName.split(' ').map(n => n[0]).join('').toUpperCase();
+  // Extract initials from displayName or name
+  const deanName = deanData?.displayName || (deanData?.firstName ? `${deanData.firstName} ${deanData.lastName || ''}`.trim() : deanData?.name || 'Dean');
+  const initials = deanName.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase() || 'D';
 
   // Get role badges
   const role = deanData?.role || 'dean';
@@ -256,12 +264,12 @@ export default function Sidebar({ onNavigate }) {
 
       {/* LOGO AREA */}
       <div className="p-6 flex items-center gap-3">
-        <div className="w-11 h-11 bg-gradient-to-br from-[#f8d070] to-[#d4af37] rounded-xl flex items-center justify-center p-0.5 shadow-md shrink-0">
-          <img src={logo} alt="SWU Logo" className="h-full w-full object-contain" />
+        <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center shrink-0">
+          <img src={logo} alt="ARCHIVIO Logo" className="w-8 h-8 object-contain" />
         </div>
         <div>
           <h1 className="text-white font-serif text-xl font-bold tracking-wider leading-none mb-1">ARCHIVIO</h1>
-          <p className="text-[9px] text-stone-400 uppercase tracking-[0.2em]">Research Archive</p>
+          <p className="text-[9px] text-[#d0a36e] uppercase tracking-[0.2em]">Research Archive</p>
         </div>
       </div>
 
@@ -348,6 +356,20 @@ export default function Sidebar({ onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* PORTAL SWITCHER FOR DUAL ROLE */}
+      {isDeanAndAdviser && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => window.location.href = '/adviser/dashboard'}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/60 rounded-xl text-emerald-300 hover:text-emerald-100 text-xs font-bold transition-all duration-200 shadow-sm group cursor-pointer"
+            title="Switch to Research Adviser Portal"
+          >
+            <span className="text-base group-hover:scale-125 transition-transform">⇄</span>
+            <span>Switch to Adviser Portal</span>
+          </button>
+        </div>
+      )}
 
       {/* LOGOUT BUTTON */}
       <div className="px-4 pb-4">

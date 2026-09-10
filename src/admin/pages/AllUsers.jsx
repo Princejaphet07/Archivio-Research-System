@@ -16,6 +16,8 @@ const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
   Student: 'bg-blue-100 text-blue-700',
   Dean: 'bg-pink-100 text-pink-700',
+  'Dean + Adviser': 'bg-purple-100 text-purple-700 border border-purple-200',
+  'Super Admin': 'bg-red-100 text-red-700 border border-red-200',
 };
 
 export default function AllUsers() {
@@ -29,18 +31,21 @@ export default function AllUsers() {
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
 
   useEffect(() => {
+    let unsubSA = null;
     let unsubDeans = null;
     let unsubAdvisers = null;
     let unsubStudents = null;
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
+        if (unsubSA) unsubSA();
         if (unsubDeans) unsubDeans();
         if (unsubAdvisers) unsubAdvisers();
         if (unsubStudents) unsubStudents();
         return;
       }
 
+      let saData = [];
       let deansData = [];
       let advisersData = [];
       let studentsData = [];
@@ -52,11 +57,34 @@ export default function AllUsers() {
     };
 
     const updateCombinedUsers = () => {
-      const combined = [...deansData, ...advisersData, ...studentsData];
+      // Deduplicate by email: if user exists in deansData with Dean + Adviser or Dean, don't duplicate row from advisers
+      const deanEmails = new Set(deansData.map(d => (d.email || '').toLowerCase().trim()));
+      const filteredAdvisers = advisersData.filter(a => !deanEmails.has((a.email || '').toLowerCase().trim()));
+
+      const combined = [...saData, ...deansData, ...filteredAdvisers, ...studentsData];
       combined.sort((a, b) => a.name.localeCompare(b.name));
       setAllUsers(combined);
       setLoading(false);
     };
+
+    unsubSA = onSnapshot(collection(db, 'super_admins'), (snap) => {
+      saData = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'Super Admin'),
+          email: data.email,
+          role: 'Super Admin',
+          dept: data.department || 'Administration',
+          status: data.status || 'Active',
+          lastLogin: formatDate(data.lastLogin || data.createdAt),
+          createdAt: data.createdAt
+        };
+      });
+      updateCombinedUsers();
+    }, (error) => {
+      console.error("Error fetching super admins:", error);
+    });
 
     unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(doc => {
@@ -65,7 +93,7 @@ export default function AllUsers() {
           id: doc.id,
           name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
           email: data.email,
-          role: 'Dean',
+          role: data.role === 'dean+adviser' ? 'Dean + Adviser' : 'Dean',
           dept: data.department || 'N/A',
           status: data.status || 'Active',
           lastLogin: formatDate(data.lastLogin || data.createdAt),
@@ -84,7 +112,7 @@ export default function AllUsers() {
           id: doc.id,
           name: data.displayName || (data.firstName ? data.firstName + ' ' + data.lastName : 'No Name'),
           email: data.email,
-          role: 'Adviser',
+          role: data.role === 'dean+adviser' ? 'Dean + Adviser' : 'Adviser',
           dept: data.department || 'N/A',
           status: data.status || 'Active',
           lastLogin: formatDate(data.lastLogin || data.createdAt),
@@ -119,6 +147,7 @@ export default function AllUsers() {
 
     return () => {
       unsubAuth();
+      if (unsubSA) unsubSA();
       if (unsubDeans) unsubDeans();
       if (unsubAdvisers) unsubAdvisers();
       if (unsubStudents) unsubStudents();
@@ -131,8 +160,9 @@ export default function AllUsers() {
 
   const tabs = [
     `All Users (${yearFilteredUsers.length})`, 
-    `Deans (${yearFilteredUsers.filter(u => u.role === 'Dean').length})`, 
-    `Advisers (${yearFilteredUsers.filter(u => u.role === 'Adviser').length})`, 
+    `Super Admins (${yearFilteredUsers.filter(u => u.role === 'Super Admin').length})`,
+    `Deans (${yearFilteredUsers.filter(u => u.role === 'Dean' || u.role === 'Dean + Adviser').length})`, 
+    `Advisers (${yearFilteredUsers.filter(u => u.role === 'Adviser' || u.role === 'Dean + Adviser').length})`, 
     `Students (${yearFilteredUsers.filter(u => u.role === 'Student').length})`
   ];
 
@@ -140,9 +170,10 @@ export default function AllUsers() {
     let users = yearFilteredUsers;
 
     // 2. Filter by Active Tab
-    if (activeTab === 1) users = users.filter(u => u.role === 'Dean');
-    if (activeTab === 2) users = users.filter(u => u.role === 'Adviser');
-    if (activeTab === 3) users = users.filter(u => u.role === 'Student');
+    if (activeTab === 1) users = users.filter(u => u.role === 'Super Admin');
+    if (activeTab === 2) users = users.filter(u => u.role === 'Dean' || u.role === 'Dean + Adviser');
+    if (activeTab === 3) users = users.filter(u => u.role === 'Adviser' || u.role === 'Dean + Adviser');
+    if (activeTab === 4) users = users.filter(u => u.role === 'Student');
 
     // 3. Search Filter
     if (search) {

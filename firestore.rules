@@ -13,13 +13,25 @@ service cloud.firestore {
         : 'none';
     }
     function isSystemAdmin() {
-      return isAuthenticated() && (getUserRole() == 'super-admin' || getUserRole() == 'admin');
+      return isAuthenticated() && (
+        getUserRole() == 'super-admin' || 
+        getUserRole() == 'admin' ||
+        exists(/databases/$(database)/documents/super_admins/$(request.auth.uid))
+      );
     }
     function isDean() {
-      return isAuthenticated() && (getUserRole() == 'dean' || getUserRole() == 'dean+adviser');
+      return isAuthenticated() && (
+        getUserRole() == 'dean' || 
+        getUserRole() == 'dean+adviser' ||
+        exists(/databases/$(database)/documents/deans/$(request.auth.uid))
+      );
     }
     function isAdviser() {
-      return isAuthenticated() && (getUserRole() == 'adviser' || getUserRole() == 'dean+adviser');
+      return isAuthenticated() && (
+        getUserRole() == 'adviser' || 
+        getUserRole() == 'dean+adviser' ||
+        exists(/databases/$(database)/documents/advisers/$(request.auth.uid))
+      );
     }
     function isGroupMember(groupId) {
       let groupData = get(/databases/$(database)/documents/groups/$(groupId)).data;
@@ -44,8 +56,7 @@ service cloud.firestore {
       allow create: if isSystemAdmin()
                     || isDean()
                     || (request.auth.uid == userId &&
-                        (request.resource.data.role == 'adviser' ||
-                         request.resource.data.role == 'student'))
+                        (request.resource.data.role in ['adviser', 'student', 'dean', 'dean+adviser', 'admin']))
                     // -----------------------------------------------------------------
                     // Unauthenticated creation for the known admin UID
                     // -----------------------------------------------------------------
@@ -59,19 +70,23 @@ service cloud.firestore {
     match /students/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser()
-                    || request.auth.uid == resource.data.uid
+                    || request.auth.uid == docId
+                    || (resource != null && request.auth.uid == resource.data.uid)
                     || request.auth.uid == request.resource.data.uid;
     }
     match /advisers/{docId} {
       allow read: if true;
       allow write: if isSystemAdmin() || isDean()
-                    || request.auth.uid == resource.data.userId
-                    || request.auth.uid == request.resource.data.userId;
+                    || request.auth.uid == docId
+                    || (resource != null && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.uid))
+                    || request.auth.uid == request.resource.data.userId
+                    || request.auth.uid == request.resource.data.uid;
     }
     match /deans/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean()
-                    || request.auth.uid == resource.data.uid
+                    || request.auth.uid == docId
+                    || (resource != null && request.auth.uid == resource.data.uid)
                     || request.auth.uid == request.resource.data.uid;
     }
     // -----------------------------------------------------------------
@@ -81,7 +96,7 @@ service cloud.firestore {
       allow read: if true;
       // Unauthenticated creation for the exact settings document the script writes
       allow create: if request.auth == null && docId == 'system';
-      allow write: if isSystemAdmin();
+      allow write: if isSystemAdmin() || isDean();
     }
     match /activity_logs/{docId} {
       allow read: if isSystemAdmin() || isDean();
@@ -94,7 +109,7 @@ service cloud.firestore {
       allow update, delete: if isSystemAdmin();
     }
     match /dean_settings/{userId} {
-      allow read, write: if request.auth.uid == userId || isSystemAdmin();
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isDean() || isSystemAdmin());
     }
     match /requirements/{docId} {
       allow read: if isAuthenticated();
@@ -111,7 +126,8 @@ service cloud.firestore {
       allow write: if isSystemAdmin();
     }
     match /super_admins/{docId} {
-      allow read, write: if isSystemAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isSystemAdmin();
     }
     // -----------------------------------------------------------------
     // 5. Research Data, Invitations & Submissions
@@ -159,7 +175,13 @@ service cloud.firestore {
       allow read, update, delete: if isSystemAdmin();
     }
     match /notifications/{docId} {
-      allow read, update, delete: if request.auth.uid == resource.data.userId;
+      allow read, update, delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId
+        || (resource != null && resource.data.userId == request.auth.token.email)
+        || (resource != null && resource.data.userEmail == request.auth.token.email)
+        || isDean()
+        || isSystemAdmin()
+      );
       allow create: if isAuthenticated();
     }
     match /userChats/{userId}/{document=**} {

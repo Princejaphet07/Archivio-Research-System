@@ -32,13 +32,19 @@ function App() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
-      if (snap.exists() && snap.data().maintenance === true) {
-        setIsMaintenanceMode(true);
-      } else {
-        setIsMaintenanceMode(false);
+    const unsub = onSnapshot(
+      doc(db, 'settings', 'system_preferences'),
+      (snap) => {
+        if (snap.exists() && snap.data().maintenance === true) {
+          setIsMaintenanceMode(true);
+        } else {
+          setIsMaintenanceMode(false);
+        }
+      },
+      (err) => {
+        console.warn('System preferences listener notice (non-fatal):', err.message);
       }
-    });
+    );
     return () => unsub();
   }, []);
 

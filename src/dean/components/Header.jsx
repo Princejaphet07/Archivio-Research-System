@@ -53,14 +53,14 @@ export default function Header({ activePage, onMenuClick }) {
 
         {/* Role Multi-Select pills - Only show for Dual Role users */}
         {deanData?.role === 'dean+adviser' && (
-          <div className="hidden md:flex items-center gap-1.5 bg-stone-100 dark:bg-stone-800/80 rounded-xl p-1 border border-stone-200/60 dark:border-stone-700 font-bold text-[11px] transition-all">
+          <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800/80 rounded-xl p-1 border border-stone-200/60 dark:border-stone-700 font-bold text-[11px] transition-all">
             <span className="text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-700 px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5 cursor-default">
               <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span> Dean
             </span>
             <button
               onClick={handleSwitchToAdviser}
-              className="text-stone-400 dark:text-stone-500 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-stone-700 dark:hover:text-stone-300 hover:bg-white/50 dark:hover:bg-stone-700/50 rounded-lg transition-all"
-              title="Switch to Adviser Portal"
+              className="text-stone-500 dark:text-stone-400 px-2.5 py-1 flex items-center gap-1.5 cursor-pointer hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-white/60 dark:hover:bg-stone-700/50 rounded-lg transition-all"
+              title="Switch to Research Adviser Portal"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Adviser
             </button>
