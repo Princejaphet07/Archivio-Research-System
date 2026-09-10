@@ -279,6 +279,9 @@ export default function StudentActivate() {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
+                    onCopy={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
                     placeholder="Create a strong password" 
                     className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
                     disabled={loading}
@@ -303,6 +306,9 @@ export default function StudentActivate() {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
+                    onCopy={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
                     placeholder="Confirm your password" 
                     className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
                     disabled={loading}

@@ -41,3 +41,23 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* System-Wide Anti-Copy & Anti-Highlight for Password Fields */
+input[type="password"],
+input[data-is-password="true"],
+input[data-no-copy="true"],
+input[data-password="true"] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+input[type="password"]::selection,
+input[data-is-password="true"]::selection,
+input[data-no-copy="true"]::selection,
+input[data-password="true"]::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+

@@ -14,6 +14,7 @@ function ArchiveLogin() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,6 +85,19 @@ function ArchiveLogin() {
       Swal.fire({ icon: 'warning', title: 'Missing Fields', text: 'Please fill in all required fields.' });
       return;
     }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Enforce @phinmaed.com domain strictly
+    if (!cleanEmail.endsWith('@phinmaed.com')) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Access Restricted',
+        text: 'Access to ARCHIVIO Public Archive is strictly restricted to official PHINMA Education accounts (@phinmaed.com). Non-PHINMA emails cannot sign in or register.',
+        confirmButtonColor: '#7a2039'
+      });
+      return;
+    }
     
     if (!isLogin && password !== confirmPassword) {
       Swal.fire({ icon: 'warning', title: 'Passwords Mismatch', text: 'Your passwords do not match. Please try again.' });
@@ -111,10 +125,10 @@ function ArchiveLogin() {
     setLoading(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, cleanEmail, password);
         Swal.fire({ icon: 'success', title: 'Welcome Back!', timer: 1500, showConfirmButton: false });
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
         await updateProfile(userCredential.user, { displayName: name });
         Swal.fire({ icon: 'success', title: 'Account Created!', text: 'Welcome to Archivio.', timer: 1500, showConfirmButton: false });
       }
@@ -132,8 +146,25 @@ function ArchiveLogin() {
 
   const handleGoogleAuth = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      hd: 'phinmaed.com',
+      prompt: 'select_account'
+    });
     try {
-      await signInWithPopup(auth, provider);
+      const userCredential = await signInWithPopup(auth, provider);
+      const userEmail = userCredential.user.email?.toLowerCase().trim();
+
+      if (!userEmail || !userEmail.endsWith('@phinmaed.com')) {
+        await auth.signOut();
+        Swal.fire({
+          icon: 'error',
+          title: 'Unauthorized Account',
+          text: `The account (${userEmail || 'non-PHINMA'}) is not a @phinmaed.com account. Access is strictly restricted to PHINMA Education accounts.`,
+          confirmButtonColor: '#7a2039'
+        });
+        return;
+      }
+
       Swal.fire({ icon: 'success', title: 'Welcome!', timer: 1500, showConfirmButton: false });
       navigate(from, { replace: true });
     } catch (error) {
@@ -265,9 +296,10 @@ function ArchiveLogin() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
-                  placeholder="juan@swu.phinma.edu.ph"
+                  placeholder="yourname@phinmaed.com"
                 />
               </div>
+              <p className="text-[10px] text-stone-500 dark:text-gray-400 mt-1">Official @phinmaed.com email address required</p>
             </div>
             <div>
               <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-1">Password</label>
@@ -277,10 +309,19 @@ function ArchiveLogin() {
                 </div>
                 <input 
                   type={showPassword ? "text" : "password"} 
+                  name="password"
+                  id="archive-password"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                  data-password="true"
+                  data-no-copy="true"
+                  data-is-password="true"
+                  onCopy={(e) => { e.preventDefault(); return false; }}
+                  onCut={(e) => { e.preventDefault(); return false; }}
+                  onContextMenu={(e) => { e.preventDefault(); return false; }}
+                  className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 select-none dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                   placeholder="••••••••••••"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
@@ -353,15 +394,24 @@ function ArchiveLogin() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                   </div>
                   <input 
-                    type={showPassword ? "text" : "password"} 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    name="confirmPassword"
+                    id="archive-confirm-password"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required={!isLogin}
-                    className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
+                    data-password="true"
+                    data-no-copy="true"
+                    data-is-password="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
+                    className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-white/40 dark:border-white/10 rounded outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] text-sm text-stone-800 dark:text-gray-200 transition-colors placeholder-stone-400 select-none dark:[&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:#e5e7eb]"
                     placeholder="••••••••••••"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Password Visibility">
-                    {showPassword ? (
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700" title="Toggle Confirm Password Visibility">
+                    {showConfirmPassword ? (
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -411,7 +461,7 @@ function ArchiveLogin() {
               <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
             </svg>
-            <span>Continue with Google</span>
+            <span>Continue with Google (@phinmaed.com)</span>
           </button>
 
           {/* LINK PABALIK SA HOME */}

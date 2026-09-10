@@ -6,6 +6,8 @@ import { logActivity } from '../../firebase/logActivity';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 
 export default function StudentSignup({ onSwitchPage }) {
   const [step, setStep] = useState(1);
@@ -17,6 +19,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+  const [isPrefilled, setIsPrefilled] = useState(false);
 
   // Step 1 — Personal Info
   const [personalInfo, setPersonalInfo] = useState({
@@ -65,6 +68,24 @@ export default function StudentSignup({ onSwitchPage }) {
     return () => unsubCats();
   }, [invitationData?.sentBy]);
 
+  // Fetch Programs from settings
+  useEffect(() => {
+    const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
+      setProgramsList(snap.docs.map(d => d.data()));
+    });
+    return () => unsubProgs();
+  }, []);
+
+  // Autofill schoolEmail if present in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setPersonalInfo(prev => ({ ...prev, schoolEmail: emailParam }));
+      setIsPrefilled(true);
+    }
+  }, []);
+
   // Step 3 — Account Security
   const [securityInfo, setSecurityInfo] = useState({
     password: '',
@@ -93,8 +114,9 @@ export default function StudentSignup({ onSwitchPage }) {
       setError('Please provide both the member\'s name and email');
       return;
     }
-    if (!email.endsWith('@phinmaed.com')) {
-      setError('Member email must be @phinmaed.com');
+    const memberEmailCheck = validateStudentSchoolEmail(email);
+    if (!memberEmailCheck.isValid) {
+      setError(`Member email error: ${memberEmailCheck.error}`);
       return;
     }
     if (groupInfo.members.find(m => m.email === email)) {
@@ -132,8 +154,9 @@ export default function StudentSignup({ onSwitchPage }) {
       setError('Please fill in all required fields.');
       return false;
     }
-    if (!schoolEmail.toLowerCase().endsWith('@phinmaed.com')) {
-      setError('School email must be a @phinmaed.com address.');
+    const studentEmailCheck = validateStudentSchoolEmail(schoolEmail);
+    if (!studentEmailCheck.isValid) {
+      setError(studentEmailCheck.error);
       return false;
     }
     setError('');
@@ -333,23 +356,22 @@ export default function StudentSignup({ onSwitchPage }) {
         });
 
         for (const member of groupInfo.members) {
-          const memberEmail = typeof member === 'object' ? member.email : member;
-          const existingInvitesSnap = await getDocs(
-            query(collection(db, 'studentInvitations'), where('studentEmail', '==', memberEmail))
-          );
-          
-          if (existingInvitesSnap.empty) {
-            await addDoc(collection(db, 'studentInvitations'), {
-              studentEmail: memberEmail,
-              sentBy: invitationData.sentBy,
-              sentByName: invitationData.sentByName,
-              department: invitationData.department || 'Not specified',
-              status: 'pending',
-              invitationSentAt: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-              invitedByLeader: email
-            });
-          }
+          const memberEmail = (typeof member === 'object' ? member.email : member)?.toLowerCase()?.trim();
+          if (!memberEmail) continue;
+
+          // Clear any stale invitation/data for this member email so they get a fresh pending invitation
+          await wipeEmailData(memberEmail);
+
+          await addDoc(collection(db, 'studentInvitations'), {
+            studentEmail: memberEmail,
+            sentBy: invitationData.sentBy,
+            sentByName: invitationData.sentByName,
+            department: invitationData.department || 'Not specified',
+            status: 'pending',
+            invitationSentAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            invitedByLeader: email
+          });
         }
       }
 
@@ -504,8 +526,11 @@ export default function StudentSignup({ onSwitchPage }) {
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* School Email</label>
               <input name="schoolEmail" value={personalInfo.schoolEmail} onChange={handlePersonalChange}
                 type="email" placeholder="jcreyes.swu@phinmaed.com"
-                className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
-              <p className="text-[10px] text-gray-400 mt-1 pl-2">Pre-filled from your invitation link</p>
+                readOnly={isPrefilled}
+                className={`w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A] ${isPrefilled ? 'opacity-70 cursor-not-allowed bg-gray-100/50' : ''}`} />
+              <p className="text-[10px] text-gray-400 mt-1 pl-2">
+                {isPrefilled ? "Pre-filled from your invitation link (Cannot be edited)" : "Must be a valid @phinmaed.com email"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-5">
@@ -514,15 +539,9 @@ export default function StudentSignup({ onSwitchPage }) {
                 <select name="course" value={personalInfo.course} onChange={handlePersonalChange}
                   className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs text-gray-500 focus:outline-none focus:border-[#6B0F1A] appearance-none">
                   <option value="">Select your course</option>
-                  <option>BS Information Technology</option>
-                  <option>BS Computer Science</option>
-                  <option>BS Computer Engineering</option>
-                  <option>BS Nursing</option>
-                  <option>BS Accountancy</option>
-                  <option>BS Business Administration</option>
-                  <option>BS Civil Engineering</option>
-                  <option>BS Architecture</option>
-                  <option>Doctor of Medicine</option>
+                  {programsList.map(prog => (
+                    <option key={prog.id || prog.code} value={prog.name}>{prog.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -637,7 +656,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   <input
                     value={memberInput} onChange={e => setMemberInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
-                    type="email" placeholder="Email (member@phinmaed.com)"
+                    type="email" placeholder="Email (member.swu@phinmaed.com)"
                     className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
                 </div>
                 <button type="button" onClick={handleAddMember}
@@ -676,7 +695,13 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={e => setSecurityInfo(p => ({ ...p, password: e.target.value }))}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter a strong password"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" 
+                  data-password="true"
+                  data-no-copy="true"
+                  data-is-password="true"
+                  onCopy={(e) => { e.preventDefault(); return false; }}
+                  onCut={(e) => { e.preventDefault(); return false; }}
+                  onContextMenu={(e) => { e.preventDefault(); return false; }}
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A] select-none" 
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -729,11 +754,18 @@ export default function StudentSignup({ onSwitchPage }) {
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Confirm Password</label>
               <div className="relative">
                 <input
+                  name="confirmPassword"
                   value={securityInfo.confirmPassword}
                   onChange={e => setSecurityInfo(p => ({ ...p, confirmPassword: e.target.value }))}
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Re-enter your password"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A] pr-10"
+                  data-password="true"
+                  data-no-copy="true"
+                  data-is-password="true"
+                  onCopy={(e) => { e.preventDefault(); return false; }}
+                  onCut={(e) => { e.preventDefault(); return false; }}
+                  onContextMenu={(e) => { e.preventDefault(); return false; }}
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A] pr-10 select-none"
                   required />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-2 text-gray-400 hover:text-[#6B0F1A] text-base">

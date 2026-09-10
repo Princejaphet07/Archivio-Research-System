@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { doc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
@@ -28,6 +28,10 @@ function ArchivePaperViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef(null);
+  const pageRefsMap = useRef({});
+  const scrollContainerRef = useRef(null);
   const [relatedPapers, setRelatedPapers] = useState([]);
   const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -64,6 +68,57 @@ function ArchivePaperViewer() {
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
   }
+
+  const scrollToPage = useCallback((pg) => {
+    const clamped = Math.max(1, Math.min(numPages || pg, pg));
+    setCurrentPage(clamped);
+    const el = pageRefsMap.current[clamped];
+    if (el && scrollContainerRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [numPages]);
+
+  const handleScrollActivity = useCallback(() => {
+    setIsScrolling(true);
+    clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 1200);
+  }, []);
+
+  // Track currently visible page via IntersectionObserver during continuous scroll
+  useEffect(() => {
+    if (!numPages || !scrollContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestEntry = null;
+        let maxRatio = 0;
+        entries.forEach((entry) => {
+          if (entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio;
+            bestEntry = entry;
+          }
+        });
+        if (bestEntry && bestEntry.intersectionRatio > 0.1) {
+          const pg = parseInt(bestEntry.target.dataset.page, 10);
+          if (!isNaN(pg)) {
+            setCurrentPage(pg);
+          }
+        }
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: [0.1, 0.25, 0.5, 0.75, 1.0],
+      }
+    );
+
+    Object.values(pageRefsMap.current).forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [numPages]);
 
   // Cleanup speech synthesis on unmount
   useEffect(() => {
@@ -467,7 +522,7 @@ function ArchivePaperViewer() {
       'Chapter 5: Conclusion': 20
     };
     if (map[chap]) {
-      setCurrentPage(map[chap]);
+      scrollToPage(map[chap]);
     }
   };
 
@@ -785,7 +840,7 @@ function ArchivePaperViewer() {
                       {Array.from({ length: numPages }).map((_, idx) => (
                         <div key={idx} className="flex flex-col items-center gap-2 mb-4">
                           <button 
-                            onClick={() => setCurrentPage(idx + 1)}
+                            onClick={() => scrollToPage(idx + 1)}
                             className={`w-28 bg-white cursor-pointer transition-all overflow-hidden ${currentPage === idx + 1 ? 'ring-2 ring-[#7a2039] border-none shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
                           >
                             <Page 
@@ -1077,7 +1132,11 @@ function ArchivePaperViewer() {
 
             {/* EMBEDDED MANUSCRIPT VIEWER */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
-              <div className="w-full h-full relative overflow-auto flex justify-center custom-scrollbar py-8 pb-32">
+              <div 
+                ref={scrollContainerRef}
+                onScroll={handleScrollActivity}
+                className="w-full h-full relative overflow-y-auto overflow-x-hidden flex flex-col items-center custom-scrollbar py-8 pb-32"
+              >
                 <Document
                   file={paper.documents['Final Manuscript'].url}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -1102,72 +1161,99 @@ function ArchivePaperViewer() {
                       </div>
                     </div>
                   }
-                  className="flex flex-col items-center shadow-2xl bg-white relative"
+                  className="flex flex-col items-center gap-6 relative"
                 >
-                  <Page 
-                    pageNumber={currentPage} 
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    width={pdfWidth}
-                    className="relative pointer-events-none min-h-[800px]"
-                    loading={
-                      <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 md:p-12 lg:p-20 flex flex-col h-[800px] rounded-sm">
-                        <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
-                        <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
-                        <div className="space-y-4 mb-8">
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-5/6 rounded animate-shimmer"></div>
-                        </div>
-                        <div className="space-y-4 mb-8">
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-4/6 rounded animate-shimmer"></div>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-full rounded animate-shimmer"></div>
-                          <div className="h-4 w-3/4 rounded animate-shimmer"></div>
-                        </div>
-                      </div>
-                    }
-                  />
-                  
-                  {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-50">
-                    <div className="w-full h-full relative flex items-center justify-center opacity-10">
-                      <h2 className="text-8xl font-bold transform -rotate-45 text-stone-900 absolute">SWU PHINMA</h2>
-                      <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute top-1/4">CONFIDENTIAL</h2>
-                      <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute bottom-1/4">DO NOT COPY</h2>
-                    </div>
-                  </div>
-                </Document>
+                  {numPages ? (
+                    Array.from({ length: numPages }, (_, index) => {
+                      const pageNum = index + 1;
+                      return (
+                        <div
+                          key={pageNum}
+                          id={`archive-pdf-page-${pageNum}`}
+                          data-page={pageNum}
+                          ref={(el) => {
+                            if (el) pageRefsMap.current[pageNum] = el;
+                          }}
+                          className="relative shadow-2xl bg-white rounded-sm overflow-hidden"
+                          style={{
+                            contentVisibility: 'auto',
+                            containIntrinsicSize: `${pdfWidth}px 1100px`,
+                          }}
+                        >
+                          <Page 
+                            pageNumber={pageNum} 
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            width={pdfWidth}
+                            className="relative pointer-events-none min-h-[800px]"
+                            loading={
+                              <div 
+                                className="bg-white dark:bg-gray-800 flex items-center justify-center text-stone-400 text-sm"
+                                style={{ width: pdfWidth, height: 1000 }}
+                              >
+                                Loading page {pageNum}...
+                              </div>
+                            }
+                          />
 
-                {/* PAGINATION CONTROLS */}
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#242b35]/90 backdrop-blur px-6 py-3 rounded-full shadow-lg z-50 border border-[#1f252e]">
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage <= 1}
-                    className="text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer"
-                  >
-                    ← Prev
-                  </button>
-                  <span className="text-sm font-bold text-gray-300 min-w-[100px] text-center">
-                    Page {currentPage} of {numPages || '--'}
-                  </span>
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.min(numPages || p, p + 1))}
-                    disabled={currentPage >= numPages}
-                    className="text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer"
-                  >
-                    Next →
-                  </button>
-                </div>
+                          {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}
+                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-20 select-none">
+                            <div className="w-full h-full relative flex items-center justify-center opacity-10">
+                              <h2 className="text-8xl font-bold transform -rotate-45 text-stone-900 absolute">SWU PHINMA</h2>
+                              <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute top-1/4">CONFIDENTIAL</h2>
+                              <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute bottom-1/4">DO NOT COPY</h2>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="relative shadow-2xl bg-white rounded-sm overflow-hidden" style={{ width: pdfWidth, minHeight: 800 }}>
+                      <Page 
+                        pageNumber={1} 
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        width={pdfWidth}
+                        className="relative pointer-events-none min-h-[800px]"
+                      />
+                    </div>
+                  )}
+                  </Document>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-stone-500 dark:text-gray-400 z-20">
                 <span className="text-4xl mb-4">📄</span>
                 <p>No valid manuscript uploaded for this submission.</p>
+              </div>
+            )}
+
+            {/* PAGINATION CONTROLS - DEAD CENTER ON THE DOCUMENT WORKSPACE */}
+            {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' && (
+              <div 
+                className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 bg-[#242b35]/90 backdrop-blur px-5 py-2.5 rounded-full z-50 border border-[#1f252e] transition-all duration-300 pointer-events-auto ${
+                  isScrolling 
+                    ? 'opacity-25 hover:opacity-100 shadow-sm' 
+                    : 'opacity-100 shadow-xl'
+                }`}
+                style={{ minWidth: '280px' }}
+              >
+                <button 
+                  onClick={() => scrollToPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm font-bold text-gray-300 flex-1 text-center select-none whitespace-nowrap">
+                  Page {currentPage} of {numPages || '--'}
+                </span>
+                <button 
+                  onClick={() => scrollToPage(currentPage + 1)}
+                  disabled={currentPage >= (numPages || 1)}
+                  className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
+                >
+                  Next →
+                </button>
               </div>
             )}
 

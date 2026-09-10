@@ -18,7 +18,7 @@ export default function StudentForgotPassword({ onSwitchPage }) {
   const [error, setError] = useState('');
   const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
   
-  const API_URL = 'http://localhost:3001/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
   const handleChangeOtp = (element, index) => {
     if (isNaN(element.value)) return false;
@@ -48,6 +48,7 @@ export default function StudentForgotPassword({ onSwitchPage }) {
     e.preventDefault();
     setError('');
     setLoading(true);
+    const controller = new AbortController();
 
     try {
       const response = await fetch(`${API_URL}/send-otp`, {
@@ -88,12 +89,13 @@ export default function StudentForgotPassword({ onSwitchPage }) {
     if (codeStr.length !== 6) return;
     setError('');
     setOtpStatus('verifying');
-
+    const controller = new AbortController();
     try {
       const response = await fetch(`${API_URL}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        signal: controller.signal,
+        body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: codeStr
         })
@@ -110,9 +112,13 @@ export default function StudentForgotPassword({ onSwitchPage }) {
         setStep(3);
       }, 1500);
     } catch (err) {
-      // Do not set general error to avoid duplicate alerts
-      setOtpStatus('error');
+      if (err.name !== 'AbortError') {
+        setError(err.message);
+        setOtpStatus('error');
+      }
     }
+    // Cleanup on component unmount
+    return () => controller.abort();
   };
 
   // Password strength helpers
@@ -293,7 +299,7 @@ export default function StudentForgotPassword({ onSwitchPage }) {
                 {otpStatus === 'verifying' ? 'Verifying...' : 'Verify Code'}
               </button>
               <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); }} className="text-xs text-[#6B0F1A] hover:underline">
+                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); setError(''); }} className="text-xs text-[#6B0F1A] hover:underline">
                   Resend Code
                 </button>
               </div>
@@ -310,9 +316,14 @@ export default function StudentForgotPassword({ onSwitchPage }) {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition mb-3"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition mb-3 select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-stone-400 hover:text-stone-600 focus:outline-none">
                     {showPassword ? (
@@ -353,9 +364,14 @@ export default function StudentForgotPassword({ onSwitchPage }) {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600 focus:outline-none">
                     {showConfirmPassword ? (

@@ -49,13 +49,20 @@ export default function ArchiveForgotPassword() {
   const handleSendOTP = async (e) => {
     e.preventDefault();
     setError('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.endsWith('@phinmaed.com')) {
+      setError('Please enter your official @phinmaed.com institutional email address.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch(`${API_URL}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() })
+        body: JSON.stringify({ email: cleanEmail })
       });
 
       const data = await response.json();
@@ -216,12 +223,13 @@ export default function ArchiveForgotPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. user@swu.phinma.edu.ph"
+                    placeholder="e.g. user@phinmaed.com"
                     className="w-full pl-10 pr-4 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
                     required
                     disabled={loading}
                   />
                 </div>
+                <p className="text-[10px] text-stone-500 dark:text-gray-400 mt-1">Official @phinmaed.com account required</p>
               </div>
               <button
                 type="submit"
@@ -300,9 +308,14 @@ export default function ArchiveForgotPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors mb-3"
+                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors mb-3 select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
                     {showPassword ? 'Hide' : 'Show'}
@@ -332,9 +345,14 @@ export default function ArchiveForgotPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
+                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
                     {showConfirmPassword ? 'Hide' : 'Show'}

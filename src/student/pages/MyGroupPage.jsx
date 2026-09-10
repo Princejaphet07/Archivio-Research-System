@@ -6,6 +6,8 @@ import NotificationBell from '../Components/NotificationBell';
 import PortalHeader from '../Components/PortalHeader';
 import { Card, CardBody, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { validateStudentSchoolEmail, verifySchoolEmailOnline } from '../../utils/schoolEmailValidator';
 
 const Shimmer = () => (
   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-white/[0.06] to-transparent" />
@@ -30,6 +32,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [memberProfiles, setMemberProfiles] = useState([]);
+  const [groupData, setGroupData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +51,16 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
         const data = snap.docs[0].data();
         setStudentData(data);
+
+        // Fetch Group Document
+        const targetLeaderUid = data.leaderUid || data.uid;
+        if (targetLeaderUid) {
+          const groupQ = query(collection(db, 'groups'), where('leaderUid', '==', targetLeaderUid));
+          const groupSnap = await getDocs(groupQ);
+          if (!groupSnap.empty) {
+            setGroupData(groupSnap.docs[0].data());
+          }
+        }
 
         // Fetch profiles of all group member emails listed during signup
         const memberEmails = (data.groupMembers || []).map(m => typeof m === 'object' ? m.email : m);
@@ -78,8 +91,8 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         '  <input id="swal-input-name" class="swal2-input !m-0 !w-full" placeholder="e.g. Juan Dela Cruz" style="width: 100%; box-sizing: border-box; margin: 0;">' +
         '  <label class="text-xs font-semibold text-gray-700 mt-2">Student ID Number</label>' +
         '  <input id="swal-input-id" class="swal2-input !m-0 !w-full" placeholder="e.g. 03-1234-56789" style="width: 100%; box-sizing: border-box; margin: 0;">' +
-        '  <label class="text-xs font-semibold text-gray-700 mt-2">Email Address</label>' +
-        '  <input id="swal-input-email" type="email" class="swal2-input !m-0 !w-full" placeholder="member@phinmaed.com" style="width: 100%; box-sizing: border-box; margin: 0;">' +
+        '  <label class="text-xs font-semibold text-gray-700 mt-2">Official Student Email (.swu@phinmaed.com)</label>' +
+        '  <input id="swal-input-email" type="email" class="swal2-input !m-0 !w-full" placeholder="member.swu@phinmaed.com" style="width: 100%; box-sizing: border-box; margin: 0;">' +
         '</div>',
       focusConfirm: false,
       showCancelButton: true,
@@ -93,11 +106,12 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           Swal.showValidationMessage('Please provide name, ID number, and email');
           return false;
         }
-        if (!email.endsWith('@phinmaed.com')) {
-          Swal.showValidationMessage('Email must use @phinmaed.com domain');
+        const validation = validateStudentSchoolEmail(email);
+        if (!validation.isValid) {
+          Swal.showValidationMessage(validation.error);
           return false;
         }
-        return { name, studentId, email };
+        return { name, studentId, email: validation.normalizedEmail };
       }
     });
 
@@ -115,6 +129,14 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
     try {
       setLoading(true);
+
+      // Verify domain MX records via backend
+      const onlineVerification = await verifySchoolEmailOnline(newEmail, 'student');
+      if (!onlineVerification.isValid) {
+        Swal.fire('Verification Error', onlineVerification.error, 'error');
+        setLoading(false);
+        return;
+      }
       
       // Update the leader's student document
       const newGroupMembers = [...currentMembers, { email: newEmail, name: newName, studentId: newStudentId }];
@@ -134,24 +156,21 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
         });
       }
 
-      // Generate a studentInvitation for the new member
-      const existingInvitesSnap = await getDocs(
-        query(collection(db, 'studentInvitations'), where('studentEmail', '==', newEmail))
-      );
-      
-      if (existingInvitesSnap.empty) {
-        await addDoc(collection(db, 'studentInvitations'), {
-          studentEmail: newEmail,
-          sentBy: studentData.invitedBy || '',
-          sentByName: studentData.invitedByName || 'Research Adviser',
-          department: studentData.department || 'Not specified',
-          status: 'pending',
-          invitationSentAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          invitedByLeader: studentData.email, // Track who added them
-          studentNumber: newStudentId // Pass the ID number so they can see it when they sign up
-        });
-      }
+      // Clean up any stale or orphaned invitations for this email to prevent "already invited" conflicts
+      await wipeEmailData(newEmail);
+
+      // Generate a fresh studentInvitation for the new member
+      await addDoc(collection(db, 'studentInvitations'), {
+        studentEmail: newEmail,
+        sentBy: studentData.invitedBy || '',
+        sentByName: studentData.invitedByName || 'Research Adviser',
+        department: studentData.department || 'Not specified',
+        status: 'pending',
+        invitationSentAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        invitedByLeader: studentData.email, // Track who added them
+        studentNumber: newStudentId // Pass the ID number so they can see it when they sign up
+      });
 
       // Send email to the new member
       try {
@@ -204,11 +223,62 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
     }
   };
 
+  const handleRemoveMember = async (member) => {
+    const memberEmail = (member.email || '').toLowerCase().trim();
+    if (!memberEmail) return;
+
+    const result = await Swal.fire({
+      title: 'Remove Member?',
+      text: `Are you sure you want to remove ${member.name || memberEmail} from your group? All associated invitation and pending records will be permanently wiped.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, remove'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        // 1. Update leader's student document groupMembers
+        const currentGroupMembers = studentData.groupMembers || [];
+        const updatedGroupMembers = currentGroupMembers.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() !== memberEmail : m?.toLowerCase() !== memberEmail));
+        await updateDoc(doc(db, 'students', studentData.uid), {
+          groupMembers: updatedGroupMembers
+        });
+
+        // 2. Update group document members
+        const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', studentData.uid)));
+        if (!groupSnap.empty) {
+          const groupId = groupSnap.docs[0].id;
+          const groupData = groupSnap.docs[0].data();
+          const existingMembers = groupData.members || [];
+          const updatedMembers = existingMembers.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() !== memberEmail : m?.toLowerCase() !== memberEmail));
+          await updateDoc(doc(db, 'groups', groupId), {
+            members: updatedMembers,
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        // 3. Wipe orphaned data for this member
+        await wipeEmailData(memberEmail);
+
+        setStudentData(prev => ({ ...prev, groupMembers: updatedGroupMembers }));
+        Swal.fire('Removed!', `${member.name || memberEmail} has been removed from the group and invitation data cleared.`, 'success');
+      } catch (err) {
+        console.error('Error removing member:', err);
+        Swal.fire('Error', 'Failed to remove member. Please try again.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // ── Derived values ──────────────────────────────────────────────────────────
   const displayName   = studentData?.displayName || studentName || 'Student';
-  const groupTitle    = studentData?.groupName    || propGroupName  || 'Your Group';
-  const researchTitle = studentData?.researchTitle || '—';
-  const adviserName   = studentData?.invitedByName || propAdviserName || 'Your Adviser';
+  const groupTitle    = groupData?.groupName || studentData?.groupName || propGroupName || 'Your Group';
+  const researchTitle = groupData?.researchTitle || studentData?.researchTitle || '—';
+  const adviserName   = groupData?.adviserName || studentData?.invitedByName || propAdviserName || 'Your Adviser';
   const course        = studentData?.course || '';
   const department    = studentData?.department || '';
 
@@ -418,11 +488,12 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h4 className="text-[16px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{member.name}</h4>
-                          {member.isYou && (
-                            <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
-                          )}
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-[16px] font-bold text-[#1A1A1A] dark:text-stone-100 truncate">{member.name}</h4>
+                            {member.isYou && (
+                              <span className="bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">YOU</span>
+                            )}
                             <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                               member.isYou
                                 ? 'bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#D05353]'
@@ -430,8 +501,20 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                                   ? 'bg-amber-100 text-amber-700'
                                   : 'bg-stone-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'
                             }`}>
-                            {member.role}
-                          </span>
+                              {member.role}
+                            </span>
+                          </div>
+
+                          {leaderCard.isYou && !member.isYou && (
+                            <button
+                              onClick={() => handleRemoveMember(member)}
+                              className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1 text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                              title="Remove member and clear invitation data"
+                            >
+                              <span>🗑️</span>
+                              <span className="text-[11px] font-semibold">Remove</span>
+                            </button>
+                          )}
                         </div>
 
                         <div className="text-[13px] text-gray-500 dark:text-stone-400 flex flex-col gap-1.5 mt-3 font-medium">

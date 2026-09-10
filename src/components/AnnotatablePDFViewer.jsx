@@ -11,14 +11,21 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
-  
+
   // annotations = { [pageNumber]: [ { type, points, color, size } ] }
   const [annotations, setAnnotations] = useState(initialAnnotations || {});
-  const [currentTool, setCurrentTool] = useState('pen'); // 'pen', 'highlighter', 'eraser', 'text'
+  const [currentTool, setCurrentTool] = useState('pen');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState(null);
   const [textInput, setTextInput] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Scroll-mode state
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const pageRefsMap = useRef({});       // { pageNum: domElement }
+  const scrollTimeoutRef = useRef(null);
+  const observerRef = useRef(null);
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -91,6 +98,75 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     setNumPages(numPages);
     setPageNumber(1);
   };
+
+  // ── Scroll-mode helpers ──────────────────────────────────────────────────────
+
+  // Track which page is most visible via IntersectionObserver
+  useEffect(() => {
+    if (!readOnly || !numPages) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        let best = null;
+        let bestRatio = 0;
+        entries.forEach(entry => {
+          if (entry.intersectionRatio > bestRatio) {
+            bestRatio = entry.intersectionRatio;
+            best = entry.target;
+          }
+        });
+        if (best) {
+          const pg = parseInt(best.dataset.page, 10);
+          if (!isNaN(pg)) setPageNumber(pg);
+        }
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: Array.from({ length: 21 }, (_, i) => i * 0.05),
+      }
+    );
+
+    Object.values(pageRefsMap.current).forEach(el => {
+      if (el) observerRef.current.observe(el);
+    });
+
+    return () => observerRef.current?.disconnect();
+  }, [numPages, readOnly]);
+
+  // Detect scroll — make nav ghost while scrolling, solid again after idle
+  const handleScrollActivity = useCallback(() => {
+    setIsScrolling(true);
+    clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 1200);
+  }, []);
+
+  // Scroll to a specific page
+  const scrollToPage = useCallback((pg) => {
+    const el = pageRefsMap.current[pg];
+    if (el && scrollContainerRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setPageNumber(pg);
+    }
+  }, []);
+
+  const goToPrev = useCallback(() => {
+    const target = Math.max(1, pageNumber - 1);
+    if (readOnly) scrollToPage(target);
+    else setPageNumber(target);
+  }, [pageNumber, readOnly, scrollToPage]);
+
+  const goToNext = useCallback(() => {
+    const target = Math.min(numPages || pageNumber, pageNumber + 1);
+    if (readOnly) scrollToPage(target);
+    else setPageNumber(target);
+  }, [pageNumber, numPages, readOnly, scrollToPage]);
+
+  // Register page element for observer + scroll lookup
+  const setPageRef = useCallback((pg, el) => {
+    if (!el) return;
+    pageRefsMap.current[pg] = el;
+    if (observerRef.current) observerRef.current.observe(el);
+  }, []);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
@@ -221,27 +297,31 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
 
   return (
     <div className="flex flex-col h-full bg-stone-200 dark:bg-stone-950 overflow-hidden relative select-none">
-      
-      {/* Toolbar */}
+
+      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between p-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 shrink-0 shadow-sm z-10">
-        
+
         {/* Pagination & Zoom */}
         <div className="flex items-center gap-2 md:gap-4">
+
+          {/* Page indicator + inline Prev/Next (always visible in toolbar) */}
           <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
-            <button 
-              onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+            <button
+              onClick={goToPrev}
               disabled={pageNumber <= 1}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-50 text-stone-700 dark:text-stone-300 transition-colors"
+              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all"
+              title="Previous page"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className="px-3 text-sm font-medium text-stone-700 dark:text-stone-300 font-mono">
               {pageNumber} / {numPages || '-'}
             </span>
-            <button 
-              onClick={() => setPageNumber(p => Math.min(numPages || p, p + 1))}
-              disabled={pageNumber >= numPages}
-              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-50 text-stone-700 dark:text-stone-300 transition-colors"
+            <button
+              onClick={goToNext}
+              disabled={pageNumber >= (numPages || 1)}
+              className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 text-stone-700 dark:text-stone-300 transition-all"
+              title="Next page"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -250,7 +330,7 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
           <div className="h-6 w-px bg-stone-300 dark:bg-stone-700 hidden sm:block"></div>
 
           <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1 hidden sm:flex">
-            <button 
+            <button
               onClick={() => setScale(s => Math.max(0.5, s - 0.25))}
               className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors"
             >
@@ -259,7 +339,7 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
             <span className="px-2 text-xs font-medium text-stone-700 dark:text-stone-300 w-12 text-center">
               {Math.round(scale * 100)}%
             </span>
-            <button 
+            <button
               onClick={() => setScale(s => Math.min(3.0, s + 0.25))}
               className="p-1.5 rounded hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors"
             >
@@ -268,32 +348,32 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
           </div>
         </div>
 
-        {/* Drawing Tools */}
+        {/* Drawing Tools (non-readOnly only) */}
         {!readOnly && (
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
-              <button 
+              <button
                 onClick={() => setCurrentTool('pen')}
                 className={`p-2 rounded transition-colors ${currentTool === 'pen' ? 'bg-white dark:bg-stone-700 text-[#7a2e46] dark:text-[#f8d070] shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
                 title="Pen (Red)"
               >
                 <Pen className="w-5 h-5" />
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentTool('highlighter')}
                 className={`p-2 rounded transition-colors ${currentTool === 'highlighter' ? 'bg-white dark:bg-stone-700 text-amber-500 shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
                 title="Highlighter (Yellow)"
               >
                 <Highlighter className="w-5 h-5" />
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentTool('text')}
                 className={`p-2 rounded transition-colors ${currentTool === 'text' ? 'bg-white dark:bg-stone-700 text-[#7a2e46] dark:text-[#f8d070] shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
                 title="Text Tool"
               >
                 <Type className="w-5 h-5" />
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentTool('eraser')}
                 className={`p-2 rounded transition-colors ${currentTool === 'eraser' ? 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
                 title="Eraser"
@@ -301,8 +381,8 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
                 <Eraser className="w-5 h-5" />
               </button>
             </div>
-            
-            <button 
+
+            <button
               onClick={clearPage}
               className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-1"
               title="Clear current page"
@@ -310,12 +390,12 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
               <Trash2 className="w-5 h-5" />
             </button>
 
-            <button 
+            <button
               onClick={handleSave}
               disabled={!hasChanges}
               className={`ml-2 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${
-                hasChanges 
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md' 
+                hasChanges
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-600 cursor-not-allowed'
               }`}
             >
@@ -326,120 +406,172 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
         )}
       </div>
 
-      {/* PDF Viewport */}
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-auto bg-stone-200 dark:bg-stone-950 flex justify-center p-4 md:p-8"
-        style={{ cursor: readOnly ? 'default' : 'crosshair' }}
-      >
-        {documentUrl ? (
-          <div className="relative shadow-2xl transition-transform origin-top" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+      {/* ── PDF Viewport ─────────────────────────────────────────────────────── */}
+      {documentUrl ? (
+        readOnly ? (
+          /* ══ SCROLL MODE (read-only): all pages stacked ══ */
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScrollActivity}
+            className="flex-1 overflow-y-auto overflow-x-auto bg-stone-200 dark:bg-stone-950 flex flex-col items-center py-6 gap-4"
+          >
             <Document
               file={documentUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               loading={<div className="p-12 text-stone-500 font-medium">Loading document...</div>}
               error={<div className="p-12 text-red-500 font-medium bg-red-50 rounded-lg">Failed to load PDF. Please try again.</div>}
             >
-              <Page 
-                pageNumber={pageNumber} 
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                onRenderSuccess={onPageRenderSuccess}
-                className="pointer-events-none bg-white" 
-                width={800} // fixed base width, scale applied via CSS
-              />
+              {numPages && Array.from({ length: numPages }, (_, i) => i + 1).map(pg => (
+                <div
+                  key={pg}
+                  ref={el => setPageRef(pg, el)}
+                  data-page={pg}
+                  className="shadow-2xl bg-white"
+                  style={{ transform: `scale(${scale})`, transformOrigin: 'top center', marginBottom: scale > 1 ? `${(scale - 1) * 600}px` : '0' }}
+                >
+                  <Page
+                    pageNumber={pg}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={false}
+                    width={800}
+                  />
+                </div>
+              ))}
             </Document>
 
-            {/* Drawing Canvas Overlay */}
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 z-10 touch-none"
-              style={{ 
-                cursor: readOnly ? 'default' : 'crosshair',
-                pointerEvents: readOnly ? 'none' : 'auto'
-              }}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseOut={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              onTouchCancel={stopDrawing}
-            />
+            {/* Spacer so last page isn't flush to bottom */}
+            <div className="h-24 shrink-0" />
+          </div>
+        ) : (
+          /* ══ SINGLE-PAGE MODE (annotation): one page at a time ══ */
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-auto bg-stone-200 dark:bg-stone-950 flex justify-center p-4 md:p-8"
+            style={{ cursor: 'crosshair' }}
+          >
+            <div className="relative shadow-2xl transition-transform origin-top" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+              <Document
+                file={documentUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                loading={<div className="p-12 text-stone-500 font-medium">Loading document...</div>}
+                error={<div className="p-12 text-red-500 font-medium bg-red-50 rounded-lg">Failed to load PDF. Please try again.</div>}
+              >
+                <Page
+                  pageNumber={pageNumber}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  onRenderSuccess={onPageRenderSuccess}
+                  className="pointer-events-none bg-white"
+                  width={800}
+                />
+              </Document>
 
-            {/* Text Input Overlay */}
-            {textInput && (
-              <input
-                autoFocus
-                type="text"
-                value={textInput.value}
-                onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
-                onBlur={() => {
-                  if (textInput.value.trim()) {
-                    setAnnotations(prev => ({
-                      ...prev,
-                      [pageNumber]: [...(prev[pageNumber] || []), {
-                        type: 'text',
-                        text: textInput.value,
-                        points: [{ x: textInput.x, y: textInput.y }]
-                      }]
-                    }));
-                    setHasChanges(true);
-                  }
-                  setTextInput(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.target.blur();
-                }}
-                placeholder="Type..."
-                className="absolute z-20 bg-white/90 border-2 border-[#7a2e46] dark:border-[#f8d070] outline-none text-[#7a2e46] dark:text-stone-900 px-2 py-1 rounded shadow-lg font-sans font-bold"
-                style={{
-                  left: `${textInput.x}px`,
-                  top: `${textInput.y - 12}px`,
-                  fontSize: '16px',
-                  minWidth: '200px'
-                }}
+              {/* Drawing Canvas Overlay */}
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 z-10 touch-none"
+                style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseOut={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+                onTouchCancel={stopDrawing}
               />
-            )}
 
-            {/* Rendered Text Annotations */}
-            {(annotations[pageNumber] || []).map((path, idx) => {
-              if (path.type !== 'text') return null;
-              return (
-                <div
-                  key={idx}
-                  className="absolute z-10 group"
-                  style={{
-                    left: `${path.points[0].x}px`,
-                    top: `${path.points[0].y - 12}px`
+              {/* Text Input Overlay */}
+              {textInput && (
+                <input
+                  autoFocus
+                  type="text"
+                  value={textInput.value}
+                  onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
+                  onBlur={() => {
+                    if (textInput.value.trim()) {
+                      setAnnotations(prev => ({
+                        ...prev,
+                        [pageNumber]: [...(prev[pageNumber] || []), {
+                          type: 'text',
+                          text: textInput.value,
+                          points: [{ x: textInput.x, y: textInput.y }]
+                        }]
+                      }));
+                      setHasChanges(true);
+                    }
+                    setTextInput(null);
                   }}
-                >
-                  <div className="relative bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm border border-[#7a2e46]/30 dark:border-[#f8d070]/30 px-2 py-1 rounded shadow-sm">
-                    <span className="font-sans font-bold text-[#7a2e46] dark:text-[#f8d070] text-[16px] whitespace-pre-wrap leading-tight">{path.text}</span>
-                    {!readOnly && (
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                  placeholder="Type..."
+                  className="absolute z-20 bg-white/90 border-2 border-[#7a2e46] dark:border-[#f8d070] outline-none text-[#7a2e46] dark:text-stone-900 px-2 py-1 rounded shadow-lg font-sans font-bold"
+                  style={{ left: `${textInput.x}px`, top: `${textInput.y - 12}px`, fontSize: '16px', minWidth: '200px' }}
+                />
+              )}
+
+              {/* Rendered Text Annotations */}
+              {(annotations[pageNumber] || []).map((path, idx) => {
+                if (path.type !== 'text') return null;
+                return (
+                  <div
+                    key={idx}
+                    className="absolute z-10 group"
+                    style={{ left: `${path.points[0].x}px`, top: `${path.points[0].y - 12}px` }}
+                  >
+                    <div className="relative bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm border border-[#7a2e46]/30 dark:border-[#f8d070]/30 px-2 py-1 rounded shadow-sm">
+                      <span className="font-sans font-bold text-[#7a2e46] dark:text-[#f8d070] text-[16px] whitespace-pre-wrap leading-tight">{path.text}</span>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteTextAnnotation(idx);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); deleteTextAnnotation(idx); }}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
                         title="Delete text"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-stone-500">
-            No document provided
-          </div>
-        )}
-      </div>
+        )
+      ) : (
+        <div className="flex items-center justify-center h-full text-stone-500">
+          No document provided
+        </div>
+      )}
+
+      {/* ── Floating Prev / Next bar (scroll mode only) ───────────────────── */}
+      {readOnly && numPages && (
+        <div
+          className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-stone-900/85 dark:bg-stone-950/90 backdrop-blur-md rounded-full px-3 py-1.5 shadow-2xl ring-1 ring-white/10 transition-all duration-500 group/bar ${
+            isScrolling
+              ? 'opacity-0 pointer-events-none translate-y-2'
+              : 'opacity-100 pointer-events-auto translate-y-0'
+          }`}
+        >
+          <button
+            onClick={goToPrev}
+            disabled={pageNumber <= 1}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white/80 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-full hover:bg-white/10 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Prev
+          </button>
+
+          <span className="text-white/60 text-xs font-mono px-3 border-x border-white/20">
+            Page {pageNumber} of {numPages}
+          </span>
+
+          <button
+            onClick={goToNext}
+            disabled={pageNumber >= numPages}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white/80 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-full hover:bg-white/10 transition-all"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

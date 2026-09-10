@@ -297,9 +297,14 @@ export default function ForgotPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full pl-10 pr-12 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all mb-3"
+                    className="w-full pl-10 pr-12 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all mb-3 select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#801e38] hover:text-[#601328]">
                     {showPassword ? 'Hide' : 'Show'}
@@ -329,9 +334,14 @@ export default function ForgotPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full pl-10 pr-12 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
+                    className="w-full pl-10 pr-12 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#801e38] hover:text-[#601328]">
                     {showConfirmPassword ? 'Hide' : 'Show'}

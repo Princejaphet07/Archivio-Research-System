@@ -6,6 +6,7 @@ import loginBg from '../../assets/parchment.png';
 import Swal from 'sweetalert2';
 
 function ForgotPassword() {
+  const abortControllerRef = useRef(null);
   const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   
@@ -21,7 +22,7 @@ function ForgotPassword() {
   const [error, setError] = useState('');
   const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
   
-  const API_URL = 'http://localhost:3001/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   const handleChangeOtp = (element, index) => {
     if (isNaN(element.value)) return false;
@@ -291,9 +292,14 @@ function ForgotPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 focus:outline-none focus:border-[#7a2e46] transition mb-3"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 focus:outline-none focus:border-[#7a2e46] transition mb-3 select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
                     {showPassword ? 'Hide' : 'Show'}
@@ -322,9 +328,14 @@ function ForgotPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 focus:outline-none focus:border-[#7a2e46] transition"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm text-gray-800 focus:outline-none focus:border-[#7a2e46] transition select-none"
                     required
                     disabled={loading}
+                    data-password="true"
+                    data-no-copy="true"
+                    onCopy={(e) => { e.preventDefault(); return false; }}
+                    onCut={(e) => { e.preventDefault(); return false; }}
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]">
                     {showConfirmPassword ? 'Hide' : 'Show'}

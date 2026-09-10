@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { Trash2, Download, ShieldOff, Unlock } from 'lucide-react';
 import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
 
 const roleColors = {
   Adviser: 'bg-amber-100 text-amber-700',
@@ -227,50 +228,7 @@ export default function AllUsers() {
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        let colName = 'students';
-        if (user.role === 'Dean') colName = 'deans';
-        if (user.role === 'Adviser') colName = 'advisers';
-        
-        await deleteDoc(doc(db, colName, user.id));
-
-        let uid = null;
-        const qUsers = query(collection(db, 'users'), where('email', '==', user.email));
-        const snapUsers = await getDocs(qUsers);
-        if (!snapUsers.empty) {
-          uid = snapUsers.docs[0].id;
-          await deleteDoc(doc(db, 'users', uid));
-        }
-
-        try {
-          if (user.role === 'Student') {
-            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', user.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            if (uid) {
-              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', uid));
-              const snapSub = await getDocs(qSub);
-              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
-            }
-          } else if (user.role === 'Adviser' || user.role === 'Dean') {
-            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', user.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', user.email));
-            const snapReq = await getDocs(qReq);
-            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
-          }
-        } catch (cleanupErr) {
-          console.error("Error cleaning up related data:", cleanupErr);
-        }
-
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email })
-        });
+        await wipeEmailData(user.email, user.id);
 
         Swal.fire('Deleted!', 'User and all related data have been permanently deleted.', 'success');
       } catch (error) {

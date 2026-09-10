@@ -45,7 +45,7 @@ function DeanActivate() {
         
         if (data.accountStatus !== 'pending_activation') {
           // Already activated
-          window.location.href = '/dean/';
+          navigate('/dean/');
           return;
         }
         
@@ -199,6 +199,9 @@ function DeanActivate() {
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
                 className="w-full rounded-xl border border-stone-300 bg-white py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20 shadow-sm"
                 placeholder="Enter new password"
               />
@@ -225,6 +228,9 @@ function DeanActivate() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
                 className="w-full rounded-xl border border-stone-300 bg-white py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20 shadow-sm"
                 placeholder="Confirm new password"
               />

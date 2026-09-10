@@ -36,7 +36,8 @@ export default function NotificationBell({ onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [prefs, setPrefs] = useState(null);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
-  const prevNotifsRef = useRef(new Set()); // To track seen notifs for toasts
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const prevNotifsRef = useRef(new Set());
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -87,6 +88,23 @@ export default function NotificationBell({ onNavigate }) {
 
     return () => unsub();
   }, []);
+
+  // Auto-open on first load if there are unread notifications
+  useEffect(() => {
+    if (hasAutoOpened) return;
+    const unread = notifications.filter(n => !n.isRead).length;
+    if (unread > 0) {
+      setIsOpen(true);
+      setHasAutoOpened(true);
+    }
+  }, [notifications, hasAutoOpened]);
+
+  // Auto-close on scroll
+  useEffect(() => {
+    const handleScroll = () => { if (isOpen) setIsOpen(false); };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isOpen]);
 
   // Handle sounds and TOASTS for new notifications
   useEffect(() => {
@@ -216,18 +234,28 @@ export default function NotificationBell({ onNavigate }) {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const showDot = prefs ? prefs['inapp-1'] !== false : true;
+  const hasUnread = unreadCount > 0;
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-10 h-10 rounded-full border border-[#E8DFCB] dark:border-stone-700 bg-white dark:bg-stone-900 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-all shadow-sm cursor-pointer"
+        className={`relative w-10 h-10 rounded-full border flex items-center justify-center transition-all shadow-sm cursor-pointer ${
+          hasUnread
+            ? 'border-[#CF3645]/40 bg-[#CF3645]/5 dark:bg-[#CF3645]/10 dark:border-[#CF3645]/30 hover:bg-[#CF3645]/10'
+            : 'border-[#E8DFCB] dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-black/5 dark:hover:bg-white/5'
+        }`}
+        title={hasUnread ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'Notifications'}
       >
-        <svg className="w-5 h-5 text-[#8A7B61] dark:text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <svg
+          className={`w-5 h-5 ${hasUnread ? 'text-[#CF3645] dark:text-[#f87171] animate-[bellRing_1.2s_ease-in-out_infinite]' : 'text-[#8A7B61] dark:text-stone-300'}`}
+          style={hasUnread ? { transformOrigin: '50% 0%' } : {}}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
-        {showDot && unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-[18px] h-[18px] bg-[#CF3645] text-white text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-[#FDF9ED] dark:ring-stone-900">
+        {showDot && hasUnread && (
+          <span className="absolute -top-1 -right-1 w-[18px] h-[18px] bg-[#CF3645] text-white text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-[#FDF9ED] dark:ring-stone-900 animate-pulse">
             {unreadCount}
           </span>
         )}
@@ -237,7 +265,14 @@ export default function NotificationBell({ onNavigate }) {
       {isOpen && (
         <div className="absolute right-0 mt-3 w-80 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700/50 overflow-hidden z-[9999] transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-gradient-to-r from-[#7B1F35] to-[#9a2843] dark:from-stone-800 dark:to-stone-800 text-white px-5 py-4 flex justify-between items-center shadow-inner">
-            <h3 className="font-bold text-[15px] tracking-wide">Notifications</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-[15px] tracking-wide">Notifications</h3>
+              {hasUnread && (
+                <span className="bg-white/20 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
             {notifications.length > 0 && (
               <div className="flex gap-3">
                 {unreadCount > 0 && (
@@ -341,6 +376,22 @@ export default function NotificationBell({ onNavigate }) {
           </div>
         </div>
       )}
+
+      {/* Bell ring animation keyframe */}
+      <style>{`
+        @keyframes bellRing {
+          0%   { transform: rotate(0deg); }
+          10%  { transform: rotate(14deg); }
+          20%  { transform: rotate(-12deg); }
+          30%  { transform: rotate(10deg); }
+          40%  { transform: rotate(-8deg); }
+          50%  { transform: rotate(6deg); }
+          60%  { transform: rotate(-4deg); }
+          70%  { transform: rotate(2deg); }
+          80%  { transform: rotate(0deg); }
+          100% { transform: rotate(0deg); }
+        }
+      `}</style>
     </div>
   );
 }

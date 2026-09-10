@@ -106,6 +106,7 @@ function ReviewSubmissions() {
 
   // Filter by tab
   const filteredByTab = enrichedSubmissions.filter(sub => {
+    if (activeTab === 'dean_revision') return sub.reviewStatus === 'dean_revision';
     if (activeTab === 'pending') return sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
     if (activeTab === 'reviewed') return sub.reviewStatus === 'reviewed' || sub.reviewStatus === 'revision';
     if (activeTab === 'approved') return sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
@@ -140,6 +141,7 @@ function ReviewSubmissions() {
 
   // Tab counts
   const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
+  const deanRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
   const reviewedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'reviewed' || s.reviewStatus === 'revision').length;
   const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published').length;
 
@@ -256,17 +258,20 @@ function ReviewSubmissions() {
 
   // Handle Approve action
   const handleApprove = async (sub) => {
+    const isDeanRev = sub.reviewStatus === 'dean_revision';
     const res = await Swal.fire({
-      title: 'Approve Submission?',
-      text: "This will approve the research and forward it to the Dean's Publish Queue.",
+      title: isDeanRev ? 'Re-Approve & Submit to Dean?' : 'Approve Submission?',
+      text: isDeanRev 
+        ? "This will re-approve the revised manuscript and return it to the Dean's Publish Queue."
+        : "This will approve the research and forward it to the Dean's Publish Queue.",
       input: 'textarea',
-      inputLabel: 'Optional Comments for the Student',
-      inputPlaceholder: 'Great job! Or any final thoughts...',
+      inputLabel: 'Optional Comments / Notes',
+      inputPlaceholder: isDeanRev ? 'E.g. Completed revisions requested by the Dean...' : 'Great job! Or any final thoughts...',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#059669',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, Approve'
+      confirmButtonText: isDeanRev ? 'Yes, Re-Approve to Dean' : 'Yes, Approve'
     });
 
     if (res.isConfirmed) {
@@ -368,12 +373,20 @@ function ReviewSubmissions() {
 
   // Handle Reject/Revision action
   const handleReject = async (sub) => {
+    const isDeanRev = sub.reviewStatus === 'dean_revision' || !!sub.deanComments;
+    const defaultInput = sub.deanComments 
+      ? `Dean's Directive (${sub.deanFeedback?.category || 'Revision'}):\n"${sub.deanComments}"\n\nAdviser Instructions:`
+      : '';
+
     const res = await Swal.fire({
-      title: 'Request Revision?',
-      text: "The student will be notified to revise their submission.",
+      title: isDeanRev ? 'Forward Revision to Students?' : 'Request Revision?',
+      text: isDeanRev 
+        ? `Forward Dean's revision directive to ${sub.groupName}:` 
+        : "The student will be notified to revise their submission.",
       input: 'textarea',
-      inputLabel: 'Revision Comments & Feedback',
-      inputPlaceholder: 'Please fix chapter 2 and update the bibliography...',
+      inputValue: defaultInput,
+      inputLabel: 'Revision Comments & Instructions',
+      inputPlaceholder: 'Detail the required revisions here...',
       inputValidator: (value) => {
         if (!value) {
           return 'You need to write a comment for the revision request!'
@@ -383,7 +396,7 @@ function ReviewSubmissions() {
       showCancelButton: true,
       confirmButtonColor: '#ca8a04',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, Request Revision'
+      confirmButtonText: isDeanRev ? 'Forward to Students' : 'Yes, Request Revision'
     });
 
     if (res.isConfirmed) {
@@ -586,6 +599,8 @@ function ReviewSubmissions() {
 
   const getStatusBadge = (status) => {
     switch (status) {
+      case 'dean_revision':
+        return <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] px-2.5 py-1 rounded-full font-bold border border-amber-300 dark:border-amber-700">🏛️ Returned by Dean</span>;
       case 'in_progress':
         return <span className="bg-blue-50 text-blue-700 text-[11px] px-2.5 py-1 rounded-full font-bold">In Progress</span>;
       case 'pending':
@@ -632,12 +647,18 @@ function ReviewSubmissions() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-8">
+        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-6 flex-wrap">
           <button
             onClick={() => setActiveTab('pending')}
             className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
             ⏳ Pending Review <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{pendingCount}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('dean_revision')}
+            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'dean_revision' ? 'border-b-2 border-amber-600 text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+          >
+            🏛️ Returned by Dean <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'dean_revision' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{deanRevisionCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('reviewed')}
@@ -649,7 +670,7 @@ function ReviewSubmissions() {
             onClick={() => setActiveTab('approved')}
             className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🎓 Approved <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
+            🏆 Approved <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
           </button>
         </div>
 
@@ -666,6 +687,11 @@ function ReviewSubmissions() {
                     <>
                       <th className="py-3.5 px-4">Approved On</th>
                       <th className="py-3.5 px-4">Status</th>
+                    </>
+                  ) : activeTab === 'dean_revision' ? (
+                    <>
+                      <th className="py-3.5 px-4">Returned Date</th>
+                      <th className="py-3.5 px-4 text-center">Dean Directive</th>
                     </>
                   ) : (
                     <>
@@ -715,6 +741,17 @@ function ReviewSubmissions() {
                             )}
                           </td>
                         </>
+                      ) : activeTab === 'dean_revision' ? (
+                        <>
+                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
+                            {item.returnedAt ? new Date(item.returnedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-300 dark:border-amber-700">
+                              {item.deanFeedback?.category || 'Revision Directive'}
+                            </span>
+                          </td>
+                        </>
                       ) : activeTab === 'reviewed' ? (
                         <>
                           <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
@@ -755,7 +792,7 @@ function ReviewSubmissions() {
                         </>
                       )}
                       <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <PremiumButton 
                             onClick={() => handleFullReview(item)}
                             variant="ghost"
@@ -763,17 +800,37 @@ function ReviewSubmissions() {
                           >
                             View
                           </PremiumButton>
-                          {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
+                          {activeTab === 'dean_revision' && (
                             <>
+                              <PremiumButton 
+                                onClick={() => handleReject(item)}
+                                variant="outline"
+                                size="sm"
+                                className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                                title="Forward feedback to student group to revise"
+                              >
+                                Forward to Student
+                              </PremiumButton>
                               <PremiumButton 
                                 onClick={() => handleApprove(item)}
                                 variant="primary"
                                 size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-xs"
+                                title="Re-approve manuscript and return to Dean for publishing"
                               >
-                                Approve
+                                Re-Approve to Dean
                               </PremiumButton>
                             </>
+                          )}
+                          {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
+                            <PremiumButton 
+                              onClick={() => handleApprove(item)}
+                              variant="primary"
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Approve
+                            </PremiumButton>
                           )}
                         </div>
                       </td>
@@ -816,6 +873,30 @@ function ReviewSubmissions() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6">
+
+              {/* DEAN REVISION DIRECTIVE ALERT BANNER */}
+              {(selectedSubmission.reviewStatus === 'dean_revision' || selectedSubmission.deanComments) && (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                      <span>🏛️ Dean's Revision Directive — {selectedSubmission.deanFeedback?.category || 'Feedback'}</span>
+                    </div>
+                    {selectedSubmission.deanFeedback?.urgency === 'urgent' && (
+                      <span className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-bold uppercase tracking-wider">
+                        Urgent Attention
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-stone-800 dark:text-stone-100 text-sm font-serif italic whitespace-pre-wrap leading-relaxed bg-white/70 dark:bg-stone-900/60 p-3.5 rounded-lg border border-amber-200 dark:border-amber-800/40">
+                    "{selectedSubmission.deanComments || selectedSubmission.deanFeedback?.comments}"
+                  </p>
+                  <div className="flex items-center justify-between text-[11px] text-stone-500 dark:text-stone-400 mt-2.5">
+                    <span>From: <strong>{selectedSubmission.deanFeedback?.deanName || 'Dean'}</strong> ({selectedSubmission.deanFeedback?.deanEmail || 'Dean\'s Office'})</span>
+                    <span>{selectedSubmission.returnedAt ? new Date(selectedSubmission.returnedAt).toLocaleString() : ''}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Overview Stats */}
               <div className="grid grid-cols-3 gap-4">
@@ -1045,6 +1126,28 @@ function ReviewSubmissions() {
                       title={selectedSubmission.completionPercent < 100 ? 'Student must submit all documents first' : ''}
                     >
                       Approve
+                    </button>
+                  </>
+                )}
+                {selectedSubmission.reviewStatus === 'dean_revision' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowReviewModal(false);
+                        handleReject(selectedSubmission);
+                      }}
+                      className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Forward to Student</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowReviewModal(false);
+                        handleApprove(selectedSubmission);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Re-Approve to Dean</span>
                     </button>
                   </>
                 )}

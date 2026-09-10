@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import { useUser } from '../context/UserContext';
@@ -17,6 +17,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const [requirements, setRequirements] = useState([]);
   const [adviserFilter, setAdviserFilter] = useState('All Advisers');
   const [loading, setLoading] = useState(true);
+  const [queueTab, setQueueTab] = useState('ready'); // 'ready' | 'returned'
+  const [revisionModalOpen, setRevisionModalOpen] = useState(false);
+  const [selectedItemForRevision, setSelectedItemForRevision] = useState(null);
+  const [revisionCategory, setRevisionCategory] = useState('Formatting & Citations');
+  const [revisionComments, setRevisionComments] = useState('');
+  const [revisionUrgency, setRevisionUrgency] = useState('normal');
+  const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
 
   const [viewerState, setViewerState] = useState({
     isOpen: false,
@@ -98,9 +105,11 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
   const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'reviewed').length;
   const publishedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'published').length;
+  const returnedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
 
-  // Items awaiting publication
+  // Items awaiting publication & returned for revision
   const awaitingPublication = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'reviewed');
+  const returnedItems = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision');
   
   // Eligible / Blocked (Though approved items should be 100%, we compute it strictly)
   const eligibleItems = awaitingPublication.filter(s => s.completionPercent === 100);
@@ -109,10 +118,15 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const eligibleCount = eligibleItems.length;
   const blockedCount = blockedItems.length;
 
-  // Unique advisers for dropdown
-  const uniqueAdvisers = ['All Advisers', ...new Set(awaitingPublication.map(s => s.adviserName).filter(Boolean))];
+  // Unique advisers for dropdown across awaiting and returned
+  const allQueueItems = [...awaitingPublication, ...returnedItems];
+  const uniqueAdvisers = ['All Advisers', ...new Set(allQueueItems.map(s => s.adviserName).filter(Boolean))];
 
   const filteredQueue = eligibleItems.filter(item => 
+    adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
+  );
+
+  const filteredReturned = returnedItems.filter(item =>
     adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
   );
 
@@ -262,6 +276,143 @@ export default function PublishQueue({ activePage, onNavigate }) {
     }
   };
 
+  const handleOpenRevisionModal = (item) => {
+    setSelectedItemForRevision(item);
+    setRevisionCategory('Formatting & Citations');
+    setRevisionComments(item.deanComments || '');
+    setRevisionUrgency('normal');
+    setRevisionModalOpen(true);
+  };
+
+  const handleSubmitRevision = async () => {
+    if (!selectedItemForRevision) return;
+    if (!revisionComments.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Feedback Required',
+        text: 'Please specify revision feedback or instructions for the adviser.',
+        confirmButtonColor: '#7a1f3d'
+      });
+      return;
+    }
+
+    setIsSubmittingRevision(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const deanName = deanData?.name || auth.currentUser?.displayName || 'Dean';
+      const deanEmail = auth.currentUser?.email || 'Dean';
+
+      const feedbackData = {
+        comments: revisionComments.trim(),
+        category: revisionCategory,
+        urgency: revisionUrgency,
+        timestamp: nowIso,
+        deanName,
+        deanEmail
+      };
+
+      await updateDoc(doc(db, 'submissions', selectedItemForRevision.id), {
+        reviewStatus: 'dean_revision',
+        deanFeedback: feedbackData,
+        deanComments: revisionComments.trim(),
+        returnedAt: nowIso,
+        returnedBy: deanEmail
+      });
+
+      // Notify the Adviser in-app
+      if (selectedItemForRevision.adviserUid) {
+        try {
+          const targetIds = new Set([selectedItemForRevision.adviserUid]);
+          try {
+            const advUserSnap = await getDocs(query(collection(db, 'users'), where('email', '==', selectedItemForRevision.adviserUid)));
+            advUserSnap.forEach(uDoc => targetIds.add(uDoc.id));
+          } catch (uErr) { /* ignore */ }
+
+          for (const targetId of targetIds) {
+            await addDoc(collection(db, 'notifications'), {
+              userId: targetId,
+              title: revisionUrgency === 'urgent' ? '🚨 URGENT: Dean Returned Manuscript' : '🏛️ Dean Returned Manuscript for Revision',
+              message: `Dean ${deanName} returned "${selectedItemForRevision.researchTitle}" for revision. Category: ${revisionCategory}. Feedback: "${revisionComments.trim().substring(0, 90)}..."`,
+              isRead: false,
+              createdAt: serverTimestamp(),
+              type: 'dean_revision',
+              submissionId: selectedItemForRevision.id
+            });
+          }
+        } catch (notifErr) {
+          console.error('Failed to notify adviser:', notifErr);
+        }
+
+        // Send Email notification to Adviser
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: selectedItemForRevision.adviserUid,
+            message: {
+              subject: `[ARCHIVIO] Dean Revision Required: ${selectedItemForRevision.researchTitle}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                    <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Dean Review Directive</p>
+                  </div>
+                  <div style="padding: 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0;">Dear Adviser ${selectedItemForRevision.adviserName},</h2>
+                    <p style="color: #4a5568; line-height: 1.6;">Dean <strong>${deanName}</strong> has reviewed the submitted manuscript <strong>"${selectedItemForRevision.researchTitle}"</strong> from <strong>${selectedItemForRevision.groupName}</strong> and requested revisions before public archiving.</p>
+                    
+                    <div style="background-color: #fffaf0; border-left: 4px solid #dd6b20; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0 0 6px 0; color: #7b341e; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+                        Category: ${revisionCategory} ${revisionUrgency === 'urgent' ? '(Urgent)' : ''}
+                      </p>
+                      <p style="margin: 0; color: #2d3748; white-space: pre-wrap; font-style: italic;">"${revisionComments.trim()}"</p>
+                    </div>
+
+                    <p style="color: #4a5568; line-height: 1.6;">Please coordinate with the student group to address these items. Once revised, you can re-approve the manuscript to return it to the Dean's Publish Queue.</p>
+                    
+                    <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                      Best regards,<br>
+                      <strong>${deanName}</strong><br>
+                      Dean's Office
+                    </p>
+                  </div>
+                </div>
+              `
+            }
+          });
+        } catch (mailErr) {
+          console.error('Failed to send mail to adviser:', mailErr);
+        }
+      }
+
+      await logActivity({
+        user: deanEmail,
+        role: 'Dean',
+        action: 'Returned research manuscript to adviser for revision',
+        details: `Title: ${selectedItemForRevision.researchTitle} | Adviser: ${selectedItemForRevision.adviserName} | Category: ${revisionCategory}`,
+        status: 'Success'
+      });
+
+      setRevisionModalOpen(false);
+      setSelectedItemForRevision(null);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Feedback Sent to Adviser',
+        text: `The manuscript has been returned to ${selectedItemForRevision.adviserName} for revision.`,
+        confirmButtonColor: '#7a1f3d'
+      });
+    } catch (err) {
+      console.error('Failed to submit revision:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to send revision feedback. Please try again.',
+        confirmButtonColor: '#7a1f3d'
+      });
+    } finally {
+      setIsSubmittingRevision(false);
+    }
+  };
+
   const handlePublishAll = async () => {
     if (eligibleCount === 0) return;
     
@@ -379,11 +530,36 @@ export default function PublishQueue({ activePage, onNavigate }) {
             {/* ===== LEFT: AWAITING PUBLICATION LIST ===== */}
             <Card glass={true} className="col-span-2 overflow-hidden flex flex-col">
 
-              {/* Card Header */}
-              <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white dark:bg-stone-800 z-10 sticky top-0">
-                <div>
-                  <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100">Awaiting Publication</h2>
-                  <p className="text-[11px] text-stone-400 mt-0.5">Approved → Ready to Publish</p>
+              {/* Card Header with Tabs */}
+              <div className="px-6 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-stone-800 z-10 sticky top-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQueueTab('ready')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      queueTab === 'ready'
+                        ? 'bg-[#7a1f3d] text-white shadow-sm'
+                        : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    }`}
+                  >
+                    Ready to Publish ({eligibleCount})
+                  </button>
+                  <button
+                    onClick={() => setQueueTab('returned')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      queueTab === 'returned'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    }`}
+                  >
+                    <span>Returned for Revision</span>
+                    {returnedCount > 0 && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        queueTab === 'returned' ? 'bg-white text-amber-700' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                      }`}>
+                        {returnedCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
                 {/* Adviser Filter */}
                 <div className="relative">
@@ -404,6 +580,80 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   <div className="p-4">
                     <ListSkeleton items={4} />
                   </div>
+                ) : queueTab === 'returned' ? (
+                  filteredReturned.length === 0 ? (
+                    <div className="p-12 text-center text-stone-400 text-sm">
+                      <span className="text-3xl block mb-2">📋</span>
+                      No manuscripts currently returned for revision.
+                    </div>
+                  ) : (
+                    filteredReturned.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 border-l-4 border-l-amber-500 bg-amber-50/15"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700">
+                                ⚠️ In Revision with Adviser
+                              </span>
+                              {item.deanFeedback?.category && (
+                                <span className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                  {item.deanFeedback.category}
+                                </span>
+                              )}
+                              {item.deanFeedback?.urgency === 'urgent' && (
+                                <span className="bg-red-100 text-red-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                                  🚨 Urgent
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">{item.researchTitle}</h3>
+                            <p className="text-[11px] font-medium text-stone-500 dark:text-stone-400 mt-0.5">
+                              {item.groupName} · Assigned to Adviser: <strong className="text-[#7a1f3d] dark:text-[#f8d070]">{item.adviserName}</strong> · Returned: {item.returnedAt ? new Date(item.returnedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                            </p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <PremiumButton 
+                              onClick={() => handleViewManuscript(item)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1.5"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View Doc
+                            </PremiumButton>
+                            <PremiumButton 
+                              onClick={() => handleOpenRevisionModal(item)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700"
+                            >
+                              ✏️ Update Feedback
+                            </PremiumButton>
+                          </div>
+                        </div>
+
+                        {/* Feedback preview callout */}
+                        {item.deanComments && (
+                          <div className="bg-white/80 dark:bg-stone-800/80 rounded-lg p-3 border border-amber-200/80 dark:border-amber-800/40 text-xs">
+                            <p className="font-bold text-amber-900 dark:text-amber-200 mb-0.5 text-[11px] uppercase tracking-wider">
+                              Your Revision Feedback:
+                            </p>
+                            <p className="text-stone-700 dark:text-stone-200 italic line-clamp-2">
+                              "{item.deanComments}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )
                 ) : filteredQueue.length === 0 ? (
                   <div className="p-8 text-center text-stone-400 text-sm">No eligible submissions awaiting publication.</div>
                 ) : (
@@ -443,23 +693,23 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       </div>
 
                       {/* Actions */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <PremiumButton 
-                            onClick={() => handleSimilarityCheck(item)}
-                            variant="ghost"
-                            size="sm"
-                            className="flex items-center gap-1.5"
-                          >
-                            <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            AI Scan
-                          </PremiumButton>
-                          <PremiumButton 
-                            onClick={() => handlePreview(item)}
-                            variant="ghost"
-                            size="sm"
-                          >
-                            Abstract
-                          </PremiumButton>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PremiumButton 
+                          onClick={() => handleSimilarityCheck(item)}
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                        >
+                          <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                          AI Scan
+                        </PremiumButton>
+                        <PremiumButton 
+                          onClick={() => handlePreview(item)}
+                          variant="ghost"
+                          size="sm"
+                        >
+                          Abstract
+                        </PremiumButton>
                         <PremiumButton 
                           onClick={() => handleViewManuscript(item)}
                           variant="outline"
@@ -471,6 +721,18 @@ export default function PublishQueue({ activePage, onNavigate }) {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                           View Doc
+                        </PremiumButton>
+                        <PremiumButton 
+                          onClick={() => handleOpenRevisionModal(item)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1.5 border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                          title="Send feedback and return manuscript to adviser for revision"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Request Revision
                         </PremiumButton>
                         <PremiumButton
                           onClick={() => handlePublish(item)}
@@ -604,6 +866,153 @@ export default function PublishQueue({ activePage, onNavigate }) {
         documentUrl={viewerState.url}
         documentTitle={viewerState.title}
       />
+
+      {/* ===== DEAN REVISION & FEEDBACK MODAL ===== */}
+      {revisionModalOpen && selectedItemForRevision && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-[#7a1f3d] to-[#541529] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-lg">
+                  ✍️
+                </div>
+                <div>
+                  <h3 className="font-bold text-base tracking-wide">Request Manuscript Revision</h3>
+                  <p className="text-xs text-stone-200">Provide direct feedback to Adviser & Research Group</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRevisionModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center text-stone-200 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {/* Manuscript Info Pill */}
+              <div className="p-3.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700/60">
+                <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">Target Manuscript</p>
+                <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 line-clamp-2 mt-0.5">
+                  {selectedItemForRevision.researchTitle}
+                </h4>
+                <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400 mt-2">
+                  <span>👥 <strong>{selectedItemForRevision.groupName}</strong></span>
+                  <span>•</span>
+                  <span>👨‍🏫 Adviser: <strong className="text-[#7a1f3d] dark:text-[#f8d070]">{selectedItemForRevision.adviserName}</strong></span>
+                </div>
+              </div>
+
+              {/* Feedback Category */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-2">
+                  Revision Category
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    'Formatting & Citations',
+                    'Plagiarism & Similarity',
+                    'Methodology & Content',
+                    'Incomplete Sections',
+                    'Grammar & Syntax',
+                    'General Dean Directive'
+                  ].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setRevisionCategory(cat)}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition-all cursor-pointer ${
+                        revisionCategory === cat
+                          ? 'bg-[#7a1f3d]/10 border-[#7a1f3d] text-[#7a1f3d] dark:bg-[#f8d070]/10 dark:border-[#f8d070] dark:text-[#f8d070] font-bold'
+                          : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-stone-300'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Urgency Level */}
+              <div className="flex items-center gap-4 pt-1">
+                <span className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider">
+                  Priority:
+                </span>
+                <label className="flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="urgency"
+                    value="normal"
+                    checked={revisionUrgency === 'normal'}
+                    onChange={() => setRevisionUrgency('normal')}
+                    className="accent-[#7a1f3d]"
+                  />
+                  <span>Standard Revision</span>
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-bold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="urgency"
+                    value="urgent"
+                    checked={revisionUrgency === 'urgent'}
+                    onChange={() => setRevisionUrgency('urgent')}
+                    className="accent-amber-600"
+                  />
+                  <span>🚨 Urgent Attention</span>
+                </label>
+              </div>
+
+              {/* Feedback Instructions */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                  Detailed Feedback & Required Corrections <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={5}
+                  value={revisionComments}
+                  onChange={(e) => setRevisionComments(e.target.value)}
+                  placeholder="Specify exact chapters, pages, or guidelines that need revision before this manuscript can be approved for public archive publication..."
+                  className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-xl p-3 text-xs text-stone-800 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#7a1f3d] transition-all resize-none font-sans"
+                />
+                <p className="text-[11px] text-stone-400 mt-1">
+                  This note will be delivered immediately to {selectedItemForRevision.adviserName} and reflected in the student group timeline.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-stone-50 dark:bg-stone-800/80 border-t border-stone-200 dark:border-stone-700 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRevisionModalOpen(false)}
+                disabled={isSubmittingRevision}
+                className="px-4 py-2 text-xs font-semibold text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitRevision}
+                disabled={isSubmittingRevision}
+                className="px-5 py-2 text-xs font-bold bg-[#7a1f3d] hover:bg-[#5a162d] text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmittingRevision ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Sending Feedback...
+                  </>
+                ) : (
+                  <>
+                    <span>📤</span> Send Feedback & Return
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

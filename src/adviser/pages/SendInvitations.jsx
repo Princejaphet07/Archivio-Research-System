@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAdviser } from '../context/AdviserContext';
 import Layout from '../components/Layout';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { verifySchoolEmailOnline, validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 
 function SendInvitations() {
   const { adviserData } = useAdviser();
@@ -59,12 +61,7 @@ function SendInvitations() {
       return;
     }
 
-    if (!studentEmail.toLowerCase().endsWith('@phinmaed.com')) {
-      setError('Email must use @phinmaed.com domain');
-      return;
-    }
-
-    if (!adviserData?.email.toLowerCase().endsWith('@phinmaed.com')) {
+    if (!adviserData?.email?.toLowerCase().endsWith('@phinmaed.com')) {
       setError('❌ Only advisers with @phinmaed.com email can send invitations');
       return;
     }
@@ -72,11 +69,48 @@ function SendInvitations() {
     setLoading(true);
 
     try {
+      // 1. Strictly verify official SWU PHINMA student email (.swu@phinmaed.com) & MX records
+      const verification = await verifySchoolEmailOnline(studentEmail, 'student');
+      if (!verification.isValid) {
+        setError(`❌ ${verification.error}`);
+        setLoading(false);
+        return;
+      }
+      const emailToInvite = verification.normalizedEmail;
+
+      // 1. Check if email is already registered in users
+      const qUser = query(
+        collection(db, 'users'),
+        where('email', '==', emailToInvite)
+      );
+      const snapUser = await getDocs(qUser);
+      if (!snapUser.empty) {
+        setError('This email is already registered to an active account.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check if email already has a pending invitation
+      const qInvite = query(
+        collection(db, 'studentInvitations'),
+        where('studentEmail', '==', emailToInvite),
+        where('status', '==', 'pending')
+      );
+      const snapInvite = await getDocs(qInvite);
+      if (!snapInvite.empty) {
+        setError('This email already has a pending invitation. You can resend or remove it in the table below.');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Auto-cleanup any stale or orphaned data for this email to guarantee a 100% clean invitation
+      await wipeEmailData(emailToInvite);
+
       // Generate invitation token (kept for Firestore tracking)
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      // Clean link to the Sign Up page — no token in the URL
+      // Clean link to the Sign Up page
       const studentPortalUrl = window.location.origin;
-      const invitationLink = `${studentPortalUrl}/student/signup`;
+      const invitationLink = `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail.toLowerCase().trim())}`;
 
       // Create student invitation in Firestore
       const invitationData = {
@@ -234,6 +268,41 @@ function SendInvitations() {
       setLoading(false);
     }
   };
+  const handleRemoveInvitation = async (invitationId, studentEmail) => {
+    const result = await Swal.fire({
+      title: 'Remove Invitation?',
+      text: `Are you sure you want to remove the invitation for ${studentEmail}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, remove it'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await wipeEmailData(studentEmail);
+        await fetchInvitations();
+        Swal.fire({
+          title: 'Removed!',
+          text: 'The invitation and all associated email data have been permanently removed.',
+          icon: 'success',
+          confirmButtonColor: '#801e38'
+        });
+      } catch (error) {
+        console.error('Error removing invitation:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to remove invitation.',
+          icon: 'error',
+          confirmButtonColor: '#801e38'
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
     <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={true}>
@@ -272,7 +341,7 @@ function SendInvitations() {
                 type="email" 
                 value={studentEmail}
                 onChange={(e) => setStudentEmail(e.target.value.trim())}
-                placeholder="e.g. student@phinmaed.com" 
+                placeholder="e.g. jcreyes.swu@phinmaed.com" 
                 className="w-full bg-white dark:bg-stone-950 border border-gray-300 dark:border-stone-700 text-gray-900 dark:text-stone-100 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] disabled:opacity-50"
                 disabled={loading}
               />
@@ -285,7 +354,7 @@ function SendInvitations() {
               {loading ? 'Sending...' : 'Send Link'}
             </PremiumButton>
           </form>
-          <p className="text-xs text-gray-400 dark:text-stone-500 mt-4">💡 Only @phinmaed.com emails can receive invitations.</p>
+          <p className="text-xs text-gray-400 dark:text-stone-500 mt-4">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
         </Card>
 
         {/* History Table */}
@@ -328,14 +397,24 @@ function SendInvitations() {
                       </td>
                       <td className="py-4 px-6">
                         {invitation.status === 'pending' && (
-                          <PremiumButton 
-                            onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
-                            disabled={loading}
-                            variant="ghost"
-                            size="sm"
-                          >
-                            🔄 Resend
-                          </PremiumButton>
+                          <div className="flex items-center gap-2">
+                            <PremiumButton 
+                              onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
+                              disabled={loading}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              🔄 Resend
+                            </PremiumButton>
+                            <PremiumButton 
+                              onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
+                              disabled={loading}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              ❌ Remove
+                            </PremiumButton>
+                          </div>
                         )}
                       </td>
                     </tr>

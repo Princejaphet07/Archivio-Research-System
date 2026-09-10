@@ -11,6 +11,7 @@ import { useAcademicYear } from '../context/AcademicYearContext';
 import { Trash2, Eye, Edit2, Ban, Plus, X } from 'lucide-react';
 import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -23,6 +24,7 @@ export default function UserManagement() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -214,13 +216,8 @@ export default function UserManagement() {
 
       // Auto-select the newly added program
       const newCode = newProgCode.trim().toUpperCase();
-      if (!selectedPrograms.includes(newCode)) {
-        setSelectedPrograms(prev => {
-          const newList = [...prev, newCode];
-          setFormData(f => ({ ...f, programs: newList.join(', ') }));
-          return newList;
-        });
-      }
+      setSelectedPrograms([newCode]);
+      setFormData(f => ({ ...f, programs: newCode }));
     } catch (err) {
       console.error("Error adding program:", err);
       Swal.fire('Error', 'Failed to add program.', 'error');
@@ -229,12 +226,11 @@ export default function UserManagement() {
     }
   };
 
-  const toggleProgram = (code) => {
-    setSelectedPrograms(prev => {
-      const newList = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code];
-      setFormData(f => ({ ...f, programs: newList.join(', ') }));
-      return newList;
-    });
+  const selectProgram = (code) => {
+    setSelectedPrograms([code]);
+    setFormData(f => ({ ...f, programs: code }));
+    setShowProgramsDropdown(false);
+    setProgramSearch('');
   };
 
 
@@ -375,46 +371,7 @@ export default function UserManagement() {
         const userDoc = allUsers.find(u => u.id === userId);
         if (!userDoc) continue;
 
-        await deleteDoc(doc(db, userDoc._collection, userId));
-        if (userDoc.uid) await deleteDoc(doc(db, 'users', userDoc.uid));
-
-        // Cascading Delete
-        try {
-          if (userDoc.role === 'Student') {
-            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', userDoc.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            if (userDoc.uid) {
-              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', userDoc.uid));
-              const snapSub = await getDocs(qSub);
-              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
-            }
-          } else if (userDoc.role === 'Adviser' || userDoc.role === 'Dean') {
-            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', userDoc.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', userDoc.email));
-            const snapReq = await getDocs(qReq);
-            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
-          }
-        } catch (cleanupErr) {
-          console.error("Error cleaning up related data:", cleanupErr);
-        }
-
-        if (userDoc.uid) {
-          try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: userDoc.uid, email: userDoc.email })
-            });
-          } catch (deleteAuthError) {
-            console.warn(`Could not hard delete Firebase Auth account:`, deleteAuthError);
-          }
-        }
+        await wipeEmailData(userDoc.email, userDoc.uid || userDoc.id);
       }
 
       Swal.fire({
@@ -643,44 +600,7 @@ export default function UserManagement() {
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        await deleteDoc(doc(db, user._collection, user.id));
-        if (user.uid) await deleteDoc(doc(db, 'users', user.uid));
-
-        // Cascading Delete
-        try {
-          if (user.role === 'Student') {
-            const qGroup = query(collection(db, 'groups'), where('leaderEmail', '==', user.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            if (user.uid) {
-              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', user.uid));
-              const snapSub = await getDocs(qSub);
-              await Promise.all(snapSub.docs.map(d => deleteDoc(doc(db, 'submissions', d.id))));
-            }
-          } else if (user.role === 'Adviser' || user.role === 'Dean') {
-            const qGroup = query(collection(db, 'groups'), where('adviserUid', '==', user.email));
-            const snapGroup = await getDocs(qGroup);
-            await Promise.all(snapGroup.docs.map(d => deleteDoc(doc(db, 'groups', d.id))));
-
-            const qReq = query(collection(db, 'requirements'), where('adviserUid', '==', user.email));
-            const snapReq = await getDocs(qReq);
-            await Promise.all(snapReq.docs.map(d => deleteDoc(doc(db, 'requirements', d.id))));
-          }
-        } catch (cleanupErr) {
-          console.error("Error cleaning up related data:", cleanupErr);
-        }
-
-        if (user.uid) {
-          try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: user.uid, email: user.email })
-            });
-          } catch (err) { }
-        }
+        await wipeEmailData(user.email, user.uid || user.id);
 
         Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
       } catch (e) {
@@ -695,16 +615,28 @@ export default function UserManagement() {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.department) {
-      setError('Please fill in all required fields');
+    // Per-field validation
+    const errors = {};
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    if (!formData.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Must use @phinmaed.com domain (e.g., prdo.vender.swu@phinmaed.com)';
+    }
+    if (!formData.department) errors.department = 'Please select a department';
+    if (!formData.role) errors.role = 'Please select a role';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      // Scroll to first error field inside the modal
+      const firstErrorKey = Object.keys(errors)[0];
+      const el = document.getElementById(`add-user-${firstErrorKey}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    if (!validateEmail(formData.email)) {
-      setError('Email must use @phinmaed.com domain (e.g., prdo.vender.swu@phinmaed.com)');
-      return;
-    }
+    setFormErrors({});
 
     setLoading(true);
 
@@ -1185,7 +1117,7 @@ export default function UserManagement() {
             {/* Table Header Controls */}
             <div className="p-4 border-b border-stone-100 dark:border-stone-800/50 flex flex-col sm:flex-row items-center justify-end gap-4 bg-stone-50 dark:bg-[#252525]/50">
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <PremiumButton onClick={() => setIsModalOpen(true)} variant="primary" icon={<Plus className="w-4 h-4" />}>
+                <PremiumButton onClick={() => { setIsModalOpen(true); setFormErrors({}); setError(''); }} variant="primary" icon={<Plus className="w-4 h-4" />}>
                   Add User
                 </PremiumButton>
                 {selectedUsers.size > 0 && (
@@ -1422,24 +1354,44 @@ export default function UserManagement() {
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="add-user-firstName"
                       type="text"
                       placeholder="e.g. Maria"
                       value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
+                      onChange={(e) => { setFormData({ ...formData, firstName: e.target.value }); setFormErrors(prev => ({ ...prev, firstName: '' })); }}
+                      className={`w-full bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
+                        formErrors.firstName
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                          : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                      }`}
                     />
+                    {formErrors.firstName && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.firstName}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="add-user-lastName"
                       type="text"
                       placeholder="e.g. Santos"
                       value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
+                      onChange={(e) => { setFormData({ ...formData, lastName: e.target.value }); setFormErrors(prev => ({ ...prev, lastName: '' })); }}
+                      className={`w-full bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
+                        formErrors.lastName
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                          : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                      }`}
                     />
+                    {formErrors.lastName && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.lastName}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1449,13 +1401,24 @@ export default function UserManagement() {
                     Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="add-user-email"
                     type="email"
                     placeholder="e.g., prdo.vender.swu@phinmaed.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
+                    onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({ ...prev, email: '' })); }}
+                    className={`w-full bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
+                      formErrors.email
+                        ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                        : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                    }`}
                   />
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Must use @phinmaed.com domain</p>
+                  {formErrors.email ? (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <span>⚠</span> {formErrors.email}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Must use @phinmaed.com domain</p>
+                  )}
                 </div>
 
                 {/* Department */}
@@ -1465,9 +1428,14 @@ export default function UserManagement() {
                   </label>
                   <div className="flex gap-2">
                     <select
+                      id="add-user-department"
                       value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      className="flex-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
+                      onChange={(e) => { setFormData({ ...formData, department: e.target.value }); setFormErrors(prev => ({ ...prev, department: '' })); }}
+                      className={`flex-1 bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
+                        formErrors.department
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                          : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                      }`}
                     >
                       <option value="">Select department...</option>
                       {departmentsList.map(dept => (
@@ -1483,6 +1451,11 @@ export default function UserManagement() {
                       <Plus size={18} />
                     </button>
                   </div>
+                  {formErrors.department && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <span>⚠</span> {formErrors.department}
+                    </p>
+                  )}
                 </div>
 
                 {/* Programs */}
@@ -1538,13 +1511,8 @@ export default function UserManagement() {
                                 if (e.key === 'Enter') {
                                   e.preventDefault();
                                   const val = programSearch.trim().toUpperCase();
-                                  if (val && !selectedPrograms.includes(val)) {
-                                    setSelectedPrograms(prev => {
-                                      const newList = [...prev, val];
-                                      setFormData(f => ({ ...f, programs: newList.join(', ') }));
-                                      return newList;
-                                    });
-                                    setProgramSearch('');
+                                  if (val) {
+                                    selectProgram(val);
                                   }
                                 }
                               }}
@@ -1556,19 +1524,24 @@ export default function UserManagement() {
                               <div className="px-4 py-3 text-sm text-stone-500 dark:text-stone-400">No match found. Press <strong>Enter</strong> to add as custom.</div>
                             ) : (
                               filtered.map(prog => (
-                                <label
+                                <button
                                   key={prog.id || prog.code}
-                                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] cursor-pointer text-sm"
+                                  type="button"
+                                  onClick={() => selectProgram(prog.code)}
+                                  className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors text-left ${
+                                    selectedPrograms.includes(prog.code)
+                                      ? 'bg-[#f3e6ea] dark:bg-[#3a1520] text-[#801e38] dark:text-[#f3c6d0]'
+                                      : 'hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] text-stone-800 dark:text-stone-100'
+                                  }`}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedPrograms.includes(prog.code)}
-                                    onChange={() => toggleProgram(prog.code)}
-                                    className="w-4 h-4 rounded border-stone-300 text-[#801e38] focus:ring-[#801e38]"
-                                  />
-                                  <span className="font-semibold text-stone-800 dark:text-stone-100">{prog.code}</span>
-                                  <span className="text-stone-500 dark:text-stone-400">— {prog.name}</span>
-                                </label>
+                                  <span className="flex items-center gap-2">
+                                    <span className="font-semibold">{prog.code}</span>
+                                    <span className="text-stone-500 dark:text-stone-400 text-xs">— {prog.name}</span>
+                                  </span>
+                                  {selectedPrograms.includes(prog.code) && (
+                                    <span className="text-[#801e38] dark:text-[#f3c6d0] font-bold text-base leading-none">✓</span>
+                                  )}
+                                </button>
                               ))
                             )}
                           </div>
@@ -1581,7 +1554,7 @@ export default function UserManagement() {
                       {selectedPrograms.map(code => (
                         <span key={code} className="inline-flex items-center gap-1 bg-[#f3e6ea] text-[#801e38] text-xs font-bold px-2.5 py-1 rounded-full">
                           {code}
-                          <button type="button" onClick={() => toggleProgram(code)} className="hover:text-red-700 text-[#801e38]/60">×</button>
+                          <button type="button" onClick={() => { setSelectedPrograms([]); setFormData(f => ({ ...f, programs: '' })); }} className="hover:text-red-700 text-[#801e38]/60">×</button>
                         </span>
                       ))}
                     </div>
@@ -1594,15 +1567,25 @@ export default function UserManagement() {
                     Role Assignment <span className="text-red-500">*</span>
                   </label>
                   <select
+                    id="add-user-role"
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
+                    onChange={(e) => { setFormData({ ...formData, role: e.target.value }); setFormErrors(prev => ({ ...prev, role: '' })); }}
+                    className={`w-full bg-white dark:bg-[#1e1e1e] border rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50 transition-colors ${
+                      formErrors.role
+                        ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                        : 'border-stone-300 focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]'
+                    }`}
                   >
                     <option value="">Select role...</option>
                     <option value="super-admin">Super Admin</option>
                     <option value="dean">Dean Only - Access Dean Dashboard only</option>
                     <option value="dean+adviser">Dean + Research Adviser - Dual role access both dashboards</option>
                   </select>
+                  {formErrors.role && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <span>⚠</span> {formErrors.role}
+                    </p>
+                  )}
                 </div>
 
                 {/* Module Access - Show only for Super Admin */}
@@ -1693,6 +1676,7 @@ export default function UserManagement() {
                     setIsModalOpen(false);
                     setError('');
                     setSuccess('');
+                    setFormErrors({});
                   }}
                   disabled={loading}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition disabled:opacity-50"

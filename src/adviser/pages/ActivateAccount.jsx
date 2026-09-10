@@ -271,6 +271,9 @@ export default function ActivateAccount() {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
                   placeholder="Create a strong password" 
                   className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
                   disabled={loading}
@@ -320,6 +323,9 @@ export default function ActivateAccount() {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
                   placeholder="Confirm your password" 
                   className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
                   disabled={loading}

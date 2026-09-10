@@ -409,7 +409,7 @@ function ArchiveBrowse() {
                   <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
                   <span className="group-hover:text-[#7a2039] transition">Open Access</span>
                 </label>
-                <label className="flex items-center gap-3 text-sm text-stone-700 cursor-pointer group">
+                <label className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                   <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
                   <span className="group-hover:text-[#7a2039] transition">Restricted (SWU Only)</span>
                 </label>

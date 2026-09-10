@@ -422,6 +422,37 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 <p className="text-[11px] font-bold text-gray-500 dark:text-stone-400 tracking-widest uppercase mb-1">Full Timeline</p>
                 <h3 className="font-serif font-bold text-[22px] text-[#1A1A1A] dark:text-stone-100 mb-8">Your Research Journey</h3>
 
+                {/* Dean Feedback / Directive */}
+                {(submission?.deanComments || submission?.deanFeedback?.comments) && (
+                  <div className="mb-6 bg-rose-50/80 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 border-l-4 border-l-rose-600 dark:border-l-rose-500 p-5 rounded-r-xl shadow-sm transition-colors">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <h4 className="text-sm font-bold text-rose-900 dark:text-rose-300 flex items-center gap-2">
+                        <span className="text-base">🏛️</span> Dean's Review & Revision Directive
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        {submission?.deanFeedback?.category && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
+                            {submission.deanFeedback.category}
+                          </span>
+                        )}
+                        {submission?.deanFeedback?.priority === 'urgent' && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
+                            🚨 Urgent
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-rose-800 dark:text-rose-200/90 italic whitespace-pre-wrap bg-white/70 dark:bg-black/20 p-3.5 rounded-lg border border-rose-100 dark:border-rose-900/30 font-serif">
+                      "{submission.deanComments || submission.deanFeedback?.comments}"
+                    </p>
+                    {submission?.deanFeedback?.deanName && (
+                      <p className="text-xs text-rose-600 dark:text-rose-400 mt-2 font-medium text-right">
+                        — {submission.deanFeedback.deanName} (Dean of Studies)
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {submission?.adviserComments && (
                   <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-700/50 p-4 rounded-r-lg shadow-sm transition-colors">
                     <h4 className="text-sm font-bold text-yellow-800 dark:text-[#7B1F35] mb-1 flex items-center gap-2">

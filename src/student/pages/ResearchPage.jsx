@@ -223,8 +223,8 @@ export default function ResearchPage({ onLogout, studentName, initials, onUpload
                           View Full Paper
                         </button>
                       </div>
-                    </div>
-                  </div>
+                    </CardBody>
+                  </Card>
                 ))}
               </div>
             )}

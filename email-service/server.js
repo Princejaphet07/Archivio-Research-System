@@ -9,6 +9,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const axios = require('axios');
+const dns = require('dns');
 require('dotenv').config();
 
 const { initializeApp, cert } = require('firebase-admin/app');
@@ -1605,16 +1606,38 @@ app.post('/api/hard-delete-auth-user', async (req, res) => {
       return res.status(400).json({ error: 'Missing uid or email' });
     }
 
+    let deletedCount = 0;
+
+    // 1. Delete by UID if provided
     if (uid) {
-      await getAuth().deleteUser(uid);
-      console.log(`✅ Successfully hard deleted user from Auth: ${uid}`);
-    } else if (email) {
-      const userRecord = await getAuth().getUserByEmail(email);
-      await getAuth().deleteUser(userRecord.uid);
-      console.log(`✅ Successfully hard deleted user by email from Auth: ${email}`);
+      try {
+        await getAuth().deleteUser(uid);
+        console.log(`✅ Successfully hard deleted user from Auth by UID: ${uid}`);
+        deletedCount++;
+      } catch (uErr) {
+        if (uErr.code !== 'auth/user-not-found') {
+          console.warn(`Warning deleting by UID ${uid}:`, uErr.message);
+        }
+      }
     }
 
-    res.status(200).json({ success: true, message: 'User permanently deleted from Firebase Auth' });
+    // 2. ALWAYS also check by email if provided to ensure no orphaned auth records remain
+    if (email) {
+      try {
+        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
+        if (userRecord && userRecord.uid !== uid) {
+          await getAuth().deleteUser(userRecord.uid);
+          console.log(`✅ Successfully hard deleted user by email from Auth: ${email} (UID: ${userRecord.uid})`);
+          deletedCount++;
+        }
+      } catch (eErr) {
+        if (eErr.code !== 'auth/user-not-found') {
+          console.warn(`Warning deleting by email ${email}:`, eErr.message);
+        }
+      }
+    }
+
+    res.status(200).json({ success: true, message: `User permanently deleted from Firebase Auth (${deletedCount} records removed)` });
   } catch (error) {
     console.error('❌ Error hard deleting user from Auth:', error);
     if (error.code === 'auth/user-not-found') {
@@ -1624,6 +1647,72 @@ app.post('/api/hard-delete-auth-user', async (req, res) => {
   }
 });
 
+// ============================================
+// VERIFY SWU PHINMA SCHOOL EMAIL & MX RECORDS
+// ============================================
+app.post('/api/verify-school-email', async (req, res) => {
+  try {
+    const { email, role = 'student' } = req.body;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ valid: false, error: 'Email address is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Check phinmaed.com domain
+    if (!cleanEmail.endsWith('@phinmaed.com')) {
+      return res.status(400).json({ 
+        valid: false, 
+        error: 'Email must belong to the official @phinmaed.com school domain.' 
+      });
+    }
+
+    // 2. Enforce .swu@phinmaed.com for students
+    if (role === 'student' && !cleanEmail.endsWith('.swu@phinmaed.com')) {
+      return res.status(400).json({ 
+        valid: false, 
+        error: 'Student emails must specifically use the SWU PHINMA format (.swu@phinmaed.com).' 
+      });
+    }
+
+    // 3. Username format and placeholder checks
+    const domainSuffix = role === 'student' ? '.swu@phinmaed.com' : '@phinmaed.com';
+    const prefix = cleanEmail.slice(0, cleanEmail.length - domainSuffix.length);
+
+    if (prefix.length < 3) {
+      return res.status(400).json({ valid: false, error: 'Username is too short to be a legitimate school email.' });
+    }
+
+    const validPattern = /^[a-z0-9]+(\.[a-z0-9]+)*$/;
+    if (!validPattern.test(prefix)) {
+      return res.status(400).json({ valid: false, error: 'Username has invalid characters or malformed dots.' });
+    }
+
+    const blacklisted = ['test', 'fake', 'himo2', 'himohimo', 'asdf', 'sample', 'dummy', 'admin', 'temp', '123456'];
+    if (blacklisted.includes(prefix) || prefix.includes('himo2') || prefix.includes('fake')) {
+      return res.status(400).json({ valid: false, error: 'This appears to be a fake or test email address.' });
+    }
+
+    // 4. Resolve MX records for phinmaed.com to ensure domain is alive and receiving mail
+    try {
+      const mxRecords = await dns.promises.resolveMx('phinmaed.com');
+      if (!mxRecords || mxRecords.length === 0) {
+        return res.status(400).json({ valid: false, error: 'The school domain phinmaed.com has no active mail servers.' });
+      }
+    } catch (dnsErr) {
+      console.warn('DNS MX resolution warning:', dnsErr.message);
+    }
+
+    return res.status(200).json({ 
+      valid: true, 
+      message: 'Verified authentic school email format',
+      normalizedEmail: cleanEmail 
+    });
+  } catch (error) {
+    console.error('Error verifying school email:', error);
+    res.status(500).json({ valid: false, error: 'Failed to verify school email' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`

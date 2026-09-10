@@ -106,6 +106,11 @@ export default function HomepageChatbot() {
     fetchSystemData();
   }, []);
 
+  // Clean up any old guest history that may have been saved before this fix
+  useEffect(() => {
+    localStorage.removeItem('guestChatHistory');
+  }, []);
+
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -195,13 +200,8 @@ export default function HomepageChatbot() {
             setChatHistory(defaultGreeting);
           }
         } else {
-          // Guest User (Local Storage Only)
-          const guestHistory = localStorage.getItem('guestChatHistory');
-          if (guestHistory) {
-            setChatHistory(JSON.parse(guestHistory));
-          } else {
-            setChatHistory(defaultGreeting);
-          }
+          // Guest User — no persistence, always start fresh
+          setChatHistory(defaultGreeting);
         }
       } catch (err) {
         console.error("Failed to load chat history", err);
@@ -309,7 +309,7 @@ export default function HomepageChatbot() {
           return docRef.id;
         }
       } else {
-        localStorage.setItem('guestChatHistory', JSON.stringify(newHistory));
+        // Guest users: history is in-memory only, not persisted
         return null;
       }
     } catch (err) {

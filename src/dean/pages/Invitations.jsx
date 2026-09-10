@@ -6,6 +6,8 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { verifySchoolEmailOnline, validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -96,40 +98,44 @@ Please click the button below to activate your account and set up your credentia
       return;
     }
 
-    if (!formData.email.toLowerCase().endsWith('@phinmaed.com')) {
-      setError('Email must use @phinmaed.com domain');
-      return;
-    }
-
     setLoading(true);
 
     try {
+      const emailCheck = await verifySchoolEmailOnline(formData.email, 'adviser');
+      if (!emailCheck.isValid) {
+        setError(`❌ ${emailCheck.error}`);
+        setLoading(false);
+        return;
+      }
+      const targetEmail = emailCheck.normalizedEmail;
+
       // Generate a simple invitation token to track this specific invitation
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
-      const targetEmail = formData.email.toLowerCase().trim();
-
-      // CLEANUP: If this email was manually deleted from Firebase Auth and is being recreated,
-      // wipe orphaned profile data tied to this email to ensure a fresh start.
-      const collectionsToClean = ['users', 'advisers', 'deans'];
-      for (const colName of collectionsToClean) {
-        const qClean = query(collection(db, colName), where('email', '==', targetEmail));
-        const snapClean = await getDocs(qClean);
-        const deletes = snapClean.docs.map(d => deleteDoc(doc(db, colName, d.id)));
-        await Promise.all(deletes);
+      // 1. Check if email is already registered to an active account
+      const qUser = query(collection(db, 'users'), where('email', '==', targetEmail));
+      const snapUser = await getDocs(qUser);
+      if (!snapUser.empty) {
+        setError('This email is already registered to an active account.');
+        setLoading(false);
+        return;
       }
 
-      // Clean up orphaned groups tied to this adviser email
-      const qGroupsClean = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
-      const snapGroupsClean = await getDocs(qGroupsClean);
-      const deleteGroupsClean = snapGroupsClean.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
-      await Promise.all(deleteGroupsClean);
+      // 2. Check if a pending invitation already exists in advisers
+      const qAdvPending = query(
+        collection(db, 'advisers'),
+        where('email', '==', targetEmail),
+        where('status', '==', 'pending')
+      );
+      const snapAdvPending = await getDocs(qAdvPending);
+      if (!snapAdvPending.empty) {
+        setError('This email already has a pending invitation. You can resend or remove it in the Sent Invitations table.');
+        setLoading(false);
+        return;
+      }
 
-      // Clean up orphaned adviser requirements
-      const qReqsClean = query(collection(db, 'requirements'), where('adviserUid', '==', targetEmail));
-      const snapReqsClean = await getDocs(qReqsClean);
-      const deleteReqsClean = snapReqsClean.docs.map(d => deleteDoc(doc(db, 'requirements', d.id)));
-      await Promise.all(deleteReqsClean);
+      // 3. Clean up any stale or orphaned records to guarantee a fresh, conflict-free invitation
+      await wipeEmailData(targetEmail);
 
       // Clean link to the Sign Up page — no token exposed in the URL, only the email
       const adviserPortalUrl = window.location.origin;
@@ -275,6 +281,41 @@ Please click the button below to activate your account and set up your credentia
       setError('Failed to resend invitation');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveInvitation = async (adviserId, adviserEmail) => {
+    const result = await Swal.fire({
+      title: 'Remove Invitation?',
+      text: `Are you sure you want to remove the invitation for ${adviserEmail}? All associated invitation data will be permanently wiped.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, remove it'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await wipeEmailData(adviserEmail);
+        Swal.fire({
+          title: 'Removed!',
+          text: 'The invitation and all associated email data have been permanently removed.',
+          icon: 'success',
+          confirmButtonColor: '#801e38'
+        });
+      } catch (error) {
+        console.error('Error removing invitation:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to remove invitation.',
+          icon: 'error',
+          confirmButtonColor: '#801e38'
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -430,15 +471,27 @@ Please click the button below to activate your account and set up your credentia
                           </td>
                           <td className="py-3.5 text-center">
                             {adviser.status === 'pending' && (
-                              <PremiumButton
-                                onClick={() => handleResendInvitation(adviser.id, adviser.email)}
-                                disabled={loading}
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-1 mx-auto"
-                              >
-                                🔄 Resend
-                              </PremiumButton>
+                              <div className="flex items-center justify-center gap-2">
+                                <PremiumButton
+                                  onClick={() => handleResendInvitation(adviser.id, adviser.email)}
+                                  disabled={loading}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1"
+                                >
+                                  🔄 Resend
+                                </PremiumButton>
+                                <PremiumButton
+                                  onClick={() => handleRemoveInvitation(adviser.id, adviser.email)}
+                                  disabled={loading}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1"
+                                  title="Remove invitation and wipe data"
+                                >
+                                  🗑️
+                                </PremiumButton>
+                              </div>
                             )}
                           </td>
                         </tr>
