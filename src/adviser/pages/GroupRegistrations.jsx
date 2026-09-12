@@ -218,8 +218,52 @@ function GroupRegistrations() {
           )}
         </div>
 
-        {/* History Table */}
-        <Card glass={true} className="mt-8">
+        {/* History: Mobile Cards for Phones */}
+        <div className="md:hidden space-y-3 mt-8">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-base">Registration History</h3>
+            <span className="text-xs text-gray-500 dark:text-stone-400">{filteredHistory.length} records</span>
+          </div>
+
+          {paginatedHistory.length === 0 ? (
+            <Card glass={true} className="p-6 text-center text-gray-500 dark:text-stone-400 text-sm">
+              No registration history yet.
+            </Card>
+          ) : (
+            paginatedHistory.map((item) => (
+              <Card key={item.id} glass={true} className="p-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 truncate">
+                      {item.groupName}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-stone-400">Leader: {item.leaderName}</p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold shrink-0 ${
+                    item.status === 'approved' 
+                      ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+                      : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+                  }`}>
+                    • {item.status === 'approved' ? 'Approved' : 'Declined'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-700 dark:text-stone-300 line-clamp-2">
+                  <span className="font-semibold text-gray-500 dark:text-stone-400">Title: </span>
+                  {item.researchTitle}
+                </p>
+
+                <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-1.5 border-t border-gray-100 dark:border-stone-800">
+                  <span>🎓 {item.department || item.program || 'N/A'}</span>
+                  <span>📅 {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* History Table (Desktop Only) */}
+        <Card glass={true} className="hidden md:block mt-8">
           <div className="p-5 border-b border-gray-200 dark:border-stone-800">
             <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Registration History</h3>
             <p className="text-xs text-gray-500 dark:text-stone-400">Previously processed</p>
@@ -304,61 +348,61 @@ function GroupRegistrations() {
 
       {/* View Modal */}
       {selectedGroup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-stone-950 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-scale-in">
-            <div className="bg-[#7a1f3d] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-6 py-4 flex justify-between items-center text-white dark:text-stone-100">
-              <h2 className="font-bold text-xl font-serif">Group Registration Details</h2>
-              <button onClick={() => setSelectedGroup(null)} className="text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-3xl font-light leading-none">&times;</button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-stone-950 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto transform transition-all animate-scale-in">
+            <div className="bg-[#7a1f3d] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-5 sm:px-6 py-4 flex justify-between items-center text-white dark:text-stone-100 pr-12 relative">
+              <h2 className="font-bold text-lg sm:text-xl font-serif">Group Registration Details</h2>
+              <button onClick={() => setSelectedGroup(null)} className="absolute top-4 right-4 text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-2xl font-light leading-none cursor-pointer">&times;</button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-5 sm:p-6 space-y-4 sm:space-y-5">
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Group Name</h3>
-                <p className="font-bold text-2xl text-gray-900 dark:text-stone-100">{selectedGroup.groupName}</p>
+                <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Group Name</h3>
+                <p className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-stone-100">{selectedGroup.groupName}</p>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Research Title</h3>
-                <p className="text-gray-800 dark:text-stone-300 text-lg font-medium">{selectedGroup.researchTitle}</p>
+                <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Research Title</h3>
+                <p className="text-gray-800 dark:text-stone-300 text-base sm:text-lg font-medium">{selectedGroup.researchTitle}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-lg border border-gray-100 dark:border-stone-800">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-xl border border-gray-100 dark:border-stone-800">
                   <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Program</h3>
-                  <p className="text-gray-800 dark:text-stone-300 font-medium">{selectedGroup.program}</p>
+                  <p className="text-gray-800 dark:text-stone-300 font-medium text-sm">{selectedGroup.program || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-lg border border-gray-100 dark:border-stone-800">
+                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-xl border border-gray-100 dark:border-stone-800">
                   <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Applied Date</h3>
-                  <p className="text-gray-800 dark:text-stone-300 font-medium">{new Date(selectedGroup.createdAt).toLocaleDateString()}</p>
+                  <p className="text-gray-800 dark:text-stone-300 font-medium text-sm">{new Date(selectedGroup.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
+                <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
                 <ul className="space-y-2 mt-2">
-                  <li className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-stone-800 shadow-sm">
-                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 flex items-center justify-center text-sm font-bold shadow-sm">
+                  <li className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-xl border border-gray-200 dark:border-stone-800 shadow-sm">
+                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
                       {selectedGroup.leaderName?.substring(0, 2).toUpperCase() || 'L'}
                     </span>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-gray-900 dark:text-stone-100 flex items-center gap-2">
-                        {selectedGroup.leaderName}
-                        <span className="text-[9px] bg-[#fff7ed] dark:bg-orange-900/30 text-[#c2410c] dark:text-orange-400 px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] dark:border-orange-800/50 shadow-sm">Leader</span>
+                        <span className="truncate">{selectedGroup.leaderName}</span>
+                        <span className="text-[9px] bg-[#fff7ed] dark:bg-orange-900/30 text-[#c2410c] dark:text-orange-400 px-2 py-0.5 rounded-full uppercase border border-[#fed7aa] dark:border-orange-800/50 shadow-sm shrink-0">Leader</span>
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{selectedGroup.leaderEmail}</p>
+                      <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{selectedGroup.leaderEmail}</p>
                     </div>
                   </li>
                   {selectedGroup.members?.map((m, idx) => {
                     const memberName = typeof m === 'object' ? (m.name || m.email.split('@')[0]) : m.split('@')[0];
                     const memberEmail = typeof m === 'object' ? m.email : m;
                     return (
-                      <li key={idx} className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-stone-800 shadow-sm">
-                        <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-stone-800 text-gray-700 dark:text-stone-300 flex items-center justify-center text-sm font-bold border border-gray-300 dark:border-stone-700">
+                      <li key={idx} className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-xl border border-gray-200 dark:border-stone-800 shadow-sm">
+                        <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-stone-800 text-gray-700 dark:text-stone-300 flex items-center justify-center text-xs font-bold border border-gray-300 dark:border-stone-700 shrink-0">
                           {memberName.substring(0, 2).toUpperCase()}
                         </span>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800 dark:text-stone-200">{memberName}</p>
-                          <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{memberEmail}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-stone-200 truncate">{memberName}</p>
+                          <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{memberEmail}</p>
                         </div>
                       </li>
                     );
@@ -367,22 +411,22 @@ function GroupRegistrations() {
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-stone-900 px-6 py-4 flex justify-end gap-3 border-t border-gray-200 dark:border-stone-800">
+            <div className="bg-gray-50 dark:bg-stone-900 px-5 sm:px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 border-t border-gray-200 dark:border-stone-800">
               <button
                 onClick={() => setSelectedGroup(null)}
-                className="px-5 py-2.5 rounded-lg font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition shadow-sm"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition text-sm text-center"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDecision(selectedGroup, 'decline')}
-                className="px-5 py-2.5 rounded-lg font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center justify-center gap-2 text-sm"
               >
                 ✕ Decline
               </button>
               <button
                 onClick={() => handleDecision(selectedGroup, 'approve')}
-                className="px-5 py-2.5 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2 text-sm"
               >
                 ✓ Approve
               </button>

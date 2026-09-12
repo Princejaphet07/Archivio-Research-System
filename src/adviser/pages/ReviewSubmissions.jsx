@@ -643,36 +643,136 @@ function ReviewSubmissions() {
           </select>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-6 flex-wrap">
+        {/* Tabs: Horizontally scrollable on mobile */}
+        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-2 sm:gap-6 overflow-x-auto no-scrollbar flex-nowrap pb-1">
           <button
             onClick={() => setActiveTab('pending')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ⏳ Pending Review <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{pendingCount}</span>
+            ⏳ Pending Review <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{pendingCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('dean_revision')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'dean_revision' ? 'border-b-2 border-amber-600 text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'dean_revision' ? 'border-b-2 border-amber-600 text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🏛️ Returned by Dean <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'dean_revision' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{deanRevisionCount}</span>
+            🏛️ Returned by Dean <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'dean_revision' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{deanRevisionCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('reviewed')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'reviewed' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'reviewed' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ✅ Reviewed <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'reviewed' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{reviewedCount}</span>
+            ✅ Reviewed <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'reviewed' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{reviewedCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('approved')}
-            className={`pb-3 font-bold text-sm flex items-center gap-2 transition-colors ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🏆 Approved <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
+            🏆 Approved <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
           </button>
         </div>
 
-        {/* Submissions Table */}
-        <Card glass={true} className="mt-6">
+        {/* Mobile View: Cards list for phones */}
+        <div className="md:hidden space-y-3 mt-4">
+          {loading ? (
+            <TableSkeleton columns={2} rows={3} />
+          ) : finalFiltered.length === 0 ? (
+            <Card glass={true} className="p-8 text-center">
+              <span className="text-3xl block mb-2">📂</span>
+              <p className="text-gray-600 dark:text-stone-300 font-medium">
+                No matching {activeTab.replace('_', ' ')} submissions found.
+              </p>
+            </Card>
+          ) : (
+            finalFiltered.map((item, index) => (
+              <Card key={item.id} glass={true} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
+                      #{String(index + 1).padStart(2, '0')} · {item.groupName}
+                    </span>
+                    <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 line-clamp-2 mt-0.5">
+                      {item.researchTitle}
+                    </h3>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
+                    item.completionPercent === 100 
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : item.completionPercent >= 50
+                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    {item.completionPercent}% complete
+                  </span>
+                </div>
+
+                {activeTab === 'dean_revision' && (
+                  <div className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/60 text-xs">
+                    <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 text-[11px]">
+                      <span>🏛️ Dean's Directive:</span> {item.deanFeedback?.category || 'Revision'}
+                    </p>
+                    {item.deanComments && (
+                      <p className="text-amber-900/80 dark:text-amber-200/80 text-[11px] mt-1 line-clamp-2">
+                        "{item.deanComments}"
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
+                  <span>📅 {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}</span>
+                  <span>{getStatusBadge(item.reviewStatus)}</span>
+                </div>
+
+                {/* Mobile Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <PremiumButton 
+                    onClick={() => handleFullReview(item)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-xs py-2"
+                  >
+                    View Details →
+                  </PremiumButton>
+
+                  {activeTab === 'dean_revision' && (
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                      <PremiumButton 
+                        onClick={() => handleReject(item)}
+                        variant="outline"
+                        size="sm"
+                        className="justify-center text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                      >
+                        Forward
+                      </PremiumButton>
+                      <PremiumButton 
+                        onClick={() => handleApprove(item)}
+                        variant="primary"
+                        size="sm"
+                        className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs"
+                      >
+                        Re-Approve
+                      </PremiumButton>
+                    </div>
+                  )}
+
+                  {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
+                    <PremiumButton 
+                      onClick={() => handleApprove(item)}
+                      variant="primary"
+                      size="sm"
+                      className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-xs py-2"
+                    >
+                      ✓ Approve Submission
+                    </PremiumButton>
+                  )}
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Submissions Table (Desktop Only) */}
+        <Card glass={true} className="hidden md:block mt-6">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -1070,17 +1170,17 @@ function ReviewSubmissions() {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex justify-between items-center bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
-              <div className="flex gap-2">
+            <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => setShowReviewModal(false)}
-                  className="border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition"
+                  className="flex-1 sm:flex-initial border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition text-center"
                 >
                   Close
                 </button>
                 <button
                   onClick={() => setShowMsgModal(true)}
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1088,7 +1188,7 @@ function ReviewSubmissions() {
                   Message Student
                 </button>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                 {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && (
                   <>
                     <button
@@ -1105,7 +1205,7 @@ function ReviewSubmissions() {
                           console.error(e);
                         }
                       }}
-                      className="bg-[#ca8a04] hover:bg-[#a16207] text-white px-5 py-2 rounded-lg text-sm font-semibold transition"
+                      className="flex-1 sm:flex-initial bg-[#ca8a04] hover:bg-[#a16207] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center"
                       title="Move this submission to the Reviewed tab without requesting revisions"
                     >
                       Mark Reviewed
@@ -1119,7 +1219,7 @@ function ReviewSubmissions() {
                         setShowReviewModal(false);
                         handleApprove(selectedSubmission);
                       }}
-                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 dark:bg-stone-800 text-gray-500 dark:text-stone-500 cursor-not-allowed'}`}
+                      className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 dark:bg-stone-800 text-gray-500 dark:text-stone-500 cursor-not-allowed'}`}
                       title={selectedSubmission.completionPercent < 100 ? 'Student must submit all documents first' : ''}
                     >
                       Approve
@@ -1133,7 +1233,7 @@ function ReviewSubmissions() {
                         setShowReviewModal(false);
                         handleReject(selectedSubmission);
                       }}
-                      className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm"
+                      className="flex-1 sm:flex-initial bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
                     >
                       <span>Forward to Student</span>
                     </button>
@@ -1142,7 +1242,7 @@ function ReviewSubmissions() {
                         setShowReviewModal(false);
                         handleApprove(selectedSubmission);
                       }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm"
+                      className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
                     >
                       <span>Re-Approve to Dean</span>
                     </button>
@@ -1153,7 +1253,7 @@ function ReviewSubmissions() {
                     setShowReviewModal(false);
                     handleDeleteSubmission(selectedSubmission);
                   }}
-                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50"
+                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50 text-center"
                 >
                   Delete
                 </button>

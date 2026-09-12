@@ -144,17 +144,21 @@ function Dashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-[#5a1831] to-[#802a46] rounded-2xl p-8 text-white relative overflow-hidden shadow-lg">
+        <div className="bg-gradient-to-r from-[#5a1831] to-[#802a46] rounded-2xl p-5 sm:p-7 md:p-8 text-white relative overflow-hidden shadow-lg">
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
-            <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-2">Research Adviser Portal</p>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">{getGreeting()}, {adviserData?.displayName || 'Research Adviser'} <span className="animate-wave origin-bottom-right inline-block">👋</span></h1>
-            <p className="text-sm text-gray-200">{activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending your review</p>
+            <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-1.5">Research Adviser Portal</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mb-2 leading-tight">
+              {getGreeting()}, {adviserData?.displayName || 'Research Adviser'} <span className="animate-wave origin-bottom-right inline-block">👋</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
+              {activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending review
+            </p>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Grid: 2x2 on mobile, 4 on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {loading ? (
             <>
               <CardSkeleton borderTopColor="#d1d5db" />
@@ -168,7 +172,7 @@ function Dashboard() {
                 icon="🎓"
                 label="My Groups"
                 value={activeGroupCount}
-                sub="Active this semester"
+                sub="Active groups"
                 color="blue"
               />
               <StatCard
@@ -182,14 +186,14 @@ function Dashboard() {
                 icon="📄"
                 label="Approved Papers"
                 value={approvedPapersCount}
-                sub="Total completed"
+                sub="Completed"
                 color="green"
               />
               <StatCard
                 icon="📈"
                 label="Avg Completion"
                 value={`${avgCompletion}%`}
-                sub="Across all groups"
+                sub="Across groups"
                 color="maroon"
               />
             </>
@@ -201,21 +205,22 @@ function Dashboard() {
           
           {/* Left Column: My Submissions */}
           <Card className="lg:col-span-2" glass={true}>
-            <CardHeader>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="font-serif font-bold text-lg text-[#1A1A1A] dark:text-stone-100">My Submissions Dashboard</h3>
-                <p className="text-[13px] text-stone-500 dark:text-stone-400">Recent activity from your groups</p>
+                <h3 className="font-serif font-bold text-base sm:text-lg text-[#1A1A1A] dark:text-stone-100">My Submissions Dashboard</h3>
+                <p className="text-xs sm:text-[13px] text-stone-500 dark:text-stone-400">Recent activity from your groups</p>
               </div>
               <PremiumButton 
                 onClick={() => navigate('/adviser/review-submissions')}
                 variant="ghost"
                 size="sm"
+                className="self-start sm:self-auto text-xs"
               >
                 Review All →
               </PremiumButton>
             </CardHeader>
 
-            <CardBody className="space-y-6">
+            <CardBody className="space-y-5 p-4 sm:p-6">
               {loading ? (
                 <HorizontalCardSkeleton count={2} />
               ) : (
@@ -239,11 +244,10 @@ function Dashboard() {
                         
                         if (isApproved) {
                           borderColor = 'border-[#5a1831]';
-                          textColor = 'text-[#5a1831]';
+                          textColor = 'text-green-700';
                           bgColor = 'bg-green-100';
                           barColor = 'bg-[#5a1831]';
                           badgeText = '• Complete ✓';
-                          textColor = 'text-green-700';
                         } else if (sub.missingDocs.length > 0) {
                           borderColor = 'border-blue-400';
                           textColor = 'text-red-700';
@@ -253,35 +257,60 @@ function Dashboard() {
                         }
 
                         return (
-                          <div key={sub.id || idx} className="flex items-center gap-4 border-b border-gray-100 dark:border-stone-800 pb-5">
-                            <div className={`w-14 h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 dark:text-stone-200 text-sm`}>
-                              {pct}%
+                          <div key={sub.id || idx} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border-b border-gray-100 dark:border-stone-800 pb-5">
+                            {/* Mobile Top Row: Percentage + Title + Details Button */}
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 ${borderColor} flex items-center justify-center font-bold text-gray-700 dark:text-stone-200 text-xs sm:text-sm shrink-0`}>
+                                {pct}%
+                              </div>
+                              <div className="sm:hidden flex-1 min-w-0">
+                                <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 truncate">
+                                  {sub.groupName}
+                                </h4>
+                                <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold inline-block mt-0.5`}>
+                                  {badgeText}
+                                </span>
+                              </div>
+                              <button 
+                                onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
+                                className="sm:hidden border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0"
+                              >
+                                Details
+                              </button>
                             </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 flex items-center gap-2">
-                                    {sub.groupName} <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold`}>{badgeText}</span>
+
+                            {/* Body Section */}
+                            <div className="flex-1 w-full min-w-0">
+                              <div className="hidden sm:flex justify-between items-start">
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 flex items-center gap-2 flex-wrap">
+                                    <span className="truncate">{sub.groupName}</span> 
+                                    <span className={`${bgColor} ${textColor} text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold shrink-0`}>
+                                      {badgeText}
+                                    </span>
                                   </h4>
-                                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+                                  <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{sub.researchTitle} · {sub.members?.length || 1} members</p>
                                 </div>
                                 <button 
                                   onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
-                                  className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded hover:bg-gray-50 dark:hover:bg-stone-800 transition"
+                                  className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0 ml-2"
                                 >
                                   Details
                                 </button>
                               </div>
-                              <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1 flex justify-between">
-                                <span>
+
+                              <p className="sm:hidden text-xs text-gray-500 dark:text-stone-400 line-clamp-2">{sub.researchTitle} · {sub.members?.length || 1} members</p>
+
+                              <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1.5 flex justify-between items-center">
+                                <span className="truncate pr-2">
                                   {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
                                 </span>
-                                <span className={`font-bold ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
+                                <span className={`font-bold shrink-0 ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
                                   {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
                                 </span>
                               </div>
-                              <div className="w-full bg-gray-100 dark:bg-stone-800 h-1.5 rounded-full">
-                                <div className={`${barColor} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
+                              <div className="w-full bg-gray-100 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
+                                <div className={`${barColor} h-1.5 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
                               </div>
                             </div>
                           </div>

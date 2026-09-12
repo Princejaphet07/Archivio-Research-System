@@ -328,13 +328,13 @@ function SendInvitations() {
         )}
 
         {/* Action Card */}
-        <Card glass={true} className="border-2 border-dashed border-stone-200 dark:border-stone-800 p-10 flex flex-col items-center justify-center text-center">
-          <div className="text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-3">✉️</div>
-          <h2 className="text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
-          <p className="text-gray-500 dark:text-stone-400 text-sm max-w-lg mb-6">
-            Type the student's email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
+        <Card glass={true} className="border-2 border-dashed border-stone-200 dark:border-stone-800 p-5 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center">
+          <div className="text-3xl sm:text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-2 sm:mb-3">✉️</div>
+          <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
+          <p className="text-gray-500 dark:text-stone-400 text-xs sm:text-sm max-w-lg mb-5 sm:mb-6">
+            Type the student's institutional email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
           </p>
-          <form onSubmit={handleSendInvitation} className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+          <form onSubmit={handleSendInvitation} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full max-w-md">
             <div className="relative flex-1">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">📧</span>
               <input 
@@ -342,7 +342,7 @@ function SendInvitations() {
                 value={studentEmail}
                 onChange={(e) => setStudentEmail(e.target.value.trim())}
                 placeholder="e.g. jcreyes.swu@phinmaed.com" 
-                className="w-full bg-white dark:bg-stone-950 border border-gray-300 dark:border-stone-700 text-gray-900 dark:text-stone-100 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] disabled:opacity-50"
+                className="w-full bg-white dark:bg-stone-950 border border-gray-300 dark:border-stone-700 text-gray-900 dark:text-stone-100 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] disabled:opacity-50"
                 disabled={loading}
               />
             </div>
@@ -350,15 +350,75 @@ function SendInvitations() {
               type="submit"
               disabled={loading}
               variant="primary"
+              className="w-full sm:w-auto justify-center"
             >
               {loading ? 'Sending...' : 'Send Link'}
             </PremiumButton>
           </form>
-          <p className="text-xs text-gray-400 dark:text-stone-500 mt-4">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
+          <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-3 sm:mt-4">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
         </Card>
 
-        {/* History Table */}
-        <Card glass={true}>
+        {/* History: Mobile Cards for Phones */}
+        <div className="md:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-base">Sent Invitations</h3>
+            <span className="text-xs text-gray-500 dark:text-stone-400">{invitations.length} total</span>
+          </div>
+
+          {invitations.length === 0 ? (
+            <Card glass={true} className="p-6 text-center text-gray-400 dark:text-stone-500 text-sm">
+              No invitations sent yet. Send your first one above!
+            </Card>
+          ) : (
+            invitations.map((invitation) => (
+              <Card key={invitation.id} glass={true} className="p-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-stone-200 truncate">
+                      {invitation.studentEmail}
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">
+                      Sent: {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    invitation.status === 'active' 
+                      ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+                      : 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+                  }`}>
+                    • {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                  </span>
+                </div>
+
+                {invitation.status === 'pending' && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-stone-800">
+                    <PremiumButton 
+                      onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
+                      disabled={loading}
+                      variant="ghost"
+                      size="sm"
+                      className="justify-center text-xs"
+                    >
+                      🔄 Resend
+                    </PremiumButton>
+                    <PremiumButton 
+                      onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
+                      disabled={loading}
+                      variant="ghost"
+                      size="sm"
+                      className="justify-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      ❌ Remove
+                    </PremiumButton>
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* History Table (Desktop Only) */}
+        <Card glass={true} className="hidden md:block">
           <div className="p-5 border-b border-gray-200 dark:border-stone-800">
             <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Sent Invitations</h3>
             <p className="text-xs text-gray-500 dark:text-stone-400">Track invitations you've sent to students</p>

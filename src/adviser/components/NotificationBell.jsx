@@ -264,8 +264,8 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-stone-900 rounded-xl shadow-lg border border-stone-200 dark:border-stone-800 overflow-hidden z-50 transform origin-top-right transition-all">
-          <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center">
+        <div className="fixed inset-x-3 top-16 sm:top-auto sm:inset-x-auto sm:absolute sm:right-0 mt-2 sm:w-80 bg-white dark:bg-stone-900 rounded-2xl sm:rounded-xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden z-50 transform origin-top-right transition-all max-h-[80vh] flex flex-col">
+          <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-[14px]">Notifications</h3>
               {hasUnread && (

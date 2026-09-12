@@ -112,10 +112,58 @@ function MyProfile() {
           My Profile
         </SectionTitle>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Menu */}
-          <div className="w-full lg:w-64 flex-shrink-0">
-            <Card glass={true} className="overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
+          {/* Mobile Tab Strip (Horizontal) */}
+          <div className="flex lg:hidden overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-stone-100 dark:bg-stone-900/80 rounded-xl border border-stone-200 dark:border-stone-800">
+            <button 
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
+              }`}
+            >
+              <span>👤</span>
+              <span>Profile</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveTab('notifications')}
+              className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                activeTab === 'notifications'
+                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
+              }`}
+            >
+              <span>🔔</span>
+              <span>Alerts</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveTab('password')}
+              className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                activeTab === 'password'
+                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
+              }`}
+            >
+              <span>🔒</span>
+              <span>Security</span>
+            </button>
+            <button 
+              type="button"
+              onClick={handleLogout}
+              className="py-2.5 px-3 text-xs font-bold rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center justify-center gap-1"
+            >
+              <span>🚪</span>
+              <span>Exit</span>
+            </button>
+          </div>
+
+          {/* Desktop Sidebar Menu */}
+          <div className="hidden lg:block w-64 flex-shrink-0">
+            <Card glass={true} className="overflow-hidden rounded-2xl">
               <button 
                 type="button"
                 onClick={() => setActiveTab('profile')}
@@ -160,16 +208,16 @@ function MyProfile() {
           </div>
 
           {/* Form Content */}
-          <Card glass={true} className="flex-1">
-            <div className="p-6 border-b border-gray-200 dark:border-stone-800">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-stone-100">
+          <Card glass={true} className="flex-1 rounded-2xl">
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-stone-800">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-stone-100">
                 {activeTab === 'profile' && 'My Profile'}
                 {activeTab === 'notifications' && 'Notification Preferences'}
                 {activeTab === 'password' && 'Change Password'}
               </h2>
             </div>
             
-            <div className="p-6 space-y-5">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <>
@@ -178,7 +226,7 @@ function MyProfile() {
                       {saveStatus}
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">First Name</label>
                       <input type="text" value={userData.firstName} onChange={(e) => setUserData({...userData, firstName: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
@@ -201,7 +249,7 @@ function MyProfile() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Title / Honorific</label>
-                    <select value={userData.title} onChange={(e) => setUserData({...userData, title: e.target.value})} className="bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] w-full md:w-48 text-gray-900 dark:text-stone-100" disabled={loading}>
+                    <select value={userData.title} onChange={(e) => setUserData({...userData, title: e.target.value})} className="bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] w-full sm:w-48 text-gray-900 dark:text-stone-100" disabled={loading}>
                       <option value="Prof.">Prof.</option>
                       <option value="Dr.">Dr.</option>
                       <option value="Mr.">Mr.</option>
@@ -209,25 +257,25 @@ function MyProfile() {
                     </select>
                   </div>
 
-                  <div className="pt-6 border-t border-gray-100 dark:border-stone-800">
-                    <div className="flex justify-between items-center mb-2">
+                  <div className="pt-5 sm:pt-6 border-t border-gray-100 dark:border-stone-800">
+                    <div className="flex justify-between items-center mb-3">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-stone-100">ORGANIZATIONAL MEMBERSHIP</h3>
-                        <p className="text-xs text-gray-500 dark:text-stone-400">Add your professional or academic organizational memberships.</p>
+                        <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-stone-100 uppercase tracking-wider">ORGANIZATIONAL MEMBERSHIP</h3>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Add your professional or academic memberships.</p>
                       </div>
-                      <button className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090]">
+                      <button className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm">
                         +
                       </button>
                     </div>
                     
-                    <div className="border border-dashed border-gray-300 dark:border-stone-700 rounded-lg py-8 text-center bg-gray-50 dark:bg-stone-800/50">
-                      <p className="text-sm font-medium text-gray-700 dark:text-stone-300">No organizational memberships added yet</p>
-                      <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Click the + button above to add your first membership</p>
+                    <div className="border border-dashed border-gray-300 dark:border-stone-700 rounded-xl py-6 sm:py-8 text-center bg-gray-50/50 dark:bg-stone-800/40">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-stone-300">No organizational memberships added yet</p>
+                      <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400 mt-1">Click the + button above to add your first membership</p>
                     </div>
                   </div>
                   
                   <div className="pt-4 flex justify-end">
-                    <PremiumButton onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} variant="primary">
+                    <PremiumButton onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} variant="primary" className="w-full sm:w-auto">
                       {saveStatus === 'Saving...' ? 'Saving...' : 'Save Changes'}
                     </PremiumButton>
                   </div>
@@ -238,9 +286,9 @@ function MyProfile() {
               {activeTab === 'notifications' && (
                 <>
                   {/* Info Alert */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 flex items-start gap-3">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
                     <span className="text-blue-600 text-xl flex-shrink-0">🔔</span>
-                    <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-400 leading-relaxed">
                       You will receive in-app notifications based on your preferences below.
                     </p>
                   </div>
@@ -249,11 +297,11 @@ function MyProfile() {
                   <div className="space-y-4">
                     {/* New submission from my groups */}
                     <div className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-stone-800">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">New submission from my groups</p>
-                        <p className="text-xs text-gray-500 dark:text-stone-400">Notify when a group uploads research</p>
+                      <div className="flex-1 pr-3">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">New submission from my groups</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Notify when a group uploads research</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           checked={notifications.newSubmissions}
@@ -266,58 +314,58 @@ function MyProfile() {
 
                     {/* Group registration requests */}
                     <div className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-stone-800">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Group registration requests</p>
-                        <p className="text-xs text-gray-500 dark:text-stone-400">Notify when students request to register</p>
+                      <div className="flex-1 pr-3">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Group registration requests</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Notify when students request to register</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           checked={notifications.groupRegistrations}
                           onChange={() => toggleNotification('groupRegistrations')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:after:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
 
                     {/* Missing requirements alerts */}
                     <div className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-stone-800">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Missing requirements alerts</p>
-                        <p className="text-xs text-gray-500 dark:text-stone-400">Remind when groups have incomplete requirements</p>
+                      <div className="flex-1 pr-3">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Missing requirements alerts</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Remind when groups have incomplete requirements</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           checked={notifications.missingRequirements}
                           onChange={() => toggleNotification('missingRequirements')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:after:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
 
                     {/* Paper approved and publish */}
                     <div className="flex items-start justify-between py-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Paper approved and publish</p>
-                        <p className="text-xs text-gray-500 dark:text-stone-400">Notify when a paper is approved by Dean</p>
+                      <div className="flex-1 pr-3">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-stone-100 mb-0.5">Paper approved and publish</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Notify when a paper is approved by Dean</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           checked={notifications.paperApproved}
                           onChange={() => toggleNotification('paperApproved')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:after:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
                   </div>
 
                   <div className="pt-4 flex justify-end">
-                    <PremiumButton variant="primary">
+                    <PremiumButton variant="primary" className="w-full sm:w-auto">
                       Save Preferences
                     </PremiumButton>
                   </div>
@@ -328,14 +376,14 @@ function MyProfile() {
               {activeTab === 'password' && (
                 <>
                   {/* Info Alert */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 flex items-start gap-3">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
                     <span className="text-blue-600 text-xl flex-shrink-0">🔒</span>
-                    <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-400 leading-relaxed">
                       Your password is <span className="font-semibold">private</span> – only you have access. The System Administrator and Dean cannot view or reset your password.
                     </p>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-4 sm:space-y-5">
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Current Password</label>
                       <input 
@@ -364,16 +412,16 @@ function MyProfile() {
                     </div>
 
                     {/* Password Requirements */}
-                    <div className="bg-gray-50 dark:bg-stone-800 border border-gray-200 dark:border-stone-700 rounded-lg p-4">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-stone-300 mb-2">Password requirements:</p>
-                      <p className="text-xs text-gray-600 dark:text-stone-400">
+                    <div className="bg-gray-50 dark:bg-stone-800/60 border border-gray-200 dark:border-stone-700 rounded-xl p-3.5 sm:p-4">
+                      <p className="text-xs font-semibold text-gray-700 dark:text-stone-300 mb-1">Password requirements:</p>
+                      <p className="text-[11px] sm:text-xs text-gray-600 dark:text-stone-400 leading-relaxed">
                         At least 8 characters · One uppercase letter · One number · One special character
                       </p>
                     </div>
                   </div>
 
                   <div className="pt-4 flex justify-end">
-                    <PremiumButton variant="primary">
+                    <PremiumButton variant="primary" className="w-full sm:w-auto">
                       Update Password
                     </PremiumButton>
                   </div>

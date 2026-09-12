@@ -117,17 +117,82 @@ function MyGroups() {
           My Groups
         </SectionTitle>
 
-        {/* Data Table */}
-        <Card glass={true}>
+        {/* Mobile View: Card-based list for phones */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <TableSkeleton columns={3} rows={3} />
+          ) : paginatedGroups.length === 0 ? (
+            <Card glass={true} className="p-8 text-center">
+              <span className="text-3xl block mb-2">📋</span>
+              <p className="text-gray-600 dark:text-stone-300 font-medium">
+                {searchQuery ? 'No groups match your search' : 'No approved groups yet'}
+              </p>
+              <p className="text-gray-400 dark:text-stone-500 text-xs mt-1">
+                {searchQuery ? 'Try a different keyword' : 'Approve student group registrations to see them here'}
+              </p>
+            </Card>
+          ) : (
+            paginatedGroups.map((group, index) => {
+              const status = getGroupStatus(group);
+              const memberCount = 1 + (group.members?.length || 0);
+              const registeredDate = group.createdAt
+                ? new Date(group.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+                : '—';
+
+              return (
+                <Card key={group.id} glass={true} className="p-4 sm:p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
+                        Group #{String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                      </span>
+                      <h3 className="font-bold text-base text-gray-900 dark:text-stone-100 truncate mt-0.5">
+                        {group.groupName}
+                      </h3>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${status.textColor} bg-stone-100 dark:bg-stone-800`}>
+                      <span className={`w-2 h-2 rounded-full ${status.color}`}></span>
+                      {status.label}
+                    </span>
+                  </div>
+
+                  {group.researchTitle && (
+                    <p className="text-xs text-gray-700 dark:text-stone-300 line-clamp-2">
+                      <span className="font-semibold text-gray-500 dark:text-stone-400">Title: </span>
+                      {group.researchTitle}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
+                    <span>👥 {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+                    <span>📅 {registeredDate}</span>
+                  </div>
+
+                  <PremiumButton
+                    onClick={() => handleView(group)}
+                    variant="primary"
+                    size="sm"
+                    className="w-full justify-center text-xs py-2 mt-1"
+                  >
+                    View Group Details →
+                  </PremiumButton>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Full Data Table */}
+        <Card glass={true} className="hidden md:block">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-[#7a2e46] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 text-[10px] uppercase tracking-wider">
                   <th className="py-4 px-6 font-semibold w-16">No.</th>
                   <th className="py-4 px-6 font-semibold">Group Name</th>
                   <th className="py-4 px-6 font-semibold">Members</th>
-                  <th className="py-4 px-6 font-semibold">Date Registered ▾</th>
-                  <th className="py-4 px-6 font-semibold">Status ▾</th>
+                  <th className="py-4 px-6 font-semibold">Date Registered</th>
+                  <th className="py-4 px-6 font-semibold">Status</th>
                   <th className="py-4 px-6 font-semibold text-center w-24">Action</th>
                 </tr>
               </thead>
@@ -158,12 +223,12 @@ function MyGroups() {
 
                     return (
                       <tr key={group.id} className="border-b border-gray-100 dark:border-stone-800 hover:bg-gray-50 dark:hover:bg-stone-800/50 transition">
-                        <td className="py-4 px-6 text-gray-400 dark:text-stone-500 font-medium">{String(index + 1).padStart(2, '0')}</td>
+                        <td className="py-4 px-6 text-gray-400 dark:text-stone-500 font-medium">{String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}</td>
                         <td className="py-4 px-6 font-bold text-gray-900 dark:text-stone-100">{group.groupName}</td>
                         <td className="py-4 px-6 text-gray-500 dark:text-stone-400">{memberCount} member{memberCount !== 1 ? 's' : ''}</td>
                         <td className="py-4 px-6 text-gray-500 dark:text-stone-400">{registeredDate}</td>
                         <td className="py-4 px-6">
-                          <div className="flex items-center gap-2 font-medium">
+                          <div className="flex items-center gap-2 font-medium text-xs">
                             <span className={`w-2.5 h-2.5 rounded-full ${status.color}`}></span>
                             <span className={status.textColor}>{status.label}</span>
                           </div>
@@ -188,8 +253,8 @@ function MyGroups() {
 
         {/* Pagination Controls */}
         {totalPages > 1 ? (
-          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4 text-sm">
-            <span className="text-gray-500 dark:text-stone-400">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-5 gap-3 text-xs sm:text-sm">
+            <span className="text-gray-500 dark:text-stone-400 text-center sm:text-left">
               Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredGroups.length)} of {filteredGroups.length} records
             </span>
             <div className="flex items-center gap-1">
@@ -204,7 +269,7 @@ function MyGroups() {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition ${
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs sm:text-sm font-medium transition ${
                     currentPage === page
                       ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
                       : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
@@ -223,7 +288,7 @@ function MyGroups() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
             <p className="text-xs text-gray-500 dark:text-stone-400 font-medium">
               Showing {filteredGroups.length} of {groups.length} group{groups.length !== 1 ? 's' : ''}
             </p>
@@ -241,28 +306,28 @@ function MyGroups() {
         const percent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
 
         return (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-            <div className="bg-white dark:bg-stone-950 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4" onClick={() => setShowModal(false)}>
+            <div className="bg-white dark:bg-stone-950 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
 
               {/* Modal Header */}
-              <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-6 rounded-t-2xl relative">
+              <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-4 sm:p-6 rounded-t-2xl relative pr-12">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-lg"
+                  className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-sm cursor-pointer"
                 >
                   ✕
                 </button>
-                <p className="text-white/70 dark:text-stone-400 text-xs tracking-widest uppercase font-bold mb-1">Group Details</p>
-                <h2 className="text-2xl font-serif font-bold">{selectedGroup.groupName}</h2>
-                <p className="text-white/80 dark:text-stone-300 text-sm mt-1">{selectedGroup.researchTitle}</p>
+                <p className="text-white/70 dark:text-stone-400 text-[10px] tracking-widest uppercase font-bold mb-1">Group Details</p>
+                <h2 className="text-xl sm:text-2xl font-serif font-bold leading-tight">{selectedGroup.groupName}</h2>
+                <p className="text-white/80 dark:text-stone-300 text-xs sm:text-sm mt-1 line-clamp-2">{selectedGroup.researchTitle}</p>
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-3 sm:p-4 text-center">
                     <p className="text-xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{1 + (selectedGroup.members?.length || 0)}</p>
                     <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Members</p>
                   </div>
