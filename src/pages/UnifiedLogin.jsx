@@ -6,7 +6,6 @@ import { auth, db } from '../firebase/config';
 import { Mail, LockKeyhole, X } from 'lucide-react';
 
 import logo from '../assets/logo.png';
-import phinmaLogo from '../assets/phinma-logo.png';
 import loginBg from '../assets/parchment.png';
 import tornEdge from '../assets/torn-edge.png';
 import maroonBg from '../assets/maroon-bg.png';
@@ -301,12 +300,9 @@ function UnifiedLogin() {
         />
 
         <div className="flex flex-col items-center text-center space-y-4 max-w-md relative z-30">
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center">
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1.5 shadow-lg border border-white/20">
               <img src={logo} alt="ARCHIVIO Logo" className="w-full h-full object-contain rounded-full" />
-            </div>
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1.5 shadow-lg border border-white/20">
-              <img src={phinmaLogo} alt="PHINMA Logo" className="w-full h-full object-contain rounded-full" />
             </div>
           </div>
           <p className="text-[#d6ad60] text-xs font-bold tracking-[0.25em] uppercase mt-2">SWU PHINMA</p>
@@ -365,9 +361,8 @@ function UnifiedLogin() {
 
         <div className="w-full max-w-md relative z-10 animate-fade-in-up">
           <div className="md:hidden flex flex-col items-center mb-8">
-            <div className="flex items-center gap-4 mb-3">
+            <div className="flex items-center justify-center mb-3">
               <img src={logo} alt="ARCHIVIO Logo" className="w-20 h-20 drop-shadow-md" />
-              <img src={phinmaLogo} alt="PHINMA Logo" className="w-20 h-20 drop-shadow-md" />
             </div>
             <h1 className="text-3xl font-serif font-bold text-[#7a1f3d]">ARCHIVIO</h1>
           </div>

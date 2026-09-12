@@ -132,9 +132,9 @@ const transporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: EMAIL_PASSWORD
   },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 45000
+  connectionTimeout: 6000,
+  greetingTimeout: 6000,
+  socketTimeout: 10000
 });
 
 // Test email connection
@@ -335,14 +335,38 @@ app.post('/api/send-password-reset', async (req, res) => {
 </html>
 `;
 
-    await transporter.sendMail({
-      from: '"ARCHIVIO SWU PHINMA" <archivio.noreply@gmail.com>',
-      to: cleanEmail,
-      subject: 'Password Reset Request • ARCHIVIO SWU PHINMA',
-      html: emailHTML
-    });
+    try {
+      await transporter.sendMail({
+        from: '"ARCHIVIO SWU PHINMA" <archivio.noreply@gmail.com>',
+        to: cleanEmail,
+        subject: 'Password Reset Request • ARCHIVIO SWU PHINMA',
+        html: emailHTML
+      });
 
-    res.status(200).json({ success: true, message: 'Branded reset email sent successfully' });
+      return res.status(200).json({ success: true, message: 'Branded reset email sent successfully' });
+    } catch (smtpErr) {
+      console.warn('⚠️ SMTP sendMail failed (likely port blocked by cloud host), falling back to Google Identity Platform:', smtpErr.message);
+      try {
+        const apiKey = process.env.FIREBASE_API_KEY || 'AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA';
+        const gRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestType: 'PASSWORD_RESET',
+            email: cleanEmail,
+            continueUrl: customResetLink
+          })
+        });
+        const gData = await gRes.json();
+        if (!gRes.ok) {
+          throw new Error(gData.error?.message || 'Google Identity Platform dispatch failed');
+        }
+        return res.status(200).json({ success: true, message: 'Password reset link sent successfully via Google Identity Platform' });
+      } catch (gErr) {
+        console.error('All email dispatch methods failed:', gErr);
+        return res.status(500).json({ error: 'Failed to send password reset email: ' + (smtpErr.message || gErr.message) });
+      }
+    }
   } catch (error) {
     console.error('Send Password Reset Error:', error);
     res.status(500).json({ error: error.message || 'Failed to send reset email' });
