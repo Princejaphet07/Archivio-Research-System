@@ -53,8 +53,45 @@ export default function ArchiveForgotPassword() {
 
     setLoading(true);
 
+    const API_URL = import.meta.env.VITE_BACKEND_URL 
+      ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+      : 'https://archivio-email-service.onrender.com/api';
+
     try {
-      await sendPasswordResetEmail(auth, cleanEmail);
+      let sentViaBrandedService = false;
+
+      // 1. Try sending the official branded SWU PHINMA HTML email template
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s timeout
+
+        const response = await fetch(`${API_URL}/send-password-reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          sentViaBrandedService = true;
+        } else {
+          const data = await response.json().catch(() => ({}));
+          if (data.error && data.error.includes('No registered account')) {
+            throw new Error('No account found with this email address. Please make sure you have registered first.');
+          }
+        }
+      } catch (backendError) {
+        console.warn('Backend branded reset failed or timed out:', backendError.message);
+        if (backendError.message.includes('No account found')) {
+          throw backendError;
+        }
+      }
+
+      // 2. If backend service was unavailable or sleeping, seamlessly send via Firebase Client Auth
+      if (!sentViaBrandedService) {
+        await sendPasswordResetEmail(auth, cleanEmail);
+      }
 
       setIsSent(true);
       setCountdown(60); // 60s cooldown
@@ -62,14 +99,14 @@ export default function ArchiveForgotPassword() {
       fireAlert({
         icon: 'success',
         title: 'Reset Link Dispatched!',
-        text: `We sent a secure password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
-        timer: 3000,
+        text: `We sent an official password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
+        timer: 3500,
         showConfirmButton: true,
         confirmButtonText: 'Great, I will check'
       });
     } catch (err) {
       console.error('Password reset error:', err);
-      let errorMsg = 'Failed to send password reset email. Please try again.';
+      let errorMsg = err.message || 'Failed to send password reset email. Please try again.';
 
       if (err.code === 'auth/user-not-found') {
         errorMsg = 'No account found with this email address. Please make sure you have registered first.';
