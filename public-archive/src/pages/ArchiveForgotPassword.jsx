@@ -1,377 +1,291 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { auth } from '../firebase/config';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/parchment.png';
 import Swal from 'sweetalert2';
 
 export default function ArchiveForgotPassword() {
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
-  
+
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(new Array(6).fill(''));
-  const inputRefs = useRef([]);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
-  
-  const API_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:3001/api';
+  const [isSent, setIsSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
-  const handleChangeOtp = (element, index) => {
-    if (isNaN(element.value)) return false;
-    
-    const newOtp = [...otp];
-    newOtp[index] = element.value;
-    setOtp(newOtp);
-
-    // Focus next input
-    if (element.value && index < 5) {
-      inputRefs.current[index + 1].focus();
+  // Countdown timer for resend button
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
-    const codeStr = newOtp.join('');
-    if (codeStr.length === 6) {
-      performVerify(codeStr);
-    }
+  const fireAlert = (options) => {
+    return Swal.fire({
+      background: isDarkMode ? '#1c1518' : '#ffffff',
+      color: isDarkMode ? '#f5f5f5' : '#1c1917',
+      confirmButtonColor: '#7a2039',
+      ...options
+    });
   };
 
-  const handleKeyDownOtp = (e, index) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
-  };
-
-  const handleSendOTP = async (e) => {
-    e.preventDefault();
+  const handleSendResetEmail = async (e) => {
+    if (e) e.preventDefault();
     setError('');
 
     const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      setError('Please enter your institutional email address.');
+      return;
+    }
+
     if (!cleanEmail.endsWith('@phinmaed.com')) {
-      setError('Please enter your official @phinmaed.com institutional email address.');
+      setError('Access is restricted: please enter your official @phinmaed.com institutional email address.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail })
-      });
+      await sendPasswordResetEmail(auth, cleanEmail);
 
-      const data = await response.json();
+      setIsSent(true);
+      setCountdown(60); // 60s cooldown
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send OTP');
-      }
-
-      await Swal.fire({
+      fireAlert({
         icon: 'success',
-        title: 'Sending code successfully sent',
-        confirmButtonColor: '#24050f',
-        background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
-        color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333'
+        title: 'Reset Link Dispatched!',
+        text: `We sent a secure password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
+        timer: 3000,
+        showConfirmButton: true,
+        confirmButtonText: 'Great, I will check'
       });
-      
-      setStep(2);
-      setOtpStatus('idle');
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      console.error('Password reset error:', err);
+      let errorMsg = 'Failed to send password reset email. Please try again.';
 
-  // Password strength helpers
-  const hasEightChars = newPassword.length >= 8;
-  const hasNumber = /\d/.test(newPassword);
-  const hasUpper = /[A-Z]/.test(newPassword);
-  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-  const strengthCount = [hasEightChars, hasNumber, hasUpper, hasSpecial].filter(Boolean).length;
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strengthCount];
-  const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'][strengthCount];
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    performVerify(otp.join(''));
-  };
-
-  const performVerify = async (codeStr) => {
-    if (codeStr.length !== 6) return;
-    setError('');
-    setOtpStatus('verifying');
-
-    try {
-      const response = await fetch(`${API_URL}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email.trim().toLowerCase(),
-          code: codeStr
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Incorrect code');
+      if (err.code === 'auth/user-not-found') {
+        errorMsg = 'No account found with this email address. Please make sure you have registered first.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'The email address format is invalid. Please double-check.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMsg = 'Network error. Please check your internet connection and try again.';
       }
 
-      setOtpStatus('success');
-      setTimeout(() => {
-        setStep(3);
-      }, 1500); // Wait 1.5s to show green boxes before moving to new password
-    } catch (err) {
-      // Do not set general error to avoid duplicate alerts
-      setOtpStatus('error');
-    }
-  };
-
-  const handleVerifyAndReset = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    if (newPassword !== confirmPassword) {
-      return setError('Passwords do not match');
-    }
-    
-    if (strengthCount < 4) {
-      return setError('Password must be at least 8 characters long and include an uppercase letter, a number, and a special character.');
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${API_URL}/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email.trim().toLowerCase(),
-          code: otp.join(''),
-          newPassword
-        })
+      setError(errorMsg);
+      fireAlert({
+        icon: 'error',
+        title: 'Unable to Send Link',
+        text: errorMsg
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
-      }
-
-      await Swal.fire({
-        icon: 'success',
-        title: 'Password successfully changed!',
-        text: 'You can now log in with your new password.',
-        confirmButtonColor: '#24050f',
-        confirmButtonText: 'Go to Login',
-        background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
-        color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333'
-      });
-
-      navigate('/login');
-      
-    } catch (err) {
-      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex font-sans text-stone-800 dark:text-gray-200 bg-stone-50 dark:bg-gray-900 transition-colors relative">
-      {/* Background overlay for light mode */}
+    <div className="min-h-screen flex items-center justify-center p-4 md:p-8 font-sans bg-[#faf7f2] dark:bg-[#0d090b] text-stone-800 dark:text-gray-200 transition-colors relative overflow-hidden">
+      
+      {/* Background parchment texture */}
       <div 
-        className="absolute inset-0 z-0 dark:hidden"
-        style={{ backgroundImage: `url("${bgTexture}")`, backgroundSize: 'cover', opacity: 0.5 }}
-      ></div>
+        className="absolute inset-0 z-0 opacity-100 dark:opacity-10 transition-opacity duration-300 pointer-events-none"
+        style={{
+          backgroundImage: `url(${bgTexture})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
 
-      <div className="w-full flex justify-center items-center p-6 z-10">
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] w-full max-w-md p-8 relative border border-white/40 dark:border-gray-700/50">
+      {/* Ambient warm radial glow in dark mode */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_center,rgba(122,32,57,0.22)_0%,transparent_70%)]" />
+
+      {/* Theme Toggle Button */}
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 z-30 p-2.5 rounded-full bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 border border-stone-300/80 dark:border-white/15 text-stone-700 dark:text-[#f3e5ab] shadow-sm hover:scale-105 transition-all cursor-pointer backdrop-blur-md"
+        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        aria-label="Toggle Theme"
+      >
+        {isDarkMode ? '☀️' : '🌙'}
+      </button>
+
+      {/* Center Card */}
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-white/95 dark:bg-[#1c1518]/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border border-stone-200/90 dark:border-white/15 flex flex-col items-center transition-all">
           
+          {/* Header Brand */}
           <div className="flex flex-col items-center mb-6">
-            <Link to="/" className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border-2 border-stone-200 dark:border-gray-600 mb-4 shadow-md hover:scale-105 transition-transform p-2">
-              <img src={logoImg} alt="Logo" className="w-full h-full object-contain" />
+            <Link 
+              to="/" 
+              className="w-16 h-16 bg-[#24050f] dark:bg-[#2d121c] rounded-2xl flex items-center justify-center border border-stone-200 dark:border-amber-900/40 mb-4 shadow-lg hover:scale-105 transition-transform p-3 group"
+              title="Return to Home"
+            >
+              <img src={logoImg} alt="Archivio Logo" className="w-full h-full object-contain group-hover:rotate-6 transition-transform" />
             </Link>
-            <h1 className="text-2xl font-serif font-bold text-[#3d0c1b] dark:text-[#f3e5ab]">Forgot Password</h1>
-            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1 text-center">
-              {step === 1 && "Enter your email to receive a verification code."}
-              {step === 2 && "Check your email for the 6-digit code."}
-              {step === 3 && "Create a new secure password."}
+            
+            <h1 className="text-2xl font-serif font-bold text-[#3d0c1b] dark:text-[#f3e5ab] tracking-wide">
+              {isSent ? 'Reset Link Sent' : 'Forgot Password'}
+            </h1>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1.5 text-center max-w-xs leading-relaxed">
+              {isSent 
+                ? 'Check your PHINMA Gmail inbox to reset your password.'
+                : 'Enter your institutional email and we will send you a secure link to reset your password.'}
             </p>
           </div>
 
+          {/* Error Banner */}
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
-              <span className="text-red-500 text-sm">⚠️</span>
-              <p className="text-xs text-red-700 dark:text-red-300">{error}</p>
+            <div className="w-full mb-5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl p-3 flex items-start gap-2.5 text-left">
+              <span className="text-red-500 dark:text-red-400 text-sm mt-0.5">⚠️</span>
+              <p className="text-xs text-red-700 dark:text-red-300 font-medium leading-relaxed">{error}</p>
             </div>
           )}
 
-          {step === 1 && (
-            <form onSubmit={handleSendOTP}>
-              <div className="mb-5">
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-2">Email Address</label>
+          {/* STEP 1: Enter Email Form */}
+          {!isSent ? (
+            <form onSubmit={handleSendResetEmail} className="w-full space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-2">
+                  Institutional Email Address
+                </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 dark:text-gray-500 text-sm">✉️</span>
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400 dark:text-stone-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                    </svg>
+                  </div>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. user@phinmaed.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors"
+                    placeholder="e.g. user.swu@phinmaed.com"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/70 dark:bg-black/40 border border-stone-300 dark:border-white/15 rounded-lg outline-none focus:border-[#7a2039] dark:focus:border-[#f3e5ab] focus:ring-2 focus:ring-[#7a2039]/10 dark:focus:ring-[#f3e5ab]/20 text-sm text-stone-900 dark:text-stone-100 transition-all placeholder-stone-400 dark:placeholder-stone-500"
                     required
                     disabled={loading}
+                    autoFocus
                   />
                 </div>
-                <p className="text-[10px] text-stone-500 dark:text-gray-400 mt-1">Official @phinmaed.com account required</p>
+                <div className="flex items-center gap-1.5 mt-2 text-[10.5px] text-stone-500 dark:text-stone-400">
+                  <span>🔒</span>
+                  <span>Strictly restricted to official <strong>@phinmaed.com</strong> accounts</span>
+                </div>
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b] disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-[#7a2039] hover:bg-[#8b2742] active:bg-[#661a2e] text-white rounded-lg text-xs font-bold tracking-wider uppercase shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
-                {loading ? 'Sending...' : 'Send Verification Code'}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>Sending Reset Link...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Password Reset Link</span>
+                    <span>→</span>
+                  </>
+                )}
               </button>
             </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={handleVerifyOTP}>
-              <div className="mb-6">
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-3">6-Digit Code</label>
-                <div className="flex justify-between gap-2">
-                  {otp.map((data, index) => {
-                    let boxColorClass = "bg-stone-50 dark:bg-gray-700 border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 focus:border-[#24050f] dark:focus:border-[#f3e5ab]";
-                    if (otpStatus === 'success') {
-                      boxColorClass = "bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-400";
-                    } else if (otpStatus === 'error') {
-                      boxColorClass = "bg-red-50 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-400";
-                    }
-
-                    return (
-                      <input
-                        key={index}
-                        type="text"
-                        maxLength={1}
-                        ref={(el) => (inputRefs.current[index] = el)}
-                        value={data}
-                        onChange={(e) => {
-                          setOtpStatus('idle'); // Reset status on typing
-                          setError(''); // Remove the general error if user starts typing again
-                          handleChangeOtp(e.target, index);
-                        }}
-                        onKeyDown={(e) => handleKeyDownOtp(e, index)}
-                        onFocus={(e) => e.target.select()}
-                        className={`w-[14%] h-14 border rounded text-center text-2xl font-bold focus:outline-none transition-colors shadow-sm ${boxColorClass}`}
-                        required
-                        disabled={otpStatus === 'success' || otpStatus === 'verifying'}
-                      />
-                    );
-                  })}
-                </div>
-                {otpStatus === 'success' && (
-                  <p className="text-green-600 dark:text-green-400 text-xs font-bold text-center mt-3">Code Verified!</p>
-                )}
-                {otpStatus === 'error' && (
-                  <p className="text-red-600 dark:text-red-400 text-xs font-bold text-center mt-3">Incorrect code</p>
-                )}
+          ) : (
+            /* STEP 2: Sent Confirmation View */
+            <div className="w-full flex flex-col items-center text-center space-y-4">
+              
+              {/* Success Badge */}
+              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl shadow-inner animate-pulse">
+                ✓
               </div>
-              <button
-                type="submit"
-                disabled={otpStatus === 'success' || otpStatus === 'verifying' || otp.join('').length !== 6}
-                className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b] disabled:opacity-70 disabled:cursor-not-allowed"
+
+              <div className="space-y-1">
+                <p className="text-xs text-stone-600 dark:text-stone-300">
+                  We've sent a secure password reset link to:
+                </p>
+                <div className="inline-block bg-stone-100 dark:bg-[#2d1723] px-3.5 py-1.5 rounded-full border border-stone-200 dark:border-white/10 font-mono text-xs font-bold text-[#7a2039] dark:text-[#f3e5ab] break-all">
+                  {email.trim().toLowerCase()}
+                </div>
+              </div>
+
+              {/* Instructions Box */}
+              <div className="w-full bg-stone-50 dark:bg-black/30 border border-stone-200 dark:border-white/10 rounded-xl p-4 text-left space-y-2 text-xs text-stone-600 dark:text-stone-300">
+                <div className="flex items-start gap-2">
+                  <span className="text-[#7a2039] dark:text-[#f3e5ab] font-bold">1.</span>
+                  <p>Open your PHINMA Gmail inbox.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-[#7a2039] dark:text-[#f3e5ab] font-bold">2.</span>
+                  <p>Look for an email from <strong>Archivio Research System</strong> (check Spam or Junk if not in Primary).</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-[#7a2039] dark:text-[#f3e5ab] font-bold">3.</span>
+                  <p>Click the link to create your new password, then return here to log in.</p>
+                </div>
+              </div>
+
+              {/* Quick Action: Open Gmail */}
+              <a
+                href="https://mail.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-[#7a2039] hover:bg-[#8b2742] text-white rounded-lg text-xs font-bold tracking-wider uppercase shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                {otpStatus === 'verifying' ? 'Verifying...' : 'Verify Code'}
-              </button>
-              <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); }} className="text-xs text-stone-500 dark:text-gray-400 font-bold hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
-                  Resend Code
+                <span>Open PHINMA Gmail</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </a>
+
+              {/* Secondary Actions */}
+              <div className="w-full flex items-center justify-between pt-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSent(false);
+                    setError('');
+                  }}
+                  className="text-stone-500 dark:text-stone-400 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] font-medium transition-colors"
+                >
+                  ← Edit email
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendResetEmail}
+                  disabled={loading || countdown > 0}
+                  className="font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed transition-opacity"
+                >
+                  {countdown > 0 ? `Resend link (${countdown}s)` : 'Resend link'}
                 </button>
               </div>
-            </form>
+            </div>
           )}
 
-          {step === 3 && (
-            <form onSubmit={handleVerifyAndReset}>
-              <div className="mb-4">
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-2">New Password</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 dark:text-gray-500 text-sm">🔒</span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors mb-3 select-none"
-                    required
-                    disabled={loading}
-                    data-password="true"
-                    data-no-copy="true"
-                    onCopy={(e) => { e.preventDefault(); return false; }}
-                    onCut={(e) => { e.preventDefault(); return false; }}
-                    onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[10px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                
-                {/* Password Strength Indicator */}
-                {newPassword && (
-                  <div className="flex justify-between items-center mb-1 px-1">
-                    <div className="w-1/2 flex gap-1">
-                      {[1,2,3,4].map(i => (
-                        <div key={i} className={`h-1 w-full rounded-full ${i <= strengthCount ? strengthColor : 'bg-stone-200 dark:bg-gray-600'}`}></div>
-                      ))}
-                    </div>
-                    <div className={`text-[9px] font-semibold ${strengthCount <= 1 ? 'text-red-400' : strengthCount === 2 ? 'text-yellow-500' : strengthCount === 3 ? 'text-blue-500' : 'text-green-600'}`}>
-                      {strengthLabel}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="mb-6">
-                <label className="block text-[11px] font-bold text-stone-600 dark:text-gray-300 uppercase tracking-wider mb-2">Confirm Password</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400 dark:text-gray-500 text-sm">🔒</span>
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full pl-10 pr-12 py-2.5 bg-stone-50 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded outline-none focus:border-[#24050f] dark:focus:border-[#f3e5ab] text-sm text-stone-700 dark:text-gray-200 transition-colors select-none"
-                    required
-                    disabled={loading}
-                    data-password="true"
-                    data-no-copy="true"
-                    onCopy={(e) => { e.preventDefault(); return false; }}
-                    onCut={(e) => { e.preventDefault(); return false; }}
-                    onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab]">
-                    {showConfirmPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 bg-[#24050f] text-white rounded text-sm font-bold tracking-wider uppercase shadow-md transition-colors hover:bg-[#3f081b] disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Resetting Password...' : 'Reset Password'}
-              </button>
-            </form>
-          )}
-
-          <div className="text-center mt-6 pt-4 border-t border-stone-200 dark:border-gray-700">
-            <Link to="/login" className="text-xs font-bold text-stone-500 dark:text-gray-400 hover:text-[#24050f] dark:hover:text-[#f3e5ab] transition-colors">
-              ← Back to Login
+          {/* Footer Back to Login */}
+          <div className="w-full text-center mt-6 pt-4 border-t border-stone-200/80 dark:border-white/10">
+            <Link 
+              to="/login" 
+              className="text-xs font-bold text-stone-600 dark:text-stone-400 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition-colors inline-flex items-center gap-1.5"
+            >
+              <span>←</span>
+              <span>Back to Sign In</span>
             </Link>
           </div>
 

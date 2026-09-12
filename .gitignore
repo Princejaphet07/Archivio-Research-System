@@ -26,3 +26,6 @@ dist-ssr
 # Environment Variables
 .env
 email-service/.env
+
+# Firebase CLI cache
+.firebase/

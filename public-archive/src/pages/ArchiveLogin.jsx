@@ -20,6 +20,7 @@ function ArchiveLogin() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
   const navigate = useNavigate();
   const location = useLocation();
@@ -146,7 +147,7 @@ function ArchiveLogin() {
       console.error(error);
       let msg = 'Authentication failed. Please check your credentials.';
       if (error.code === 'auth/email-already-in-use') msg = 'This email is already registered. Please log in.';
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') msg = 'Invalid email or password.';
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = 'Invalid email or password.';
       fireAlert({ icon: 'error', title: 'Oops...', text: msg });
     } finally {
       setLoading(false);
@@ -154,11 +155,15 @@ function ArchiveLogin() {
   };
 
   const handleGoogleAuth = async () => {
+    if (isGoogleLoading || loading) return;
+    setIsGoogleLoading(true);
+
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       hd: 'phinmaed.com',
       prompt: 'select_account'
     });
+
     try {
       const userCredential = await signInWithPopup(auth, provider);
       const userEmail = userCredential.user.email?.toLowerCase().trim();
@@ -176,8 +181,40 @@ function ArchiveLogin() {
       fireAlert({ icon: 'success', title: 'Welcome!', timer: 1500, showConfirmButton: false });
       navigate(from, { replace: true });
     } catch (error) {
-      console.error(error);
-      fireAlert({ icon: 'error', title: 'Google Auth Failed', text: error.message || 'Could not sign in with Google.' });
+      console.warn('Google Auth note:', error.code || error.message);
+      // Suppress normal user cancellations / popup close:
+      if (
+        error.code === 'auth/popup-closed-by-user' ||
+        error.code === 'auth/cancelled-popup-request'
+      ) {
+        return; // Silent: User intentionally closed popup or clicked outside
+      }
+
+      if (error.code === 'auth/popup-blocked') {
+        fireAlert({
+          icon: 'warning',
+          title: 'Popup Blocked',
+          text: 'The sign-in popup was blocked by your browser. Please allow popups for this site and try again.'
+        });
+        return;
+      }
+
+      if (error.code === 'auth/network-request-failed') {
+        fireAlert({
+          icon: 'error',
+          title: 'Network Error',
+          text: 'Network connection issue. Please check your internet connection and try again.'
+        });
+        return;
+      }
+
+      fireAlert({
+        icon: 'error',
+        title: 'Sign In Failed',
+        text: 'Unable to sign in with Google. Please try again or sign in with your email and password.'
+      });
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -484,15 +521,28 @@ function ArchiveLogin() {
           <button 
             type="button"
             onClick={handleGoogleAuth}
-            className="w-full py-2.5 flex items-center justify-center gap-3 bg-white hover:bg-stone-50 dark:bg-white/5 dark:hover:bg-white/10 border border-stone-300 dark:border-white/15 rounded-lg font-sans font-medium text-sm text-stone-700 dark:text-stone-200 transition-all shadow-sm cursor-pointer"
+            disabled={isGoogleLoading || loading}
+            className={`w-full py-2.5 flex items-center justify-center gap-3 bg-white hover:bg-stone-50 dark:bg-white/5 dark:hover:bg-white/10 border border-stone-300 dark:border-white/15 rounded-lg font-sans font-medium text-sm text-stone-700 dark:text-stone-200 transition-all shadow-sm ${isGoogleLoading || loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            <span>Continue with Google (@phinmaed.com)</span>
+            {isGoogleLoading ? (
+              <span className="flex items-center gap-2 text-stone-600 dark:text-stone-300">
+                <svg className="animate-spin h-4 w-4 text-[#7a2039] dark:text-[#f3e5ab]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                Connecting to Google...
+              </span>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                <span>Continue with Google (@phinmaed.com)</span>
+              </>
+            )}
           </button>
 
           {/* LINK PABALIK SA HOME */}

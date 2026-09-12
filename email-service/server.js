@@ -118,20 +118,29 @@ process.on('uncaughtException', (err) => {
   // We'll log it and keep going (though it's risky if state is corrupted, it prevents "mabuang" for transient errors)
 });
 
-// Email Configuration for Mailtrap
+// Email Configuration (Defaults to Gmail SMTP with timeouts to prevent hanging)
+const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
+const EMAIL_PORT = parseInt(process.env.EMAIL_PORT) || 587;
+const EMAIL_USER = process.env.EMAIL_USER || 'archivio.noreply@gmail.com';
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || 'idypbuznxosaamzk';
+
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
-  port: parseInt(process.env.EMAIL_PORT) || 465,
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  secure: EMAIL_PORT === 465,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
+    user: EMAIL_USER,
+    pass: EMAIL_PASSWORD
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000
 });
 
 // Test email connection
 transporter.verify((error, success) => {
   if (error) {
-    console.error('❌ Email service error:', error);
+    console.error('❌ Email service verification note:', error.message);
   } else {
     console.log('✅ Email service ready');
   }
@@ -145,11 +154,16 @@ app.post('/api/send-otp', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    // Ensure user exists in Firebase Auth before sending OTP
+    // Ensure user exists in Firebase Auth before sending OTP (if Firebase Admin is initialized)
     try {
-      await getAuth().getUserByEmail(email);
+      if (serviceAccount) {
+        await getAuth().getUserByEmail(email);
+      }
     } catch (authError) {
-      return res.status(404).json({ error: 'User not found' });
+      console.warn('User lookup for OTP:', authError.code || authError.message);
+      if (authError.code === 'auth/user-not-found') {
+        return res.status(404).json({ error: 'No registered account found with this email address.' });
+      }
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
@@ -158,32 +172,41 @@ app.post('/api/send-otp', async (req, res) => {
     // Hash the OTP before storing — never store plain OTP in the database
     const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
 
-    // Store hashed OTP in Firestore
-    await getFirestore().collection('password_resets').doc(email).set({
-      code: hashedCode,
-      expiresAt
-    });
+    // Store hashed OTP in Firestore if available
+    try {
+      if (serviceAccount) {
+        await getFirestore().collection('password_resets').doc(email).set({
+          code: hashedCode,
+          expiresAt
+        });
+      }
+    } catch (fsErr) {
+      console.warn('Firestore password_resets store note:', fsErr.message);
+    }
 
     const emailHTML = `
-      <div style="font-family: sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #7B1F35;">ARCHIVIO Password Reset</h2>
-        <p>Your 6-digit verification code is:</p>
-        <h1 style="letter-spacing: 5px; color: #d0a36e;">${code}</h1>
-        <p>This code expires in 5 minutes. If you did not request this, please ignore this email.</p>
+      <div style="font-family: sans-serif; text-align: center; padding: 30px; background-color: #faf8f5; border-radius: 12px; max-width: 500px; margin: auto; border: 1px solid #e7e5e4;">
+        <h2 style="color: #7a2039; margin-bottom: 8px;">ARCHIVIO SWU PHINMA</h2>
+        <p style="color: #57534e; font-size: 14px; margin-bottom: 24px;">Research Archive Management System</p>
+        <p style="color: #292524; font-size: 14px;">Your 6-digit verification code to reset your password is:</p>
+        <div style="margin: 24px 0;">
+          <span style="letter-spacing: 8px; font-size: 32px; font-weight: bold; color: #7a2039; background-color: #ffffff; padding: 12px 24px; border-radius: 8px; border: 1px solid #d6d3d1; display: inline-block;">${code}</span>
+        </div>
+        <p style="color: #78716c; font-size: 12px;">This code will expire in <strong>5 minutes</strong>. If you did not request this password reset, please disregard this message.</p>
       </div>
     `;
 
     await transporter.sendMail({
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
+      from: `"ARCHIVIO SWU PHINMA" <${EMAIL_USER}>`,
       to: email,
-      subject: 'Password Reset Verification Code',
+      subject: 'Password Reset Verification Code - ARCHIVIO',
       html: emailHTML
     });
 
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP Error:', error);
-    res.status(500).json({ error: 'Failed to send OTP' });
+    res.status(500).json({ error: error.message || 'Failed to send OTP' });
   }
 });
 
