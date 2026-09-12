@@ -1277,6 +1277,39 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 
 
 // ============================================
+// GEMINI MULTI-MODEL FALLBACK & HIGH-QUOTA CASCADE
+// Prevents rate-limiting by prioritizing high-throughput, low-cost flash models,
+// and cascading automatically if one model is throttled or exhausted.
+// ============================================
+const GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash'
+];
+
+async function generateAIContentWithFallback(genAI, options, generatePayload) {
+  let lastError;
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const modelOptions = typeof options === 'object' && options !== null
+        ? { ...options, model: modelName }
+        : { model: modelName };
+      const model = genAI.getGenerativeModel(modelOptions);
+
+      const resultData = await model.generateContent(generatePayload);
+      const response = await resultData.response;
+      return response;
+    } catch (err) {
+      console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next model...`);
+      lastError = err;
+      // Immediately cascade to next model on 429 (rate limit), 503 (overload), 404, or any error
+    }
+  }
+  throw lastError;
+}
+
+// ============================================
 // ARCHIVIO AI ASSISTANT CHAT
 // ============================================
 app.post('/api/ai/chat', async (req, res) => {
@@ -1357,16 +1390,17 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     }
 
-    const modelWithPrompt = genAI.getGenerativeModel({ model: 'gemini-3.5-flash', systemInstruction: developerPrompt });
-    
     const contents = (Array.isArray(chatHistory) ? chatHistory : []).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
     contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const resultData = await modelWithPrompt.generateContent({ contents });
-    const responseData = await resultData.response;
+    const responseData = await generateAIContentWithFallback(
+      genAI,
+      { systemInstruction: developerPrompt },
+      { contents }
+    );
     
     let cleanResponse = responseData.text() || "";
     cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -1399,7 +1433,6 @@ app.post('/api/ai/precheck', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic writing evaluator. Evaluate this abstract for grammar, syntax, academic tone, and readability. Be constructive and helpful.
 
 ABSTRACT:
@@ -1410,8 +1443,7 @@ Respond with ONLY a JSON object using this format:
 
 The score must be 0-100. Include 1-3 specific suggestions. Return ONLY valid JSON.`;
 
-    const resultData = await model.generateContent(prompt);
-    const response = await resultData.response;
+    const response = await generateAIContentWithFallback(genAI, null, prompt);
     let rawText = response.text();
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
@@ -1464,7 +1496,6 @@ app.post('/api/ai/extract-keywords', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
 Return ONLY a JSON array of strings. No explanation, no markdown.
 Example: ["Digital Archiving", "Research Management", "Agile Development"]
@@ -1472,9 +1503,8 @@ Example: ["Digital Archiving", "Research Management", "Agile Development"]
 Abstract:
 ${abstract}`;
 
-    const resultData = await model.generateContent(prompt);
-      const response = await resultData.response;
-      let rawText = response.text();
+    const response = await generateAIContentWithFallback(genAI, null, prompt);
+    let rawText = response.text();
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     let keywords = [];
@@ -1544,7 +1574,6 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
 The abstract must cover: problem statement, methodology, results, and conclusion.
 Return ONLY the abstract text. No label, no heading, no markdown, no explanation.
@@ -1553,9 +1582,8 @@ Return ONLY the abstract text. No label, no heading, no markdown, no explanation
 ${pdfText}
 === END OF EXCERPT ===`;
 
-    const resultData = await model.generateContent(prompt);
-      const response = await resultData.response;
-      let rawText = response.text();
+    const response = await generateAIContentWithFallback(genAI, null, prompt);
+    let rawText = response.text();
     rawText = rawText.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
     
     console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
@@ -1603,7 +1631,6 @@ app.post('/api/ai/summarize-pdf', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const prompt = `You are an expert academic research assistant. Read the following excerpt from a research manuscript and generate a professional executive summary.
 
 EXCERPT:
@@ -1614,9 +1641,8 @@ Respond with ONLY a JSON object using this exact format:
 
 Ensure the JSON is valid. Output ONLY JSON.`;
 
-    const resultData = await model.generateContent(prompt);
-      const response = await resultData.response;
-      let rawText = response.text();
+    const response = await generateAIContentWithFallback(genAI, null, prompt);
+    let rawText = response.text();
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
 
     let result;
@@ -1674,7 +1700,6 @@ app.post('/api/ai/global-search', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     
     // Inject developer identity prompt and the entire database as context
     const developerPrompt = `
@@ -1702,10 +1727,12 @@ app.post('/api/ai/global-search', async (req, res) => {
     ----------------------------
     `;
     
-    const searchModel = genAI.getGenerativeModel({ model: 'gemini-3.5-flash', systemInstruction: developerPrompt });
-      const resultData = await searchModel.generateContent(query);
-      const responseData = await resultData.response;
-      res.json({ success: true, text: responseData.text() });
+    const responseData = await generateAIContentWithFallback(
+      genAI,
+      { systemInstruction: developerPrompt },
+      query
+    );
+    res.json({ success: true, text: responseData.text() });
   } catch (error) {
     console.error('Global AI Search Error:', error);
     let errorMessage = error.message;
@@ -2039,7 +2066,6 @@ app.post('/api/ai/similarity-check', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     
     const prompt = `You are an expert academic plagiarism and similarity detection system.
     Compare the NEW PAPER against the DATABASE OF PUBLISHED PAPERS below.
@@ -2056,8 +2082,7 @@ app.post('/api/ai/similarity-check', async (req, res) => {
     Return ONLY a valid JSON object in this exact format, with no extra text or markdown:
     {"score": 85, "matchTitle": "Title of the most similar paper", "analysis": "1-2 sentences explaining why they are similar or why the score is low"}`;
 
-    const resultData = await model.generateContent(prompt);
-    const responseData = await resultData.response;
+    const responseData = await generateAIContentWithFallback(genAI, null, prompt);
     let rawText = responseData.text();
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
     
