@@ -955,7 +955,7 @@ app.post('/api/send-super-admin-invitation-email', async (req, res) => {
       </div>
 
       <div class="creds-box">
-        <p>🔐 <strong>Portal:</strong> ${invitationLink || 'http://localhost:5173'}</p>
+        <p>🔐 <strong>Portal:</strong> ${invitationLink || process.env.FRONTEND_URL || 'https://archivio-research-system.web.app'}</p>
         <p>📧 <strong>Email:</strong> ${to}</p>
         <p>🔑 <strong>Temporary Password:</strong> <code>${temporaryPassword}</code></p>
       </div>
@@ -965,7 +965,7 @@ app.post('/api/send-super-admin-invitation-email', async (req, res) => {
         <ul>${modulesHtml}</ul>
       </div>
 
-      <a href="${invitationLink || 'http://localhost:5173'}" class="btn">Access System Administrator Portal →</a>
+      <a href="${invitationLink || process.env.FRONTEND_URL || 'https://archivio-research-system.web.app'}" class="btn">Access System Administrator Portal →</a>
 
       <div class="warning">
         ⚠️ Use your temporary password to sign in. You have <strong>view-only</strong> access to the granted modules. 
@@ -1611,7 +1611,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
       
       <p>You can access your portal here:</p>
       <div style="text-align: center; margin: 25px 0;">
-        <a href="${loginLink || 'http://localhost:5173'}" class="btn">Log In to ARCHIVIO</a>
+        <a href="${loginLink || process.env.FRONTEND_URL || 'https://archivio-research-system.web.app'}" class="btn">Log In to ARCHIVIO</a>
       </div>
     </div>
     <div class="footer">
