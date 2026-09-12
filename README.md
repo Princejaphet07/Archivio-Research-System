@@ -1,115 +1,322 @@
-# Archivio Research System
+# ARCHIVIO — Institutional Research & Capstone Management System
 
-## Project Description / Purpose
-The **Archivio Research System** is an advanced digital repository and archival management application designed to organize, track, index, and securely store institutional and academic research papers. It is built specifically for educational institutions, research facilities, and capstone project administrators to resolve traditional manual storage bottlenecks, paper degradation, and slow search retrieval.
+[![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Gemini AI](https://img.shields.io/badge/Google_Gemini-AI_Integration-8E75B2?logo=google&logoColor=white)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/License-Proprietary_Academic-blue)](#license)
 
-### Key Features
-- **Centralized Electronic Repository:** Securely upload, categorize, and archive full-text research papers, abstracts, and metadata.
-- **Advanced Metadata Indexing & Search:** Robust search filters (by author, advisor, year, academic department, and keywords) allowing instantaneous retrieval.
-- **Role-Based Access Control (RBAC):** Distinct permissions for Administrators (to approve/reject uploads), Researchers/Students (to submit and review work), and Guests (to search and browse public records).
-- **Comprehensive Analytics Dashboard:** Visualized reporting trends showcasing active research topics, departmental contributions, and citation highlights.
+**ARCHIVIO** is a modern, cloud-native research archival and capstone workflow management platform engineered for higher education institutions. Designed specifically to modernize academic repository workflows, ARCHIVIO replaces fragmented manual processes with an end-to-end digital lifecycle: from team creation and proposal drafting to adviser peer review, dean endorsements, and centralized institutional archiving.
 
 ---
 
-## Setup Instructions
-Follow these precise steps to configure and run the Archivio Research System on your local development environment.
+## Table of Contents
+- [Key Features](#key-features)
+- [System Architecture & Role-Based Portals](#system-architecture--role-based-portals)
+- [Technology Stack](#technology-stack)
+- [Project Directory Structure](#project-directory-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [1. Clone Repository](#1-clone-repository)
+  - [2. Frontend Setup](#2-frontend-setup)
+  - [3. Email & Backend Microservice Setup](#3-email--backend-microservice-setup)
+  - [4. Running the Application](#4-running-the-application)
+- [Security & Access Control](#security--access-control)
+- [Deployment](#deployment)
+- [Project Team & Academic Notice](#project-team--academic-notice)
+- [License](#license)
 
-### 1. Prerequisites
-Before beginning installation, ensure your workstation satisfies the following runtime conditions:
-- **Runtime Environment:** Node.js (v18.x or higher) / PHP 8.1+ (or relevant environment stack)
-- **Database Engine:** MySQL Server 8.0+ / PostgreSQL
-- **Dependency Manager:** npm (v9.x+) / Composer
-- **Version Control:** Git command-line utility
+---
 
-### 2. Installation and Clone
-First, clone the official codebase to your local directory using a shell terminal:
+## Key Features
+
+- 📂 **Centralized Cloud Research Repository**: Real-time storage and instant indexing of research manuscripts, abstracts, keywords, and publication metadata.
+- 👥 **Multi-Tier Role-Based Access Control (RBAC)**: Custom role-tailored dashboards for Students, Advisers, College Deans, and System Administrators.
+- 📝 **End-to-End Submission & Review Workflow**: Chapter-by-chapter or full manuscript uploads, revision history, inline feedback, and formal approval steps.
+- 🤖 **AI-Assisted Research Insights**: Integrated with **Google Gemini AI** and **Groq** for automated abstract summaries, research analysis, and literature assistance.
+- 📄 **Interactive PDF Document Viewer**: Embedded in-browser viewing with `react-pdf` and `pdf-lib` for seamless document reading and watermarking.
+- ✉️ **Automated Notification Microservice**: Dedicated Node.js microservice delivering instant OTP verifications, faculty invitations, review notifications, and progress alerts via institutional email.
+- 📊 **Real-Time Institutional Analytics**: Visualized research activity metrics, departmental submission distributions, and publication statistics powered by Recharts.
+- 🔒 **Enterprise-Grade Cloud Security**: Secured with Firestore database-level security rules, SHA-256 OTP hashing, Firebase Bearer Token authentication, and CORS origin restrictions.
+
+---
+
+## System Architecture & Role-Based Portals
+
+ARCHIVIO enforces a strictly partitioned 4-portal system to ensure smooth academic governance:
+
+```
+                                  ┌─────────────────────────────┐
+                                  │      ARCHIVIO Platform      │
+                                  └──────────────┬──────────────┘
+                                                 │
+            ┌───────────────────┬────────────────┴────────────────┬───────────────────┐
+            ▼                   ▼                                 ▼                   ▼
+    ┌───────────────┐   ┌───────────────┐                 ┌───────────────┐   ┌───────────────┐
+    │    Student    │   │    Adviser    │                 │   Dean / HoD  │   │  SysAdmin     │
+    │    Portal     │   │    Portal     │                 │    Portal     │   │    Portal     │
+    └───────┬───────┘   └───────┬───────┘                 └───────┬───────┘   └───────┬───────┘
+            │                   │                                 │                   │
+            │ • Submit papers   │ • Review submissions            │ • Dept. oversight │ • User mgmt
+            │ • Track milestones│ • Annotate feedback             │ • Faculty invites │ • System audit
+            │ • Team management │ • Approve/Reject stages         │ • Endorsement     │ • Global settings
+            └─────────┬─────────┴────────────────┬────────────────┴─────────┬─────────┘
+                      │                          │                          │
+                      ▼                          ▼                          ▼
+         ┌─────────────────────────┐ ┌───────────────────────┐ ┌─────────────────────────┐
+         │ Google Cloud Firestore  │ │ Firebase Auth (JWT)   │ │ Email & AI Microservice │
+         │ (Real-time NoSQL DB)    │ │ (Domain & RBAC Guard) │ │ (Node.js/Express API)   │
+         └─────────────────────────┘ └───────────────────────┘ └─────────────────────────┘
+```
+
+### 1. 🎓 Student Portal (`/student`)
+- Form research teams and assign capstone members.
+- Upload manuscript chapters, revisions, and research artifacts.
+- Real-time milestone tracker following institutional research roadmaps.
+- Review inline remarks and actionable evaluation feedback from advisers.
+
+### 2. 👨‍🏫 Adviser Portal (`/adviser`)
+- Dedicated dashboard tracking all advisee groups and their current phases.
+- Real-time manuscript review, score evaluation, and revision change-requests.
+- Approve milestone progression towards defense readiness.
+
+### 3. 🏛️ College Dean Portal (`/dean`)
+- Program-level and departmental research progress oversight.
+- Generate and dispatch faculty/adviser invitation tokens.
+- Review college research outputs and approve institutional publication endorsements.
+
+### 4. ⚙️ System Administrator Portal (`/admin`)
+- Global user management (accounts, role assignment, active/inactive statuses).
+- System-wide security logs, activity trails, and audit monitoring.
+- Institutional configuration (departments, academic years, metadata taxonomies).
+
+---
+
+## Technology Stack
+
+| Layer | Technologies Used | Description |
+| :--- | :--- | :--- |
+| **Frontend Framework** | React 19, Vite 7 | High-performance SPA with client-side routing |
+| **Styling & Icons** | Tailwind CSS v4, Lucide React | Modern responsive design and institutional UI system |
+| **Data Visualization** | Recharts | Departmental and publication trend charting |
+| **Cloud Database** | **Google Cloud Firestore (NoSQL)** | Schema-flexible, real-time database with live listeners |
+| **Authentication** | **Firebase Authentication** | Secure token-based auth with institutional email verification |
+| **Backend Microservice** | Node.js, Express.js | Dedicated auxiliary service for mailers, AI, and admin tasks |
+| **Email Transport** | Nodemailer (SMTP) | Automated transactional notifications, OTPs, and invites |
+| **AI Intelligence** | Google Gemini AI (`@google/generative-ai`), Groq SDK | Abstract summarization, paper categorization, and research aids |
+| **Document Storage** | Cloudinary & Firebase Storage | Secure cloud asset storage and media management |
+| **Document Utilities** | `react-pdf`, `pdf-lib`, `pdf-parse` | In-browser PDF rendering, parsing, and manipulation |
+
+---
+
+## Project Directory Structure
+
+```plaintext
+ARCHIVIO/
+├── email-service/               # Auxiliary Node.js / Express microservice
+│   ├── server.js                # Microservice server entrypoint (port 3001)
+│   ├── package.json             # Service dependencies (nodemailer, express, etc.)
+│   └── .env.example             # Template for email service credentials
+│
+├── public/                      # Static web assets (logos, icons, manifest)
+│
+├── src/                         # Frontend React application source
+│   ├── admin/                   # Administrator portal pages & components
+│   │   ├── pages/               # AllUsers, AuditLogs, Reports, Settings
+│   │   └── components/          # Admin-specific navigation & widgets
+│   ├── adviser/                 # Adviser portal pages & components
+│   │   ├── pages/               # Advisees, ReviewManuscript, Approvals
+│   │   └── components/          # Adviser navigation & review tools
+│   ├── dean/                    # Dean portal pages & components
+│   │   ├── pages/               # DepartmentOverview, Invitations, UserManagement
+│   │   └── components/          # Dean-specific components & charts
+│   ├── student/                 # Student portal pages & components
+│   │   ├── pages/               # Dashboard, SubmitManuscript, ProgressPage
+│   │   └── components/          # Student navigation & submission modals
+│   ├── components/              # Shared UI components (Modals, Navbars, Buttons)
+│   ├── firebase/                # Firebase client initialization & helpers
+│   │   ├── config.js            # Firebase SDK configuration
+│   │   └── logActivity.js       # Centralized audit logging utility
+│   ├── pages/                   # Public views (Login, Register, Public Archive)
+│   ├── utils/                   # Shared utilities
+│   │   └── authFetch.js         # Authenticated fetch wrapper (auto-attaches Bearer token)
+│   ├── App.jsx                  # Main application routes & role gatekeeper
+│   └── main.jsx                 # Application DOM entry point
+│
+├── firestore.rules              # Production Cloud Firestore Security Rules
+├── firestore.indexes.json       # Firestore composite index definitions
+├── firebase.json                # Firebase deployment & hosting configuration
+├── vite.config.js               # Vite build configuration
+└── package.json                 # Main frontend dependencies and scripts
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+Before running the system, make sure you have the following installed on your machine:
+- **Node.js**: `v18.x` or higher (v20+ recommended) — [Download Node.js](https://nodejs.org/)
+- **npm**: `v9.x` or higher (bundled with Node.js)
+- **Git**: For version control — [Download Git](https://git-scm.com/)
+- A **Firebase Project** with **Cloud Firestore** and **Firebase Authentication** enabled.
+
+---
+
+### 1. Clone Repository
+
 ```bash
 git clone https://github.com/Princejaphet07/Archivio-Research-System.git
 cd Archivio-Research-System
 ```
 
-### 3. Dependency Configuration
-Execute the package manager to download and install all necessary application and server dependencies:
+---
+
+### 2. Frontend Setup
+
+1. **Install frontend dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Configure Firebase Client Credentials**:
+   The Firebase web configuration is managed in `src/firebase/config.js`. Ensure your Firebase project credentials match:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "YOUR_FIREBASE_API_KEY",
+     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+     projectId: "YOUR_PROJECT_ID",
+     storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+     messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+     appId: "YOUR_APP_ID"
+   };
+   ```
+
+3. **Configure Environment Variables (Optional)**:
+   If using external AI API features on the frontend, check the root `.env`:
+   ```env
+   VITE_GROQ_API_KEY=your_groq_api_key_here
+   ```
+
+---
+
+### 3. Email & Backend Microservice Setup
+
+The auxiliary email and verification service is located in the `email-service/` directory.
+
+1. **Navigate to the email service directory**:
+   ```bash
+   cd email-service
+   ```
+
+2. **Install microservice dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**:
+   Create a `.env` file from the provided `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `email-service/.env` with your actual credentials:
+   ```env
+   # Institutional SMTP Configuration
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your-institutional-email@phinmaed.com
+   EMAIL_PASSWORD=your-google-app-password
+
+   # Service Port
+   PORT=3001
+
+   # CORS Allowed Frontend Origin
+   FRONTEND_URL=https://your-archivio-domain.vercel.app
+
+   # Cloudinary Storage Credentials
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=your-api-key
+   CLOUDINARY_API_SECRET=your-api-secret
+
+   # AI Integration
+   GEMINI_API_KEY=your-google-gemini-api-key
+   ```
+
+---
+
+### 4. Running the Application
+
+For full system functionality (including email invitations and OTP verification), run **both** the frontend development server and the email microservice:
+
+#### Terminal 1 — Start the Frontend (Port 5173):
 ```bash
-# For Node.js full-stack / backend solutions
-npm install
-
-# (Optional: If utilizing a Composer-based PHP backend)
-# composer install
-```
-
-### 4. Environment Variables Setup
-The system relies on explicit local configuration values. Create a dedicated `.env` file by cloning the default example template:
-```bash
-cp .env.example .env
-```
-Open the freshly created `.env` file in your preferred text editor and customize the database parameters to match your local setup:
-```env
-APP_NAME="Archivio Research System"
-APP_ENV=local
-APP_KEY=base64:3uR2Ym4pLQgXz6...
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=archivio_db
-DB_USERNAME=root
-DB_PASSWORD=your_secure_password
-```
-
-### 5. Database Initialization
-Instantiate the database structure along with seed values required for administration logins:
-```bash
-# For database migration sequences
-npm run migrate
-npm run seed
-```
-
-### 6. Executing the Local Server
-Launch the development environment server engine:
-```bash
+# In the root project folder:
 npm run dev
 ```
-Once initialized successfully, open your web browser and access the active platform portal at: **`http://localhost:3000`**
+Open your browser and navigate to: **`http://localhost:5173`**
+
+#### Terminal 2 — Start the Email & Backend Service (Port 3001):
+```bash
+# In a new terminal window:
+cd email-service
+node server.js
+# Or with nodemon for auto-reloading:
+npm run dev
+```
 
 ---
 
-## File Structure Explanation
+## Security & Access Control
 
-The codebase follows a standardized enterprise design pattern. Below is a comprehensive structural breakdown of primary components:
+ARCHIVIO implements a multi-layer defense strategy to safeguard institutional academic records:
 
-| Directory / File | Type | Functional Description |
-| :--- | :--- | :--- |
-| `/src` | Folder | Core application layer housing application controllers, routing, and system business logic. |
-| `/src/components` | Folder | Modular UI template parts (navigation sidebars, search bars, modals, footer panels). |
-| `/src/middleware` | Folder | Gatekeeping modules controlling user sessions, input validation, and RBAC permissions. |
-| `/public` | Folder | Statics engine storing raw client assets including logo marks, global CSS sheets, and vector graphics. |
-| `/database` | Folder | Automated configuration schemas, entity-relationship models, and lookup tables. |
-| `/tests` | Folder | Functional automated test modules assessing code reliability and system integrity. |
-| `.env.example` | File | Configuration boilerplate demonstrating all environmental variable parameters. |
-| `.gitignore` | File | Configuration excluding localized dependency caches, environments, and hidden platform modules. |
-| `package.json` | File | Comprehensive package listing documenting platform dependency versions and execution scripts. |
-| `README.md` | File | System technical brief, setup methodology, structural roadmap, and administrative layout (this document). |
+1. **Database-Level Firestore Rules**:
+   - Every read and write query is evaluated against `firestore.rules`.
+   - Direct database access is restricted strictly to authenticated users with matching role claims.
+   - Deans and Admins are verified via server-checked collection documents or custom role tokens.
+2. **Cryptographic OTP Security**:
+   - One-Time Passwords (OTPs) are hashed using **SHA-256** prior to storage in Firestore to prevent exposure even to database viewers.
+   - OTP records include strict expiration timestamps and single-use invalidation flags.
+3. **API Endpoint Guard**:
+   - Protected endpoints on the auxiliary microservice require a valid Firebase ID Token passed via `Authorization: Bearer <token>`, verified server-side using the `firebase-admin` SDK.
+4. **CORS Hardening & Rate Limiting**:
+   - API endpoints enforce origin whitelisting (`localhost` during development, production domains in deployment).
+   - High-sensitivity routes (such as OTP requests and invitation dispatches) are guarded against abuse using `express-rate-limit`.
 
 ---
 
-## Contact Information
-For maintenance inquiries, integration support, or general capstone project feedback, reach out to the development team through the official conduits below:
+## Deployment
 
-* **Project Owner / Principal Developer:** Prince Japhet
-* **GitHub Organization:** [@Princejaphet07](https://github.com/Princejaphet07)
-* **Official Communications Email:** princejaphet.dev@example.com
-* **Project Support Slack Channel:** `#archivio-research-system`
+### Frontend (Vercel / Netlify / Firebase Hosting)
+The frontend is optimized for static hosting platforms. Build the production bundle:
+```bash
+npm run build
+```
+The output will be generated in the `dist/` directory, ready to deploy to **Vercel**, **Netlify**, or **Firebase Hosting**.
+
+### Email Microservice (Render / Railway / VPS / Cloud Run)
+The Node.js `email-service` can be deployed independently as a microservice on platforms like **Render**, **Railway**, or any standard Linux VPS using a process manager like PM2:
+```bash
+pm2 start server.js --name "archivio-email-service"
+```
+
+---
+
+## Project Team & Academic Notice
+
+* **Project Title:** ARCHIVIO: Institutional Digital Research & Capstone Repository System
+* **Lead Developer / Project Owner:** Prince Japhet
+* **GitHub Repository:** [Princejaphet07/Archivio-Research-System](https://github.com/Princejaphet07/Archivio-Research-System)
+* **Institution:** Southwestern University PHINMA
 
 ---
 
 ## License
-**Proprietary License**
 
+**Academic Proprietary License**  
 Copyright © 2026 Southwestern University PHINMA. All Rights Reserved.
 
-**CONFIDENTIALITY AND USE NOTICE:**
-All source code, design elements, architectural diagrams, and documentation contained herein remain the strictly confidential and proprietary property of the Archivio Research System Project Team. 
-
-- Unauthorized copying, duplication, structural replication, modification, distribution, or commercial exploitation of any element of this repository, via any digital, mechanical, or physical medium, is strictly prohibited without explicit, pre-arranged, written authorization signed by the project owners.
-- This software is licensed strictly for academic presentation and internal appraisal purposes under the supervising institutional committee. Any external deployment or hosting is illegal.
+This project was engineered for academic demonstration, evaluation, and institutional use under Southwestern University PHINMA. Unauthorized reproduction, modification, distribution, or commercialization of this codebase without explicit written consent from the project author and institutional authorities is strictly prohibited.
