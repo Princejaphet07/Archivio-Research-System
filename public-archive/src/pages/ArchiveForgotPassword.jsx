@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase/config';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/parchment.png';
@@ -58,80 +56,49 @@ export default function ArchiveForgotPassword() {
       : 'https://archivio-email-service.onrender.com/api';
 
     try {
-      let sentViaBrandedService = false;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for cold starts
 
-      // 1. Try sending the official branded SWU PHINMA HTML email template
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for cold starts
-
-        const response = await fetch(`${API_URL}/send-password-reset`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          sentViaBrandedService = true;
-        } else {
-          const data = await response.json().catch(() => ({}));
-          if (data.error && data.error.includes('No registered account')) {
-            throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
-          }
-          console.warn('Backend returned non-ok status:', data.error);
-        }
-      } catch (backendError) {
-        console.warn('Backend branded reset note:', backendError.message);
-        if (backendError.message.includes('No registered account')) {
-          throw backendError;
-        }
-      }
-
-      // 2. If backend service was temporarily unavailable, fallback to Firebase Client Auth
-      if (!sentViaBrandedService) {
-        try {
-          await sendPasswordResetEmail(auth, cleanEmail);
-        } catch (clientErr) {
-          if (clientErr.code === 'auth/too-many-requests') {
-            throw new Error('Too many requests sent recently. Please wait a few minutes or check your email for the latest link.');
-          }
-          throw clientErr;
-        }
-      }
-
-      setIsSent(true);
-      setCountdown(60); // 60s cooldown
-
-      fireAlert({
-        icon: 'success',
-        title: 'Reset Link Dispatched!',
-        text: `We sent an official password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
-        timer: 3500,
-        showConfirmButton: true,
-        confirmButtonText: 'Great, I will check'
+      const response = await fetch(`${API_URL}/send-password-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        setIsSent(true);
+        setCountdown(60); // 60s cooldown
+
+        fireAlert({
+          icon: 'success',
+          title: 'Reset Link Dispatched!',
+          text: `We sent an official password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
+          timer: 3500,
+          showConfirmButton: true,
+          confirmButtonText: 'Great, I will check'
+        });
+      } else {
+        const data = await response.json().catch(() => ({}));
+        let errorMsg = data.error || 'The server encountered an error sending the reset email. Please try again later.';
+        
+        if (errorMsg.includes('No registered account')) {
+          errorMsg = 'No account found with this email address. Please make sure you have created an account first.';
+        } else if (errorMsg.includes('Too many requests')) {
+          errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
+        }
+        throw new Error(errorMsg);
+      }
     } catch (err) {
       console.error('Password reset error:', err);
       let errorMsg = err.message || 'Failed to send password reset email. Please try again.';
 
-      if (err.code === 'auth/user-not-found') {
-        errorMsg = 'No account found with this email address. Please make sure you have registered first.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMsg = 'The email address format is invalid. Please double-check.';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
-      } else if (err.code === 'auth/network-request-failed') {
-        errorMsg = 'Network error. Please check your internet connection and try again.';
+      if (err.name === 'AbortError' || err.message.includes('Failed to fetch')) {
+        errorMsg = 'Network error or server is starting up. Please check your internet connection and try again in a few seconds.';
       }
 
       setError(errorMsg);
-      fireAlert({
-        icon: 'error',
-        title: 'Unable to Send Link',
-        text: errorMsg
-      });
     } finally {
       setLoading(false);
     }
