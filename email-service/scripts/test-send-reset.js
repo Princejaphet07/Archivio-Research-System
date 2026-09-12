@@ -22,8 +22,11 @@ const transporter = nodemailer.createTransport({
 async function sendTestReset() {
   const email = 'prdo.vender.swu@phinmaed.com';
   console.log('Generating password reset link for:', email);
-  const resetLink = await getAuth().generatePasswordResetLink(email);
-  console.log('Reset Link generated successfully!');
+  const rawLink = await getAuth().generatePasswordResetLink(email);
+  const u = new URL(rawLink);
+  const oobCode = u.searchParams.get('oobCode');
+  const customResetLink = `https://archivio-public.web.app/reset-password?oobCode=${oobCode}`;
+  console.log('Custom Reset Link generated:', customResetLink);
 
   const emailHTML = `
 <!DOCTYPE html>
@@ -56,7 +59,7 @@ async function sendTestReset() {
 
       <!-- CTA BUTTON -->
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 34px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(84, 27, 47, 0.3); letter-spacing: 0.5px;">
+        <a href="${customResetLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 34px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(84, 27, 47, 0.3); letter-spacing: 0.5px;">
           Reset Your Password
         </a>
       </div>
@@ -71,7 +74,7 @@ async function sendTestReset() {
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px 18px; margin: 25px 0;">
         <p style="color: #718096; font-size: 12px; line-height: 1.6; margin: 0;">
           <strong>Having trouble with the button?</strong> Copy and paste this link into your web browser:<br>
-          <a href="${resetLink}" style="color: #7a2744; word-break: break-all; font-size: 11px;">${resetLink}</a>
+          <a href="${customResetLink}" style="color: #7a2744; word-break: break-all; font-size: 11px;">${customResetLink}</a>
         </p>
       </div>
 

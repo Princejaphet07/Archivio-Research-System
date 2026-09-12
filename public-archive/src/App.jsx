@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ArchiveLogin from './pages/ArchiveLogin';
 import ArchiveForgotPassword from './pages/ArchiveForgotPassword';
+import ArchiveResetPassword from './pages/ArchiveResetPassword';
 import ArchiveHome from './pages/ArchiveHome';
 import ArchiveBrowse from './pages/ArchiveBrowse';
 import ArchiveBookmarks from './pages/ArchiveBookmarks';
@@ -52,6 +53,7 @@ function App() {
           <Route path="/" element={<ArchiveHome />} />
           <Route path="/login" element={<ArchiveLogin />} />
           <Route path="/forgot-password" element={<ArchiveForgotPassword />} />
+          <Route path="/reset-password" element={<ArchiveResetPassword />} />
           <Route path="/browse" element={<ArchiveBrowse />} />
           <Route path="/about" element={<ArchiveAbout />} />
 
