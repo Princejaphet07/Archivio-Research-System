@@ -242,7 +242,7 @@ export default function ChatWidget() {
     return (
       <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 w-12 h-12 md:w-14 md:h-14 bg-[#7B1F35] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#5a1626] transition-all z-40 hover:scale-105 active:scale-95"
+        className="fixed bottom-[5.25rem] md:bottom-6 right-4 md:right-6 w-12 h-12 md:w-14 md:h-14 bg-[#7B1F35] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#5a1626] transition-all z-40 hover:scale-105 active:scale-95"
         title="Open Chat"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,7 +253,7 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="fixed inset-x-3 bottom-20 sm:bottom-6 sm:inset-x-auto sm:right-6 sm:w-[360px] h-[calc(100dvh-6.5rem)] sm:h-[500px] max-h-[580px] bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 dark:border-stone-800 overflow-hidden transition-colors">
+    <div className="fixed inset-x-3 bottom-[5.25rem] sm:bottom-6 sm:inset-x-auto sm:right-6 sm:w-[360px] h-[calc(100dvh-7.5rem)] sm:h-[500px] max-h-[580px] bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col z-50 border border-stone-200 dark:border-stone-800 overflow-hidden transition-colors">
       {/* Header */}
       <div className="bg-[#7B1F35] p-4 flex items-center justify-between text-white shadow-md z-10">
         <div className="flex items-center gap-2">

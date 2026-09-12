@@ -120,59 +120,69 @@ function MobileBottomNav({ onOpenMenu }) {
 
   return (
     <nav 
-      aria-label="Mobile Bottom Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200/80 dark:border-stone-800 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom,0px)]"
+      aria-label="Mobile Navigation Bar"
+      className="fixed bottom-3 sm:bottom-4 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[420px] max-w-[calc(100vw-1.5rem)] z-40 md:hidden animate-in fade-in slide-in-from-bottom-3 duration-300 pointer-events-auto"
     >
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto">
-        {navItems.map((item) => {
-          const isActive = item.path && path === item.path;
+      {/* Floating Glassmorphic Container */}
+      <div className="relative bg-white/85 dark:bg-stone-900/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/60 dark:border-stone-700/60 shadow-[0_10px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5),0_0_1px_1px_rgba(255,255,255,0.08)] p-1.5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]">
+        <div className="grid grid-cols-5 gap-1 items-center">
+          {navItems.map((item) => {
+            const isActive = item.path && path === item.path;
 
-          if (item.isAction) {
+            if (item.isAction) {
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={item.onClick}
+                  aria-label={item.label}
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl sm:rounded-2xl transition-all duration-200 text-stone-500 dark:text-stone-400 hover:text-[#7B1F35] dark:hover:text-[#f8d070] hover:bg-stone-100/60 dark:hover:bg-stone-800/60 active:scale-95 cursor-pointer group"
+                >
+                  <div className="relative mb-0.5 group-hover:scale-110 transition-transform duration-200">
+                    {item.icon}
+                  </div>
+                  <span className="text-[10px] font-medium tracking-tight leading-none text-stone-600 dark:text-stone-400 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070]">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            }
+
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={item.onClick}
-                className="flex flex-col items-center justify-center gap-1 text-stone-500 dark:text-stone-400 hover:text-[#541b2f] dark:hover:text-[#f8d070] transition-colors py-1 cursor-pointer"
+                onClick={() => navigate(item.path)}
+                aria-label={item.label}
+                className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-xl sm:rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer ${
+                  isActive 
+                    ? 'bg-[#7B1F35]/10 dark:bg-[#f8d070]/15 text-[#7B1F35] dark:text-[#f8d070] shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]' 
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100/50 dark:hover:bg-stone-800/50'
+                }`}
               >
-                <div className="relative">
-                  {item.icon}
+                <div className="relative mb-0.5">
+                  <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
+                    {item.icon}
+                  </div>
+                  {item.badge && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-white text-[9px] font-black flex items-center justify-center shadow-sm border-2 border-white dark:border-stone-900 animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
-                <span className="text-[10px] font-semibold tracking-tight">{item.label}</span>
+                
+                <div className="flex items-center gap-1">
+                  <span className={`text-[10px] tracking-tight leading-none ${isActive ? 'font-bold' : 'font-medium text-stone-600 dark:text-stone-400'}`}>
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <span className="w-1 h-1 rounded-full bg-[#7B1F35] dark:bg-[#f8d070] shrink-0 animate-pulse"></span>
+                  )}
+                </div>
               </button>
             );
-          }
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center gap-1 transition-all py-1 relative cursor-pointer ${
-                isActive 
-                  ? 'text-[#541b2f] dark:text-[#f8d070]' 
-                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
-              }`}
-            >
-              <div className="relative">
-                <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
-                  {item.icon}
-                </div>
-                {item.badge && (
-                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-extrabold flex items-center justify-center shadow-sm">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
-                {item.label}
-              </span>
-              {isActive && (
-                <div className="absolute bottom-1 w-6 h-0.5 bg-[#541b2f] dark:bg-[#f8d070] rounded-full"></div>
-              )}
-            </button>
-          );
-        })}
+          })}
+        </div>
       </div>
     </nav>
   );

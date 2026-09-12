@@ -55,8 +55,8 @@ function Layout({ children, title, breadcrumb, showSearch = true, searchQuery, o
           onMenuToggle={() => setIsMobileNavOpen(prev => !prev)}
         />
 
-        {/* Scrollable page body with bottom clearance for mobile navigation */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 pb-24 md:pb-8 custom-scrollbar">
+        {/* Scrollable page body with bottom clearance for floating mobile navigation */}
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 pb-28 md:pb-8 custom-scrollbar">
           {children}
         </main>
 
