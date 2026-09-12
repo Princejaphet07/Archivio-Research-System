@@ -5,17 +5,10 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
 
-const getAuthDomain = () => {
-  if (typeof window !== 'undefined' && window.location.hostname && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-    return window.location.hostname;
-  }
-  return "archivio-research-system.firebaseapp.com";
-};
-
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA",
-  authDomain: getAuthDomain(),
+  authDomain: "archivio-research-system.firebaseapp.com",
   projectId: "archivio-research-system",
   storageBucket: "archivio-research-system.firebasestorage.app",
   messagingSenderId: "798013707409",
