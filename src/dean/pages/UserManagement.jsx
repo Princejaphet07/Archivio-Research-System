@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { PremiumButton } from '../../components/ui/Card';
+import { authFetch } from '../../utils/authFetch';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -168,11 +169,7 @@ export default function UserManagement() {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
             const endpoint = newStatus === 'inactive' ? 'disable-auth-user' : 'enable-auth-user';
-            await fetch(`${backendUrl}/api/${endpoint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: user.uid, email: user.email })
-            });
+            await authFetch(`${backendUrl}/api/${endpoint}`, { uid: user.uid, email: user.email });
           } catch (err) {
             console.warn('Could not toggle Firebase Auth:', err);
           }

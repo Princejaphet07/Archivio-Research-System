@@ -49,18 +49,11 @@ service cloud.firestore {
                     || (request.auth.uid == userId &&
                         !request.resource.data.diff(resource.data).affectedKeys()
                           .hasAny(['role']));
-      // CREATE:
-      // • System admins, deans, or the user themselves (with limited roles) can create as before.
-      // • **Special case** – allow the admin‑profile script (unauthenticated) to create the
-      //   admin user document with the exact UID you generated.
+      // CREATE: System admins, deans, or the user themselves (with limited roles) can create.
       allow create: if isSystemAdmin()
                     || isDean()
                     || (request.auth.uid == userId &&
-                        (request.resource.data.role in ['adviser', 'student', 'dean', 'dean+adviser', 'admin']))
-                    // -----------------------------------------------------------------
-                    // Unauthenticated creation for the known admin UID
-                    // -----------------------------------------------------------------
-                    || (request.auth == null && userId == 'liA76ttD3vZaNtw13vsJ89IV87i2');
+                        (request.resource.data.role in ['adviser', 'student', 'dean', 'dean+adviser', 'admin']));
       // DELETE: keep original policy
       allow delete: if isSystemAdmin() || isDean();
     }
@@ -94,13 +87,12 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     match /settings/{docId} {
       allow read: if true;
-      // Unauthenticated creation for the exact settings document the script writes
-      allow create: if request.auth == null && docId == 'system';
+      allow create: if isSystemAdmin() || isDean();
       allow write: if isSystemAdmin() || isDean();
     }
     match /activity_logs/{docId} {
       allow read: if isSystemAdmin() || isDean();
-      allow create: if true;
+      allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin();
     }
     match /systemLogs/{docId} {
@@ -117,8 +109,7 @@ service cloud.firestore {
     }
     match /departments/{docId} {
       allow read: if true;
-      // Allow the script to create the initial department document
-      allow create: if request.auth == null && docId == 'dept-it';
+      allow create: if isSystemAdmin();
       allow write: if isSystemAdmin();
     }
     match /programs/{docId} {
@@ -132,10 +123,9 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     // 5. Research Data, Invitations & Submissions
     // -----------------------------------------------------------------
-    // **Added back** – allow the script to create the placeholder research doc
     match /research/{docId} {
       allow read: if true;
-      allow create: if request.auth == null && docId == '_init';
+      allow create: if isSystemAdmin() || isDean();
       allow write: if isSystemAdmin();
     }
     match /groups/{docId} {
@@ -158,12 +148,12 @@ service cloud.firestore {
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
     match /studentInvitations/{docId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     match /invitations/{docId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     // Email trigger collection permissions (Firebase Email Extension)
     match /mail/{docId} {
@@ -200,8 +190,7 @@ service cloud.firestore {
     }
     match /categories/{docId} {
       allow read: if true;
-      // Unauthenticated creation for the initial category the script writes
-      allow create: if request.auth == null && docId == 'cat-ml';
+      allow create: if isSystemAdmin() || isDean() || isAdviser();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     // -----------------------------------------------------------------

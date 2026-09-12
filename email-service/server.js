@@ -27,11 +27,28 @@ initializeApp({
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// CORS — restrict to your frontend domain
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+];
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, health checks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(o => origin.startsWith(o))) {
+      return callback(null, true);
+    }
+    console.warn('⚠️ CORS blocked origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '50mb' }));
 
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 // Rate limiting to prevent spam/abuse
 const apiLimiter = rateLimit({
@@ -44,6 +61,27 @@ const apiLimiter = rateLimit({
 
 // Apply rate limiter to all /api/ routes
 app.use('/api/', apiLimiter);
+
+// ------------------------------------------------------------------
+// Auth Middleware — verifies Firebase ID token for protected routes
+// Usage: add verifyToken as middleware to routes that require login
+// NOTE: OTP/password-reset routes are intentionally excluded because
+//       the user is NOT logged in when they need to reset their password.
+// ------------------------------------------------------------------
+async function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!idToken) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  try {
+    req.user = await getAuth().verifyIdToken(idToken);
+    next();
+  } catch (err) {
+    console.warn('⚠️ Token verification failed:', err.message);
+    return res.status(403).json({ error: 'Unauthorized: Invalid or expired token' });
+  }
+}
 
 // Global Error Handler to prevent crashes
 process.on('unhandledRejection', (reason, promise) => {
@@ -94,9 +132,12 @@ app.post('/api/send-otp', async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
     const expiresAt = new Date(Date.now() + 5 * 60000); // 5 minutes
 
-    // Store in Firestore
+    // Hash the OTP before storing — never store plain OTP in the database
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+    // Store hashed OTP in Firestore
     await getFirestore().collection('password_resets').doc(email).set({
-      code,
+      code: hashedCode,
       expiresAt
     });
 
@@ -105,7 +146,7 @@ app.post('/api/send-otp', async (req, res) => {
         <h2 style="color: #7B1F35;">ARCHIVIO Password Reset</h2>
         <p>Your 6-digit verification code is:</p>
         <h1 style="letter-spacing: 5px; color: #d0a36e;">${code}</h1>
-        <p>This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
+        <p>This code expires in 5 minutes. If you did not request this, please ignore this email.</p>
       </div>
     `;
 
@@ -137,7 +178,9 @@ app.post('/api/verify-otp', async (req, res) => {
     if (!doc.exists) return res.status(400).json({ error: 'Invalid or expired code' });
 
     const data = doc.data();
-    if (data.code !== code) return res.status(400).json({ error: 'Incorrect code' });
+    // Compare hashed code
+    const hashedInput = crypto.createHash('sha256').update(code).digest('hex');
+    if (data.code !== hashedInput) return res.status(400).json({ error: 'Incorrect code' });
     if (data.expiresAt.toDate() < new Date()) return res.status(400).json({ error: 'Code has expired' });
 
     res.status(200).json({ message: 'Code verified successfully' });
@@ -161,7 +204,9 @@ app.post('/api/reset-password', async (req, res) => {
     if (!doc.exists) return res.status(400).json({ error: 'Invalid or expired code' });
 
     const data = doc.data();
-    if (data.code !== code) return res.status(400).json({ error: 'Incorrect code' });
+    // Compare hashed code
+    const hashedInput = crypto.createHash('sha256').update(code).digest('hex');
+    if (data.code !== hashedInput) return res.status(400).json({ error: 'Incorrect code' });
     if (data.expiresAt.toDate() < new Date()) return res.status(400).json({ error: 'Code has expired' });
 
     // Code is valid, update user's password
@@ -181,7 +226,7 @@ app.post('/api/reset-password', async (req, res) => {
 // ============================================
 // SEND STUDENT MESSAGE TO ADVISER
 // ============================================
-app.post('/api/send-student-message', async (req, res) => {
+app.post('/api/send-student-message', verifyToken, async (req, res) => {
   try {
     const { studentName, studentEmail, adviserName, adviserEmail, subject, message } = req.body;
 
@@ -262,7 +307,7 @@ app.post('/api/send-student-message', async (req, res) => {
 // ============================================
 // SEND ADVISER MESSAGE TO STUDENT
 // ============================================
-app.post('/api/send-adviser-message', async (req, res) => {
+app.post('/api/send-adviser-message', verifyToken, async (req, res) => {
   try {
     const { adviserName, adviserEmail, studentName, studentEmail, subject, message } = req.body;
 
@@ -337,7 +382,7 @@ app.post('/api/send-adviser-message', async (req, res) => {
 // ============================================
 // SEND ADVISER INVITATION EMAIL
 // ============================================
-app.post('/api/send-invitation-email', async (req, res) => {
+app.post('/api/send-invitation-email', verifyToken, async (req, res) => {
   try {
     const { to, adviserName, message, invitationLink, senderName, senderDepartment } = req.body;
 
@@ -447,7 +492,7 @@ app.post('/api/send-invitation-email', async (req, res) => {
 // ============================================
 // SEND DEAN INVITATION EMAIL
 // ============================================
-app.post('/api/send-dean-invitation-email', async (req, res) => {
+app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
   try {
     const { to, deanName, invitationLink, temporaryPassword, message } = req.body;
 
@@ -537,7 +582,7 @@ app.get('/api/health', (req, res) => {
 // ============================================
 // DISABLE FIREBASE AUTH USER
 // ============================================
-app.post('/api/disable-auth-user', async (req, res) => {
+app.post('/api/disable-auth-user', verifyToken, async (req, res) => {
   try {
     const { uid, email } = req.body;
 
@@ -573,7 +618,7 @@ app.post('/api/disable-auth-user', async (req, res) => {
 // ============================================
 // ENABLE FIREBASE AUTH USER
 // ============================================
-app.post('/api/enable-auth-user', async (req, res) => {
+app.post('/api/enable-auth-user', verifyToken, async (req, res) => {
   try {
     const { uid, email } = req.body;
 
@@ -611,7 +656,7 @@ app.post('/api/enable-auth-user', async (req, res) => {
 // ============================================
 // SEND STUDENT INVITATION EMAIL
 // ============================================
-app.post('/api/send-student-invitation-email', async (req, res) => {
+app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => {
   try {
     const { to, invitationLink, senderName, senderDepartment, message } = req.body;
 

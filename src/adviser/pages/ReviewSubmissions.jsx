@@ -8,6 +8,7 @@ import { logActivity } from '../../firebase/logActivity';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { authFetch } from '../../utils/authFetch';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -539,18 +540,14 @@ function ReviewSubmissions() {
     setMsgStatus(null);
     try {
       // 1. Send Email via Backend
-      const res = await fetch(`${BACKEND_URL}/api/send-adviser-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await authFetch(`${BACKEND_URL}/api/send-adviser-message`, {
           adviserName: auth.currentUser?.displayName || 'Research Adviser',
           adviserEmail: auth.currentUser?.email || '',
           studentName: selectedSubmission.leaderName,
           studentEmail: studentEmail,
           subject: msgSubject,
           message: msgBody
-        })
-      });
+        });
 
       if (!res.ok) throw new Error('Failed to send email');
 

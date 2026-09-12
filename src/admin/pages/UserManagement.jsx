@@ -12,6 +12,7 @@ import { Trash2, Eye, Edit2, Ban, Plus, X } from 'lucide-react';
 import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { authFetch } from '../../utils/authFetch';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -314,11 +315,7 @@ export default function UserManagement() {
         if (userDoc.uid) {
           try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-            await fetch(`${backendUrl}/api/disable-auth-user`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: userDoc.uid, email: userDoc.email })
-            });
+            await authFetch(`${backendUrl}/api/disable-auth-user`, { uid: userDoc.uid, email: userDoc.email });
           } catch (deleteAuthError) {
             console.warn(`Could not disable Firebase Auth account:`, deleteAuthError);
           }

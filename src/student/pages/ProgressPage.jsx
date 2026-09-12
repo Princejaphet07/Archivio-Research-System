@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
+import { authFetch } from '../../utils/authFetch';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
@@ -198,10 +199,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     setMsgSending(true);
     setMsgStatus(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/send-student-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await authFetch(`${BACKEND_URL}/api/send-student-message`, {
           adviserEmail: adviserEmail,
           adviserName: adviserName,
           studentName: studentData?.displayName || 'Student',
@@ -209,8 +207,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
           groupName: groupName,
           subject: msgSubject,
           message: msgBody
-        })
-      });
+        });
       
       if (!res.ok) throw new Error('Failed to send message');
       

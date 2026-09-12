@@ -8,6 +8,7 @@ import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { verifySchoolEmailOnline, validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
+import { authFetch } from '../../utils/authFetch';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -251,12 +252,7 @@ Please click the button below to activate your account and set up your credentia
       // Resend email
       try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        await fetch(`${backendUrl}/api/send-invitation-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        await authFetch(`${backendUrl}/api/send-invitation-email`, {
             to: adviserEmail,
             adviserName: adviser.firstName,
             subject: defaultSubject,
@@ -264,8 +260,7 @@ Please click the button below to activate your account and set up your credentia
             invitationLink: adviser.invitationLink,
             senderName: deanData?.displayName,
             senderDepartment: deanData?.department
-          })
-        });
+          });
       } catch (emailError) {
         console.warn('Email service error:', emailError);
       }

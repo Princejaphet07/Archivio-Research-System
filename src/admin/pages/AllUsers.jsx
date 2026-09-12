@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { Trash2, Download, ShieldOff, Unlock } from 'lucide-react';
 import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import { authFetch } from '../../utils/authFetch';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 
 const roleColors = {
@@ -229,11 +230,7 @@ export default function AllUsers() {
         // 3. Call backend to disable Auth
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
         const endpoint = isInactive ? 'enable-auth-user' : 'disable-auth-user';
-        await fetch(`${backendUrl}/api/${endpoint}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email })
-        });
+        await authFetch(`${backendUrl}/api/${endpoint}`, { email: user.email });
 
         Swal.fire(`${actionText}d!`, `User has been ${actionText.toLowerCase()}d.`, 'success');
       } catch (error) {
