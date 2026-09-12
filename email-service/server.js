@@ -15,29 +15,52 @@ require('dotenv').config();
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
-const serviceAccount = require('./firebase-service-account.json');
-const { setupCleanupCron } = require('./cleanup-cron');
-const { setupBackupCron } = require('./backup-cron');
-const { setupMailListener } = require('./mail-listener');
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    serviceAccount = typeof process.env.FIREBASE_SERVICE_ACCOUNT === 'string'
+      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+      : process.env.FIREBASE_SERVICE_ACCOUNT;
+  } catch (e) {
+    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable:', e.message);
+  }
+}
+if (!serviceAccount) {
+  try {
+    serviceAccount = require('./firebase-service-account.json');
+  } catch (e) {
+    console.warn('Could not load local ./firebase-service-account.json');
+  }
+}
 
-initializeApp({
-  credential: cert(serviceAccount)
-});
+if (serviceAccount) {
+  initializeApp({
+    credential: cert(serviceAccount)
+  });
+} else {
+  console.error('CRITICAL: No Firebase credentials found! Set FIREBASE_SERVICE_ACCOUNT or provide firebase-service-account.json.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS — restrict to your frontend domain
+// CORS — allow local development and live Firebase hosting domains
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-];
+  'https://archivio-research-system.web.app',
+  'https://archivio-research-system.firebaseapp.com',
+  'https://archivio-public.web.app',
+  'https://archivio-public.firebaseapp.com',
+].filter(Boolean);
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, health checks)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.some(o => origin.startsWith(o))) {
+    if (allowedOrigins.some(o => origin.startsWith(o) || origin === o)) {
       return callback(null, true);
     }
     console.warn('⚠️ CORS blocked origin:', origin);
@@ -1759,163 +1782,177 @@ app.post('/api/verify-school-email', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`
+// Health check endpoints for monitoring and cloud platforms (e.g. Render)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/', (req, res) => {
+  res.status(200).send('ARCHIVIO Backend Microservice is running');
+});
+
+// ==========================================
+// DYNAMIC PDF WATERMARKING (ENTERPRISE)
+// ==========================================
+app.post('/api/watermark-pdf', async (req, res) => {
+  try {
+    const { pdfUrl, userName } = req.body;
+    if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required' });
+
+    // 1. Download the raw PDF into memory buffer
+    const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+    const pdfBytes = response.data;
+
+    // 2. Load PDF into pdf-lib
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const pages = pdfDoc.getPages();
+    
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const displayName = userName || 'Guest User';
+    const watermarkText = `Downloaded by ${displayName} on ${dateStr}`;
+
+    // 3. Loop through all pages and stamp watermark
+    pages.forEach((page) => {
+      const { width, height } = page.getSize();
+      const fontSize = 24;
+      const textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
+      
+      // Large diagonal watermark across center
+      page.drawText(watermarkText, {
+        x: (width / 2) - (textWidth / 2) * 0.707,
+        y: height / 2,
+        size: fontSize,
+        font: helveticaFont,
+        color: rgb(0.5, 0.1, 0.2), // SWU Maroon-ish
+        opacity: 0.25,
+        rotate: degrees(45),
+      });
+      
+      // Small footer text for accountability
+      page.drawText(`For Academic Purposes Only - SWU ARCHIVIO - ${displayName}`, {
+        x: 40,
+        y: 25,
+        size: 10,
+        font: helveticaFont,
+        color: rgb(0.4, 0.4, 0.4),
+        opacity: 0.6
+      });
+    });
+
+    // 4. Save and return modified PDF directly to browser
+    const modifiedPdfBytes = await pdfDoc.save();
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="ARCHIVIO_Paper_${Date.now()}.pdf"`);
+    res.send(Buffer.from(modifiedPdfBytes));
+
+  } catch (error) {
+    console.error('PDF Watermarking error:', error);
+    res.status(500).json({ error: 'Failed to generate watermarked PDF' });
+  }
+});
+
+// ============================================
+// AI SIMILARITY CHECKER
+// ============================================
+app.post('/api/ai/similarity-check', async (req, res) => {
+  try {
+    const { submissionId, title, abstract } = req.body;
+    if (!title || !abstract) return res.status(400).json({ error: 'Title and abstract are required' });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+    }
+
+    // Fetch all published papers from Firestore
+    const { getFirestore } = require('firebase-admin/firestore');
+    const db = getFirestore();
+    const snapshot = await db.collection('submissions').where('reviewStatus', '==', 'published').get();
+    
+    const publishedPapers = [];
+    snapshot.forEach(doc => {
+      if (submissionId && doc.id === submissionId) return; // Skip comparing to itself
+      
+      const data = doc.data();
+      publishedPapers.push({
+        id: doc.id,
+        title: data.researchTitle || data.title || '',
+        abstract: data.abstract || ''
+      });
+    });
+
+    if (publishedPapers.length === 0) {
+      return res.json({ score: 0, matchTitle: "None", analysis: "No published papers in the archive to compare against." });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+    
+    const prompt = `You are an expert academic plagiarism and similarity detection system.
+    Compare the NEW PAPER against the DATABASE OF PUBLISHED PAPERS below.
+    Identify the single published paper that is MOST similar in topic, methodology, or context to the new paper.
+    Calculate a similarity score from 0 to 100.
+    
+    NEW PAPER:
+    Title: ${title}
+    Abstract: ${abstract}
+    
+    DATABASE OF PUBLISHED PAPERS:
+    ${JSON.stringify(publishedPapers)}
+    
+    Return ONLY a valid JSON object in this exact format, with no extra text or markdown:
+    {"score": 85, "matchTitle": "Title of the most similar paper", "analysis": "1-2 sentences explaining why they are similar or why the score is low"}`;
+
+    const resultData = await model.generateContent(prompt);
+    const responseData = await resultData.response;
+    let rawText = responseData.text();
+    rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('AI returned invalid JSON');
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('AI Similarity Check Error:', error);
+    res.status(500).json({ error: 'Failed to process similarity check', details: error.message, stack: error.stack });
+  }
+});
+
+// Start the server if executed directly (e.g. node server.js)
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`
 ╔═══════════════════════════════════════╗
 ║   ARCHIVIO Email Service Running      ║
 ║   Port: ${PORT}                           ║
 ║   ✅ Ready to send invitations         ║
 ╚═══════════════════════════════════════╝
-  `);
-  console.log('Endpoints:');
-  console.log('  POST /api/send-invitation-email');
-  console.log('  POST /api/send-student-invitation-email');
-  console.log('  POST /api/send-dean-invitation-email');
-  console.log('  POST /api/send-student-message');
-  console.log('  POST /api/ai/chat');
-  console.log('  POST /api/ai/extract-keywords');
-
-  // ==========================================
-  // DYNAMIC PDF WATERMARKING (ENTERPRISE)
-  // ==========================================
-  app.post('/api/watermark-pdf', async (req, res) => {
-    try {
-      const { pdfUrl, userName } = req.body;
-      if (!pdfUrl) return res.status(400).json({ error: 'pdfUrl is required' });
-
-      // 1. Download the raw PDF into memory buffer
-      const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
-      const pdfBytes = response.data;
-
-      // 2. Load PDF into pdf-lib
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const pages = pdfDoc.getPages();
-      
-      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-      const displayName = userName || 'Guest User';
-      const watermarkText = `Downloaded by ${displayName} on ${dateStr}`;
-
-      // 3. Loop through all pages and stamp watermark
-      pages.forEach((page) => {
-        const { width, height } = page.getSize();
-        const fontSize = 24;
-        const textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
-        
-        // Large diagonal watermark across center
-        page.drawText(watermarkText, {
-          x: (width / 2) - (textWidth / 2) * 0.707,
-          y: height / 2,
-          size: fontSize,
-          font: helveticaFont,
-          color: rgb(0.5, 0.1, 0.2), // SWU Maroon-ish
-          opacity: 0.25,
-          rotate: degrees(45),
-        });
-        
-        // Small footer text for accountability
-        page.drawText(`For Academic Purposes Only - SWU ARCHIVIO - ${displayName}`, {
-          x: 40,
-          y: 25,
-          size: 10,
-          font: helveticaFont,
-          color: rgb(0.4, 0.4, 0.4),
-          opacity: 0.6
-        });
-      });
-
-      // 4. Save and return modified PDF directly to browser
-      const modifiedPdfBytes = await pdfDoc.save();
-      
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="ARCHIVIO_Paper_${Date.now()}.pdf"`);
-      res.send(Buffer.from(modifiedPdfBytes));
-
-    } catch (error) {
-      console.error('PDF Watermarking error:', error);
-      res.status(500).json({ error: 'Failed to generate watermarked PDF' });
-    }
+    `);
+    console.log('Endpoints:');
+    console.log('  GET  /api/health');
+    console.log('  POST /api/send-invitation-email');
+    console.log('  POST /api/send-student-invitation-email');
+    console.log('  POST /api/send-dean-invitation-email');
+    console.log('  POST /api/send-student-message');
+    console.log('  POST /api/ai/chat');
+    console.log('  POST /api/ai/extract-keywords');
+    console.log('  POST /api/watermark-pdf');
+    console.log('  POST /api/ai/similarity-check');
+    
+    // Start automated cron jobs
+    setupCleanupCron();
+    setupBackupCron();
+    setupMailListener(transporter);
   });
+}
 
-  // ============================================
-  // AI SIMILARITY CHECKER
-  // ============================================
-  app.post('/api/ai/similarity-check', async (req, res) => {
-    try {
-      const { submissionId, title, abstract } = req.body;
-      if (!title || !abstract) return res.status(400).json({ error: 'Title and abstract are required' });
-      if (!process.env.GEMINI_API_KEY) {
-        return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
-      }
-
-      // Fetch all published papers from Firestore
-      const { getFirestore } = require('firebase-admin/firestore');
-      const db = getFirestore();
-      const snapshot = await db.collection('submissions').where('reviewStatus', '==', 'published').get();
-      
-      const publishedPapers = [];
-      snapshot.forEach(doc => {
-        if (submissionId && doc.id === submissionId) return; // Skip comparing to itself
-        
-        const data = doc.data();
-        publishedPapers.push({
-          id: doc.id,
-          title: data.researchTitle || data.title || '',
-          abstract: data.abstract || ''
-        });
-      });
-
-      if (publishedPapers.length === 0) {
-        return res.json({ score: 0, matchTitle: "None", analysis: "No published papers in the archive to compare against." });
-      }
-
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
-      
-      const prompt = `You are an expert academic plagiarism and similarity detection system.
-      Compare the NEW PAPER against the DATABASE OF PUBLISHED PAPERS below.
-      Identify the single published paper that is MOST similar in topic, methodology, or context to the new paper.
-      Calculate a similarity score from 0 to 100.
-      
-      NEW PAPER:
-      Title: ${title}
-      Abstract: ${abstract}
-      
-      DATABASE OF PUBLISHED PAPERS:
-      ${JSON.stringify(publishedPapers)}
-      
-      Return ONLY a valid JSON object in this exact format, with no extra text or markdown:
-      {"score": 85, "matchTitle": "Title of the most similar paper", "analysis": "1-2 sentences explaining why they are similar or why the score is low"}`;
-
-      const resultData = await model.generateContent(prompt);
-        const responseData = await resultData.response;
-        let rawText = responseData.text();
-      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      
-      let result;
-      try {
-        result = JSON.parse(rawText);
-      } catch (e) {
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          result = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('AI returned invalid JSON');
-        }
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error('AI Similarity Check Error:', error);
-      res.status(500).json({ error: 'Failed to process similarity check', details: error.message, stack: error.stack });
-    }
-  });
-
-  console.log('  POST /api/watermark-pdf');
-  console.log('  GET  /api/health');
-  
-  // Start automated cron jobs
-  setupCleanupCron();
-  setupBackupCron();
-  setupMailListener(transporter);
-});
+module.exports = app;
