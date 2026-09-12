@@ -1216,7 +1216,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const modelWithPrompt = genAI.getGenerativeModel({ model: 'gemini-3.5-flash', systemInstruction: developerPrompt });
     
-    const contents = chatHistory.map(msg => ({
+    const contents = (Array.isArray(chatHistory) ? chatHistory : []).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
