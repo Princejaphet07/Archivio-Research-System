@@ -42,23 +42,20 @@ service cloud.firestore {
     // 2. Protect Users & Profiles
     // -----------------------------------------------------------------
     match /users/{userId} {
-      // Anyone logged in can read user profiles
       allow read: if isAuthenticated();
-      // Updates: admin can update any user; a user can update their own doc except the role field
       allow update: if isSystemAdmin()
                     || (request.auth.uid == userId &&
                         !request.resource.data.diff(resource.data).affectedKeys()
                           .hasAny(['role']));
-      // CREATE: System admins, deans, or the user themselves (with limited roles) can create.
+      // CREATE: Only admins, deans, or the user themselves (setup scripts removed)
       allow create: if isSystemAdmin()
                     || isDean()
                     || (request.auth.uid == userId &&
                         (request.resource.data.role in ['adviser', 'student', 'dean', 'dean+adviser', 'admin']));
-      // DELETE: keep original policy
       allow delete: if isSystemAdmin() || isDean();
     }
     // -----------------------------------------------------------------
-    // 3. Other collections (unchanged – copied for context)
+    // 3. Other collections
     // -----------------------------------------------------------------
     match /students/{docId} {
       allow read: if isAuthenticated();
@@ -87,11 +84,13 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     match /settings/{docId} {
       allow read: if true;
+      // Only admins/deans can create/update settings (removed unauthenticated backdoor)
       allow create: if isSystemAdmin() || isDean();
       allow write: if isSystemAdmin() || isDean();
     }
     match /activity_logs/{docId} {
       allow read: if isSystemAdmin() || isDean();
+      // Require login to create logs (removed open 'if true' rule)
       allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin();
     }
@@ -109,6 +108,7 @@ service cloud.firestore {
     }
     match /departments/{docId} {
       allow read: if true;
+      // Only admins can create departments (removed unauthenticated backdoor)
       allow create: if isSystemAdmin();
       allow write: if isSystemAdmin();
     }
@@ -125,6 +125,7 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     match /research/{docId} {
       allow read: if true;
+      // Only admins/deans can create research records (removed unauthenticated backdoor)
       allow create: if isSystemAdmin() || isDean();
       allow write: if isSystemAdmin();
     }
@@ -148,14 +149,15 @@ service cloud.firestore {
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
     match /studentInvitations/{docId} {
+      // Only authenticated users can read; only deans/advisers/admins can write
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     match /invitations/{docId} {
+      // Only authenticated users can read; only deans/advisers/admins can write
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
-    // Email trigger collection permissions (Firebase Email Extension)
     match /mail/{docId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isSystemAdmin();
@@ -190,11 +192,12 @@ service cloud.firestore {
     }
     match /categories/{docId} {
       allow read: if true;
+      // Only admins/deans/advisers can create categories (removed unauthenticated backdoor)
       allow create: if isSystemAdmin() || isDean() || isAdviser();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     // -----------------------------------------------------------------
-    // 6. Fallback Default Deny (only system admins may write anything else)
+    // 6. Fallback Default Deny
     // -----------------------------------------------------------------
     match /{document=**} {
       allow read, write: if isSystemAdmin();
