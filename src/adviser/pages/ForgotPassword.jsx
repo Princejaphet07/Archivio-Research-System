@@ -22,7 +22,7 @@ function ForgotPassword() {
   const [error, setError] = useState('');
   const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
   
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const API_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 
   const handleChangeOtp = (element, index) => {
     if (isNaN(element.value)) return false;
