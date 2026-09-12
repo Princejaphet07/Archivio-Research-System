@@ -34,12 +34,14 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallbackDenylist: [/^\/__/]
       },
       devOptions: {
         enabled: true,
         type: 'module',
-        navigateFallback: 'index.html'
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/__/]
       }
     })
   ],
