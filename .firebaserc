@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "archivio-research-system"
-  }
+  },
+  "targets": {
+    "archivio-research-system": {
+      "hosting": {
+        "main": [
+          "archivio-research-system"
+        ],
+        "public-archive": [
+          "archivio-public"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
