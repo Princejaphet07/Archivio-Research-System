@@ -20,12 +20,24 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendTestReset() {
+  const crypto = require('crypto');
   const email = 'prdo.vender.swu@phinmaed.com';
   console.log('Generating password reset link for:', email);
-  const rawLink = await getAuth().generatePasswordResetLink(email);
-  const u = new URL(rawLink);
-  const oobCode = u.searchParams.get('oobCode');
-  const customResetLink = `https://archivio-public.web.app/reset-password?oobCode=${oobCode}`;
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  let customResetLink = `https://archivio-public.web.app/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+  try {
+    const rawLink = await getAuth().generatePasswordResetLink(email);
+    const u = new URL(rawLink);
+    const oobCode = u.searchParams.get('oobCode');
+    if (oobCode) {
+      customResetLink = `https://archivio-public.web.app/reset-password?oobCode=${oobCode}&token=${resetToken}&email=${encodeURIComponent(email)}`;
+    }
+  } catch (err) {
+    console.warn('Firebase limit caught successfully, using token link:', err.message);
+  }
+
   console.log('Custom Reset Link generated:', customResetLink);
 
   const emailHTML = `

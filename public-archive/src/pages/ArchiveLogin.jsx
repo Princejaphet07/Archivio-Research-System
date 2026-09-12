@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase/config';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  updateProfile 
+} from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
@@ -154,9 +162,37 @@ function ArchiveLogin() {
     }
   };
 
+  // Listen for Google Auth redirect completion
+  useEffect(() => {
+    let isMounted = true;
+    getRedirectResult(auth).then(async (result) => {
+      if (!isMounted || !result || !result.user) return;
+      const userEmail = result.user.email?.toLowerCase().trim();
+      if (!userEmail || !userEmail.endsWith('@phinmaed.com')) {
+        await auth.signOut();
+        fireAlert({
+          icon: 'error',
+          title: 'Unauthorized Account',
+          text: `The account (${userEmail || 'non-PHINMA'}) is not a @phinmaed.com account. Access is strictly restricted to PHINMA Education accounts.`
+        });
+        return;
+      }
+      fireAlert({ icon: 'success', title: 'Welcome!', timer: 1500, showConfirmButton: false });
+      navigate(from, { replace: true });
+    }).catch((err) => {
+      console.warn('Redirect auth result note:', err);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   const handleGoogleAuth = async () => {
     if (isGoogleLoading || loading) return;
     setIsGoogleLoading(true);
+
+    // Failsafe timeout to prevent button from ever getting stuck in loading state
+    const safetyTimer = setTimeout(() => {
+      setIsGoogleLoading(false);
+    }, 25000);
 
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
@@ -165,8 +201,24 @@ function ArchiveLogin() {
     });
 
     try {
-      const userCredential = await signInWithPopup(auth, provider);
-      const userEmail = userCredential.user.email?.toLowerCase().trim();
+      let userCredential;
+      try {
+        userCredential = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        // If popup was blocked by browser or closed due to cross-origin isolation, fallback to redirect
+        if (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/cancelled-popup-request'
+        ) {
+          console.log('Falling back to signInWithRedirect:', popupErr.code);
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      clearTimeout(safetyTimer);
+      const userEmail = userCredential?.user?.email?.toLowerCase().trim();
 
       if (!userEmail || !userEmail.endsWith('@phinmaed.com')) {
         await auth.signOut();
@@ -181,21 +233,11 @@ function ArchiveLogin() {
       fireAlert({ icon: 'success', title: 'Welcome!', timer: 1500, showConfirmButton: false });
       navigate(from, { replace: true });
     } catch (error) {
+      clearTimeout(safetyTimer);
       console.warn('Google Auth note:', error.code || error.message);
-      // Suppress normal user cancellations / popup close:
-      if (
-        error.code === 'auth/popup-closed-by-user' ||
-        error.code === 'auth/cancelled-popup-request'
-      ) {
-        return; // Silent: User intentionally closed popup or clicked outside
-      }
 
-      if (error.code === 'auth/popup-blocked') {
-        fireAlert({
-          icon: 'warning',
-          title: 'Popup Blocked',
-          text: 'The sign-in popup was blocked by your browser. Please allow popups for this site and try again.'
-        });
+      if (error.code === 'auth/popup-closed-by-user') {
+        // User closed or popup closed prematurely; provide helpful prompt if user wants redirect
         return;
       }
 
@@ -211,9 +253,10 @@ function ArchiveLogin() {
       fireAlert({
         icon: 'error',
         title: 'Sign In Failed',
-        text: 'Unable to sign in with Google. Please try again or sign in with your email and password.'
+        text: 'Unable to complete Google sign-in. Please try again or sign in with your email and password.'
       });
     } finally {
+      clearTimeout(safetyTimer);
       setIsGoogleLoading(false);
     }
   };

@@ -234,15 +234,34 @@ app.post('/api/send-password-reset', async (req, res) => {
       }
     }
 
-    // Generate Firebase password reset link & extract oobCode for our custom Archivio page
-    let customResetLink;
-    if (serviceAccount) {
-      const rawLink = await getAuth().generatePasswordResetLink(cleanEmail);
-      const parsedUrl = new URL(rawLink);
-      const oobCode = parsedUrl.searchParams.get('oobCode');
+    // Generate secure reset token stored in Firestore so rate limits are bypassed
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const PUBLIC_URL = process.env.PUBLIC_ARCHIVE_URL || 'https://archivio-public.web.app';
+    let customResetLink = `${PUBLIC_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
-      const PUBLIC_URL = process.env.PUBLIC_ARCHIVE_URL || 'https://archivio-public.web.app';
-      customResetLink = `${PUBLIC_URL}/reset-password?oobCode=${oobCode}`;
+    if (serviceAccount) {
+      try {
+        await getFirestore().collection('password_resets').doc(cleanEmail).set({
+          token: resetToken,
+          email: cleanEmail,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 60 * 60000) // 1 hour validity
+        });
+      } catch (fsErr) {
+        console.warn('Firestore password_resets write note:', fsErr.message);
+      }
+
+      // Also attempt Firebase native reset link if within rate limit
+      try {
+        const rawLink = await getAuth().generatePasswordResetLink(cleanEmail);
+        const parsedUrl = new URL(rawLink);
+        const oobCode = parsedUrl.searchParams.get('oobCode');
+        if (oobCode) {
+          customResetLink = `${PUBLIC_URL}/reset-password?oobCode=${oobCode}&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+        }
+      } catch (nativeResetErr) {
+        console.warn('Firebase Identity Toolkit rate-limited or unavailable; proceeding with ARCHIVIO secure token reset:', nativeResetErr.message);
+      }
     } else {
       return res.status(500).json({ error: 'Firebase Admin credentials not configured on server' });
     }
@@ -327,6 +346,94 @@ app.post('/api/send-password-reset', async (req, res) => {
   } catch (error) {
     console.error('Send Password Reset Error:', error);
     res.status(500).json({ error: error.message || 'Failed to send reset email' });
+  }
+});
+
+// ============================================
+// VERIFY RESET TOKEN
+// ============================================
+app.post('/api/verify-reset-token', async (req, res) => {
+  try {
+    const { token, email } = req.body;
+    if (!token || !email) {
+      return res.status(400).json({ error: 'Token and email are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!serviceAccount) {
+      return res.status(500).json({ error: 'Server database not configured' });
+    }
+
+    const docSnap = await getFirestore().collection('password_resets').doc(cleanEmail).get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: 'Password reset link is invalid or has expired.' });
+    }
+
+    const data = docSnap.data();
+    if (data.token !== token) {
+      return res.status(400).json({ error: 'Invalid password reset token.' });
+    }
+
+    const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+    if (expiresAt < new Date()) {
+      return res.status(400).json({ error: 'This reset link has expired. Please request a new one.' });
+    }
+
+    return res.status(200).json({ valid: true, email: cleanEmail });
+  } catch (err) {
+    console.error('Verify reset token error:', err);
+    return res.status(500).json({ error: 'Failed to verify reset token' });
+  }
+});
+
+// ============================================
+// RESET PASSWORD WITH TOKEN (ADMIN SDK)
+// ============================================
+app.post('/api/reset-password-with-token', async (req, res) => {
+  try {
+    const { token, email, newPassword } = req.body;
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({ error: 'Token, email, and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!serviceAccount) {
+      return res.status(500).json({ error: 'Server database not configured' });
+    }
+
+    const docRef = getFirestore().collection('password_resets').doc(cleanEmail);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: 'Invalid or expired password reset request.' });
+    }
+
+    const data = docSnap.data();
+    if (data.token !== token) {
+      return res.status(400).json({ error: 'Invalid reset token.' });
+    }
+
+    const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+    if (expiresAt < new Date()) {
+      return res.status(400).json({ error: 'This reset token has expired. Please request a new link.' });
+    }
+
+    // Lookup user in Firebase Auth
+    const userRecord = await getAuth().getUserByEmail(cleanEmail);
+    // Update password using Admin SDK (bypasses client rate limits)
+    await getAuth().updateUser(userRecord.uid, { password: newPassword });
+
+    // Invalidate the reset token
+    await docRef.delete();
+
+    console.log(`Password reset successfully executed for user: ${cleanEmail}`);
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Reset password with token error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to update password' });
   }
 });
 

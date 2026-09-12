@@ -63,7 +63,7 @@ export default function ArchiveForgotPassword() {
       // 1. Try sending the official branded SWU PHINMA HTML email template
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for cold starts
 
         const response = await fetch(`${API_URL}/send-password-reset`, {
           method: 'POST',
@@ -78,19 +78,27 @@ export default function ArchiveForgotPassword() {
         } else {
           const data = await response.json().catch(() => ({}));
           if (data.error && data.error.includes('No registered account')) {
-            throw new Error('No account found with this email address. Please make sure you have registered first.');
+            throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
           }
+          console.warn('Backend returned non-ok status:', data.error);
         }
       } catch (backendError) {
-        console.warn('Backend branded reset failed or timed out:', backendError.message);
-        if (backendError.message.includes('No account found')) {
+        console.warn('Backend branded reset note:', backendError.message);
+        if (backendError.message.includes('No registered account')) {
           throw backendError;
         }
       }
 
-      // 2. If backend service was unavailable or sleeping, seamlessly send via Firebase Client Auth
+      // 2. If backend service was temporarily unavailable, fallback to Firebase Client Auth
       if (!sentViaBrandedService) {
-        await sendPasswordResetEmail(auth, cleanEmail);
+        try {
+          await sendPasswordResetEmail(auth, cleanEmail);
+        } catch (clientErr) {
+          if (clientErr.code === 'auth/too-many-requests') {
+            throw new Error('Too many requests sent recently. Please wait a few minutes or check your email for the latest link.');
+          }
+          throw clientErr;
+        }
       }
 
       setIsSent(true);

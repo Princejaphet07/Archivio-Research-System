@@ -12,10 +12,16 @@ export default function ArchiveResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // oobCode can be in query param "oobCode" or Firebase's "code"
+  // Query parameters: supports token (backend direct) and oobCode (Firebase native)
+  const token = searchParams.get('token') || '';
   const oobCode = searchParams.get('oobCode') || searchParams.get('code') || '';
+  const paramEmail = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState('');
+  const API_URL = import.meta.env.VITE_BACKEND_URL 
+    ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+    : 'https://archivio-email-service.onrender.com/api';
+
+  const [email, setEmail] = useState(paramEmail);
   const [verifyingCode, setVerifyingCode] = useState(true);
   const [codeValid, setCodeValid] = useState(false);
   const [codeError, setCodeError] = useState('');
@@ -47,38 +53,73 @@ export default function ArchiveResetPassword() {
     });
   };
 
-  // Verify the reset code upon page load
+  // Verify the reset code/token upon page load
   useEffect(() => {
     let isMounted = true;
 
     async function checkCode() {
-      if (!oobCode) {
+      if (!token && !oobCode) {
         if (isMounted) {
           setVerifyingCode(false);
           setCodeValid(false);
-          setCodeError('Missing password reset security code. Please request a new reset link.');
+          setCodeError('Missing password reset security token or code. Please request a fresh reset link.');
         }
         return;
       }
 
-      try {
-        const verifiedEmail = await verifyPasswordResetCode(auth, oobCode);
-        if (isMounted) {
-          setEmail(verifiedEmail);
-          setCodeValid(true);
-          setVerifyingCode(false);
+      // 1. If backend secure token is present:
+      if (token) {
+        try {
+          const res = await fetch(`${API_URL}/verify-reset-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, email: paramEmail })
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (isMounted) {
+            if (res.ok && data.valid) {
+              setEmail(data.email || paramEmail);
+              setCodeValid(true);
+              setVerifyingCode(false);
+            } else {
+              setCodeValid(false);
+              setVerifyingCode(false);
+              setCodeError(data.error || 'This reset link has expired or has already been used. Please request a new one.');
+            }
+          }
+        } catch (backendErr) {
+          console.error('Backend token verify error:', backendErr);
+          // If network failed but we have oobCode, fall through to oobCode
+          if (!oobCode && isMounted) {
+            setCodeValid(false);
+            setVerifyingCode(false);
+            setCodeError('Unable to connect to verification server. Please check your connection and try again.');
+          }
         }
-      } catch (err) {
-        console.error('Code verification error:', err);
-        if (isMounted) {
-          setCodeValid(false);
-          setVerifyingCode(false);
-          if (err.code === 'auth/expired-action-code') {
-            setCodeError('This password reset link has expired. For your security, reset links are only valid for a limited time.');
-          } else if (err.code === 'auth/invalid-action-code') {
-            setCodeError('This password reset link is invalid or has already been used. Please request a fresh reset link.');
-          } else {
-            setCodeError('Unable to verify reset link. Please check your internet connection and try again.');
+      }
+
+      // 2. If oobCode is present (and token was not verified yet):
+      if (oobCode && isMounted && !codeValid) {
+        try {
+          const verifiedEmail = await verifyPasswordResetCode(auth, oobCode);
+          if (isMounted) {
+            setEmail(verifiedEmail);
+            setCodeValid(true);
+            setVerifyingCode(false);
+          }
+        } catch (err) {
+          console.error('Firebase oobCode verification error:', err);
+          if (isMounted && !token) {
+            setCodeValid(false);
+            setVerifyingCode(false);
+            if (err.code === 'auth/expired-action-code') {
+              setCodeError('This password reset link has expired. For your security, reset links are only valid for a limited time.');
+            } else if (err.code === 'auth/invalid-action-code') {
+              setCodeError('This password reset link is invalid or has already been used. Please request a fresh reset link.');
+            } else {
+              setCodeError('Unable to verify reset link. Please check your internet connection and try again.');
+            }
           }
         }
       }
@@ -89,7 +130,7 @@ export default function ArchiveResetPassword() {
     return () => {
       isMounted = false;
     };
-  }, [oobCode]);
+  }, [token, oobCode, paramEmail, API_URL]);
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -113,7 +154,25 @@ export default function ArchiveResetPassword() {
     setLoading(true);
 
     try {
-      await confirmPasswordReset(auth, oobCode, newPassword);
+      if (token) {
+        // Submit via backend token endpoint (Admin SDK - immune to rate limit)
+        const res = await fetch(`${API_URL}/reset-password-with-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email, newPassword })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to update password');
+        }
+      } else if (oobCode) {
+        // Fallback via Firebase client SDK
+        await confirmPasswordReset(auth, oobCode, newPassword);
+      } else {
+        throw new Error('Missing reset token or code');
+      }
+
       setIsSuccess(true);
 
       await fireAlert({
@@ -126,7 +185,7 @@ export default function ArchiveResetPassword() {
       navigate('/login');
     } catch (err) {
       console.error('Confirm password reset error:', err);
-      let errorMsg = 'Failed to reset password. Please try again.';
+      let errorMsg = err.message || 'Failed to reset password. Please try again.';
 
       if (err.code === 'auth/expired-action-code') {
         errorMsg = 'This reset link has expired. Please request a new one.';
