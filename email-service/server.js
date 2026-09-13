@@ -185,6 +185,49 @@ app.get('/api/debug-smtp', async (req, res) => {
 });
 
 // ============================================
+// HYBRID EMAIL DISPATCHER (GOOGLE WEBHOOK + SMTP)
+// Uses Google Apps Script Webhook on cloud hosts (e.g. Render) to bypass port blocks over HTTPS,
+// and falls back to Nodemailer SMTP on local development machines.
+// ============================================
+const GOOGLE_SCRIPT_WEBHOOK_URL = process.env.GOOGLE_SCRIPT_WEBHOOK_URL 
+  || 'https://script.google.com/macros/s/AKfycbxzK5Lxj2gSY_IFfX5DfedpJND2WDy02Z9f0cbNR3rUjVMW_TYoleR5qse6SP8Vi3HU5Q/exec';
+
+async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@gmail.com' }) {
+  if (GOOGLE_SCRIPT_WEBHOOK_URL) {
+    try {
+      const res = await fetch(GOOGLE_SCRIPT_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          secret: 'archivio_secure_webhook_2026',
+          to,
+          subject,
+          html,
+          replyTo
+        }),
+        redirect: 'follow'
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data && data.success) {
+        console.log(`✅ Email sent via Google Apps Script Webhook to: ${to}`);
+        return { success: true, method: 'google-webhook' };
+      }
+      console.warn('Google Webhook returned non-success:', data);
+    } catch (whErr) {
+      console.warn('⚠️ Google Apps Script Webhook notice, trying Nodemailer:', whErr.message);
+    }
+  }
+
+  // Fallback to Nodemailer SMTP (e.g. local machine)
+  return await transporter.sendMail({
+    from: `"ARCHIVIO SWU PHINMA" <${EMAIL_USER}>`,
+    to,
+    subject,
+    html
+  });
+}
+
+// ============================================
 // SEND OTP FOR PASSWORD RESET
 // ============================================
 app.post('/api/send-otp', async (req, res) => {
@@ -234,8 +277,7 @@ app.post('/api/send-otp', async (req, res) => {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"ARCHIVIO SWU PHINMA" <${EMAIL_USER}>`,
+    await sendSystemEmail({
       to: email,
       subject: 'Password Reset Verification Code - ARCHIVIO',
       html: emailHTML
@@ -393,8 +435,7 @@ const handlePasswordReset = async (req, res) => {
 `;
 
     try {
-      await transporter.sendMail({
-        from: '"ARCHIVIO SWU PHINMA" <archivio.noreply@gmail.com>',
+      await sendSystemEmail({
         to: cleanEmail,
         subject: 'Password Reset Request • ARCHIVIO SWU PHINMA',
         html: emailHTML
