@@ -60,9 +60,13 @@ export function UserProvider({ children }) {
         }
       } else {
         setCurrentUser(null);
-        // Only redirect if they are not on the dashboard/login root. 
+        // Only redirect if they are not on the dashboard/login root or forgot password page. 
         // Note: UnifiedLogin is at `/`, Admin is at `/admin/*`
-        if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/') {
+        if (
+          window.location.pathname.startsWith('/admin') && 
+          window.location.pathname !== '/admin/' &&
+          window.location.pathname !== '/admin/forgot-password'
+        ) {
            window.location.href = '/';
         }
       }
