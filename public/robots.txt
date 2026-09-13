@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /reset-password
+Allow: /verify/
+Allow: /dean-activate
+Disallow: /admin/
+Disallow: /dean/
+Disallow: /adviser/
+Disallow: /student/
