@@ -3,9 +3,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Anti-Screenshot / Print Protections */
+/* Anti-Screenshot / Print Protections (allows certificate print) */
 @media print {
-  body {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+  body:not(:has(.printable-certificate)) {
+    display: none !important;
+  }
+  body:has(.printable-certificate) * {
+    visibility: hidden;
+  }
+  .printable-certificate,
+  .printable-certificate * {
+    visibility: visible !important;
+  }
+  .printable-certificate {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px 24px 20px 24px !important;
+    background: #FAF8F5 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    z-index: 9999999 !important;
+  }
+  .no-print {
     display: none !important;
   }
 }

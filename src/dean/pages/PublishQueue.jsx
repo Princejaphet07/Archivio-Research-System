@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import CertificateModal from '../../components/CertificateModal';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const { deanData } = useUser();
@@ -24,6 +25,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
   const [revisionComments, setRevisionComments] = useState('');
   const [revisionUrgency, setRevisionUrgency] = useState('normal');
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
+  const [certModalItem, setCertModalItem] = useState(null);
 
   const [viewerState, setViewerState] = useState({
     isOpen: false,
@@ -134,6 +136,11 @@ export default function PublishQueue({ activePage, onNavigate }) {
   );
 
   const filteredReturned = returnedItems.filter(item =>
+    adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
+  );
+
+  const publishedItems = enrichedSubmissions.filter(s => s.reviewStatus === 'published');
+  const filteredPublished = publishedItems.filter(item =>
     adviserFilter === 'All Advisers' || item.adviserName === adviserFilter
   );
 
@@ -567,6 +574,21 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       </span>
                     )}
                   </button>
+                  <button
+                    onClick={() => setQueueTab('published')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      queueTab === 'published'
+                        ? 'bg-emerald-700 text-white shadow-sm'
+                        : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    }`}
+                  >
+                    <span>Published Archive</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      queueTab === 'published' ? 'bg-white text-emerald-800' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+                    }`}>
+                      {publishedCount}
+                    </span>
+                  </button>
                 </div>
                 {/* Adviser Filter */}
                 <div className="relative">
@@ -587,6 +609,55 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   <div className="p-4">
                     <ListSkeleton items={4} />
                   </div>
+                ) : queueTab === 'published' ? (
+                  filteredPublished.length === 0 ? (
+                    <div className="p-12 text-center text-stone-400 text-sm">
+                      <span className="text-3xl block mb-2">📜</span>
+                      No published manuscripts found for this filter.
+                    </div>
+                  ) : (
+                    filteredPublished.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700 border-l-4 border-l-emerald-600 bg-emerald-50/10"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 uppercase tracking-wider">
+                              Archived
+                            </span>
+                            <span className="text-xs text-stone-500 font-mono">
+                              ARCH-SWU-{item.id.substring(0, 8).toUpperCase()}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-snug">
+                            {item.researchTitle}
+                          </h4>
+                          <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                            {item.groupName} · Adviser: {item.adviserName} · Published {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Archived'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setCertModalItem(item)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                          >
+                            <span>📜</span>
+                            <span>Certificate</span>
+                          </button>
+                          <a
+                            href={`/verify/${item.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-stone-300 dark:border-stone-600 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition flex items-center gap-1"
+                          >
+                            <span>🔍</span>
+                            <span>Verify Record</span>
+                          </a>
+                        </div>
+                      </div>
+                    ))
+                  )
                 ) : queueTab === 'returned' ? (
                   filteredReturned.length === 0 ? (
                     <div className="p-12 text-center text-stone-400 text-sm">
@@ -1020,6 +1091,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
           </div>
         </div>
       )}
+
+      {/* CERTIFICATE MODAL */}
+      <CertificateModal
+        isOpen={!!certModalItem}
+        onClose={() => setCertModalItem(null)}
+        submission={certModalItem}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import UnifiedLogin from './pages/UnifiedLogin';
 import DeanActivate from './pages/DeanActivate';
 import ResetPassword from './pages/ResetPassword';
+import PublicVerifyCertificate from './pages/PublicVerifyCertificate';
 
 // Lazy-load each sub-app so the browser downloads only the portal the user needs
 const AdminApp = React.lazy(() => import('./admin/App'));
@@ -41,6 +42,9 @@ function App() {
 
           {/* Password Reset (For Admin, Dean, Adviser, Student) */}
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Public Archival Certificate Verification */}
+          <Route path="/verify/:id" element={<PublicVerifyCertificate />} />
 
           {/* Catch all redirect to login */}
           <Route path="*" element={<Navigate to="/" replace />} />

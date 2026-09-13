@@ -36,7 +36,7 @@ function ArchivePaperViewer() {
   const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
-  
+
   // Smart Dictionary State
   const [dictPopup, setDictPopup] = useState({
     isOpen: false,
@@ -126,7 +126,7 @@ function ArchivePaperViewer() {
       window.speechSynthesis.cancel();
     };
   }, []);
-  
+
   // AI Chat State
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
@@ -136,7 +136,7 @@ function ArchivePaperViewer() {
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   useEffect(() => {
-    let unsubBookmark = () => {};
+    let unsubBookmark = () => { };
     if (paper) {
       if (currentUser) {
         unsubBookmark = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
@@ -196,8 +196,8 @@ function ArchivePaperViewer() {
   }, []);
 
   useEffect(() => {
-    let unsubGroup = () => {};
-    
+    let unsubGroup = () => { };
+
     const unsubSub = onSnapshot(doc(db, 'submissions', id), async (docSnap) => {
       if (docSnap.exists()) {
         const subData = { id: docSnap.id, ...docSnap.data() };
@@ -221,7 +221,7 @@ function ArchivePaperViewer() {
             setPaper({
               ...subData,
               researchTitle: subData.researchTitle || groupData?.researchTitle || subData.title,
-              authorDisplay: groupData 
+              authorDisplay: groupData
                 ? [groupData.leaderName, ...(groupData.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
                 : subData.studentName || subData.groupName || 'Unknown Author',
               program: subData.program || groupData?.program,
@@ -259,7 +259,7 @@ function ArchivePaperViewer() {
   // Fetch Related Researches
   useEffect(() => {
     if (!paper || (!paper.program && !paper.category)) return;
-    
+
     const fetchRelated = async () => {
       try {
         const qRelated = query(
@@ -272,7 +272,7 @@ function ArchivePaperViewer() {
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(doc => doc.id !== paper.id) // Exclude current paper
           .slice(0, 15); // Increased to 15 for map visualization
-          
+
         setRelatedPapers(related);
       } catch (err) {
         console.error('Failed to fetch related papers', err);
@@ -283,13 +283,13 @@ function ArchivePaperViewer() {
 
   const graphData = useMemo(() => {
     if (!paper || relatedPapers.length === 0) return { nodes: [], links: [] };
-    
+
     const nodes = [
       { id: paper.id, name: paper.researchTitle || paper.title, group: 'current', val: 25 },
       ...relatedPapers.map(rp => ({
-        id: rp.id, 
-        name: rp.researchTitle || rp.title, 
-        group: 'related', 
+        id: rp.id,
+        name: rp.researchTitle || rp.title,
+        group: 'related',
         val: 10
       }))
     ];
@@ -411,12 +411,12 @@ function ArchivePaperViewer() {
   const handleAbstractDoubleClick = async (e) => {
     const selection = window.getSelection();
     const word = selection.toString().trim().replace(/[^a-zA-Z]/g, ''); // strip punctuation
-    
+
     if (word && word.length > 1) {
       // Get exact coordinates of the selection
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      
+
       setDictPopup({
         isOpen: true,
         word: word,
@@ -430,14 +430,14 @@ function ArchivePaperViewer() {
         const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
-        
+
         let def = '';
         if (data && data[0] && data[0].meanings && data[0].meanings[0].definitions) {
           def = data[0].meanings[0].definitions[0].definition;
         } else {
           def = "Definition not found.";
         }
-        
+
         setDictPopup(prev => ({ ...prev, definition: def, loading: false }));
       } catch (err) {
         setDictPopup(prev => ({ ...prev, definition: "Definition not found.", loading: false }));
@@ -555,7 +555,7 @@ function ArchivePaperViewer() {
       // Guest logic
       try {
         let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-        
+
         if (!localBookmarks.includes(paper.id)) {
           localBookmarks.push(paper.id);
           localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
@@ -595,7 +595,7 @@ function ArchivePaperViewer() {
             <div className="h-8 w-8 rounded-full animate-shimmer"></div>
           </div>
         </header>
-        
+
         {/* Main Workspace Skeleton */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left Sidebar Skeleton */}
@@ -653,7 +653,7 @@ function ArchivePaperViewer() {
 
   return (
     <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 font-sans overflow-hidden transition-colors">
-      
+
       {/* HEADER - Hidden in Zen Mode */}
       {!isZenMode && (
         <div className="z-20 relative shadow-md shrink-0">
@@ -663,15 +663,27 @@ function ArchivePaperViewer() {
 
       {/* VIEW-ONLY BANNER - Hidden in Zen Mode */}
       {!isZenMode && (
-        <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center gap-4 text-xs z-10 shadow-sm transition-colors">
-          <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer">←</Link>
-          <div className="hidden md:flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-[#ff8c00] rounded-full"></span>
+        <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center justify-between gap-3 text-xs z-10 shadow-sm transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer shrink-0" title="Back to Browse">←</Link>
+            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-300 truncate">
+              <span className="w-2.5 h-2.5 bg-[#ff8c00] rounded-full shrink-0"></span>
               <span className="font-bold text-white">View-only access</span> 
-              <span className="text-gray-300">—copying and downloading are disabled. This document is protected for academic integrity.</span>
+              <span className="text-gray-400 hidden lg:inline">— protected for academic integrity.</span>
             </div>
           </div>
+
+          {/* VERIFIED INSTITUTIONAL RECORD BADGE */}
+          <Link
+            to={`/verify/${paper.id}`}
+            className="flex items-center gap-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 hover:border-emerald-400 px-3 py-1 rounded-full text-[11px] font-medium transition-all shadow-sm group shrink-0 cursor-pointer"
+            title="Officially validated and archived by Southwestern University PHINMA. Click to view verification ledger."
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs">🛡️</span>
+            <span className="font-bold tracking-wide">Verified Institutional Record</span>
+            <span className="text-emerald-400/80 group-hover:text-emerald-200 text-[10px] hidden md:inline underline ml-0.5">Verify →</span>
+          </Link>
         </div>
       )}
 
@@ -736,7 +748,7 @@ function ArchivePaperViewer() {
           <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
 
           {/* ZEN MODE TOGGLE */}
-          <button 
+          <button
             onClick={() => { setIsZenMode(!isZenMode); if (!isZenMode) { setIsFullscreen(true); } else { setIsFullscreen(false); } }}
             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 cursor-pointer ${isZenMode ? 'bg-[#7a2039] text-white shadow-lg scale-110' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`}
             title={isZenMode ? 'Exit Zen Mode' : 'Zen Mode (Focus Reading)'}
@@ -759,7 +771,7 @@ function ArchivePaperViewer() {
           <div className="w-[calc(100%-3.5rem)] sm:w-64 absolute sm:relative left-14 sm:left-0 h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto z-20 sm:z-10 shadow-xl sm:shadow-none transition-colors">
             {/* Mobile Close Button */}
             <div className="sm:hidden flex justify-end p-2 pb-0">
-              <button 
+              <button
                 onClick={() => setActiveTab(null)}
                 className="text-stone-500 hover:text-[#7a2039] p-1"
                 title="Close Sidebar"
@@ -769,13 +781,13 @@ function ArchivePaperViewer() {
                 </svg>
               </button>
             </div>
-            
+
             {activeTab === 'abstract' && (
               <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
                 <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
                   <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Abstract</h2>
                   {paper.abstract && (
-                    <button 
+                    <button
                       onClick={handleToggleAudio}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition cursor-pointer shadow-sm ${isSpeaking ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'}`}
                     >
@@ -784,7 +796,7 @@ function ArchivePaperViewer() {
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative">
-                  <p 
+                  <p
                     onDoubleClick={handleAbstractDoubleClick}
                     className="text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6 selection:bg-[#7a2039]/20 selection:text-[#7a2039]"
                     title="Double-click any word for its definition"
@@ -794,13 +806,13 @@ function ArchivePaperViewer() {
 
                   {/* Dictionary Popup */}
                   {dictPopup.isOpen && (
-                    <div 
+                    <div
                       className="absolute z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-[#7a2039]/20 dark:border-[#f3e5ab]/20 shadow-xl rounded-lg p-3 w-48 -translate-x-1/2 -translate-y-full"
                       style={{ left: Math.min(Math.max(100, dictPopup.x), 200), top: dictPopup.y - 120 }} // Keep inside sidebar bounds roughly
                     >
                       <div className="flex justify-between items-start mb-1">
                         <h4 className="font-bold text-[#7a2039] dark:text-[#f3e5ab] text-xs capitalize">{dictPopup.word}</h4>
-                        <button onClick={() => setDictPopup(prev => ({...prev, isOpen: false}))} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200">✕</button>
+                        <button onClick={() => setDictPopup(prev => ({ ...prev, isOpen: false }))} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200">✕</button>
                       </div>
                       <div className="text-[10px] text-stone-600 dark:text-gray-300 leading-snug max-h-24 overflow-y-auto custom-scrollbar">
                         {dictPopup.loading ? (
@@ -812,6 +824,26 @@ function ArchivePaperViewer() {
                       <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white/90 dark:bg-gray-800/90 border-b border-r border-[#7a2039]/20 dark:border-[#f3e5ab]/20 transform rotate-45"></div>
                     </div>
                   )}
+                </div>
+
+                {/* INSTITUTIONAL VALIDATION CARD */}
+                <div className="mt-4 pt-3 border-t border-stone-200 dark:border-gray-700 shrink-0">
+                  <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-3 text-xs">
+                    <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-bold mb-1">
+                      <span className="text-sm">✓</span>
+                      <span>Officially Verified Record</span>
+                    </div>
+                    <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-snug">
+                      Validated by Faculty & permanently indexed in Southwestern University PHINMA Institutional Repository.
+                    </p>
+                    <Link
+                      to={`/verify/${paper.id}`}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 hover:underline cursor-pointer"
+                    >
+                      <span>View Public Verification Ledger</span>
+                      <span>→</span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
@@ -839,13 +871,13 @@ function ArchivePaperViewer() {
                     <Document file={paper.documents['Final Manuscript'].url}>
                       {Array.from({ length: numPages }).map((_, idx) => (
                         <div key={idx} className="flex flex-col items-center gap-2 mb-4">
-                          <button 
+                          <button
                             onClick={() => scrollToPage(idx + 1)}
                             className={`w-28 bg-white cursor-pointer transition-all overflow-hidden ${currentPage === idx + 1 ? 'ring-2 ring-[#7a2039] border-none shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
                           >
-                            <Page 
-                              pageNumber={idx + 1} 
-                              width={112} 
+                            <Page
+                              pageNumber={idx + 1}
+                              width={112}
                               renderTextLayer={false}
                               renderAnnotationLayer={false}
                             />
@@ -867,12 +899,12 @@ function ArchivePaperViewer() {
               <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
                 <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar">
-                  
+
                   {/* APA Format */}
                   <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
-                      <button 
+                      <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${authorName} (${year}). ${title}. SWU PHINMA.`);
                           Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -891,7 +923,7 @@ function ArchivePaperViewer() {
                   <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
-                      <button 
+                      <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${authorName}. "${title}." SWU PHINMA, ${year}.`);
                           Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -910,7 +942,7 @@ function ArchivePaperViewer() {
                   <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
-                      <button 
+                      <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${authorName}, "${title}," SWU PHINMA, ${year}.`);
                           Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -924,7 +956,7 @@ function ArchivePaperViewer() {
                       {authorName}, "{title}," SWU PHINMA, {year}.
                     </p>
                   </div>
-                  
+
                   {/* Export Section */}
                   <div className="mt-4 border-t border-stone-200 dark:border-gray-700 pt-4">
                     <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-3 uppercase tracking-wider">Export Citation</h3>
@@ -946,46 +978,46 @@ function ArchivePaperViewer() {
             {activeTab === 'share' && (
               <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors overflow-y-auto custom-scrollbar">
                 <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Share Research</h2>
-                
+
                 <div className="flex flex-col items-center gap-6 mt-4">
                   {/* Social Buttons */}
                   <div className="flex justify-center gap-3 w-full">
-                    <a 
+                    <a
                       href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex-1 flex flex-col items-center justify-center p-3 bg-[#1877F2] text-white rounded-lg shadow-sm hover:opacity-90 transition cursor-pointer"
                     >
-                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
                       <span className="text-[10px] font-bold">Facebook</span>
                     </a>
-                    <a 
+                    <a
                       href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('Read this research paper: ' + title)}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex-1 flex flex-col items-center justify-center p-3 bg-black text-white rounded-lg shadow-sm hover:bg-gray-800 transition cursor-pointer"
                     >
-                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                       <span className="text-[10px] font-bold">X (Twitter)</span>
                     </a>
-                    <a 
+                    <a
                       href={`mailto:?subject=${encodeURIComponent('Read this research paper: ' + title)}&body=${encodeURIComponent('I thought you might find this research interesting: ' + window.location.href)}`}
                       className="flex-1 flex flex-col items-center justify-center p-3 bg-stone-500 text-white rounded-lg shadow-sm hover:bg-stone-600 transition cursor-pointer"
                     >
-                      <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       <span className="text-[10px] font-bold">Email</span>
                     </a>
                   </div>
 
                   {/* QR Code */}
                   <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200 mt-2">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} 
-                      alt="QR Code" 
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`}
+                      alt="QR Code"
                       className="w-32 h-32 object-contain"
                     />
                   </div>
                   <div className="text-center w-full">
                     <p className="text-xs text-stone-500 dark:text-gray-400 mb-3">Scan to read on mobile devices</p>
-                    <button 
+                    <button
                       onClick={copyLink}
                       className="w-full bg-[#7a2039] text-white px-6 py-3 rounded-lg hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
                     >
@@ -1001,7 +1033,7 @@ function ArchivePaperViewer() {
                 <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
                   <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Related Researches</h2>
                   {relatedPapers.length > 0 && (
-                    <button 
+                    <button
                       onClick={() => setIsMapView(true)}
                       className="text-[10px] bg-[#7a2039] text-white px-2 py-1 rounded hover:bg-[#5a1528] transition font-medium flex items-center gap-1 shadow-sm"
                       title="View Interactive Map"
@@ -1010,7 +1042,7 @@ function ArchivePaperViewer() {
                     </button>
                   )}
                 </div>
-                
+
                 <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
                   {relatedPapers.length > 0 ? (
                     relatedPapers.slice(0, 5).map(rp => ( // Limit list view to 5 to keep sidebar clean
@@ -1038,7 +1070,7 @@ function ArchivePaperViewer() {
                 {isMapView && (
                   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-900 w-[95vw] h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative border border-stone-200 dark:border-gray-700">
-                      
+
                       {/* Modal Header */}
                       <div className="flex justify-between items-center p-4 border-b border-stone-200 dark:border-gray-800 bg-[#fcfbf7] dark:bg-gray-900">
                         <div>
@@ -1049,7 +1081,7 @@ function ArchivePaperViewer() {
                             Explore connections between papers in <strong>{paper.program || paper.category}</strong>. Drag nodes to interact.
                           </p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => setIsMapView(false)}
                           className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 dark:bg-gray-800 text-stone-600 dark:text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
                         >
@@ -1072,7 +1104,7 @@ function ArchivePaperViewer() {
                           width={window.innerWidth * 0.95}
                           height={window.innerHeight * 0.95 - 75} // Subtract header height
                         />
-                        
+
                         {/* Legend */}
                         <div className="absolute bottom-6 left-6 bg-black/60 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white font-sans shadow-lg">
                           <h4 className="text-xs font-bold mb-2 uppercase tracking-widest text-stone-300">Legend</h4>
@@ -1099,7 +1131,7 @@ function ArchivePaperViewer() {
         )}
 
         {/* CENTER DOCUMENT VIEWER */}
-        <div 
+        <div
           className="flex-1 overflow-hidden flex flex-col relative bg-[#e5e5e5]"
           onContextMenu={(e) => e.preventDefault()}
           onCopy={(e) => e.preventDefault()}
@@ -1109,13 +1141,13 @@ function ArchivePaperViewer() {
           <div className="w-full h-full flex flex-col relative select-none transition-all duration-300">
             {/* MOBILE EXIT FULLSCREEN FLOATING BUTTON */}
             {isFullscreen && (
-              <button 
+              <button
                 onClick={toggleFullscreen}
                 className="md:hidden absolute top-4 right-4 z-50 bg-[#7a2039] text-white p-2 rounded-full shadow-lg opacity-80 hover:opacity-100 flex items-center justify-center"
                 title="Exit Fullscreen"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
                 </svg>
               </button>
             )}
@@ -1132,7 +1164,7 @@ function ArchivePaperViewer() {
 
             {/* EMBEDDED MANUSCRIPT VIEWER */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
-              <div 
+              <div
                 ref={scrollContainerRef}
                 onScroll={handleScrollActivity}
                 className="w-full h-full relative overflow-y-auto overflow-x-hidden flex flex-col items-center custom-scrollbar py-8 pb-32"
@@ -1180,14 +1212,14 @@ function ArchivePaperViewer() {
                             containIntrinsicSize: `${pdfWidth}px 1100px`,
                           }}
                         >
-                          <Page 
-                            pageNumber={pageNum} 
+                          <Page
+                            pageNumber={pageNum}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             width={pdfWidth}
                             className="relative pointer-events-none min-h-[800px]"
                             loading={
-                              <div 
+                              <div
                                 className="bg-white dark:bg-gray-800 flex items-center justify-center text-stone-400 text-sm"
                                 style={{ width: pdfWidth, height: 1000 }}
                               >
@@ -1209,8 +1241,8 @@ function ArchivePaperViewer() {
                     })
                   ) : (
                     <div className="relative shadow-2xl bg-white rounded-sm overflow-hidden" style={{ width: pdfWidth, minHeight: 800 }}>
-                      <Page 
-                        pageNumber={1} 
+                      <Page
+                        pageNumber={1}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         width={pdfWidth}
@@ -1218,7 +1250,7 @@ function ArchivePaperViewer() {
                       />
                     </div>
                   )}
-                  </Document>
+                </Document>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-stone-500 dark:text-gray-400 z-20">
@@ -1229,15 +1261,14 @@ function ArchivePaperViewer() {
 
             {/* PAGINATION CONTROLS - DEAD CENTER ON THE DOCUMENT WORKSPACE */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' && (
-              <div 
-                className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 bg-[#242b35]/90 backdrop-blur px-5 py-2.5 rounded-full z-50 border border-[#1f252e] transition-all duration-300 pointer-events-auto ${
-                  isScrolling 
-                    ? 'opacity-25 hover:opacity-100 shadow-sm' 
+              <div
+                className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 bg-[#242b35]/90 backdrop-blur px-5 py-2.5 rounded-full z-50 border border-[#1f252e] transition-all duration-300 pointer-events-auto ${isScrolling
+                    ? 'opacity-25 hover:opacity-100 shadow-sm'
                     : 'opacity-100 shadow-xl'
-                }`}
+                  }`}
                 style={{ minWidth: '280px' }}
               >
-                <button 
+                <button
                   onClick={() => scrollToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
                   className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
@@ -1247,7 +1278,7 @@ function ArchivePaperViewer() {
                 <span className="text-sm font-bold text-gray-300 flex-1 text-center select-none whitespace-nowrap">
                   Page {currentPage} of {numPages || '--'}
                 </span>
-                <button 
+                <button
                   onClick={() => scrollToPage(currentPage + 1)}
                   disabled={currentPage >= (numPages || 1)}
                   className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
@@ -1339,15 +1370,15 @@ function ArchivePaperViewer() {
             </div>
             <form onSubmit={handleChatSubmit} className="p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
               <div className="flex gap-2">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   disabled={isTyping}
-                  placeholder="Ask about methodology..." 
-                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors" 
+                  placeholder="Ask about methodology..."
+                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors"
                 />
-                <button 
+                <button
                   type="submit"
                   disabled={isTyping || !chatInput.trim()}
                   className="bg-[#7a2039] text-white px-3 rounded hover:bg-[#5a1528] transition cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"

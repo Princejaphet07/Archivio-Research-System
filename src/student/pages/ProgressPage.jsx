@@ -8,6 +8,7 @@ import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
+import CertificateModal from '../../components/CertificateModal';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
@@ -25,6 +26,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
   // ── New Research modal state ───────────────────────────────────────────────
   const [showNewResearchModal, setShowNewResearchModal] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
   const [newResearchTitle, setNewResearchTitle] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -645,10 +647,17 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 {/* Congrats card if published */}
                 {isPublished && !loading && (
                   <>
-                    <Card hover className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 p-5 sm:p-6 border-t-4 border-[#7B1F35]">
-                      <p className="text-3xl sm:text-4xl mb-3 text-center">🎉</p>
-                      <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2 text-center">Research Published!</h3>
-                      <p className="text-[13px] text-gray-600 dark:text-stone-400 text-center">Your research is now live in the public archive and searchable by anyone.</p>
+                    <Card hover className="bg-[#F3EADB] dark:bg-[#7B1F35]/20 p-5 sm:p-6 border-t-4 border-[#7B1F35] flex flex-col items-center">
+                      <p className="text-3xl sm:text-4xl mb-2 text-center">🎉</p>
+                      <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-1 text-center">Research Published!</h3>
+                      <p className="text-[13px] text-gray-600 dark:text-stone-400 text-center mb-4">Your research is now live in the public archive and searchable by anyone.</p>
+                      <PremiumButton
+                        onClick={() => setShowCertModal(true)}
+                        className="w-full min-h-[44px] touch-manipulation bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold justify-center shadow-md gap-2"
+                      >
+                        <span>📜</span>
+                        <span>Download Archival Certificate</span>
+                      </PremiumButton>
                     </Card>
 
                     <Card hover className="p-5 sm:p-6">
@@ -879,6 +888,14 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
           </div>
         </div>
       )}
+
+      {/* CERTIFICATE OF ARCHIVAL MODAL */}
+      <CertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        submission={submission}
+        studentData={studentData}
+      />
 
     </div>
   );

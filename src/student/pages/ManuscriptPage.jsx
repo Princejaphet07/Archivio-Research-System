@@ -8,6 +8,7 @@ import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import CertificateModal from '../../components/CertificateModal';
 
 export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role, leaderUid }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const [extractingKeywords, setExtractingKeywords] = useState(false);
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '' });
   const [documentResubmissions, setDocumentResubmissions] = useState({});
+  const [showCertModal, setShowCertModal] = useState(false);
 
   const handleOpenViewer = async () => {
     if (!hasManuscript) return;
@@ -555,9 +557,18 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                 </div>
                 
                 {isPublished ? (
-                  <div className="mt-4 px-4 py-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-bold rounded-lg border border-green-200 dark:border-green-800 text-center flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                    Published
+                  <div className="flex flex-col gap-2 mt-4">
+                    <div className="px-4 py-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-bold rounded-lg border border-green-200 dark:border-green-800 text-center flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                      Published
+                    </div>
+                    <button
+                      onClick={() => setShowCertModal(true)}
+                      className="w-full min-h-[44px] bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] text-[13px] font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer"
+                    >
+                      <span>📜</span>
+                      <span>Download Archival Certificate</span>
+                    </button>
                   </div>
                 ) : (
                   <PremiumButton onClick={() => setActiveTab('Requirements')} className="w-full min-h-[44px] justify-center mt-4 touch-manipulation">
@@ -695,6 +706,14 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         role="student"
         initialNote={submission?.documentRevisions?.['Final Manuscript'] || ''}
         initialAnnotations={submission?.documentAnnotations?.['Final Manuscript'] || {}}
+      />
+
+      {/* CERTIFICATE OF ARCHIVAL MODAL */}
+      <CertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        submission={submission}
+        studentData={studentData}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import ArchiveHome from './pages/ArchiveHome';
 import ArchiveBrowse from './pages/ArchiveBrowse';
 import ArchiveBookmarks from './pages/ArchiveBookmarks';
 import ArchiveAbout from './pages/ArchiveAbout';
+import ArchiveVerifyCertificate from './pages/ArchiveVerifyCertificate';
 
 import ArchivePaperViewer from './pages/ArchivePaperViewer';
 import { AuthProvider } from './context/AuthContext';
@@ -56,6 +57,7 @@ function App() {
           <Route path="/reset-password" element={<ArchiveResetPassword />} />
           <Route path="/browse" element={<ArchiveBrowse />} />
           <Route path="/about" element={<ArchiveAbout />} />
+          <Route path="/verify/:id" element={<ArchiveVerifyCertificate />} />
 
           
           {/* Protected Routes */}

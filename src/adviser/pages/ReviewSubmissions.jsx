@@ -9,6 +9,7 @@ import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
+import CertificateModal from '../../components/CertificateModal';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -35,6 +36,7 @@ function ReviewSubmissions() {
   const [msgSending, setMsgSending] = useState(false);
   const [msgStatus, setMsgStatus] = useState(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [certModalItem, setCertModalItem] = useState(null);
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
   // Fetch real data from Firebase
@@ -765,6 +767,18 @@ function ReviewSubmissions() {
                       ✓ Approve Submission
                     </PremiumButton>
                   )}
+
+                  {activeTab === 'approved' && (
+                    <PremiumButton 
+                      onClick={() => setCertModalItem(item)}
+                      variant="primary"
+                      size="sm"
+                      className="w-full justify-center bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold text-xs py-2 flex items-center gap-1"
+                    >
+                      <span>📜</span>
+                      <span>View Certificate</span>
+                    </PremiumButton>
+                  )}
                 </div>
               </Card>
             ))
@@ -927,6 +941,17 @@ function ReviewSubmissions() {
                               className="bg-emerald-600 hover:bg-emerald-700"
                             >
                               Approve
+                            </PremiumButton>
+                          )}
+                          {activeTab === 'approved' && (
+                            <PremiumButton 
+                              onClick={() => setCertModalItem(item)}
+                              variant="primary"
+                              size="sm"
+                              className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold flex items-center gap-1"
+                            >
+                              <span>📜</span>
+                              <span>Certificate</span>
                             </PremiumButton>
                           )}
                         </div>
@@ -1248,6 +1273,18 @@ function ReviewSubmissions() {
                     </button>
                   </>
                 )}
+                {(selectedSubmission.reviewStatus === 'approved' || selectedSubmission.reviewStatus === 'published') && (
+                  <button
+                    onClick={() => {
+                      setShowReviewModal(false);
+                      setCertModalItem(selectedSubmission);
+                    }}
+                    className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>📜</span>
+                    <span>Archival Certificate</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowReviewModal(false);
@@ -1479,6 +1516,13 @@ function ReviewSubmissions() {
           </div>
         </div>
       )}
+
+      {/* CERTIFICATE MODAL */}
+      <CertificateModal
+        isOpen={!!certModalItem}
+        onClose={() => setCertModalItem(null)}
+        submission={certModalItem}
+      />
 
     </Layout>
   );
