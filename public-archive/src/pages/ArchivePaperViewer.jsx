@@ -676,13 +676,21 @@ function ArchivePaperViewer() {
           {/* VERIFIED INSTITUTIONAL RECORD BADGE */}
           <Link
             to={`/verify/${paper.id}`}
-            className="flex items-center gap-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 hover:border-emerald-400 px-3 py-1 rounded-full text-[11px] font-medium transition-all shadow-sm group shrink-0 cursor-pointer"
+            className="flex items-center gap-2 bg-[#1a2028] hover:bg-[#141920] text-stone-200 hover:text-white border border-stone-700/80 hover:border-[#c9a227]/80 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm group shrink-0 cursor-pointer"
             title="Officially validated and archived by Southwestern University PHINMA. Click to view verification ledger."
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs">🛡️</span>
-            <span className="font-bold tracking-wide">Verified Institutional Record</span>
-            <span className="text-emerald-400/80 group-hover:text-emerald-200 text-[10px] hidden md:inline underline ml-0.5">Verify →</span>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-[#c9a227] group-hover:text-[#e5c07b] transition-colors shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="font-semibold text-stone-200 group-hover:text-white tracking-tight">Verified Record</span>
+            </div>
+            <span className="text-[10px] text-stone-400 group-hover:text-[#f3e5ab] pl-2 border-l border-stone-700 flex items-center gap-0.5 transition-colors font-semibold">
+              Verify
+              <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
           </Link>
         </div>
       )}
@@ -828,20 +836,24 @@ function ArchivePaperViewer() {
 
                 {/* INSTITUTIONAL VALIDATION CARD */}
                 <div className="mt-4 pt-3 border-t border-stone-200 dark:border-gray-700 shrink-0">
-                  <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-3 text-xs">
-                    <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-bold mb-1">
-                      <span className="text-sm">✓</span>
-                      <span>Officially Verified Record</span>
+                  <div className="bg-[#FAF8F5] dark:bg-gray-800/90 border border-[#7a2039]/20 dark:border-gray-700 rounded-xl p-3.5 text-xs shadow-sm">
+                    <div className="flex items-center gap-1.5 text-[#7a2039] dark:text-[#f3e5ab] font-bold mb-1">
+                      <svg className="w-3.5 h-3.5 text-[#c9a227] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="tracking-tight">Officially Verified Record</span>
                     </div>
-                    <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-snug">
-                      Validated by Faculty & permanently indexed in Southwestern University PHINMA Institutional Repository.
+                    <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed">
+                      Authenticated by Faculty & permanently cataloged in SWU PHINMA Institutional Repository.
                     </p>
                     <Link
                       to={`/verify/${paper.id}`}
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 hover:underline cursor-pointer"
+                      className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline cursor-pointer group"
                     >
-                      <span>View Public Verification Ledger</span>
-                      <span>→</span>
+                      <span>View Verification Ledger</span>
+                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </Link>
                   </div>
                 </div>
