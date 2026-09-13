@@ -30,6 +30,7 @@ function ArchiveBrowse() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
+  const [expandedAbstracts, setExpandedAbstracts] = useState({});
   const [sortOption, setSortOption] = useState(location.state?.sort || 'Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [location.state.dept] : []);
@@ -70,7 +71,10 @@ function ArchiveBrowse() {
       // scroll to top smoothly
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [location.state?.dept]);
+    if (location.state?.sort) {
+      setSortOption(location.state.sort);
+    }
+  }, [location.state?.dept, location.state?.sort]);
 
   const { currentUser } = useAuth();
 
