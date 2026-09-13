@@ -141,17 +141,16 @@ const EMAIL_PORT = parseInt(process.env.EMAIL_PORT) || 465;
 const EMAIL_USER = process.env.EMAIL_USER || 'archivio.noreply@gmail.com';
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || 'idypbuznxosaamzk';
 
+// Use Gmail service directly for reliable SSL configuration
 const transporter = nodemailer.createTransport({
-  host: EMAIL_HOST,
-  port: EMAIL_PORT,
-  secure: EMAIL_PORT === 465,
+  service: 'gmail',
   auth: {
     user: EMAIL_USER,
     pass: EMAIL_PASSWORD
   },
-  connectionTimeout: 6000,
-  greetingTimeout: 6000,
-  socketTimeout: 10000
+  connectionTimeout: 8000,
+  greetingTimeout: 8000,
+  socketTimeout: 12000
 });
 
 // Test email connection
@@ -161,6 +160,28 @@ transporter.verify((error, success) => {
   } else {
     console.log('✅ Email service ready');
   }
+});
+
+// Diagnostic endpoint to test SMTP connectivity directly from the host
+app.get('/api/debug-smtp', async (req, res) => {
+  const result = {};
+  try {
+    const tGmail = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+      connectionTimeout: 5000
+    });
+    await tGmail.verify();
+    result.gmailService = 'SUCCESS';
+  } catch (e) {
+    result.gmailService = { error: e.message, code: e.code };
+  }
+  res.json({
+    envPort: process.env.EMAIL_PORT,
+    envUser: process.env.EMAIL_USER ? 'SET' : 'NOT_SET',
+    envPass: process.env.EMAIL_PASSWORD ? 'SET' : 'NOT_SET',
+    result
+  });
 });
 
 // ============================================
