@@ -439,7 +439,7 @@ function UnifiedLogin() {
                 <span className="text-[13px] text-[#5c4a40] font-semibold group-hover:text-[#2d1b11] transition-colors">Remember me</span>
               </label>
 
-              <Link to="/dean/forgot-password" className="text-[13px] font-bold text-[#7a1f3d] hover:text-[#5c172e] transition-colors hover:underline underline-offset-4">
+              <Link to="/admin/forgot-password" className="text-[13px] font-bold text-[#7a1f3d] hover:text-[#5c172e] transition-colors hover:underline underline-offset-4">
                 Forgot Password?
               </Link>
             </div>
