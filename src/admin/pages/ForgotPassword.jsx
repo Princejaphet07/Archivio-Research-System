@@ -32,12 +32,7 @@ export default function ForgotPassword() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setError('Please enter your institutional email address.');
-      return;
-    }
-
-    if (!cleanEmail.endsWith('@phinmaed.com')) {
-      setError('Access is restricted: please enter your official @phinmaed.com institutional email address.');
+      setError('Please enter your email address.');
       return;
     }
 
@@ -134,8 +129,8 @@ export default function ForgotPassword() {
             </h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 text-center">
               {isSent 
-                ? 'Check your PHINMA Gmail inbox to reset your password.'
-                : 'Enter your institutional email and we will send you a secure link to reset your password.'}
+                ? 'Check your email inbox to reset your password.'
+                : 'Enter your email and we will send you a secure link to reset your password.'}
             </p>
           </div>
 
@@ -156,7 +151,7 @@ export default function ForgotPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. admin@phinmaed.com"
+                    placeholder="e.g. admin@example.com"
                     className="w-full pl-10 pr-4 py-3 bg-[#fbfaf8] border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all"
                     required
                     disabled={loading}
@@ -188,7 +183,7 @@ export default function ForgotPassword() {
               </div>
 
               <div className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-left space-y-2 text-xs text-stone-600 dark:text-stone-300">
-                <p><span className="text-[#801e38] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
+                <p><span className="text-[#801e38] font-bold">1.</span> Open your email inbox.</p>
                 <p><span className="text-[#801e38] font-bold">2.</span> Click the link to create your new password.</p>
                 <p><span className="text-[#801e38] font-bold">3.</span> Return here to log in.</p>
               </div>
@@ -199,7 +194,7 @@ export default function ForgotPassword() {
                 rel="noopener noreferrer"
                 className="w-full py-3.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-xl text-sm font-bold tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
               >
-                Open PHINMA Gmail
+                Open Email Inbox
               </a>
 
               <div className="w-full flex items-center justify-between pt-2 text-xs">
