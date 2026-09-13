@@ -73,12 +73,9 @@ function Header() {
 
   return (
     <nav className="flex justify-between items-center px-4 md:px-12 py-4 bg-[#3d0c1b] text-white sticky top-0 z-50 shadow-md w-full transition-all">
-      <Link to="/" className="flex items-center space-x-3 group">
-        <img src={logo} alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-full p-1 group-hover:scale-105 transition-transform" />
-        <div className="flex flex-col">
-          <span className="text-xl font-bold tracking-widest text-[#f3e5ab] leading-none">PUBLIC ARCHIVIO</span>
-          <span className="text-[10px] text-amber-200/70 tracking-wider font-sans mt-0.5 uppercase">SWU PHINMA</span>
-        </div>
+      <Link to="/" className="flex items-center space-x-3">
+        <img src={logo} alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-full p-1" />
+        <span className="text-xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</span>
       </Link>
       <div className="hidden md:flex space-x-8 text-sm font-sans">
         <Link to="/" className={`${path === '/' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>Home</Link>
