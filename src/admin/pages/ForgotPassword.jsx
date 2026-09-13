@@ -46,7 +46,7 @@ export default function ForgotPassword() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: cleanEmail, role: 'admin' }),
+          body: JSON.stringify({ email: cleanEmail, role: 'admin', origin: window.location.origin }),
         });
 
         let data = {};

@@ -48,7 +48,7 @@ export default function StudentForgotPassword({ onSwitchPage }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: cleanEmail, role: 'student' }),
+          body: JSON.stringify({ email: cleanEmail, role: 'student', origin: window.location.origin }),
         });
 
         let data = {};

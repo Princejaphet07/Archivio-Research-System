@@ -137,7 +137,7 @@ process.on('uncaughtException', (err) => {
 
 // Email Configuration (Defaults to Gmail SMTP with timeouts to prevent hanging)
 const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
-const EMAIL_PORT = parseInt(process.env.EMAIL_PORT) || 587;
+const EMAIL_PORT = parseInt(process.env.EMAIL_PORT) || 465;
 const EMAIL_USER = process.env.EMAIL_USER || 'archivio.noreply@gmail.com';
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || 'idypbuznxosaamzk';
 
@@ -266,8 +266,9 @@ const handlePasswordReset = async (req, res) => {
 
     // Generate secure reset token stored in Firestore so rate limits are bypassed
     const resetToken = crypto.randomBytes(32).toString('hex');
-    // Direct link to main system (Admin, Dean, Adviser, Student portal) instead of public archive
-    const MAIN_APP_URL = req.headers.origin 
+    // Direct link to main or public archive system (matches local or live origin)
+    const MAIN_APP_URL = req.body?.origin
+      || req.headers.origin 
       || process.env.FRONTEND_URL 
       || 'https://archivio-research-system.web.app';
     let customResetLink = `${MAIN_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;

@@ -54,55 +54,70 @@ export default function ArchiveForgotPassword() {
     setLoading(true);
 
     try {
-      const actionCodeSettings = {
-        url: `${window.location.origin}/reset-password`,
-        handleCodeInApp: true
-      };
+      const API_URL = import.meta.env.VITE_BACKEND_URL 
+        ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+        : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://archivio-email-service.onrender.com/api');
 
-      // 1. Primary: Direct HTTPS request to Google Firebase Identity Platform (fast, reliable, immune to cloud SMTP blocks)
       let sentSuccessfully = false;
+
+      // Primary: Dispatch branded SWU PHINMA email via backend service (goes directly to custom Set Password UI)
       try {
-        await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
-        sentSuccessfully = true;
-      } catch (fbErr) {
-        console.warn('Firebase client SDK send note:', fbErr.code, fbErr.message);
-
-        // Specific Firebase errors we should report immediately
-        if (fbErr.code === 'auth/user-not-found') {
-          throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
-        } else if (fbErr.code === 'auth/too-many-requests') {
-          throw new Error('Too many requests sent. Please wait a few minutes before trying again.');
-        } else if (fbErr.code === 'auth/invalid-email') {
-          throw new Error('Invalid institutional email address format.');
-        }
-
-        // If client SDK failed due to network or other transient error, attempt backend endpoint with a short timeout
-        const API_URL = import.meta.env.VITE_BACKEND_URL 
-          ? `${import.meta.env.VITE_BACKEND_URL}/api` 
-          : 'https://archivio-email-service.onrender.com/api';
-
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout to avoid long hangs
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const response = await fetch(`${API_URL}/send-password-reset`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail }),
+          body: JSON.stringify({ 
+            email: cleanEmail, 
+            role: 'public',
+            origin: window.location.origin 
+          }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
 
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (_) {}
+
         if (response.ok) {
           sentSuccessfully = true;
         } else {
-          const data = await response.json().catch(() => ({}));
-          let errorMsg = data.error || 'Unable to send reset email. Please try again.';
-          if (errorMsg.includes('No registered account')) {
-            errorMsg = 'No account found with this email address. Please make sure you have created an account first.';
-          } else if (errorMsg.includes('Too many requests')) {
-            errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
+          let errorMsg = data.details || data.error || 'Failed to dispatch reset email';
+          if (errorMsg.includes('No registered account') || data.error === 'auth/user-not-found') {
+            throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
+          } else if (errorMsg.includes('Too many requests') || data.error === 'auth/too-many-requests') {
+            throw new Error('Too many requests sent. Please wait a few minutes before trying again.');
+          } else {
+            throw new Error(errorMsg);
           }
-          throw new Error(errorMsg);
+        }
+      } catch (backendErr) {
+        console.warn('Backend custom reset dispatch note:', backendErr.message);
+
+        // If specific user error, rethrow immediately
+        if (backendErr.message.includes('No registered account') || backendErr.message.includes('Too many requests')) {
+          throw backendErr;
+        }
+
+        // Emergency fallback: direct Firebase Client SDK if backend server is unreachable
+        try {
+          const actionCodeSettings = {
+            url: `${window.location.origin}/reset-password`
+          };
+          await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
+          sentSuccessfully = true;
+        } catch (fbErr) {
+          console.error('Firebase fallback also failed:', fbErr);
+          if (fbErr.code === 'auth/user-not-found') {
+            throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
+          } else if (fbErr.code === 'auth/too-many-requests') {
+            throw new Error('Too many requests sent. Please wait a few minutes before trying again.');
+          } else {
+            throw new Error(backendErr.message || 'Unable to send reset email. Please try again.');
+          }
         }
       }
 

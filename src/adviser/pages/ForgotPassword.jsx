@@ -49,7 +49,7 @@ function ForgotPassword() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: cleanEmail, role: 'adviser' }),
+          body: JSON.stringify({ email: cleanEmail, role: 'adviser', origin: window.location.origin }),
         });
 
         let data = {};
