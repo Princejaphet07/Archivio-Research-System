@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://archivio-public.web.app/sitemap.xml
