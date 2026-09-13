@@ -15,6 +15,15 @@ require('dotenv').config();
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
+
+let setupCleanupCron, setupBackupCron, setupMailListener;
+try {
+  ({ setupCleanupCron } = require('./cleanup-cron'));
+  ({ setupBackupCron } = require('./backup-cron'));
+  ({ setupMailListener } = require('./mail-listener'));
+} catch (cronErr) {
+  console.warn('Optional background helpers load note:', cronErr.message);
+}
 let serviceAccount;
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
@@ -44,11 +53,13 @@ if (serviceAccount) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS — allow local development and live Firebase hosting domains
+// CORS — allow local development (any localhost/127.0.0.1 port) and live Firebase hosting domains
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
   'http://localhost:3000',
   'https://archivio-research-system.web.app',
   'https://archivio-research-system.firebaseapp.com',
@@ -60,6 +71,12 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, health checks)
     if (!origin) return callback(null, true);
+    
+    // Dynamically allow any localhost or 127.0.0.1 port for local development
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
     if (allowedOrigins.some(o => origin.startsWith(o) || origin === o)) {
       return callback(null, true);
     }
@@ -1460,8 +1477,8 @@ app.post('/api/ai/chat', async (req, res) => {
     if (paperContext) {
       developerPrompt = `
       === SYSTEM INSTRUCTIONS ===
-      YOUR IDENTITY:
-      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
+      YOUR IDENTITY & CREATORS:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by **Prince Japhet Vender** (Lead Programmer & Full-Stack Developer), alongside **Jerika Zamoras** (UI/UX Designer), **Hylla Mae Tejada** (Project Manager), and **Andrea Cañete Perote** (Assistant Programmer).
       
       STRICT SCOPE & NO-CODE POLICY:
       - You are strictly an Academic Research Assistant for Southwestern University PHINMA ARCHIVIO.
@@ -1481,8 +1498,8 @@ app.post('/api/ai/chat', async (req, res) => {
       === SYSTEM INSTRUCTIONS ===
       You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System.
       
-      YOUR IDENTITY:
-      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by **Prince Japhet Vender**, a Full Stack Developer.
+      YOUR IDENTITY & CREATORS:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by **Prince Japhet Vender** (Lead Programmer & Full-Stack Developer), alongside **Jerika Zamoras** (UI/UX Designer), **Hylla Mae Tejada** (Project Manager), and **Andrea Cañete Perote** (Assistant Programmer).
 
       STRICT SCOPE & NO-CODE POLICY:
       - You are strictly an Academic Research Assistant for Southwestern University PHINMA ARCHIVIO.
@@ -1835,8 +1852,7 @@ app.post('/api/ai/global-search', async (req, res) => {
     // Inject developer identity prompt and the entire database as context
     const developerPrompt = `
     CRITICAL INSTRUCTION FOR ALL YOUR RESPONSES:
-    If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by Prince Japhet Vender. 
-    You must state that Prince Japhet Vender is a Full Stack Developer.
+    If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by Prince Japhet Vender (Lead Programmer & Full-Stack Developer), alongside Jerika Zamoras (UI/UX Designer), Hylla Mae Tejada (Project Manager), and Andrea Cañete Perote (Assistant Programmer).
     Always be polite and helpful.
 
     You are the Global Archivio Librarian. You have access to the entire database of published research papers.
@@ -2257,10 +2273,16 @@ if (process.env.NODE_ENV !== 'test') {
     console.log('  POST /api/watermark-pdf');
     console.log('  POST /api/ai/similarity-check');
     
-    // Start automated cron jobs
-    setupCleanupCron();
-    setupBackupCron();
-    setupMailListener(transporter);
+    // Start automated background tasks safely
+    if (typeof setupCleanupCron === 'function') {
+      try { setupCleanupCron(); } catch (e) { console.warn('Cron setupCleanupCron error:', e.message); }
+    }
+    if (typeof setupBackupCron === 'function') {
+      try { setupBackupCron(); } catch (e) { console.warn('Cron setupBackupCron error:', e.message); }
+    }
+    if (typeof setupMailListener === 'function') {
+      try { setupMailListener(transporter); } catch (e) { console.warn('Mail listener error:', e.message); }
+    }
   });
 }
 
