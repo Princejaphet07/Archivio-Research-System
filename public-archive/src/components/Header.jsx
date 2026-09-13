@@ -76,11 +76,8 @@ function Header() {
       <Link to="/" className="flex items-center space-x-3 group">
         <img src={logo} alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-full p-1 group-hover:scale-105 transition-transform" />
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-widest text-[#f3e5ab] leading-none">ARCHIVIO</span>
-            <span className="text-[9px] font-semibold tracking-wider uppercase bg-amber-400/20 text-amber-300 border border-amber-400/30 px-1.5 py-0.5 rounded">Public</span>
-          </div>
-          <span className="text-[10px] text-amber-200/70 tracking-wider font-sans mt-0.5">Research Archive</span>
+          <span className="text-xl font-bold tracking-widest text-[#f3e5ab] leading-none">PUBLIC ARCHIVIO</span>
+          <span className="text-[10px] text-amber-200/70 tracking-wider font-sans mt-0.5 uppercase">SWU PHINMA</span>
         </div>
       </Link>
       <div className="hidden md:flex space-x-8 text-sm font-sans">
