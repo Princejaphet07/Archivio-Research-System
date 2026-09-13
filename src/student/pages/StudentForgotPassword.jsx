@@ -1,180 +1,117 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth } from '../../firebase/config';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
 
 export default function StudentForgotPassword({ onSwitchPage }) {
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
-  
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(new Array(6).fill(''));
-  const inputRefs = useRef([]);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [otpStatus, setOtpStatus] = useState('idle'); // 'idle', 'verifying', 'success', 'error'
-  
-  const API_URL = (import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:3001/api');
+  const [isSent, setIsSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
-  const handleChangeOtp = (element, index) => {
-    if (isNaN(element.value)) return false;
-    
-    const newOtp = [...otp];
-    newOtp[index] = element.value;
-    setOtp(newOtp);
+  const API_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:3001/api';
 
-    // Focus next input
-    if (element.value && index < 5) {
-      inputRefs.current[index + 1].focus();
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
-    const codeStr = newOtp.join('');
-    if (codeStr.length === 6) {
-      performVerify(codeStr);
-    }
-  };
-
-  const handleKeyDownOtp = (e, index) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
-  };
-
-  const handleSendOTP = async (e) => {
-    e.preventDefault();
+  const handleSendResetEmail = async (e) => {
+    if (e) e.preventDefault();
     setError('');
-    setLoading(true);
-    const controller = new AbortController();
 
-    try {
-      const response = await fetch(`${API_URL}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() })
-      });
+    const cleanEmail = email.trim().toLowerCase();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send OTP');
-      }
-
-      await Swal.fire({
-        icon: 'success',
-        title: 'Sending code successfully sent',
-        confirmButtonColor: '#6B0F1A',
-        background: '#fff',
-        color: '#333'
-      });
-      
-      setStep(2);
-      setOtpStatus('idle');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (!cleanEmail) {
+      setError('Please enter your institutional email address.');
+      return;
     }
-  };
 
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    performVerify(otp.join(''));
-  };
-
-  const performVerify = async (codeStr) => {
-    if (codeStr.length !== 6) return;
-    setError('');
-    setOtpStatus('verifying');
-    const controller = new AbortController();
-    try {
-      const response = await fetch(`${API_URL}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          code: codeStr
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Incorrect code');
-      }
-
-      setOtpStatus('success');
-      setTimeout(() => {
-        setStep(3);
-      }, 1500);
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        setError(err.message);
-        setOtpStatus('error');
-      }
-    }
-    // Cleanup on component unmount
-    return () => controller.abort();
-  };
-
-  // Password strength helpers
-  const hasEightChars = newPassword.length >= 8;
-  const hasNumber = /\d/.test(newPassword);
-  const hasUpper = /[A-Z]/.test(newPassword);
-  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-  const strengthCount = [hasEightChars, hasNumber, hasUpper, hasSpecial].filter(Boolean).length;
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strengthCount];
-  const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'][strengthCount];
-
-  const handleVerifyAndReset = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    if (newPassword !== confirmPassword) {
-      return setError('Passwords do not match');
-    }
-    
-    if (strengthCount < 4) {
-      return setError('Password must be at least 8 characters long and include an uppercase letter, a number, and a special character.');
+    if (!cleanEmail.endsWith('@phinmaed.com')) {
+      setError('Access is restricted: please enter your official @phinmaed.com institutional email address.');
+      return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email.trim().toLowerCase(),
-          code: otp.join(''),
-          newPassword
-        })
-      });
+      const PUBLIC_URL = import.meta.env.VITE_PUBLIC_ARCHIVE_URL || 'https://archivio-public.web.app';
+      const actionCodeSettings = {
+        url: `${PUBLIC_URL}/reset-password`,
+        handleCodeInApp: true
+      };
 
-      const data = await response.json();
+      let sentSuccessfully = false;
+      try {
+        await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
+        sentSuccessfully = true;
+      } catch (fbErr) {
+        console.warn('Firebase client SDK send note:', fbErr.code, fbErr.message);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        if (fbErr.code === 'auth/user-not-found') {
+          throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
+        } else if (fbErr.code === 'auth/too-many-requests') {
+          throw new Error('Too many requests sent. Please wait a few minutes before trying again.');
+        } else if (fbErr.code === 'auth/invalid-email') {
+          throw new Error('Invalid institutional email address format.');
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(`${API_URL}/send-password-reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          sentSuccessfully = true;
+        } else {
+          const data = await response.json().catch(() => ({}));
+          let errorMsg = data.error || 'Unable to send reset email. Please try again.';
+          if (errorMsg.includes('No registered account')) {
+            errorMsg = 'No account found with this email address. Please make sure you have created an account first.';
+          } else if (errorMsg.includes('Too many requests')) {
+            errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
+          }
+          throw new Error(errorMsg);
+        }
       }
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'Password successfully changed!',
-        text: 'You can now log in with your new password.',
-        confirmButtonColor: '#6B0F1A',
-        confirmButtonText: 'Go to Login',
-        background: '#fff',
-        color: '#333'
-      });
+      if (sentSuccessfully) {
+        setIsSent(true);
+        setCountdown(60);
 
-      onSwitchPage('login');
-      
+        await Swal.fire({
+          icon: 'success',
+          title: 'Reset Link Dispatched!',
+          text: `We sent an official password reset link to ${cleanEmail}. Please check your inbox or spam folder.`,
+          timer: 3500,
+          showConfirmButton: true,
+          confirmButtonText: 'Great, I will check',
+          confirmButtonColor: '#6B0F1A',
+          background: '#fff',
+          color: '#333'
+        });
+      }
     } catch (err) {
-      setError(err.message);
+      console.error('Password reset error:', err);
+      let errorMsg = err.message || 'Failed to send password reset email. Please try again.';
+
+      if (err.name === 'AbortError' || err.message.includes('Failed to fetch')) {
+        errorMsg = 'Network error or server is starting up. Please check your internet connection and try again in a few seconds.';
+      }
+
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -211,11 +148,13 @@ export default function StudentForgotPassword({ onSwitchPage }) {
         {/* Right Side - Forgot Password Flow */}
         <div className="w-[55%] flex flex-col p-[60px] bg-white relative">
           <div className="flex flex-col items-center mb-6">
-            <h1 className="text-3xl font-serif font-bold text-gray-900">Forgot Password</h1>
+            <h1 className="text-3xl font-serif font-bold text-gray-900">
+              {isSent ? 'Reset Link Sent' : 'Forgot Password'}
+            </h1>
             <p className="text-xs text-gray-500 mt-2 text-center">
-              {step === 1 && "Enter your email to receive a verification code."}
-              {step === 2 && "Check your email for the 6-digit code."}
-              {step === 3 && "Create a new secure password."}
+              {isSent 
+                ? 'Check your PHINMA Gmail inbox to reset your password.'
+                : 'Enter your institutional email and we will send you a secure link to reset your password.'}
             </p>
           </div>
 
@@ -226,178 +165,83 @@ export default function StudentForgotPassword({ onSwitchPage }) {
             </div>
           )}
 
-          {step === 1 && (
-            <form onSubmit={handleSendOTP}>
+          {!isSent ? (
+            <form onSubmit={handleSendResetEmail}>
               <div className="mb-5">
                 <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. prdo.vender.swu@phinmaed.com"
-                  className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] transition"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. prdo.vender.swu@phinmaed.com"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#7a2e46] transition"
+                    required
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide"
+                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide flex items-center justify-center gap-2"
               >
-                {loading ? 'Sending Code...' : 'Send Verification Code'}
+                {loading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
               </button>
             </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={handleVerifyOTP}>
-              <div className="mb-6">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">6-Digit Code</label>
-                <div className="flex justify-between gap-2">
-                  {otp.map((data, index) => {
-                    let boxColorClass = "bg-[#faf7f5] border-gray-200 focus:border-[#7a2e46]";
-                    if (otpStatus === 'success') {
-                      boxColorClass = "bg-green-50 border-green-500 text-green-700 focus:border-green-500";
-                    } else if (otpStatus === 'error') {
-                      boxColorClass = "bg-red-50 border-red-500 text-red-700 focus:border-red-500";
-                    }
-
-                    return (
-                      <input
-                        key={index}
-                        type="text"
-                        maxLength={1}
-                        ref={(el) => (inputRefs.current[index] = el)}
-                        value={data}
-                        onChange={(e) => {
-                          setOtpStatus('idle');
-                          setError('');
-                          handleChangeOtp(e.target, index);
-                        }}
-                        onKeyDown={(e) => handleKeyDownOtp(e, index)}
-                        onFocus={(e) => e.target.select()}
-                        className={`w-[14%] h-14 border rounded-lg text-center text-2xl font-semibold focus:outline-none transition shadow-sm ${boxColorClass}`}
-                        required
-                        disabled={otpStatus === 'success' || otpStatus === 'verifying'}
-                      />
-                    );
-                  })}
-                </div>
-                {otpStatus === 'success' && (
-                  <p className="text-green-600 text-xs font-bold text-center mt-3">Code Verified!</p>
-                )}
-                {otpStatus === 'error' && (
-                  <p className="text-red-600 text-xs font-bold text-center mt-3">Incorrect code</p>
-                )}
+          ) : (
+            <div className="w-full flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl shadow-inner animate-pulse">
+                ✓
               </div>
-              <button
-                type="submit"
-                disabled={otpStatus === 'success' || otpStatus === 'verifying' || otp.join('').length !== 6}
-                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide disabled:opacity-60 disabled:cursor-not-allowed"
+              
+              <div className="space-y-1">
+                <p className="text-xs text-gray-600">
+                  We've sent a secure password reset link to:
+                </p>
+                <div className="inline-block bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 font-mono text-xs font-bold text-[#6B0F1A]">
+                  {email.trim().toLowerCase()}
+                </div>
+              </div>
+
+              <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left space-y-2 text-xs text-gray-600">
+                <p><span className="text-[#6B0F1A] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
+                <p><span className="text-[#6B0F1A] font-bold">2.</span> Click the link to create your new password.</p>
+                <p><span className="text-[#6B0F1A] font-bold">3.</span> Return here to log in.</p>
+              </div>
+
+              <a
+                href="https://mail.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-[#6B0F1A] hover:bg-[#540c14] text-white rounded-lg text-xs font-bold tracking-wider shadow-sm transition-all flex items-center justify-center gap-2"
               >
-                {otpStatus === 'verifying' ? 'Verifying...' : 'Verify Code'}
-              </button>
-              <div className="text-center mt-4">
-                <button type="button" onClick={() => { setStep(1); setOtpStatus('idle'); setOtp(new Array(6).fill('')); setError(''); }} className="text-xs text-[#6B0F1A] hover:underline">
-                  Resend Code
+                Open PHINMA Gmail
+              </a>
+
+              <div className="w-full flex items-center justify-between pt-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSent(false);
+                    setError('');
+                  }}
+                  className="text-gray-500 hover:text-[#6B0F1A] transition-colors"
+                >
+                  ← Edit email
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendResetEmail}
+                  disabled={loading || countdown > 0}
+                  className="font-bold text-[#6B0F1A] hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {countdown > 0 ? `Resend link (${countdown}s)` : 'Resend link'}
                 </button>
               </div>
-            </form>
-          )}
-
-          {step === 3 && (
-            <form onSubmit={handleVerifyAndReset}>
-              <div className="mb-4">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">New Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition mb-3 select-none"
-                    required
-                    disabled={loading}
-                    data-password="true"
-                    data-no-copy="true"
-                    onCopy={(e) => { e.preventDefault(); return false; }}
-                    onCut={(e) => { e.preventDefault(); return false; }}
-                    onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-stone-400 hover:text-stone-600 focus:outline-none">
-                    {showPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                        <line x1="2" y1="2" x2="22" y2="22" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                
-                {/* Password Strength Indicator */}
-                {newPassword && (
-                  <div className="flex justify-between items-center mb-1 px-1">
-                    <div className="w-1/2 flex gap-1">
-                      {[1,2,3,4].map(i => (
-                        <div key={i} className={`h-1 w-full rounded-full ${i <= strengthCount ? strengthColor : 'bg-gray-200'}`}></div>
-                      ))}
-                    </div>
-                    <div className={`text-[9px] font-semibold ${strengthCount <= 1 ? 'text-red-400' : strengthCount === 2 ? 'text-yellow-500' : strengthCount === 3 ? 'text-blue-500' : 'text-green-600'}`}>
-                      {strengthLabel}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="mb-6">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Confirm Password</label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#7a2e46] transition select-none"
-                    required
-                    disabled={loading}
-                    data-password="true"
-                    data-no-copy="true"
-                    onCopy={(e) => { e.preventDefault(); return false; }}
-                    onCut={(e) => { e.preventDefault(); return false; }}
-                    onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-600 focus:outline-none">
-                    {showConfirmPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                        <line x1="2" y1="2" x2="22" y2="22" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#6B0F1A] hover:bg-[#540c14] disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-sm tracking-wide"
-              >
-                {loading ? 'Resetting Password...' : 'Reset Password'}
-              </button>
-            </form>
+            </div>
           )}
 
           <div className="text-center mt-8 pt-4">
