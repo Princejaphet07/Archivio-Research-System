@@ -149,13 +149,13 @@ service cloud.firestore {
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
     match /studentInvitations/{docId} {
-      // Only authenticated users can read; only deans/advisers/admins can write
-      allow read: if isAuthenticated();
+      // Allow public read for signup verification
+      allow read: if true;
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     match /invitations/{docId} {
-      // Only authenticated users can read; only deans/advisers/admins can write
-      allow read: if isAuthenticated();
+      // Allow public read for signup verification
+      allow read: if true;
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
     match /mail/{docId} {
