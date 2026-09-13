@@ -30,8 +30,7 @@ function ArchiveBrowse() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
-  const [expandedAbstracts, setExpandedAbstracts] = useState({});
-  const [sortOption, setSortOption] = useState('Newest First');
+  const [sortOption, setSortOption] = useState(location.state?.sort || 'Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [location.state.dept] : []);
   const [loading, setLoading] = useState(true);
@@ -236,11 +235,12 @@ function ArchiveBrowse() {
 
   // Filter & Sort
   const filteredPapers = publishedPapers.filter(paper => {
-    const q = searchQuery.toLowerCase();
+    const q = (searchQuery || '').trim().toLowerCase();
     const title = (paper.researchTitle || paper.title || '').toLowerCase();
     const author = (paper.authorDisplay || '').toLowerCase();
+    const keywords = (paper.keywords || []).join(' ').toLowerCase();
     const program = (paper.program || paper.department || paper.category || '').toLowerCase();
-    const matchesSearch = title.includes(q) || author.includes(q) || keywords.includes(q) || program.includes(q);
+    const matchesSearch = !q || title.includes(q) || author.includes(q) || keywords.includes(q) || program.includes(q);
     
     // Year filter logic
     const pubYear = new Date(paper.publishedAt || paper.createdAt || currentDate).getFullYear().toString();

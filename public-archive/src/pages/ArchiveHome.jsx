@@ -66,7 +66,7 @@ function ArchiveHome() {
   };
 
   const handleTagClick = (tag) => {
-    navigate('/browse', { state: { q: tag, dept: tag } });
+    navigate('/browse', { state: { dept: tag, sort: 'Most Viewed' } });
   };
   const [stats, setStats] = useState({
     papers: 0,
@@ -264,10 +264,7 @@ function ArchiveHome() {
           </form>
           {popularDepartments.length > 0 && (
             <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
-              <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1 flex items-center justify-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#d6ad60] inline-block">
-                  <path fillRule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.6 11.02a.75.75 0 00-.77.838 8.01 8.01 0 004.996 6.804A7.478 7.478 0 0012 18.75a7.48 7.48 0 004.97-1.892 8.01 8.01 0 003.88-6.195.75.75 0 00-.745-.815 7.56 7.56 0 01-2.92-1.393 9.746 9.746 0 00-4.222-6.169z" clipRule="evenodd" />
-                </svg>
+              <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">
                 Popular:
               </span>
               {popularDepartments.map(tag => (
@@ -275,7 +272,7 @@ function ArchiveHome() {
                   type="button"
                   key={tag}
                   onClick={() => handleTagClick(tag)}
-                  className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium flex items-center gap-1"
+                  className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium"
                   title={`View research in ${tag}`}
                 >
                   {tag}
