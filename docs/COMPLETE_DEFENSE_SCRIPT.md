@@ -14,8 +14,9 @@
 6. [👨‍🎓 Student Proponent Portal Walkthrough Script](#6-student-proponent-portal-walkthrough-script)
 7. [🌐 Public Research Archive (Discovery Platform) Script](#7-public-research-archive-discovery-platform-script)
 8. [🧠 AI Microservice & Backend Architecture Script](#8-ai-microservice--backend-architecture-script)
-9. [🛡️ Top 10 Defense Questions & Winning Answers (Cheatsheet)](#9-top-10-defense-questions--winning-answers-cheatsheet)
-10. [🎯 Powerful Closing Statement](#10-powerful-closing-statement)
+9. [🛡️ System Security & Data Privacy Architecture (Security Defense Guide)](#9-system-security--data-privacy-architecture-security-defense-guide)
+10. [🎯 Top 12 Defense Questions & Winning Answers (Cheatsheet)](#10-top-12-defense-questions--winning-answers-cheatsheet)
+11. [🏆 Powerful Closing Statement](#11-powerful-closing-statement)
 
 ---
 
@@ -194,7 +195,50 @@
 
 ---
 
-## 9. 🛡️ Top 10 Defense Questions & Winning Answers (Cheatsheet)
+## 9. 🛡️ System Security & Data Privacy Architecture (Security Defense Guide)
+> **Tumong:** Kompleto ug lig-on nga giya kon pangutan-on sa Panel bahin sa **Security, Hacking Prevention, Anti-Forgery, ug Data Privacy Compliance**.
+
+### 🏛️ Ang 7 ka Haligi sa ARCHIVIO Security (The 7 Pillars):
+
+#### 1. 🔐 Role-Based Access Control (RBAC) & Principle of Least Privilege
+* **Unsay pasabot:** Ang matag user naay estrikto nga utlanan sa ilang mahimo:
+  - **Student:** Makatan-aw ug maka-edit lang sa ilang kaugalingong group submission.
+  - **Adviser:** Makabasa ug maka-review lang sa mga papers nga gi-assign sa ilaha; dili sila maka-publish sa archive.
+  - **Dean:** Ang bugtong authorized person nga maka-click og "Approve & Publish" ug mo-isyu og official Reference ID.
+  - **Public Visitors:** View-only access sa approved metadata; walay write o delete permissions.
+
+#### 2. 🛡️ Database-Level Security Rules (Firestore Rules)
+* **Pang-Defense Explanation:**
+  > *"Dili lang sa Frontend namo gipanalipdan ang system. Sa backend, ang among **Cloud Firestore Security Rules** nag-validate sa matag request. Pananglitan: Bisan kon ang usa ka estudyante mogamit og Developer Tools sa browser aron usbon ang iyang status gikan sa 'pending' ngadto sa 'published', ang Firebase server-side rules **awtomatikong mo-block ug mo-reject sa request** tungod kay ang Dean UID ra ang naay write permission sa status field."*
+
+#### 3. 📜 Anti-Forgery & Credential Protection
+* **Pang-Defense Explanation:**
+  > *"Aron masiguro ang katinuod sa **Certificate of Archiving**:*
+  > 1. *Matag papel nagdala og talagsaon nga **Reference ID (`ARCH-SWU-XXXXXX`)**.*
+  > 2. *Ang QR Code naka-link sa among live **Institutional Verification Ledger** (`/verify/:id`) nga nagpakita sa exact Dean ug Adviser electronic approval timestamps.*
+  > 3. *Aron malikayan ang peke nga kopya o tampering, **among gi-restrict ang pag-download sa official certificate ngadto lamang sa authenticated student proponents ug faculty**. Ang public makakita lamang sa resibo sa ledger, apan dili maka-download sa physical clearance document sa estudyante."*
+
+#### 4. 🇵🇭 Data Privacy Act of 2012 (Republic Act 10173) Compliance
+* **Pang-Defense Explanation:**
+  > *"Ang ARCHIVIO 100% compliant sa Data Privacy Act ubos sa mga prinsipyo sa **Transparency, Legitimate Purpose, ug Proportionality**:*
+  > - *Ang Public Archive nagpakita lamang sa **Scholarly Academic Metadata** (Research Title, Author Names, Abstract, Department, ug Year).*
+  > - *Ang mga personal ug sensitibong impormasyon—sama sa student mobile numbers, personal emails, student ID numbers, ug unapproved draft remarks—kay **estriktorong gitagoan ug dili ma-access sa public API**."*
+
+#### 5. 🔒 Anti-Scraping & Intellectual Property (IP) Defense
+* **Pang-Defense Explanation:**
+  > *"Gipanalipdan ang intellectual property sa mga estudyante pinaagi sa among **Secure Canvas-based Viewer**. Ang PDF renderer nag-convert sa mga panid ngadto sa canvas elements nga protektado sa view-only security layers, nga nagpugong sa automatic bot scraping sa tibuok manuscript."*
+
+#### 6. 🔑 Secret Management & Environment Isolation
+* **Pang-Defense Explanation:**
+  > *"Walay bisan unsang sensitive API keys o Firebase Admin Private Service Account keys nga na-expose sa public frontend code. Ang tanang email credentials ug backend admin tokens naka-encrypt sulod sa secure server environment variables sa Render ug gitagoan gikan sa git pinaagi sa among `.gitignore`."*
+
+#### 7. 🌐 Network & API Resilience (CORS & Rate Limiting)
+* **Pang-Defense Explanation:**
+  > *"Ang among Express AI microservice gipanalipdan sa **Cross-Origin Resource Sharing (CORS)** whitelist aron ang among verified domains lamang ang maka-send og requests, samtang ang **Rate Limiting** nagpugong sa Denial of Service (DoS) o bot abuse."*
+
+---
+
+## 10. 🛡️ Top 12 Defense Questions & Winning Answers (Cheatsheet)
 
 ### Q1: "Nganong dili na lang mo mogamit og Google Drive o Google Forms para sa thesis submission?"
 > **Tubag:**
@@ -236,9 +280,17 @@
 > **Tubag:**
 > *"For Version 2.0, we plan to integrate automated **Plagiarism & Similarity Index Checking** directly into the upload pipeline, integrate university RFID student ID scanning at the library kiosk, and deploy native mobile apps via Android & iOS bundles."*
 
+### Q11: "Unsaon pagsiguro nga dili ma-edit sa student ang submission status o grado sa Firestore?"
+> **Tubag:**
+> *"Through **Cloud Firestore Security Rules**. In our `firestore.rules`, permissions are strictly enforced on the database server. Even if a user executes custom JavaScript code from their browser console, Firestore validates whether `request.auth.token.role == 'dean'`. If an unauthorized student attempts to modify the `reviewStatus` or `publishedAt` fields, the database rejects the write operation at the protocol level."*
+
+### Q12: "Unsay panalipod ninyo batok sa SQL Injection ug Cross-Site Scripting (XSS)?"
+> **Tubag:**
+> *"First, because we utilize Google Cloud Firestore, it is a NoSQL document store that does not concatenate raw SQL strings, effectively eliminating traditional SQL Injection vulnerabilities. Second, against XSS, React automatically sanitizes and escapes all user-supplied variables before rendering into the DOM. Furthermore, inputs are strictly type-checked and validated both client-side and on our Node.js microservice."*
+
 ---
 
-## 10. 🎯 Powerful Closing Statement
+## 11. 🎯 Powerful Closing Statement
 > **Kinsa ang mosulti:** Lead Programmer / Team Representative  
 > **Gitas-on:** 1 ka minuto  
 
