@@ -239,8 +239,8 @@ function ArchiveBrowse() {
     const q = searchQuery.toLowerCase();
     const title = (paper.researchTitle || paper.title || '').toLowerCase();
     const author = (paper.authorDisplay || '').toLowerCase();
-    const keywords = (paper.keywords || []).join(' ').toLowerCase();
-    const matchesSearch = title.includes(q) || author.includes(q) || keywords.includes(q);
+    const program = (paper.program || paper.department || paper.category || '').toLowerCase();
+    const matchesSearch = title.includes(q) || author.includes(q) || keywords.includes(q) || program.includes(q);
     
     // Year filter logic
     const pubYear = new Date(paper.publishedAt || paper.createdAt || currentDate).getFullYear().toString();
@@ -248,8 +248,8 @@ function ArchiveBrowse() {
     
     // Department filter logic
     const matchesDept = selectedDepartments.length === 0 || selectedDepartments.some(dept => {
-      const p = (paper.program || paper.category || '').toLowerCase();
-      return p.includes(dept.toLowerCase());
+      const d = dept.toLowerCase();
+      return program.includes(d) || d.includes(program);
     });
     
     return matchesSearch && matchesYear && matchesDept;

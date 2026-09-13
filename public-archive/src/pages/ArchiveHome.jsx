@@ -13,13 +13,14 @@ function ArchiveHome() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [placeholderText, setPlaceholderText] = useState('');
+  const [popularDepartments, setPopularDepartments] = useState([]);
   const navigate = useNavigate();
   const currentDate = React.useMemo(() => Date.now(), []);
 
   useEffect(() => {
     const phrases = [
       'Search for "Computer Science"...',
-      'Search for "Nursing"...',
+      'Search for "Information Technology"...',
       'Search by author name...',
       'Search keywords...',
     ];
@@ -65,7 +66,7 @@ function ArchiveHome() {
   };
 
   const handleTagClick = (tag) => {
-    navigate('/browse', { state: { q: tag } });
+    navigate('/browse', { state: { q: tag, dept: tag } });
   };
   const [stats, setStats] = useState({
     papers: 0,
@@ -91,8 +92,6 @@ function ArchiveHome() {
     }
   };
 
-
-
   useEffect(() => {
     // Fetch published submissions
     const qSubs = query(
@@ -109,6 +108,7 @@ function ArchiveHome() {
     const computeData = () => {
       if (!subsList.length) {
         setPublishedPapers([]);
+        setPopularDepartments([]);
         setStats({ papers: 0, authors: 0, departments: 1, advisers: 0 });
         setTimeout(() => setLoading(false), 800);
         return;
@@ -124,6 +124,7 @@ function ArchiveHome() {
           groupName: group?.groupName || sub.groupName,
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
+          department: group?.department || sub.department,
           authorDisplay: group
             ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
@@ -132,8 +133,6 @@ function ArchiveHome() {
 
       // Sort newest first client-side
       const sortedPapers = enrichedPapers.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-      setPublishedPapers(sortedPapers);
-
       setPublishedPapers(sortedPapers);
 
       // Compute stats
@@ -146,6 +145,40 @@ function ArchiveHome() {
         if (p.adviserName) uniqueAdvisers.add(p.adviserName);
         if (p.program) uniqueDepartments.add(p.program);
       });
+
+      // Compute popular departments ranked dynamically by highest view counts
+      const deptViewsMap = {};
+      enrichedPapers.forEach(p => {
+        const dept = p.program || p.department || p.category;
+        if (dept && typeof dept === 'string' && dept.trim()) {
+          const cleanDept = dept.trim();
+          const views = Number(p.views) || 0;
+          deptViewsMap[cleanDept] = (deptViewsMap[cleanDept] || 0) + views;
+        }
+      });
+
+      let sortedPopularDepts = Object.keys(deptViewsMap)
+        .sort((a, b) => deptViewsMap[b] - deptViewsMap[a])
+        .slice(0, 5);
+
+      // Fallback: If no department/program on papers, rank keywords with highest views
+      if (sortedPopularDepts.length === 0) {
+        const kwViewsMap = {};
+        enrichedPapers.forEach(p => {
+          const views = Number(p.views) || 0;
+          (p.keywords || []).forEach(kw => {
+            if (kw && typeof kw === 'string' && kw.trim()) {
+              const cleanKw = kw.trim();
+              kwViewsMap[cleanKw] = (kwViewsMap[cleanKw] || 0) + views;
+            }
+          });
+        });
+        sortedPopularDepts = Object.keys(kwViewsMap)
+          .sort((a, b) => kwViewsMap[b] - kwViewsMap[a])
+          .slice(0, 5);
+      }
+
+      setPopularDepartments(sortedPopularDepts);
 
       setStats({
         papers: enrichedPapers.length,
@@ -229,12 +262,27 @@ function ArchiveHome() {
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0 shadow-sm border border-[#6b142c]/50">Search</button>
           </form>
-          <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
-            <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">Popular:</span>
-            {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
-              <span key={tag} onClick={() => handleTagClick(tag)} className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all">{tag}</span>
-            ))}
-          </div>
+          {popularDepartments.length > 0 && (
+            <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
+              <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#d6ad60] inline-block">
+                  <path fillRule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.6 11.02a.75.75 0 00-.77.838 8.01 8.01 0 004.996 6.804A7.478 7.478 0 0012 18.75a7.48 7.48 0 004.97-1.892 8.01 8.01 0 003.88-6.195.75.75 0 00-.745-.815 7.56 7.56 0 01-2.92-1.393 9.746 9.746 0 00-4.222-6.169z" clipRule="evenodd" />
+                </svg>
+                Popular:
+              </span>
+              {popularDepartments.map(tag => (
+                <button
+                  type="button"
+                  key={tag}
+                  onClick={() => handleTagClick(tag)}
+                  className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium flex items-center gap-1"
+                  title={`View research in ${tag}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
