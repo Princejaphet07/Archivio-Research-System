@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from '../../firebase/config';
-import { sendPasswordResetEmail } from 'firebase/auth';
+// import { sendPasswordResetEmail } from 'firebase/auth'; // Replaced with custom backend
 import newIcon from '../../assets/new icon.png';
 import loginBg from '../../assets/parchment.png';
 import Swal from 'sweetalert2';
@@ -42,49 +42,48 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const PUBLIC_URL = import.meta.env.VITE_PUBLIC_ARCHIVE_URL || 'https://archivio-public.web.app';
-      const actionCodeSettings = {
-        url: `${PUBLIC_URL}/reset-password`,
-        handleCodeInApp: true
-      };
-
       let sentSuccessfully = false;
       try {
-        await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
+        const response = await fetch(`${API_URL}/send-password-reset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: cleanEmail, role: 'adviser' }),
+        });
+
+        let data = {};
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            data = { error: text || `Server error (${response.status})` };
+          }
+        } catch (parseErr) {
+          data = { error: `Server error (${response.status})` };
+        }
+
+        if (!response.ok) {
+          const err = new Error(data.details || data.error || 'Failed to send password reset email');
+          err.code = data.error; 
+          throw err;
+        }
+
         sentSuccessfully = true;
       } catch (fbErr) {
-        console.warn('Firebase client SDK send note:', fbErr.code, fbErr.message);
+        console.warn('Backend send note:', fbErr.code, fbErr.message);
 
+        // Firebase error mapping
         if (fbErr.code === 'auth/user-not-found') {
           throw new Error('No registered account found with this email address. Please make sure you have created an account first.');
         } else if (fbErr.code === 'auth/too-many-requests') {
           throw new Error('Too many requests sent. Please wait a few minutes before trying again.');
-        } else if (fbErr.code === 'auth/invalid-email') {
+        } else if (fbErr.message?.includes('format')) {
           throw new Error('Invalid institutional email address format.');
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-        const response = await fetch(`${API_URL}/send-password-reset`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          sentSuccessfully = true;
         } else {
-          const data = await response.json().catch(() => ({}));
-          let errorMsg = data.error || 'Unable to send reset email. Please try again.';
-          if (errorMsg.includes('No registered account')) {
-            errorMsg = 'No account found with this email address. Please make sure you have created an account first.';
-          } else if (errorMsg.includes('Too many requests')) {
-            errorMsg = 'Too many requests sent. Please wait a few minutes before trying again.';
-          }
-          throw new Error(errorMsg);
+          throw new Error(fbErr.message || 'Unable to send reset email. Please try again.');
         }
       }
 

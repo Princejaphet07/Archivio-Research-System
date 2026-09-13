@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // Only the login page loads immediately — everything else is lazy
 import UnifiedLogin from './pages/UnifiedLogin';
 import DeanActivate from './pages/DeanActivate';
+import ResetPassword from './pages/ResetPassword';
 
 // Lazy-load each sub-app so the browser downloads only the portal the user needs
 const AdminApp = React.lazy(() => import('./admin/App'));
@@ -37,6 +38,9 @@ function App() {
 
           {/* Dean Activation */}
           <Route path="/dean-activate" element={<DeanActivate />} />
+
+          {/* Password Reset (For Admin, Dean, Adviser, Student) */}
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Catch all redirect to login */}
           <Route path="*" element={<Navigate to="/" replace />} />

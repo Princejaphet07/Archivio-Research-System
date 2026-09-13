@@ -230,15 +230,12 @@ app.post('/api/send-otp', async (req, res) => {
 // ============================================
 // SEND BRANDED PASSWORD RESET EMAIL (SWU PHINMA TEMPLATE)
 // ============================================
-app.post('/api/send-password-reset', async (req, res) => {
+const handlePasswordReset = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, role } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@phinmaed.com')) {
-      return res.status(400).json({ error: 'Only @phinmaed.com email addresses are supported.' });
-    }
 
     // Verify user exists in Firebase Auth
     try {
@@ -251,10 +248,29 @@ app.post('/api/send-password-reset', async (req, res) => {
       }
     }
 
+    // Admin accounts are not restricted to @phinmaed.com domain.
+    // For other roles, check if the email belongs to @phinmaed.com or is in admins collection.
+    if (role !== 'admin' && !cleanEmail.endsWith('@phinmaed.com')) {
+      let isAdminUser = false;
+      try {
+        if (serviceAccount) {
+          const adminDoc = await getFirestore().collection('admins').doc(cleanEmail).get();
+          if (adminDoc.exists) isAdminUser = true;
+        }
+      } catch (e) {}
+
+      if (!isAdminUser) {
+        return res.status(400).json({ error: 'Only @phinmaed.com email addresses are supported.' });
+      }
+    }
+
     // Generate secure reset token stored in Firestore so rate limits are bypassed
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const PUBLIC_URL = process.env.PUBLIC_ARCHIVE_URL || 'https://archivio-public.web.app';
-    let customResetLink = `${PUBLIC_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+    // Direct link to main system (Admin, Dean, Adviser, Student portal) instead of public archive
+    const MAIN_APP_URL = req.headers.origin 
+      || process.env.FRONTEND_URL 
+      || 'https://archivio-research-system.web.app';
+    let customResetLink = `${MAIN_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
     if (serviceAccount) {
       try {
@@ -270,11 +286,13 @@ app.post('/api/send-password-reset', async (req, res) => {
 
       // Also attempt Firebase native reset link if within rate limit
       try {
-        const rawLink = await getAuth().generatePasswordResetLink(cleanEmail);
+        const rawLink = await getAuth().generatePasswordResetLink(cleanEmail, {
+          url: `${MAIN_APP_URL}/reset-password`
+        });
         const parsedUrl = new URL(rawLink);
         const oobCode = parsedUrl.searchParams.get('oobCode');
         if (oobCode) {
-          customResetLink = `${PUBLIC_URL}/reset-password?oobCode=${oobCode}&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+          customResetLink = `${MAIN_APP_URL}/reset-password?oobCode=${oobCode}&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
         }
       } catch (nativeResetErr) {
         console.warn('Firebase Identity Toolkit rate-limited or unavailable; proceeding with ARCHIVIO secure token reset:', nativeResetErr.message);
@@ -388,7 +406,11 @@ app.post('/api/send-password-reset', async (req, res) => {
     console.error('Send Password Reset Error:', error);
     res.status(500).json({ error: error.message || 'Failed to send reset email' });
   }
-});
+};
+
+app.post('/api/send-password-reset', handlePasswordReset);
+app.post('/api/auth/reset-password', handlePasswordReset);
+app.post('/api/auth/reset_password', handlePasswordReset);
 
 // ============================================
 // VERIFY RESET TOKEN
