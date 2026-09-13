@@ -53,8 +53,8 @@ const TEAM_MEMBERS = [
     iconEmoji: '🎨',
     badgeStyle: 'bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/60',
     accentGradient: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400',
-    github: 'https://github.com/Princejaphet07',
-    email: 'mailto:japhetvender00@gmail.com'
+    github: 'https://github.com/jezamorasxv',
+    email: 'mailto:jerikazamoras4@gmail.com'
   },
   {
     name: 'Hylla Mae Tejada',
@@ -66,8 +66,8 @@ const TEAM_MEMBERS = [
     iconEmoji: '📋',
     badgeStyle: 'bg-purple-100 text-purple-900 dark:bg-purple-950/70 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/60',
     accentGradient: 'bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-400',
-    github: 'https://github.com/Princejaphet07',
-    email: 'mailto:japhetvender00@gmail.com'
+    github: 'https://github.com/tejadahyllamae',
+    email: 'mailto:tejadahyllamae@gmail.com'
   },
   {
     name: 'Andrea Cañete Perote',
@@ -79,8 +79,8 @@ const TEAM_MEMBERS = [
     iconEmoji: '🚀',
     badgeStyle: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/60',
     accentGradient: 'bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400',
-    github: 'https://github.com/Princejaphet07',
-    email: 'mailto:japhetvender00@gmail.com'
+    github: 'https://github.com/andreavgdeywajk',
+    email: 'mailto:andreaperote04@gmail.com'
   }
 ];
 
