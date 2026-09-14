@@ -63,11 +63,18 @@ export const trackPaperView = (paper) => {
 /**
  * 2. Track Search Queries
  * Triggered when a visitor performs a keyword search in the public archive
+ * Sends both standard Google Analytics 'search' event and custom 'search_research'
  */
 export const trackSearch = (queryStr, resultCount = 0) => {
   const cleanQuery = String(queryStr || '').trim();
   if (!cleanQuery) return;
 
+  // Standard Google Analytics 4 Search Event (Auto-parsed by GA4 Search reports)
+  logPublicEvent('search', {
+    search_term: cleanQuery.slice(0, 100)
+  });
+
+  // Custom ARCHIVIO research search event with results count
   logPublicEvent('search_research', {
     search_term: cleanQuery.slice(0, 100),
     results_count: Number(resultCount) || 0
