@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'ARCHIVIO Public Search',
-        short_name: 'ARCHIVIO Public',
+        name: 'ARCHIVIO | SWU PHINMA Research Archive',
+        short_name: 'ARCHIVIO',
         description: 'Search Research Archive for SWU PHINMA',
         theme_color: '#6b142c',
         background_color: '#faf7f0',

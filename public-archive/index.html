@@ -7,37 +7,53 @@
     <link rel="icon" type="image/svg+xml" href="/logo.png" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <link rel="mask-icon" href="/logo.png" color="#6b142c" />
-    <title>PUBLIC ARCHIVIO | SWU PHINMA</title>
+    <title>ARCHIVIO | SWU PHINMA Research Archive</title>
     <meta name="description" content="Official Public Research Repository of Southwestern University PHINMA. Discover and access published academic capstone and research papers." />
-    <meta name="keywords" content="ARCHIVIO, PUBLIC ARCHIVIO, SWU PHINMA, Southwestern University, Research Archive, Capstone Projects, Academic Repository" />
+    <meta name="keywords" content="ARCHIVIO, SWU PHINMA, Southwestern University, Research Archive, Capstone Projects, Academic Repository" />
     <meta name="author" content="Southwestern University PHINMA" />
     <link rel="canonical" href="https://archivio-public.web.app/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://archivio-public.web.app/" />
-    <meta property="og:title" content="PUBLIC ARCHIVIO | SWU PHINMA" />
+    <meta property="og:title" content="ARCHIVIO | SWU PHINMA Research Archive" />
     <meta property="og:description" content="Official Public Research Repository of Southwestern University PHINMA. Discover and access published academic capstone and research papers." />
     <meta property="og:image" content="https://archivio-public.web.app/pwa-512x512.png" />
-    <meta property="og:site_name" content="PUBLIC ARCHIVIO" />
+    <meta property="og:site_name" content="ARCHIVIO" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="PUBLIC ARCHIVIO | SWU PHINMA" />
+    <meta name="twitter:title" content="ARCHIVIO | SWU PHINMA Research Archive" />
     <meta name="twitter:description" content="Official Public Research Repository of Southwestern University PHINMA. Discover and access published academic capstone and research papers." />
     <meta name="twitter:image" content="https://archivio-public.web.app/pwa-512x512.png" />
 
-    <!-- Schema.org JSON-LD for Google Search -->
+    <!-- Schema.org JSON-LD for Google Search (Site Name & Organization) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "EducationalOrganization",
-      "name": "ARCHIVIO - SWU PHINMA Research Archive",
-      "url": "https://archivio-public.web.app/",
-      "logo": "https://archivio-public.web.app/logo.png",
-      "description": "Institutional repository and digital research management system for Southwestern University PHINMA.",
-      "sameAs": [
-        "https://swu.phinma.edu.ph"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://archivio-public.web.app/#website",
+          "url": "https://archivio-public.web.app/",
+          "name": "ARCHIVIO",
+          "alternateName": [
+            "ARCHIVIO SWU PHINMA",
+            "SWU PHINMA Research Archive",
+            "Public Archivio"
+          ],
+          "publisher": {
+            "@id": "https://archivio-public.web.app/#organization"
+          }
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://archivio-public.web.app/#organization",
+          "name": "Southwestern University PHINMA",
+          "url": "https://swu.phinma.edu.ph",
+          "logo": "https://archivio-public.web.app/logo.png",
+          "description": "Institutional repository and digital research management system for Southwestern University PHINMA."
+        }
       ]
     }
     </script>
