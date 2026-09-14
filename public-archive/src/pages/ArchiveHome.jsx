@@ -13,14 +13,13 @@ function ArchiveHome() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [placeholderText, setPlaceholderText] = useState('');
-  const [popularDepartments, setPopularDepartments] = useState([]);
   const navigate = useNavigate();
   const currentDate = React.useMemo(() => Date.now(), []);
 
   useEffect(() => {
     const phrases = [
       'Search for "Computer Science"...',
-      'Search for "Information Technology"...',
+      'Search for "Nursing"...',
       'Search by author name...',
       'Search keywords...',
     ];
@@ -66,7 +65,7 @@ function ArchiveHome() {
   };
 
   const handleTagClick = (tag) => {
-    navigate('/browse', { state: { dept: tag, sort: 'Most Viewed' } });
+    navigate('/browse', { state: { q: tag } });
   };
   const [stats, setStats] = useState({
     papers: 0,
@@ -108,7 +107,6 @@ function ArchiveHome() {
     const computeData = () => {
       if (!subsList.length) {
         setPublishedPapers([]);
-        setPopularDepartments([]);
         setStats({ papers: 0, authors: 0, departments: 1, advisers: 0 });
         setTimeout(() => setLoading(false), 800);
         return;
@@ -145,40 +143,6 @@ function ArchiveHome() {
         if (p.adviserName) uniqueAdvisers.add(p.adviserName);
         if (p.program) uniqueDepartments.add(p.program);
       });
-
-      // Compute popular departments ranked dynamically by highest view counts
-      const deptViewsMap = {};
-      enrichedPapers.forEach(p => {
-        const dept = p.program || p.department || p.category;
-        if (dept && typeof dept === 'string' && dept.trim()) {
-          const cleanDept = dept.trim();
-          const views = Number(p.views) || 0;
-          deptViewsMap[cleanDept] = (deptViewsMap[cleanDept] || 0) + views;
-        }
-      });
-
-      let sortedPopularDepts = Object.keys(deptViewsMap)
-        .sort((a, b) => deptViewsMap[b] - deptViewsMap[a])
-        .slice(0, 5);
-
-      // Fallback: If no department/program on papers, rank keywords with highest views
-      if (sortedPopularDepts.length === 0) {
-        const kwViewsMap = {};
-        enrichedPapers.forEach(p => {
-          const views = Number(p.views) || 0;
-          (p.keywords || []).forEach(kw => {
-            if (kw && typeof kw === 'string' && kw.trim()) {
-              const cleanKw = kw.trim();
-              kwViewsMap[cleanKw] = (kwViewsMap[cleanKw] || 0) + views;
-            }
-          });
-        });
-        sortedPopularDepts = Object.keys(kwViewsMap)
-          .sort((a, b) => kwViewsMap[b] - kwViewsMap[a])
-          .slice(0, 5);
-      }
-
-      setPopularDepartments(sortedPopularDepts);
 
       setStats({
         papers: enrichedPapers.length,
@@ -262,24 +226,18 @@ function ArchiveHome() {
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0 shadow-sm border border-[#6b142c]/50">Search</button>
           </form>
-          {popularDepartments.length > 0 && (
-            <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
-              <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">
-                Popular:
+          <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
+            <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">Popular:</span>
+            {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
+              <span 
+                key={tag} 
+                onClick={() => handleTagClick(tag)} 
+                className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium"
+              >
+                {tag}
               </span>
-              {popularDepartments.map(tag => (
-                <button
-                  type="button"
-                  key={tag}
-                  onClick={() => handleTagClick(tag)}
-                  className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium"
-                  title={`View research in ${tag}`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </div>
 
