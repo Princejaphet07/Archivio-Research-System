@@ -7,6 +7,7 @@ import { doc, onSnapshot, getDoc, updateDoc, setDoc, arrayRemove } from 'firebas
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
+import { trackBookmark } from '../utils/analytics';
 
 function ArchiveBookmarks() {
   const { currentUser } = useAuth();
@@ -101,6 +102,7 @@ function ArchiveBookmarks() {
   }, [currentUser]);
 
   const handleRemoveBookmark = async (paperId) => {
+    trackBookmark({ id: paperId }, 'remove');
     if (!currentUser) {
       // Guest User: Remove from LocalStorage
       try {

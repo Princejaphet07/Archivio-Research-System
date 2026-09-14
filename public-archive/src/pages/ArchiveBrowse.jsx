@@ -7,6 +7,13 @@ import { collection, onSnapshot, query, where, doc, updateDoc, setDoc, arrayUnio
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
+import { 
+  trackSearch, 
+  trackDepartmentFilter, 
+  trackYearFilter, 
+  trackBookmark, 
+  trackCitation 
+} from '../utils/analytics';
 
 const HighlightedText = ({ text, highlight }) => {
   if (!highlight.trim() || !text) return <>{text}</>;
@@ -44,7 +51,11 @@ function ArchiveBrowse() {
   const currentDate = useMemo(() => Date.now(), []);
 
   const toggleYear = (year) => {
-    setSelectedYears(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]);
+    setSelectedYears(prev => {
+      const willInclude = !prev.includes(year);
+      if (willInclude) trackYearFilter(year);
+      return willInclude ? [...prev, year] : prev.filter(y => y !== year);
+    });
     setDisplayLimit(5);
   };
 
@@ -54,11 +65,13 @@ function ArchiveBrowse() {
 
   const toggleDepartment = (dept) => {
     const normDept = normalizeDepartment(dept);
-    setSelectedDepartments(prev => 
-      prev.some(d => normalizeDepartment(d) === normDept)
+    setSelectedDepartments(prev => {
+      const isAlready = prev.some(d => normalizeDepartment(d) === normDept);
+      if (!isAlready) trackDepartmentFilter(normDept);
+      return isAlready
         ? prev.filter(d => normalizeDepartment(d) !== normDept)
-        : [...prev, normDept]
-    );
+        : [...prev, normDept];
+    });
     setDisplayLimit(5);
   };
 
@@ -140,6 +153,8 @@ function ArchiveBrowse() {
       return;
     }
 
+    trackBookmark(paper, 'add');
+
     if (!currentUser) {
       // Guest logic
       try {
@@ -168,6 +183,7 @@ function ArchiveBrowse() {
   };
 
   const handleShare = async (paper) => {
+    trackCitation(paper, 'Share');
     const url = `${window.location.origin}/viewer/${paper.id}`;
     const title = paper.researchTitle || paper.title || 'ARCHIVIO Research Paper';
     const text = `Check out this research paper on ARCHIVIO: ${title}`;
@@ -289,6 +305,16 @@ function ArchiveBrowse() {
   });
 
   const paginatedPapers = filteredPapers.slice(0, displayLimit);
+
+  // Google Analytics: Track search queries (debounced to avoid event spamming)
+  useEffect(() => {
+    const trimmed = (searchQuery || '').trim();
+    if (!trimmed || trimmed.length < 2) return;
+    const timeout = setTimeout(() => {
+      trackSearch(trimmed, filteredPapers.length);
+    }, 1500);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, filteredPapers.length]);
 
   // Calculate popular keywords (Dynamic by Department)
   const getPopularKeywords = () => {

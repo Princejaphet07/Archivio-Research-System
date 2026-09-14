@@ -7,8 +7,8 @@ import { db } from '../firebase/config';
 import { collection, onSnapshot, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
-
 import { normalizeDepartment } from '../utils/normalizeDepartment';
+import { trackSearch, trackDepartmentFilter, trackLike } from '../utils/analytics';
 export { normalizeDepartment };
 
 function ArchiveHome() {
@@ -64,11 +64,13 @@ function ArchiveHome() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
+      trackSearch(searchInput.trim(), 0);
       navigate('/browse', { state: { q: searchInput.trim() } });
     }
   };
 
   const handleTagClick = (dept) => {
+    trackDepartmentFilter(dept);
     navigate('/browse', { state: { dept: dept, sort: 'Most Viewed' } });
   };
   const [stats, setStats] = useState({
@@ -86,6 +88,7 @@ function ArchiveHome() {
       Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
       return;
     }
+    trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
     const likes = paper.likes || [];
     if (likes.includes(currentUser.uid)) {

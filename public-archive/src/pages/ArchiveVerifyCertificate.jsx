@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
+import { trackCertificateVerify } from '../utils/analytics';
 
 export default function ArchiveVerifyCertificate() {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export default function ArchiveVerifyCertificate() {
       try {
         const docRef = doc(db, 'submissions', id);
         const snap = await getDoc(docRef);
+        trackCertificateVerify(id, snap.exists());
 
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() };

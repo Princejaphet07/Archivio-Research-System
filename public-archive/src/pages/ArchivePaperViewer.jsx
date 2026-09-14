@@ -11,6 +11,13 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import ForceGraph2D from 'react-force-graph-2d';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
+import { 
+  trackPaperView, 
+  trackBookmark, 
+  trackLike, 
+  trackCitation, 
+  trackAiChat 
+} from '../utils/analytics';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -317,6 +324,7 @@ function ArchivePaperViewer() {
   }, [paper, relatedPapers]);
 
   const hasIncremented = useRef(false);
+  const hasTrackedAnalytics = useRef(false);
 
   // Increment view count when paper viewer opens
   useEffect(() => {
@@ -326,6 +334,14 @@ function ArchivePaperViewer() {
       updateDoc(docRef, { views: increment(1) }).catch(err => console.error("Failed to increment views:", err));
     }
   }, [id]);
+
+  // Track paper readership in Google Analytics (Public Archive exclusively)
+  useEffect(() => {
+    if (paper && !hasTrackedAnalytics.current) {
+      hasTrackedAnalytics.current = true;
+      trackPaperView(paper);
+    }
+  }, [paper]);
 
   // Initialize Chat when paper loads
   useEffect(() => {
@@ -344,6 +360,7 @@ function ArchivePaperViewer() {
     setChatInput('');
     setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);
+    trackAiChat(paper, userMessage.length);
 
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
@@ -477,6 +494,7 @@ function ArchivePaperViewer() {
     a.download = `${titleStr.replace(/\s+/g, '_')}.ris`;
     a.click();
     URL.revokeObjectURL(url);
+    trackCitation(paper, 'RIS');
   };
 
   const generateBibTeX = () => {
@@ -501,10 +519,12 @@ function ArchivePaperViewer() {
     a.download = `${titleStr.replace(/\s+/g, '_')}.bib`;
     a.click();
     URL.revokeObjectURL(url);
+    trackCitation(paper, 'BibTeX');
   };
 
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
+    trackCitation(paper, 'Link');
     Swal.fire({
       title: 'Link Copied',
       text: 'The link has been copied to your clipboard.',
@@ -532,6 +552,7 @@ function ArchivePaperViewer() {
       Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
       return;
     }
+    trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
     const likes = paper.likes || [];
     if (likes.includes(currentUser.uid)) {
@@ -551,6 +572,8 @@ function ArchivePaperViewer() {
       });
       return;
     }
+
+    trackBookmark(paper, 'add');
 
     if (!currentUser) {
       // Guest logic
