@@ -74,7 +74,12 @@ function ArchiveBrowse() {
     if (location.state?.sort) {
       setSortOption(location.state.sort);
     }
-  }, [location.state?.dept, location.state?.sort]);
+    if (location.state?.q !== undefined) {
+      setSearchQuery(location.state.q);
+      setDisplayLimit(5);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location.state?.dept, location.state?.sort, location.state?.q]);
 
   const { currentUser } = useAuth();
 

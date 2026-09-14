@@ -13,6 +13,7 @@ function ArchiveHome() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [placeholderText, setPlaceholderText] = useState('');
+  const [popularPapers, setPopularPapers] = useState([]);
   const navigate = useNavigate();
   const currentDate = React.useMemo(() => Date.now(), []);
 
@@ -65,7 +66,7 @@ function ArchiveHome() {
   };
 
   const handleTagClick = (tag) => {
-    navigate('/browse', { state: { q: tag } });
+    navigate('/browse', { state: { q: tag, sort: 'Most Viewed' } });
   };
   const [stats, setStats] = useState({
     papers: 0,
@@ -107,6 +108,7 @@ function ArchiveHome() {
     const computeData = () => {
       if (!subsList.length) {
         setPublishedPapers([]);
+        setPopularPapers([]);
         setStats({ papers: 0, authors: 0, departments: 1, advisers: 0 });
         setTimeout(() => setLoading(false), 800);
         return;
@@ -132,6 +134,18 @@ function ArchiveHome() {
       // Sort newest first client-side
       const sortedPapers = enrichedPapers.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
       setPublishedPapers(sortedPapers);
+
+      // Compute popular research papers ranked dynamically by highest views
+      const topPapers = [...enrichedPapers]
+        .sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0))
+        .filter(p => (p.researchTitle || p.title))
+        .slice(0, 5)
+        .map(p => ({
+          id: p.id,
+          title: p.researchTitle || p.title,
+          views: Number(p.views) || 0
+        }));
+      setPopularPapers(topPapers);
 
       // Compute stats
       const uniqueAuthors = new Set();
@@ -226,18 +240,22 @@ function ArchiveHome() {
             </div>
             <button type="submit" className="bg-[#6b142c] text-white px-8 py-3 rounded-lg md:rounded hover:bg-[#4a0d1e] transition font-medium cursor-pointer w-full md:w-auto mt-1 md:mt-0 shadow-sm border border-[#6b142c]/50">Search</button>
           </form>
-          <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
-            <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">Popular:</span>
-            {['Computer Science', 'Business', 'Nursing', 'Education', 'Engineering'].map(tag => (
-              <span 
-                key={tag} 
-                onClick={() => handleTagClick(tag)} 
-                className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          {popularPapers.length > 0 && (
+            <div className="flex flex-wrap justify-center items-center gap-2 mt-6 text-[10px] md:text-xs font-sans px-2">
+              <span className="text-[#d6ad60] uppercase tracking-wider font-bold w-full md:w-auto text-center mb-1 md:mb-0 opacity-90 mr-1">Popular:</span>
+              {popularPapers.map(paper => (
+                <button 
+                  type="button"
+                  key={paper.id} 
+                  onClick={() => handleTagClick(paper.title)} 
+                  className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium max-w-[200px] sm:max-w-[280px] truncate"
+                  title={`${paper.title} (${paper.views} view${paper.views === 1 ? '' : 's'})`}
+                >
+                  {paper.title}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
