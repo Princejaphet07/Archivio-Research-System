@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import { collection, onSnapshot, query, where, doc, updateDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
+import { normalizeDepartment } from '../utils/normalizeDepartment';
 
 const HighlightedText = ({ text, highlight }) => {
   if (!highlight.trim() || !text) return <>{text}</>;
@@ -33,7 +34,7 @@ function ArchiveBrowse() {
   const [expandedAbstracts, setExpandedAbstracts] = useState({});
   const [sortOption, setSortOption] = useState(location.state?.sort || 'Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
-  const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [location.state.dept] : []);
+  const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [normalizeDepartment(location.state.dept)] : []);
   const [loading, setLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(5);
   const [userBookmarks, setUserBookmarks] = useState([]);
@@ -52,7 +53,12 @@ function ArchiveBrowse() {
   };
 
   const toggleDepartment = (dept) => {
-    setSelectedDepartments(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]);
+    const normDept = normalizeDepartment(dept);
+    setSelectedDepartments(prev => 
+      prev.some(d => normalizeDepartment(d) === normDept)
+        ? prev.filter(d => normalizeDepartment(d) !== normDept)
+        : [...prev, normDept]
+    );
     setDisplayLimit(5);
   };
 
@@ -216,6 +222,7 @@ function ArchiveBrowse() {
           groupName: group?.groupName || sub.groupName,
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
+          department: group?.department || sub.department,
           authorDisplay: group 
             ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
@@ -257,8 +264,9 @@ function ArchiveBrowse() {
     
     // Department filter logic
     const matchesDept = selectedDepartments.length === 0 || selectedDepartments.some(dept => {
-      const d = dept.toLowerCase();
-      return program.includes(d) || d.includes(program);
+      const targetDept = normalizeDepartment(dept).toLowerCase();
+      const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
+      return normPaperDept === targetDept;
     });
     
     return matchesSearch && matchesYear && matchesDept;
@@ -289,10 +297,8 @@ function ArchiveBrowse() {
     // Filter papers by selected department first if any
     const papersToAnalyze = selectedDepartments.length > 0 
       ? publishedPapers.filter(paper => {
-          return selectedDepartments.some(dept => {
-            const p = (paper.program || paper.category || '').toLowerCase();
-            return p.includes(dept.toLowerCase());
-          });
+          const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
+          return selectedDepartments.some(dept => normalizeDepartment(dept).toLowerCase() === normPaperDept);
         })
       : publishedPapers;
 
@@ -445,12 +451,12 @@ function ArchiveBrowse() {
             <div>
               <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Department</h3>
               <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
-                {['Computer Science', 'Information Technology', 'Nursing', 'Business', 'Education', 'Engineering', 'Architecture', 'Pharmacy'].map(dept => (
+                {['Information Technology', 'Computer Science', 'Information Systems', 'Nursing', 'Business Administration', 'Education', 'Engineering', 'Architecture', 'Pharmacy', 'Criminology'].map(dept => (
                   <label key={dept} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
                     <input 
                       type="checkbox" 
                       className="w-4 h-4 accent-[#7a2039] cursor-pointer"
-                      checked={selectedDepartments.includes(dept)}
+                      checked={selectedDepartments.some(d => normalizeDepartment(d) === dept)}
                       onChange={() => toggleDepartment(dept)}
                     />
                     <span className="group-hover:text-[#7a2039] transition">{dept}</span>
@@ -590,7 +596,7 @@ function ArchiveBrowse() {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
                       <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded text-xs font-medium">
-                        {paper.program || 'Research'}
+                        {normalizeDepartment(paper.program || paper.department || paper.category) || 'Research'}
                       </span>
                       <span className="text-xs text-stone-400 dark:text-gray-500 font-medium">
                         Published: {new Date(paper.publishedAt || currentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -698,7 +704,7 @@ function ArchiveBrowse() {
             <div className="p-6 border-b border-stone-200 dark:border-gray-800 flex justify-between items-start bg-white/50 dark:bg-gray-800/50">
               <div>
                 <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-600 dark:text-gray-300 rounded text-[10px] font-bold uppercase tracking-wider mb-3 inline-block">
-                  {previewPaper.program || 'Research'}
+                  {normalizeDepartment(previewPaper.program || previewPaper.department || previewPaper.category) || 'Research'}
                 </span>
                 <h2 className="text-2xl font-bold text-stone-900 dark:text-white font-serif leading-tight">
                   <HighlightedText text={previewPaper.researchTitle || 'Untitled Research'} highlight={searchQuery} />

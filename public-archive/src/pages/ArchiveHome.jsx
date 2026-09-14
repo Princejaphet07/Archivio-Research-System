@@ -8,6 +8,9 @@ import { collection, onSnapshot, query, where, doc, updateDoc, arrayUnion, array
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
+import { normalizeDepartment } from '../utils/normalizeDepartment';
+export { normalizeDepartment };
+
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,9 +141,9 @@ function ArchiveHome() {
       // Compute popular departments ranked dynamically by highest view counts
       const deptViewsMap = {};
       enrichedPapers.forEach(p => {
-        const dept = p.department || p.program || p.category;
-        if (dept && typeof dept === 'string' && dept.trim()) {
-          const cleanDept = dept.trim();
+        const rawDept = p.department || p.program || p.category;
+        if (rawDept && typeof rawDept === 'string' && rawDept.trim()) {
+          const cleanDept = normalizeDepartment(rawDept);
           const views = Number(p.views) || 0;
           deptViewsMap[cleanDept] = (deptViewsMap[cleanDept] || 0) + views;
         }
@@ -160,7 +163,8 @@ function ArchiveHome() {
       enrichedPapers.forEach(p => {
         if (p.studentUid) uniqueAuthors.add(p.studentUid);
         if (p.adviserName) uniqueAdvisers.add(p.adviserName);
-        if (p.program) uniqueDepartments.add(p.program);
+        const rawDept = p.department || p.program || p.category;
+        if (rawDept) uniqueDepartments.add(normalizeDepartment(rawDept));
       });
 
       setStats({
@@ -193,25 +197,15 @@ function ArchiveHome() {
 
     const counts = {};
     publishedPapers.forEach(p => {
-      let cat = p.category || p.program || 'Uncategorized';
-      
-      // Normalize common names
-      const lowerCat = cat.toLowerCase();
-      if (lowerCat.includes('information technology') || lowerCat === 'bsit') cat = 'Information Technology';
-      else if (lowerCat.includes('information system') || lowerCat === 'bsis') cat = 'Information Systems';
-      else if (lowerCat.includes('computer science') || lowerCat === 'bscs') cat = 'Computer Science';
-      else if (lowerCat.includes('nursing')) cat = 'Nursing';
-      else if (lowerCat.includes('business') || lowerCat.includes('management')) cat = 'Business Administration';
-      else if (lowerCat.includes('education') || lowerCat.includes('teaching')) cat = 'Education';
-      else cat = cat.replace(/^BS\s+/i, ''); // Just strip 'BS ' prefix if any
-
+      const rawCat = p.category || p.department || p.program;
+      const cat = normalizeDepartment(rawCat);
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
     return Object.entries(counts).map(([name, count]) => ({
       name,
       papers: `${count} paper${count === 1 ? '' : 's'}`
-    })).sort((a, b) => b.papers.split(' ')[0] - a.papers.split(' ')[0]);
+    })).sort((a, b) => parseInt(b.papers) - parseInt(a.papers));
   }, [publishedPapers]);
 
   return (
@@ -313,8 +307,8 @@ function ArchiveHome() {
                 
                 <div className="relative z-10">
                   <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
-                    <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[150px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
-                      {paper.program || 'Research'}
+                    <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[180px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
+                      {normalizeDepartment(paper.program || paper.department || paper.category) || 'Research'}
                     </span>
                     <span className="font-medium bg-stone-100 dark:bg-gray-800 px-2 py-1 rounded-md">{new Date(paper.publishedAt || currentDate).getFullYear()}</span>
                   </div>
@@ -380,7 +374,7 @@ function ArchiveHome() {
 
           <div className="flex gap-4 overflow-x-auto pb-6 pt-2 font-sans snap-x">
             {categories.map((cat, index) => (
-              <Link to="/browse" key={index} className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block">
+              <Link to="/browse" state={{ dept: cat.name }} key={index} className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block">
                 <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm">{cat.name}</h3>
                 <div className="flex justify-between items-center text-xs text-stone-500 dark:text-gray-400">
                   <span>{cat.papers}</span>

@@ -10,6 +10,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import ForceGraph2D from 'react-force-graph-2d';
+import { normalizeDepartment } from '../utils/normalizeDepartment';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -258,19 +259,19 @@ function ArchivePaperViewer() {
 
   // Fetch Related Researches
   useEffect(() => {
-    if (!paper || (!paper.program && !paper.category)) return;
+    if (!paper) return;
 
     const fetchRelated = async () => {
       try {
         const qRelated = query(
           collection(db, 'submissions'),
-          where('reviewStatus', '==', 'published'),
-          where('program', '==', paper.program || paper.category)
+          where('reviewStatus', '==', 'published')
         );
         const snapshot = await getDocs(qRelated);
+        const currentDept = normalizeDepartment(paper.program || paper.department || paper.category);
         const related = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(doc => doc.id !== paper.id) // Exclude current paper
+          .filter(doc => doc.id !== paper.id && normalizeDepartment(doc.program || doc.department || doc.category) === currentDept)
           .slice(0, 15); // Increased to 15 for map visualization
 
         setRelatedPapers(related);
@@ -1060,7 +1061,7 @@ function ArchivePaperViewer() {
                     relatedPapers.slice(0, 5).map(rp => ( // Limit list view to 5 to keep sidebar clean
                       <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded p-4 shadow-sm hover:shadow-md transition relative group">
                         <span className="text-[10px] bg-stone-100 dark:bg-gray-600 px-2 py-1 rounded text-stone-600 dark:text-gray-300 font-medium mb-2 inline-block truncate max-w-full">
-                          {rp.program || 'Research'}
+                          {normalizeDepartment(rp.program || rp.department || rp.category) || 'Research'}
                         </span>
                         <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-1 line-clamp-2" title={rp.researchTitle || rp.title}>
                           {rp.researchTitle || rp.title || 'Untitled Research'}
@@ -1090,7 +1091,7 @@ function ArchivePaperViewer() {
                             <span>🕸️</span> Interactive Research Network
                           </h2>
                           <p className="text-xs text-stone-500 dark:text-gray-400">
-                            Explore connections between papers in <strong>{paper.program || paper.category}</strong>. Drag nodes to interact.
+                            Explore connections between papers in <strong>{normalizeDepartment(paper.program || paper.department || paper.category)}</strong>. Drag nodes to interact.
                           </p>
                         </div>
                         <button

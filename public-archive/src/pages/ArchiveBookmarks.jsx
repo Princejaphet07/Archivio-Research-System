@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import { doc, onSnapshot, getDoc, updateDoc, setDoc, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
+import { normalizeDepartment } from '../utils/normalizeDepartment';
 
 function ArchiveBookmarks() {
   const { currentUser } = useAuth();
@@ -49,7 +50,7 @@ function ArchiveBookmarks() {
 
           return {
             id: pSnap.id,
-            category: categoryDisplay || 'Uncategorized',
+            category: normalizeDepartment(categoryDisplay) || 'Information Technology',
             dateSaved: `Saved ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
             title: titleDisplay || 'Untitled',
             authors: authorDisplay,
