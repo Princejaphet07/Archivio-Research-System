@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from '../../firebase/config';
 // import { sendPasswordResetEmail } from 'firebase/auth'; // Replaced with custom backend
 import newIcon from '../../assets/new icon.png';
 import loginBg from '../../assets/parchment.png';
 import Swal from 'sweetalert2';
+import ReCaptcha from '../../components/ReCaptcha';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,8 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [isSent, setIsSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const recaptchaRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_BACKEND_URL 
     ? `${import.meta.env.VITE_BACKEND_URL}/api` 
@@ -33,6 +36,11 @@ export default function ForgotPassword() {
 
     if (!cleanEmail) {
       setError('Please enter your email address.');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please verify that you are not a robot before requesting a password reset link.');
       return;
     }
 
@@ -102,6 +110,8 @@ export default function ForgotPassword() {
       }
     } catch (err) {
       console.error('Password reset error:', err);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
       let errorMsg = err.message || 'Failed to send password reset email. Please try again.';
 
       if (err.name === 'AbortError' || err.message.includes('Failed to fetch')) {
@@ -158,6 +168,13 @@ export default function ForgotPassword() {
                   />
                 </div>
               </div>
+
+              <ReCaptcha
+                ref={recaptchaRef}
+                onChange={setCaptchaToken}
+                className="mb-4"
+              />
+
               <button
                 type="submit"
                 disabled={loading}

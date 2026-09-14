@@ -26,7 +26,9 @@ jobs:
       - name: Configure Production Environment Variables
         run: |
           echo "VITE_BACKEND_URL=https://archivio-email-service.onrender.com" > .env
+          echo "VITE_RECAPTCHA_SITE_KEY=6Lf197otAAAAAKWaNv2gSG5G2pJBQeHa0Vh8v5IB" >> .env
           echo "VITE_BACKEND_URL=https://archivio-email-service.onrender.com" > public-archive/.env
+          echo "VITE_RECAPTCHA_SITE_KEY=6Lf197otAAAAAKWaNv2gSG5G2pJBQeHa0Vh8v5IB" >> public-archive/.env
 
       - name: Build Both Applications
         run: npm run build:all

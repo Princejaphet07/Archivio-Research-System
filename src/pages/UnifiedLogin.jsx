@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, getDoc, getCountFromServer, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { Mail, LockKeyhole, X } from 'lucide-react';
+import ReCaptcha from '../components/ReCaptcha';
 
 import logo from '../assets/logo.png';
 import loginBg from '../assets/parchment.png';
@@ -63,6 +64,8 @@ function UnifiedLogin() {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const recaptchaRef = useRef(null);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -83,6 +86,12 @@ function UnifiedLogin() {
     e.preventDefault();
     
     setError('');
+
+    if (!captchaToken) {
+      setError('Please verify that you are not a robot before signing in.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -274,6 +283,8 @@ function UnifiedLogin() {
 
     } catch (error) {
       console.error('Login error:', error);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
       let errorMsg = 'Login failed. Please check your credentials.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         errorMsg = 'Incorrect email or password.';
@@ -443,6 +454,8 @@ function UnifiedLogin() {
                 Forgot Password?
               </Link>
             </div>
+
+            <ReCaptcha ref={recaptchaRef} onChange={setCaptchaToken} className="mt-4 mb-1" />
 
             <button
               type="submit"

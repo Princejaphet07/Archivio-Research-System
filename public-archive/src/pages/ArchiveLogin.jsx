@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase/config';
 import { 
@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
 import bg from '../assets/parchment.png';
 import { useTheme } from '../context/ThemeContext';
+import ReCaptcha from '../components/ReCaptcha';
 
 function ArchiveLogin() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -29,6 +30,8 @@ function ArchiveLogin() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const recaptchaRef = useRef(null);
   const [stats, setStats] = useState({ papers: 0, authors: 0, programs: 0 });
   const navigate = useNavigate();
   const location = useLocation();
@@ -139,6 +142,15 @@ function ArchiveLogin() {
         return;
       }
     }
+
+    if (!captchaToken) {
+      fireAlert({
+        icon: 'warning',
+        title: 'Verification Required',
+        text: 'Please verify that you are not a robot before signing in.'
+      });
+      return;
+    }
     
     setLoading(true);
     try {
@@ -153,6 +165,8 @@ function ArchiveLogin() {
       navigate(from, { replace: true });
     } catch (error) {
       console.error(error);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
       let msg = 'Authentication failed. Please check your credentials.';
       if (error.code === 'auth/email-already-in-use') msg = 'This email is already registered. Please log in.';
       if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = 'Invalid email or password.';
@@ -355,14 +369,22 @@ function ArchiveLogin() {
             ></div>
             <button 
               type="button"
-              onClick={() => setIsLogin(true)}
+              onClick={() => {
+                setIsLogin(true);
+                recaptchaRef.current?.reset();
+                setCaptchaToken(null);
+              }}
               className={`flex-1 text-xs font-bold py-2 rounded-full relative z-10 transition-colors ${isLogin ? 'text-[#7a2039] dark:text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'}`}
             >
               Sign In
             </button>
             <button 
               type="button"
-              onClick={() => setIsLogin(false)}
+              onClick={() => {
+                setIsLogin(false);
+                recaptchaRef.current?.reset();
+                setCaptchaToken(null);
+              }}
               className={`flex-1 text-xs font-bold py-2 rounded-full relative z-10 transition-colors ${!isLogin ? 'text-[#7a2039] dark:text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'}`}
             >
               Sign Up
@@ -546,6 +568,12 @@ function ArchiveLogin() {
                 </label>
               </div>
             )}
+
+            <ReCaptcha
+              ref={recaptchaRef}
+              onChange={setCaptchaToken}
+              className="pt-2 pb-1"
+            />
 
             <button 
               type="submit" 

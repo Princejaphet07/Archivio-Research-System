@@ -190,7 +190,7 @@ app.get('/api/debug-smtp', async (req, res) => {
 // and falls back to Nodemailer SMTP on local development machines.
 // ============================================
 const GOOGLE_SCRIPT_WEBHOOK_URL = process.env.GOOGLE_SCRIPT_WEBHOOK_URL 
-  || 'https://script.google.com/macros/s/AKfycbxzK5Lxj2gSY_IFfX5DfedpJND2WDy02Z9f0cbNR3rUjVMW_TYoleR5qse6SP8Vi3HU5Q/exec';
+  || 'https://script.google.com/macros/s/AKfycbw3JnQMBWx186nXipSVSXIHvYqQxOlIiq82hStHt20BQ1mIgfoFOp5O2FFMUor9IlDc/exec';
 
 async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@gmail.com' }) {
   if (GOOGLE_SCRIPT_WEBHOOK_URL) {

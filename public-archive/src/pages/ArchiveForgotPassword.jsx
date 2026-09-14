@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase/config';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/parchment.png';
 import Swal from 'sweetalert2';
+import ReCaptcha from '../components/ReCaptcha';
 
 export default function ArchiveForgotPassword() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -16,6 +17,8 @@ export default function ArchiveForgotPassword() {
   const [error, setError] = useState('');
   const [isSent, setIsSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const recaptchaRef = useRef(null);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -48,6 +51,11 @@ export default function ArchiveForgotPassword() {
 
     if (!cleanEmail.endsWith('@phinmaed.com')) {
       setError('Access is restricted: please enter your official @phinmaed.com institutional email address.');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please verify that you are not a robot before requesting a password reset link.');
       return;
     }
 
@@ -136,6 +144,8 @@ export default function ArchiveForgotPassword() {
       }
     } catch (err) {
       console.error('Password reset error:', err);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
       let errorMsg = err.message || 'Failed to send password reset email. Please try again.';
 
       if (err.name === 'AbortError' || err.message.includes('Failed to fetch')) {
@@ -238,6 +248,12 @@ export default function ArchiveForgotPassword() {
                   <span>Strictly restricted to official <strong>@phinmaed.com</strong> accounts</span>
                 </div>
               </div>
+
+              <ReCaptcha
+                ref={recaptchaRef}
+                onChange={setCaptchaToken}
+                className="pt-1"
+              />
 
               <button
                 type="submit"
