@@ -334,7 +334,7 @@ const handlePasswordReset = async (req, res) => {
       || req.headers.origin 
       || process.env.FRONTEND_URL 
       || 'https://archivio-research-system.web.app';
-    let customResetLink = `${MAIN_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+    const customResetLink = `${MAIN_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
     if (serviceAccount) {
       try {
@@ -346,20 +346,6 @@ const handlePasswordReset = async (req, res) => {
         });
       } catch (fsErr) {
         console.warn('Firestore password_resets write note:', fsErr.message);
-      }
-
-      // Also attempt Firebase native reset link if within rate limit
-      try {
-        const rawLink = await getAuth().generatePasswordResetLink(cleanEmail, {
-          url: `${MAIN_APP_URL}/reset-password`
-        });
-        const parsedUrl = new URL(rawLink);
-        const oobCode = parsedUrl.searchParams.get('oobCode');
-        if (oobCode) {
-          customResetLink = `${MAIN_APP_URL}/reset-password?oobCode=${oobCode}&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
-        }
-      } catch (nativeResetErr) {
-        console.warn('Firebase Identity Toolkit rate-limited or unavailable; proceeding with ARCHIVIO secure token reset:', nativeResetErr.message);
       }
     } else {
       return res.status(500).json({ error: 'Firebase Admin credentials not configured on server' });

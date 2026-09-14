@@ -88,19 +88,22 @@ export default function ArchiveResetPassword() {
               setCodeError(data.error || 'This reset link has expired or has already been used. Please request a new one.');
             }
           }
+          // The backend token is our primary authoritative check. Do NOT fall through to oobCode.
+          return;
         } catch (backendErr) {
           console.error('Backend token verify error:', backendErr);
-          // If network failed but we have oobCode, fall through to oobCode
+          // Only fall through to oobCode if network error occurred AND we have an oobCode
           if (!oobCode && isMounted) {
             setCodeValid(false);
             setVerifyingCode(false);
             setCodeError('Unable to connect to verification server. Please check your connection and try again.');
+            return;
           }
         }
       }
 
-      // 2. If oobCode is present (and token was not verified yet):
-      if (oobCode && isMounted && !codeValid) {
+      // 2. If oobCode is present (and no token was provided or backend was unreachable):
+      if (oobCode && isMounted) {
         try {
           const verifiedEmail = await verifyPasswordResetCode(auth, oobCode);
           if (isMounted) {
@@ -110,7 +113,7 @@ export default function ArchiveResetPassword() {
           }
         } catch (err) {
           console.error('Firebase oobCode verification error:', err);
-          if (isMounted && !token) {
+          if (isMounted) {
             setCodeValid(false);
             setVerifyingCode(false);
             if (err.code === 'auth/expired-action-code') {
@@ -165,6 +168,15 @@ export default function ArchiveResetPassword() {
 
         if (!res.ok) {
           throw new Error(data.error || 'Failed to update password');
+        }
+
+        // Also consume oobCode if present so Firebase Auth marks it redeemed
+        if (oobCode) {
+          try {
+            await confirmPasswordReset(auth, oobCode, newPassword);
+          } catch (e) {
+            // Ignore if already consumed or updated via Admin SDK
+          }
         }
       } else if (oobCode) {
         // Fallback via Firebase client SDK
