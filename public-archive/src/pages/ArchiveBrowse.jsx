@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -44,6 +44,7 @@ function ArchiveBrowse() {
   const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [normalizeDepartment(location.state.dept)] : []);
   const [loading, setLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(5);
+  const lastTrackedQueryRef = useRef('');
   const [userBookmarks, setUserBookmarks] = useState([]);
   const [previewPaper, setPreviewPaper] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -306,15 +307,20 @@ function ArchiveBrowse() {
 
   const paginatedPapers = filteredPapers.slice(0, displayLimit);
 
-  // Google Analytics: Track search queries (debounced to avoid event spamming)
+  // Google Analytics: Track search queries (debounced and de-duplicated to log exactly once)
   useEffect(() => {
     const trimmed = (searchQuery || '').trim();
     if (!trimmed || trimmed.length < 2) return;
+    if (loading) return; // Wait until papers have loaded so filteredPapers.length is exact
+    if (lastTrackedQueryRef.current.toLowerCase() === trimmed.toLowerCase()) return;
+
     const timeout = setTimeout(() => {
+      lastTrackedQueryRef.current = trimmed;
       trackSearch(trimmed, filteredPapers.length);
-    }, 1500);
+    }, 1200);
+
     return () => clearTimeout(timeout);
-  }, [searchQuery, filteredPapers.length]);
+  }, [searchQuery, filteredPapers.length, loading]);
 
   // Calculate popular keywords (Dynamic by Department)
   const getPopularKeywords = () => {

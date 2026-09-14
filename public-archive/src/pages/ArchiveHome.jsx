@@ -8,7 +8,7 @@ import { collection, onSnapshot, query, where, doc, updateDoc, arrayUnion, array
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
-import { trackSearch, trackDepartmentFilter, trackLike } from '../utils/analytics';
+import { trackDepartmentFilter, trackLike } from '../utils/analytics';
 export { normalizeDepartment };
 
 function ArchiveHome() {
@@ -64,7 +64,6 @@ function ArchiveHome() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      trackSearch(searchInput.trim(), 0);
       navigate('/browse', { state: { q: searchInput.trim() } });
     }
   };
