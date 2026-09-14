@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 /* Anti-Screenshot / Print Protections (allows certificate print) */
 @media print {
   @page {
