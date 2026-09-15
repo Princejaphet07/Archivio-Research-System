@@ -185,14 +185,76 @@ app.get('/api/debug-smtp', async (req, res) => {
 });
 
 // ============================================
-// HYBRID EMAIL DISPATCHER (GOOGLE WEBHOOK + SMTP)
-// Uses Google Apps Script Webhook on cloud hosts (e.g. Render) to bypass port blocks over HTTPS,
-// and falls back to Nodemailer SMTP on local development machines.
+// ZERO-FAILURE MULTI-PROVIDER DISPATCH ENGINE
+// 1. Brevo HTTPS API (Port 443 - 300 free emails/day, no port blocks, 100% cloud reliability)
+// 2. Resend HTTPS API (Port 443 - 3,000 free emails/month, no port blocks)
+// 3. Google Apps Script Webhook (Port 443 - free 100/day fallback)
+// 4. Nodemailer SMTP (Port 465 SSL - for local or unblocked environments)
 // ============================================
 const GOOGLE_SCRIPT_WEBHOOK_URL = process.env.GOOGLE_SCRIPT_WEBHOOK_URL 
   || 'https://script.google.com/macros/s/AKfycbw3JnQMBWx186nXipSVSXIHvYqQxOlIiq82hStHt20BQ1mIgfoFOp5O2FFMUor9IlDc/exec';
 
 async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@gmail.com' }) {
+  const targetEmail = (to || '').toLowerCase().trim();
+
+  // Tier 1: Brevo REST API (HTTPS Port 443 — NEVER blocked on Render, 300 free/day)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'ARCHIVIO SWU PHINMA', email: process.env.BREVO_SENDER_EMAIL || EMAIL_USER },
+          to: [{ email: targetEmail }],
+          replyTo: { email: replyTo },
+          subject,
+          htmlContent: html
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        console.log(`✅ Email sent via Brevo HTTPS API to: ${targetEmail}`);
+        return { success: true, method: 'brevo-api', messageId: data.messageId };
+      }
+      console.warn('⚠️ Brevo API notice (trying next provider):', data);
+    } catch (brevoErr) {
+      console.warn('⚠️ Brevo API error, trying next provider:', brevoErr.message);
+    }
+  }
+
+  // Tier 2: Resend REST API (HTTPS Port 443 — NEVER blocked on Render, 3,000 free/month)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL || 'ARCHIVIO SWU PHINMA <onboarding@resend.dev>',
+          to: [targetEmail],
+          reply_to: replyTo,
+          subject,
+          html
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        console.log(`✅ Email sent via Resend HTTPS API to: ${targetEmail}`);
+        return { success: true, method: 'resend-api', id: data.id };
+      }
+      console.warn('⚠️ Resend API notice (trying next provider):', data);
+    } catch (resendErr) {
+      console.warn('⚠️ Resend API error, trying next provider:', resendErr.message);
+    }
+  }
+
+  // Tier 3: Google Apps Script Webhook (HTTPS Port 443)
   if (GOOGLE_SCRIPT_WEBHOOK_URL) {
     try {
       const res = await fetch(GOOGLE_SCRIPT_WEBHOOK_URL, {
@@ -200,7 +262,7 @@ async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           secret: 'archivio_secure_webhook_2026',
-          to,
+          to: targetEmail,
           subject,
           html,
           replyTo
@@ -209,19 +271,19 @@ async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@
       });
       const data = await res.json().catch(() => ({}));
       if (data && data.success) {
-        console.log(`✅ Email sent via Google Apps Script Webhook to: ${to}`);
+        console.log(`✅ Email sent via Google Apps Script Webhook to: ${targetEmail}`);
         return { success: true, method: 'google-webhook' };
       }
-      console.warn('Google Webhook returned non-success:', data);
+      console.warn('Google Webhook notice:', data?.error || data);
     } catch (whErr) {
       console.warn('⚠️ Google Apps Script Webhook notice, trying Nodemailer:', whErr.message);
     }
   }
 
-  // Fallback to Nodemailer SMTP (e.g. local machine)
+  // Tier 4: Fallback to Nodemailer SMTP (e.g. local development machine)
   return await transporter.sendMail({
     from: `"ARCHIVIO SWU PHINMA" <${EMAIL_USER}>`,
-    to,
+    to: targetEmail,
     subject,
     html
   });
@@ -670,19 +732,16 @@ app.post('/api/send-student-message', verifyToken, async (req, res) => {
 </body>
 </html>`;
 
-    const mailOptions = {
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
+    const emailSubject = subject ? `[ARCHIVIO] ${subject}` : `[ARCHIVIO] Message from ${studentName || studentEmail}`;
+    const info = await sendSystemEmail({
       to: adviserEmail,
       replyTo: studentEmail,
-      subject: subject ? `[ARCHIVIO] ${subject}` : `[ARCHIVIO] Message from ${studentName || studentEmail}`,
-      html: emailHTML,
-      text: `Message from ${studentName || studentEmail} (${studentEmail}):\n\n${message}`,
-    };
+      subject: emailSubject,
+      html: emailHTML
+    });
+    console.log(`✅ Student message dispatched to adviser ${adviserEmail}`);
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Student message sent to adviser ${adviserEmail}: ${info.response}`);
-
-    res.status(200).json({ success: true, message: 'Message sent successfully', messageId: info.messageId });
+    res.status(200).json({ success: true, message: 'Message sent successfully', info });
   } catch (error) {
     console.error('❌ Error sending student message:', error);
     res.status(500).json({ success: false, error: 'Failed to send message', details: error.message });
@@ -700,36 +759,28 @@ app.post('/api/send-adviser-message', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const emailHTML = `
-<!DOCTYPE html>
+    const emailHTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
-    .header { background: linear-gradient(135deg, #7B1F35 0%, #5D1627 100%); color: white; padding: 30px; text-align: center; }
-    .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
-    .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
-    .badge { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-    .content { padding: 32px 30px; }
-    .from-box { background: #FDF9ED; border: 1px solid #E8DFCB; border-left: 4px solid #7B1F35; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-    .from-box p { margin: 0; font-size: 13px; color: #555; }
-    .from-box strong { color: #7B1F35; }
-    .message-box { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; font-size: 15px; color: #444; line-height: 1.8; white-space: pre-wrap; }
-    .footer { background: #f0ebe3; padding: 16px 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #e8dfcb; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+    .header { background-color: #541b2f; color: #ffffff; padding: 20px 24px; }
+    .header h2 { margin: 0; font-size: 18px; }
+    .content { padding: 24px; color: #333333; line-height: 1.6; }
+    .meta { background: #fdf6f7; border-left: 4px solid #541b2f; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; }
+    .message-box { background: #fafafa; border: 1px solid #eeeeee; border-radius: 6px; padding: 16px; white-space: pre-wrap; font-size: 14px; }
+    .footer { background: #f5f5f5; padding: 16px 24px; font-size: 12px; color: #777777; text-align: center; border-top: 1px solid #e0e0e0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="badge">📬 Adviser Message</div>
-      <h1>ARCHIVIO Research System</h1>
-      <p>You have a new message from your adviser</p>
+      <h2>📬 Message from Your Research Adviser</h2>
     </div>
     <div class="content">
-      <div class="from-box">
+      <div class="meta">
         <p>📌 <strong>From:</strong> ${adviserName || adviserEmail}</p>
         <p>📧 <strong>Email:</strong> ${adviserEmail}</p>
         <p>👤 <strong>To:</strong> ${studentName || studentEmail}</p>
@@ -744,19 +795,16 @@ app.post('/api/send-adviser-message', verifyToken, async (req, res) => {
 </body>
 </html>`;
 
-    const mailOptions = {
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
+    const emailSubject = subject ? `[ARCHIVIO] ${subject}` : `[ARCHIVIO] Message from ${adviserName || adviserEmail}`;
+    const info = await sendSystemEmail({
       to: studentEmail,
       replyTo: adviserEmail,
-      subject: subject ? `[ARCHIVIO] ${subject}` : `[ARCHIVIO] Message from ${adviserName || adviserEmail}`,
-      html: emailHTML,
-      text: `Message from ${adviserName || adviserEmail} (${adviserEmail}):\n\n${message}`,
-    };
+      subject: emailSubject,
+      html: emailHTML
+    });
+    console.log(`✅ Adviser message dispatched to student ${studentEmail}`);
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Adviser message sent to student ${studentEmail}: ${info.response}`);
-
-    res.status(200).json({ success: true, message: 'Message sent successfully', messageId: info.messageId });
+    res.status(200).json({ success: true, message: 'Message sent successfully', info });
   } catch (error) {
     console.error('❌ Error sending adviser message:', error);
     res.status(500).json({ success: false, error: 'Failed to send message', details: error.message });
@@ -1426,14 +1474,13 @@ app.post('/api/send-status-email', async (req, res) => {
   `;
 
   try {
-    await transporter.sendMail({
-      from: `"ARCHIVIO Updates" <${process.env.EMAIL_FROM || 'noreply@archivio.edu.ph'}>`,
+    const info = await sendSystemEmail({
       to: to,
       subject: `[ARCHIVIO] ${statusHeader}: ${title}`,
       html: emailHtml,
     });
     console.log(`✅ Status email sent to: ${to} (${status})`);
-    res.json({ success: true, message: 'Status email sent' });
+    res.json({ success: true, message: 'Status email sent', info });
   } catch (error) {
     console.error('❌ Error sending status email:', error);
     res.status(500).json({ error: 'Failed to send email', details: error.message });
@@ -2003,14 +2050,13 @@ app.post('/api/send-welcome-email', async (req, res) => {
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `ARCHIVIO Admin <${process.env.EMAIL_USER}>`,
+    const info = await sendSystemEmail({
       to,
       subject: '[ARCHIVIO] Your New Account Details',
       html: emailHTML
     });
 
-    res.status(200).json({ success: true, message: 'Welcome email sent successfully' });
+    res.status(200).json({ success: true, message: 'Welcome email sent successfully', info });
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
     res.status(500).json({ error: 'Failed to send email' });

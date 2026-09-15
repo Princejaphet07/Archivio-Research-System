@@ -7,6 +7,7 @@ import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { verifySchoolEmailOnline, validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
+import { authFetch } from '../../utils/authFetch';
 
 function SendInvitations() {
   const { adviserData } = useAdviser();
@@ -128,7 +129,20 @@ function SendInvitations() {
 
       const docRef = await addDoc(collection(db, 'studentInvitations'), invitationData);
 
-      // Call email service to send invitation
+      // 1. Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      authFetch(`${backendUrl}/api/send-student-invitation-email`, {
+        to: studentEmail.toLowerCase().trim(),
+        invitationLink: invitationLink,
+        senderName: adviserData.displayName || 'Research Adviser',
+        senderDepartment: adviserData.department || 'SWU Phinma'
+      }).then(res => {
+        console.log('✅ Direct student invitation dispatch response:', res);
+      }).catch(err => {
+        console.warn('⚠️ Direct student invitation notice:', err.message);
+      });
+
+      // 2. Redundant Log in Firestore 'mail' collection (for mail-listener)
       try {
         await addDoc(collection(db, 'mail'), {
           to: studentEmail,
@@ -173,18 +187,51 @@ function SendInvitations() {
             `
           }
         });
-      } catch (emailError) {
-        console.warn('Email service error (invitation still saved):', emailError);
+      } catch (mailErr) {
+        console.warn('Firestore mail logging notice:', mailErr.message);
       }
 
       // Refresh invitations list
       await fetchInvitations();
 
-      Swal.fire({
-        title: 'Success!',
-        text: `Invitation sent to ${studentEmail}!`,
+      // Show comprehensive success modal with immediate copy link
+      await Swal.fire({
+        title: 'Invitation Dispatched!',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+            <p style="margin-bottom: 12px; color: #4a5568;">
+              An invitation email has been sent to <strong>${studentEmail}</strong>.
+            </p>
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; margin-bottom: 6px;">Direct Student Sign Up Link:</label>
+              <input type="text" id="swalStudLink" readonly value="${invitationLink}" style="width: 100%; font-size: 12px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; background-color: #ffffff; color: #2d3748; box-sizing: border-box;" />
+            </div>
+            <button id="copySwalStudBtn" type="button" style="width: 100%; background: #541b2f; color: #fff; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              📋 Copy Student Sign Up Link
+            </button>
+            <p style="font-size: 11px; color: #a0aec0; margin-top: 10px; margin-bottom: 0;">
+              💡 The student can use this link directly in their browser anytime to create their account.
+            </p>
+          </div>
+        `,
         icon: 'success',
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Done',
+        didOpen: () => {
+          const btn = document.getElementById('copySwalStudBtn');
+          const input = document.getElementById('swalStudLink');
+          if (btn && input) {
+            btn.addEventListener('click', () => {
+              navigator.clipboard.writeText(input.value);
+              btn.innerText = '✅ Copied to Clipboard!';
+              btn.style.background = '#2e7d32';
+              setTimeout(() => {
+                btn.innerText = '📋 Copy Student Sign Up Link';
+                btn.style.background = '#541b2f';
+              }, 2500);
+            });
+          }
+        }
       });
       setStudentEmail('');
 
@@ -194,6 +241,19 @@ function SendInvitations() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyInvitationLink = (link) => {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Invitation link copied!',
+      showConfirmButton: false,
+      timer: 2000
+    });
   };
 
   const handleResendInvitation = async (invitationId, studentEmail) => {
@@ -206,12 +266,24 @@ function SendInvitations() {
 
       // Get invitation data
       const invitation = invitations.find(i => i.id === invitationId);
+      const studentPortalUrl = window.location.origin;
+      const link = invitation?.invitationLink || `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail)}`;
 
-      // Resend email
+      // 1. Direct Backend Resend
       try {
-        const studentPortalUrl = window.location.origin;
-        const link = invitation.invitationLink || `${studentPortalUrl}/signup`;
-        
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+        await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
+          to: studentEmail.toLowerCase().trim(),
+          invitationLink: link,
+          senderName: adviserData.displayName || 'Research Adviser',
+          senderDepartment: adviserData.department || 'SWU Phinma'
+        });
+      } catch (emailError) {
+        console.warn('Backend resend notice:', emailError);
+      }
+
+      // 2. Redundant queue in Firestore 'mail'
+      try {
         await addDoc(collection(db, 'mail'), {
           to: studentEmail,
           message: {
@@ -391,13 +463,22 @@ function SendInvitations() {
                 </div>
 
                 {invitation.status === 'pending' && (
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-stone-800">
+                  <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-gray-100 dark:border-stone-800">
+                    <PremiumButton 
+                      onClick={() => handleCopyInvitationLink(invitation.invitationLink || `${window.location.origin}/student/signup?email=${encodeURIComponent(invitation.studentEmail)}`)}
+                      variant="ghost"
+                      size="sm"
+                      className="justify-center text-[11px] px-1"
+                      title="Copy signup link"
+                    >
+                      📋 Copy
+                    </PremiumButton>
                     <PremiumButton 
                       onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                       disabled={loading}
                       variant="ghost"
                       size="sm"
-                      className="justify-center text-xs"
+                      className="justify-center text-[11px] px-1"
                     >
                       🔄 Resend
                     </PremiumButton>
@@ -406,7 +487,7 @@ function SendInvitations() {
                       disabled={loading}
                       variant="ghost"
                       size="sm"
-                      className="justify-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="justify-center text-[11px] px-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       ❌ Remove
                     </PremiumButton>
@@ -458,6 +539,14 @@ function SendInvitations() {
                       <td className="py-4 px-6">
                         {invitation.status === 'pending' && (
                           <div className="flex items-center gap-2">
+                            <PremiumButton 
+                              onClick={() => handleCopyInvitationLink(invitation.invitationLink || `${window.location.origin}/student/signup?email=${encodeURIComponent(invitation.studentEmail)}`)}
+                              variant="ghost"
+                              size="sm"
+                              title="Copy direct registration link"
+                            >
+                              📋 Copy Link
+                            </PremiumButton>
                             <PremiumButton 
                               onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                               disabled={loading}

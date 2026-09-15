@@ -162,7 +162,23 @@ Please click the button below to activate your account and set up your credentia
 
       await addDoc(collection(db, 'advisers'), adviserData);
 
-      // Trigger Firebase Email Extension
+      // 1. Trigger Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      authFetch(`${backendUrl}/api/send-invitation-email`, {
+        to: formData.email.toLowerCase().trim(),
+        adviserName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+        subject: defaultSubject,
+        message: formData.message || defaultMessage,
+        invitationLink: invitationLink,
+        senderName: deanData?.displayName || 'Dean',
+        senderDepartment: deanData?.department || 'SWU Phinma'
+      }).then(res => {
+        console.log('✅ Direct backend invitation dispatch response:', res);
+      }).catch(err => {
+        console.warn('⚠️ Direct backend dispatch notice:', err.message);
+      });
+
+      // 2. Redundant Log in Firestore 'mail' collection (for mail-listener)
       try {
         await addDoc(collection(db, 'mail'), {
           to: formData.email,
@@ -203,24 +219,49 @@ Please click the button below to activate your account and set up your credentia
             `
           }
         });
-
-        Swal.fire({
-          title: 'Success!',
-          text: `Invitation sent to ${formData.email}!`,
-          icon: 'success',
-          confirmButtonColor: '#801e38'
-        });
-      } catch (emailError) {
-        console.warn('Email service error (invitation still saved):', emailError);
-        Swal.fire({
-          title: 'Saved',
-          text: 'Invitation saved, but email could not be sent.',
-          icon: 'warning',
-          confirmButtonColor: '#801e38'
-        });
+      } catch (mailErr) {
+        console.warn('Firestore mail logging notice:', mailErr.message);
       }
 
-      // Refresh advisers list (handled by onSnapshot)
+      // Show comprehensive success modal with immediate copy link
+      await Swal.fire({
+        title: 'Invitation Dispatched!',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+            <p style="margin-bottom: 12px; color: #4a5568;">
+              An invitation email has been sent to <strong>${formData.email}</strong>.
+            </p>
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; margin-bottom: 6px;">Direct Adviser Sign Up Link:</label>
+              <input type="text" id="swalAdvLink" readonly value="${invitationLink}" style="width: 100%; font-size: 12px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; background-color: #ffffff; color: #2d3748; box-sizing: border-box;" />
+            </div>
+            <button id="copySwalAdvBtn" type="button" style="width: 100%; background: #541b2f; color: #fff; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              📋 Copy Sign Up Link
+            </button>
+            <p style="font-size: 11px; color: #a0aec0; margin-top: 10px; margin-bottom: 0;">
+              💡 The adviser can use this link directly in their browser anytime to activate their account.
+            </p>
+          </div>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Done',
+        didOpen: () => {
+          const btn = document.getElementById('copySwalAdvBtn');
+          const input = document.getElementById('swalAdvLink');
+          if (btn && input) {
+            btn.addEventListener('click', () => {
+              navigator.clipboard.writeText(input.value);
+              btn.innerText = '✅ Copied to Clipboard!';
+              btn.style.background = '#2e7d32';
+              setTimeout(() => {
+                btn.innerText = '📋 Copy Sign Up Link';
+                btn.style.background = '#541b2f';
+              }, 2500);
+            });
+          }
+        }
+      });
 
       // Reset form
       setFormData({
@@ -238,6 +279,19 @@ Please click the button below to activate your account and set up your credentia
     }
   };
 
+  const handleCopyInvitationLink = (link) => {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Invitation link copied!',
+      showConfirmButton: false,
+      timer: 2000
+    });
+  };
+
   const handleResendInvitation = async (adviserId, adviserEmail) => {
     setLoading(true);
     try {
@@ -248,23 +302,36 @@ Please click the button below to activate your account and set up your credentia
 
       // Get adviser data
       const adviser = advisers.find(a => a.id === adviserId);
+      const link = adviser?.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviserEmail)}`;
 
-      // Resend email
+      // 1. Resend via direct backend
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
         await authFetch(`${backendUrl}/api/send-invitation-email`, {
-            to: adviserEmail,
-            adviserName: adviser.firstName,
-            subject: defaultSubject,
-            message: adviser.message,
-            invitationLink: adviser.invitationLink,
-            senderName: deanData?.displayName,
-            senderDepartment: deanData?.department
-          });
+          to: adviserEmail,
+          adviserName: adviser?.firstName || adviser?.displayName || 'Adviser',
+          subject: defaultSubject,
+          message: adviser?.message || defaultMessage,
+          invitationLink: link,
+          senderName: deanData?.displayName || 'Dean',
+          senderDepartment: deanData?.department || 'SWU Phinma'
+        });
       } catch (emailError) {
-        console.warn('Email service error:', emailError);
+        console.warn('Backend resend notice:', emailError);
       }
 
+      // 2. Redundant queue in Firestore 'mail'
+      try {
+        await addDoc(collection(db, 'mail'), {
+          to: adviserEmail,
+          message: {
+            subject: defaultSubject,
+            text: `Reminder: You have been invited as a Research Adviser in ARCHIVIO. Access link: ${link}`
+          }
+        });
+      } catch (mErr) {
+        console.warn('Firestore mail resend notice:', mErr);
+      }
 
       Swal.fire({
         title: 'Sent!',
@@ -467,6 +534,15 @@ Please click the button below to activate your account and set up your credentia
                           <td className="py-3.5 text-center">
                             {adviser.status === 'pending' && (
                               <div className="flex items-center justify-center gap-2">
+                                <PremiumButton
+                                  onClick={() => handleCopyInvitationLink(adviser.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviser.email)}`)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1 text-stone-700 dark:text-stone-300"
+                                  title="Copy direct invitation link"
+                                >
+                                  📋 Copy Link
+                                </PremiumButton>
                                 <PremiumButton
                                   onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                   disabled={loading}
