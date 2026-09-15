@@ -281,6 +281,44 @@ export default function AllUsers() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      Swal.fire('No Data', 'There are no users to export with the current filter.', 'info');
+      return;
+    }
+    const headers = ['Name', 'Email', 'Role', 'Department', 'Status', 'Last Login'];
+    const rows = filtered.map(u => [
+      u.name || '',
+      u.email || '',
+      u.role || '',
+      u.dept || '',
+      u.status || 'Active',
+      u.lastLogin || 'N/A'
+    ]);
+    const csvContent = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const tabName = activeTab === 1 ? 'super_admins' : activeTab === 2 ? 'deans' : activeTab === 3 ? 'advisers' : activeTab === 4 ? 'students' : 'all_users';
+    link.setAttribute('href', url);
+    link.setAttribute('download', `archivio_${tabName}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Successfully exported ${filtered.length} user record(s) to CSV.`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-[#121212] font-sans overflow-hidden">
       <Sidebar />
@@ -319,7 +357,11 @@ export default function AllUsers() {
 
             {/* Search + Export */}
             <div className="p-4 flex items-center justify-end gap-4 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50 dark:bg-[#252525]/50">
-              <PremiumButton variant="ghost" icon={<Download className="w-4 h-4" />}>
+              <PremiumButton 
+                variant="ghost" 
+                icon={<Download className="w-4 h-4" />}
+                onClick={handleExportCSV}
+              >
                 Export CSV
               </PremiumButton>
             </div>

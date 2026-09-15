@@ -226,6 +226,45 @@ export default function ResearchRecords() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      Swal.fire('No Data', 'There are no research records to export with the current filter.', 'info');
+      return;
+    }
+    const headers = ['Record ID', 'Research Title', 'Group Name', 'Adviser', 'Category', 'Year', 'Status', 'Progress (%)'];
+    const rows = filtered.map(r => [
+      r.id || '',
+      r.title || '',
+      r.group || '',
+      r.adviser || '',
+      r.category || '',
+      r.year || '',
+      r.status || '',
+      r.progress || 0
+    ]);
+    const csvContent = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `archivio_research_records_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Successfully exported ${filtered.length} research record(s) to CSV.`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
       {/* Sidebar */}
@@ -242,7 +281,11 @@ export default function ResearchRecords() {
             <SectionTitle sub={`All uploaded research within the College of IT · ${records.length} total records`}>
               Research Records
             </SectionTitle>
-            <PremiumButton variant="ghost" className="flex items-center gap-2">
+            <PremiumButton 
+              variant="ghost" 
+              className="flex items-center gap-2"
+              onClick={handleExportCSV}
+            >
               <span>📤</span> Export CSV
             </PremiumButton>
           </div>
