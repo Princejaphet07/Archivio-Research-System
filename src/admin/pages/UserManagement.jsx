@@ -1092,6 +1092,15 @@ export default function UserManagement() {
             `
           }
         });
+        // Direct call to email backend API to wake up Render & dispatch immediately
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+        await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
+          to: formData.email.toLowerCase().trim(),
+          deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+          invitationLink: invitationLink,
+          temporaryPassword: temporaryPassword,
+          role: formData.role
+        }).catch(apiErr => console.warn('Direct backend dean email dispatch note:', apiErr));
       } catch (emailError) {
         console.warn('Email service error (dean account still created):', emailError);
       }
@@ -1107,11 +1116,23 @@ export default function UserManagement() {
         details: `${formData.firstName.trim()} ${formData.lastName.trim()} — ${formData.department}`,
       });
 
-      Swal.fire({
-        title: 'Success!',
-        text: `Dean invitation sent to ${formData.email}!`,
+      await Swal.fire({
+        title: 'Dean Account Created & Invitation Dispatched!',
+        html: `
+          <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
+            <p style="margin-bottom: 12px;">An official invitation has been dispatched to <strong>${formData.email}</strong>.</p>
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
+              <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Account Credentials</p>
+              <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${formData.email.toLowerCase().trim()}</p>
+              <p style="margin: 0 0 6px 0; color: #718096; font-size: 12px;">Temporary Password:</p>
+              <code style="background-color: #ffffff; color: #541b2f; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block; letter-spacing: 1px;">${temporaryPassword}</code>
+            </div>
+            <p style="margin: 0; color: #718096; font-size: 12px;"><em>The Dean can log in immediately using these credentials at the portal, or via the link sent to their email.</em></p>
+          </div>
+        `,
         icon: 'success',
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Great, Copy & Done'
       });
 
       // Reset form
@@ -1152,12 +1173,14 @@ export default function UserManagement() {
       const deanPortalUrl = window.location.origin;
       const invitationLink = deanData?.invitationLink || `${deanPortalUrl}/`;
 
+      const temporaryPassword = deanData?.temporaryPassword || '';
+
       await updateDoc(deanRef, {
         invitationDate: new Date().toISOString(),
         invitationSent: true
       });
 
-      // Call email service to resend email
+      // 1. Call email service queue
       try {
         await addDoc(collection(db, 'mail'), {
           to: deanEmail,
@@ -1174,8 +1197,16 @@ export default function UserManagement() {
                 <div style="padding: 40px 30px; background-color: #ffffff;">
                   <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${deanName},</h2>
                   <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
+
+                  ${temporaryPassword ? `
+                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 18px; margin: 25px 0;">
+                    <p style="margin: 0 0 8px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Your Temporary Credentials</p>
+                    <p style="margin: 0 0 6px 0; color: #2d3748; font-size: 14px;"><strong>Email:</strong> ${deanEmail}</p>
+                    <p style="margin: 0; color: #718096; font-size: 13px;">Temporary Password: <code style="background: #ffffff; color: #541b2f; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #d5c9bb; font-size: 15px;">${temporaryPassword}</code></p>
+                  </div>
+                  ` : ''}
                   
-                  <div style="text-align: center; margin: 40px 0 10px 0;">
+                  <div style="text-align: center; margin: 30px 0 10px 0;">
                     <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
                   </div>
                 </div>
@@ -1188,15 +1219,38 @@ export default function UserManagement() {
           }
         });
       } catch (emailError) {
-        console.warn('Email service error:', emailError);
+        console.warn('Email service queue error:', emailError);
       }
 
-      Swal.fire({
-        title: 'Success!',
-        text: `Invitation resent to ${deanEmail}`,
+      // 2. Direct call to email backend API
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
+        to: deanEmail,
+        deanName: deanName,
+        invitationLink: invitationLink,
+        temporaryPassword: temporaryPassword || 'Your established password',
+        role: deanData?.role || 'dean'
+      }).catch(err => console.warn('Direct backend resend dispatch note:', err));
+
+      await Swal.fire({
+        title: 'Invitation Dispatched!',
+        html: `
+          <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
+            <p style="margin-bottom: 12px;">Invitation reminder dispatched to <strong>${deanEmail}</strong>.</p>
+            ${temporaryPassword ? `
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
+              <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Account Credentials</p>
+              <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${deanEmail}</p>
+              <p style="margin: 0 0 6px 0; color: #718096; font-size: 12px;">Temporary Password:</p>
+              <code style="background-color: #ffffff; color: #541b2f; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
+            </div>
+            ` : ''}
+            <p style="margin: 0; color: #718096; font-size: 12px;"><em>The Dean can log in immediately using these credentials.</em></p>
+          </div>
+        `,
         icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Great, Copy & Done'
       });
     } catch (error) {
       console.error('Error resending invitation:', error);

@@ -1,8 +1,8 @@
 const { getFirestore } = require('firebase-admin/firestore');
 
-function setupMailListener(transporter) {
+function setupMailListener(transporter, sendSystemEmail) {
   const db = getFirestore();
-  console.log('📬 Setting up Firestore mail listener...');
+  console.log('📬 Setting up Firestore mail listener with redundant failover...');
 
   // Listen to the 'mail' collection for new documents
   db.collection('mail')
@@ -24,28 +24,34 @@ function setupMailListener(transporter) {
               'delivery.startTime': new Date()
             });
 
-            const mailOptions = {
-              from: process.env.EMAIL_USER || '"ARCHIVIO" <noreply@archivio.com>',
+            const emailPayload = {
               to: docData.to,
               subject: docData.message?.subject || 'ARCHIVIO Notification',
               html: docData.message?.html || docData.message?.text || 'You have a new notification.'
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            let dispatchInfo;
+            if (typeof sendSystemEmail === 'function') {
+              dispatchInfo = await sendSystemEmail(emailPayload);
+            } else if (transporter) {
+              dispatchInfo = await transporter.sendMail({
+                from: process.env.EMAIL_USER || '"ARCHIVIO" <noreply@archivio.com>',
+                ...emailPayload
+              });
+            } else {
+              throw new Error('No email transport or webhook configured');
+            }
             
             // Mark as success
             await docRef.update({
               'delivery.state': 'SUCCESS',
               'delivery.endTime': new Date(),
-              'delivery.info': {
-                messageId: info.messageId,
-                response: info.response
-              }
+              'delivery.info': dispatchInfo || { status: 'sent' }
             });
 
-            console.log(`✅ Mail sent successfully to ${docData.to}`);
+            console.log(`✅ Mail listener dispatched successfully to ${docData.to}`);
           } catch (error) {
-            console.error(`❌ Failed to send mail to ${docData.to}:`, error);
+            console.error(`❌ Mail listener failed to send to ${docData.to}:`, error.message);
             // Mark as error
             await docRef.update({
               'delivery.state': 'ERROR',

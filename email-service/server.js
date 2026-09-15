@@ -846,22 +846,17 @@ app.post('/api/send-invitation-email', verifyToken, async (req, res) => {
 </html>
     `;
 
-    // Send email
-    const mailOptions = {
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
-      to: to,
+    const dispatchInfo = await sendSystemEmail({
+      to: to.toLowerCase().trim(),
       subject: `Invitation: Join ARCHIVIO as a Research Adviser`,
-      html: emailHTML,
-      text: emailMessage // Fallback plain text
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${to}: ${info.response}`);
+      html: emailHTML
+    });
+    console.log(`✅ Email sent to ${to}`);
     
     res.status(200).json({
       success: true,
       message: 'Email sent successfully',
-      messageId: info.messageId
+      info: dispatchInfo
     });
 
   } catch (error) {
@@ -931,22 +926,17 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
 </div>
     `;
 
-    // Send email
-    const mailOptions = {
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
-      to: to,
+    const dispatchInfo = await sendSystemEmail({
+      to: to.toLowerCase().trim(),
       subject: `Dean Invitation: Join ARCHIVIO Research Management System`,
-      html: emailHTML,
-      text: message || 'You have been invited to join ARCHIVIO'
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Dean invitation email sent to ${to}: ${info.response}`);
+      html: emailHTML
+    });
+    console.log(`✅ Dean invitation email sent to ${to}`);
     
     res.status(200).json({
       success: true,
       message: 'Email sent successfully',
-      messageId: info.messageId
+      info: dispatchInfo
     });
 
   } catch (error) {
@@ -1226,22 +1216,17 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
 </html>
     `;
 
-    // Send email
-    const mailOptions = {
-      from: `ARCHIVIO <${process.env.EMAIL_USER}>`,
-      to: to,
+    const dispatchInfo = await sendSystemEmail({
+      to: to.toLowerCase().trim(),
       subject: `Student Invitation: Join ARCHIVIO Research Management System`,
-      html: emailHTML,
-      text: message || 'You have been invited to join ARCHIVIO'
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Student invitation email sent to ${to}: ${info.response}`);
+      html: emailHTML
+    });
+    console.log(`✅ Student invitation email sent to ${to}`);
     
     res.status(200).json({
       success: true,
       message: 'Email sent successfully',
-      messageId: info.messageId
+      info: dispatchInfo
     });
 
   } catch (error) {
@@ -1344,9 +1329,8 @@ app.post('/api/send-super-admin-invitation-email', async (req, res) => {
   `;
 
   try {
-    await transporter.sendMail({
-      from: `"ARCHIVIO System" <${process.env.EMAIL_FROM || 'noreply@archivio.edu.ph'}>`,
-      to: to,
+    await sendSystemEmail({
+      to: to.toLowerCase().trim(),
       subject: `⭐ You're invited as Super Admin — ARCHIVIO System Administrator Portal`,
       html: emailHtml,
     });
@@ -2352,7 +2336,7 @@ if (process.env.NODE_ENV !== 'test') {
       try { setupBackupCron(); } catch (e) { console.warn('Cron setupBackupCron error:', e.message); }
     }
     if (typeof setupMailListener === 'function') {
-      try { setupMailListener(transporter); } catch (e) { console.warn('Mail listener error:', e.message); }
+      try { setupMailListener(transporter, sendSystemEmail); } catch (e) { console.warn('Mail listener error:', e.message); }
     }
   });
 }
