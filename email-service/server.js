@@ -53,6 +53,9 @@ if (serviceAccount) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust reverse proxy headers (Render, Cloudflare, Heroku) for accurate rate limiting and client IP
+app.set('trust proxy', 1);
+
 // CORS — allow local development (any localhost/127.0.0.1 port) and live Firebase hosting domains
 const allowedOrigins = [
   process.env.FRONTEND_URL,
