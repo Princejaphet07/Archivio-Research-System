@@ -17,7 +17,11 @@ export async function authFetch(url, body) {
   let idToken = null;
 
   try {
-    const currentUser = auth.currentUser;
+    let currentUser = auth.currentUser;
+    if (!currentUser && typeof auth.authStateReady === 'function') {
+      await auth.authStateReady();
+      currentUser = auth.currentUser;
+    }
     if (currentUser) {
       idToken = await currentUser.getIdToken();
     }

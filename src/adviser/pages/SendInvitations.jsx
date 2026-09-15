@@ -6,8 +6,8 @@ import Layout from '../components/Layout';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
-import { verifySchoolEmailOnline, validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 function SendInvitations() {
   const { adviserData } = useAdviser();
@@ -130,7 +130,7 @@ function SendInvitations() {
       const docRef = await addDoc(collection(db, 'studentInvitations'), invitationData);
 
       // 1. Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      const backendUrl = getBackendUrl();
       authFetch(`${backendUrl}/api/send-student-invitation-email`, {
         to: studentEmail.toLowerCase().trim(),
         invitationLink: invitationLink,
@@ -271,7 +271,7 @@ function SendInvitations() {
 
       // 1. Direct Backend Resend
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+        const backendUrl = getBackendUrl();
         await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
           to: studentEmail.toLowerCase().trim(),
           invitationLink: link,

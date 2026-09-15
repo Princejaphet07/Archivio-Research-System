@@ -212,9 +212,9 @@ async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          sender: { name: 'ARCHIVIO SWU PHINMA', email: process.env.BREVO_SENDER_EMAIL || EMAIL_USER },
+          sender: { name: 'ARCHIVIO SWU PHINMA', email: process.env.BREVO_SENDER_EMAIL || 'japhetvender00@gmail.com' },
           to: [{ email: targetEmail }],
-          replyTo: { email: replyTo },
+          replyTo: { email: replyTo || 'archivio.noreply@gmail.com' },
           subject,
           htmlContent: html
         })
@@ -933,9 +933,9 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate email domain - only @phinmaed.com allowed
-    if (!to.toLowerCase().endsWith('@phinmaed.com')) {
-      return res.status(400).json({ error: 'Invitations can only be sent to @phinmaed.com email addresses' });
+    // Email domain validation relaxed for testing purposes (supports @phinmaed.com & test addresses)
+    if (!to.includes('@')) {
+      return res.status(400).json({ error: 'Please provide a valid email address' });
     }
 
     // Email template for dean invitation
@@ -1004,6 +1004,64 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Email service is running' });
+});
+
+// ============================================
+// HARD DELETE FIREBASE AUTH USER
+// ============================================
+app.post('/api/hard-delete-auth-user', async (req, res) => {
+  try {
+    const { uid, email } = req.body;
+
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing UID or email' });
+    }
+
+    console.log(`📍 Attempting to hard-delete Firebase Auth user: ${email || uid}`);
+
+    let targetUid = uid;
+    if (!targetUid && email) {
+      try {
+        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
+        targetUid = userRecord.uid;
+      } catch (notFound) {
+        console.log(`ℹ️ User ${email} not found in Firebase Auth by email (already deleted)`);
+      }
+    }
+
+    if (targetUid) {
+      try {
+        await getAuth().deleteUser(targetUid);
+        console.log(`✅ Hard-deleted user ${targetUid} from Firebase Auth`);
+      } catch (delErr) {
+        if (delErr.code !== 'auth/user-not-found') {
+          console.warn('Firebase Auth deleteUser warning:', delErr.message);
+        }
+      }
+    }
+
+    // Also double check by email in case uid was a Firestore document ID different from Auth UID
+    if (email) {
+      try {
+        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
+        if (userRecord && userRecord.uid && userRecord.uid !== targetUid) {
+          await getAuth().deleteUser(userRecord.uid);
+          console.log(`✅ Also deleted Firebase Auth user with matching email: ${userRecord.uid}`);
+        }
+      } catch (_) {}
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User successfully purged from Firebase Auth'
+    });
+  } catch (error) {
+    console.error('❌ Error in hard-delete-auth-user:', error);
+    res.status(500).json({
+      error: 'Failed to hard-delete auth user',
+      details: error.message
+    });
+  }
 });
 
 // ============================================

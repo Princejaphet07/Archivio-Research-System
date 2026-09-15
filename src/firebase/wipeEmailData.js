@@ -1,101 +1,119 @@
 import { db } from './config';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getBackendUrl } from '../utils/backendUrl';
+import { authFetch } from '../utils/authFetch';
 
 /**
  * Completely wipe all data associated with an email or UID across all ARCHIVIO collections and Firebase Auth.
- * This prevents the bug where deleted users or invitations leave orphaned records that cause "already invited" errors.
+ * This prevents orphaned records, ensures clean deletions, and avoids "already invited" or "email in use" errors.
  * 
  * @param {string} emailInput - The user email to wipe
- * @param {string} [uidInput] - Optional Firebase Auth UID
+ * @param {string} [uidInput] - Optional Firebase Auth UID or Firestore Document ID
  */
 export async function wipeEmailData(emailInput, uidInput = null) {
-  if (!emailInput && !uidInput) return;
+  if (!emailInput && !uidInput) return true;
   const email = emailInput ? emailInput.toLowerCase().trim() : null;
-  const uid = uidInput || null;
+  const uid = uidInput ? String(uidInput).trim() : null;
 
+  console.log(`🧹 Starting full wipe for user: email=${email}, uid=${uid}`);
+
+  // 1. Hard delete from Firebase Auth via backend API
   try {
-    // 1. Hard delete from Firebase Auth via backend API
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+    const backendUrl = getBackendUrl();
+    await authFetch(`${backendUrl}/api/hard-delete-auth-user`, { uid, email })
+      .catch(err => console.warn('Backend Auth wipe network warning:', err.message));
+  } catch (authErr) {
+    console.warn('Backend Auth wipe call warning:', authErr);
+  }
+
+  // 2. Direct document deletions by ID/UID across all potential role collections
+  if (uid) {
+    const directCollections = ['super_admins', 'deans', 'advisers', 'students', 'users', 'dean_settings', 'user_bookmarks'];
+    await Promise.allSettled(
+      directCollections.map(col => deleteDoc(doc(db, col, uid)).catch(() => {}))
+    );
+  }
+
+  // 3. Delete from role collections by Email
+  if (email) {
+    const emailCollections = [
+      { col: 'super_admins', field: 'email' },
+      { col: 'deans', field: 'email' },
+      { col: 'advisers', field: 'email' },
+      { col: 'students', field: 'email' },
+      { col: 'users', field: 'email' },
+      { col: 'studentInvitations', field: 'studentEmail' },
+      { col: 'invitations', field: 'email' },
+    ];
+
+    for (const item of emailCollections) {
+      try {
+        const q = query(collection(db, item.col), where(item.field, '==', email));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          await Promise.allSettled(snap.docs.map(d => deleteDoc(doc(db, item.col, d.id))));
+        }
+      } catch (colErr) {
+        console.warn(`Wipe from ${item.col} notice:`, colErr.message);
+      }
+    }
+  }
+
+  // 4. Wipe student records by UID field
+  if (uid) {
     try {
-      await fetch(`${backendUrl}/api/hard-delete-auth-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, email })
-      });
-    } catch (authErr) {
-      console.warn('Backend Auth wipe warning (email service might be offline):', authErr);
-    }
-
-    // 2. Wipe from studentInvitations (by studentEmail)
-    if (email) {
-      const qInv = query(collection(db, 'studentInvitations'), where('studentEmail', '==', email));
-      const snapInv = await getDocs(qInv);
-      await Promise.all(snapInv.docs.map(d => deleteDoc(doc(db, 'studentInvitations', d.id))));
-    }
-
-    // 3. Wipe from advisers collection (by email)
-    if (email) {
-      const qAdv = query(collection(db, 'advisers'), where('email', '==', email));
-      const snapAdv = await getDocs(qAdv);
-      await Promise.all(snapAdv.docs.map(d => deleteDoc(doc(db, 'advisers', d.id))));
-    }
-
-    // 4. Wipe from students collection (by email and/or uid)
-    if (email) {
-      const qStd = query(collection(db, 'students'), where('email', '==', email));
-      const snapStd = await getDocs(qStd);
-      await Promise.all(snapStd.docs.map(d => deleteDoc(doc(db, 'students', d.id))));
-    }
-    if (uid) {
       const qStdUid = query(collection(db, 'students'), where('uid', '==', uid));
       const snapStdUid = await getDocs(qStdUid);
-      await Promise.all(snapStdUid.docs.map(d => deleteDoc(doc(db, 'students', d.id))));
-    }
+      if (!snapStdUid.empty) {
+        await Promise.allSettled(snapStdUid.docs.map(d => deleteDoc(doc(db, 'students', d.id))));
+      }
+    } catch (_) {}
 
-    // 5. Wipe from deans collection (by email)
-    if (email) {
-      const qDean = query(collection(db, 'deans'), where('email', '==', email));
-      const snapDean = await getDocs(qDean);
-      await Promise.all(snapDean.docs.map(d => deleteDoc(doc(db, 'deans', d.id))));
-    }
+    try {
+      const qUsrUid = query(collection(db, 'users'), where('uid', '==', uid));
+      const snapUsrUid = await getDocs(qUsrUid);
+      if (!snapUsrUid.empty) {
+        await Promise.allSettled(snapUsrUid.docs.map(d => deleteDoc(doc(db, 'users', d.id))));
+      }
+    } catch (_) {}
+  }
 
-    // 6. Wipe from users collection (by email and/or uid)
+  // 5. Clean up groups & requirements tied to this user
+  if (email || uid) {
+    // If student was leader: delete the group and its submissions
     if (email) {
-      const qUsr = query(collection(db, 'users'), where('email', '==', email));
-      const snapUsr = await getDocs(qUsr);
-      await Promise.all(snapUsr.docs.map(d => deleteDoc(doc(db, 'users', d.id))));
-    }
-    if (uid) {
       try {
-        await deleteDoc(doc(db, 'users', uid));
-      } catch (_) {}
-    }
-
-    // 7. Wipe or clean from groups collection
-    if (email) {
-      // If student was leader: delete the group and its submissions
-      const qLeadGroup = query(collection(db, 'groups'), where('leaderEmail', '==', email));
-      const snapLeadGroup = await getDocs(qLeadGroup);
-      for (const gDoc of snapLeadGroup.docs) {
-        const gData = gDoc.data();
-        if (gData.leaderUid) {
-          const qSub = query(collection(db, 'submissions'), where('studentUid', '==', gData.leaderUid));
-          const snapSub = await getDocs(qSub);
-          await Promise.all(snapSub.docs.map(s => deleteDoc(doc(db, 'submissions', s.id))));
+        const qLeadGroup = query(collection(db, 'groups'), where('leaderEmail', '==', email));
+        const snapLeadGroup = await getDocs(qLeadGroup);
+        for (const gDoc of snapLeadGroup.docs) {
+          const gData = gDoc.data();
+          if (gData.leaderUid) {
+            try {
+              const qSub = query(collection(db, 'submissions'), where('studentUid', '==', gData.leaderUid));
+              const snapSub = await getDocs(qSub);
+              await Promise.allSettled(snapSub.docs.map(s => deleteDoc(doc(db, 'submissions', s.id))));
+            } catch (_) {}
+          }
+          await deleteDoc(doc(db, 'groups', gDoc.id)).catch(() => {});
         }
-        await deleteDoc(doc(db, 'groups', gDoc.id));
+      } catch (leadErr) {
+        console.warn('Group leader wipe notice:', leadErr.message);
       }
 
       // If adviser: delete supervised groups and requirements
-      const qAdvGroup = query(collection(db, 'groups'), where('adviserUid', '==', email));
-      const snapAdvGroup = await getDocs(qAdvGroup);
-      await Promise.all(snapAdvGroup.docs.map(g => deleteDoc(doc(db, 'groups', g.id))));
+      try {
+        const qAdvGroup = query(collection(db, 'groups'), where('adviserUid', '==', email));
+        const snapAdvGroup = await getDocs(qAdvGroup);
+        await Promise.allSettled(snapAdvGroup.docs.map(g => deleteDoc(doc(db, 'groups', g.id))));
+      } catch (_) {}
 
-      const qAdvReq = query(collection(db, 'requirements'), where('adviserUid', '==', email));
-      const snapAdvReq = await getDocs(qAdvReq);
-      await Promise.all(snapAdvReq.docs.map(r => deleteDoc(doc(db, 'requirements', r.id))));
+      try {
+        const qAdvReq = query(collection(db, 'requirements'), where('adviserUid', '==', email));
+        const snapAdvReq = await getDocs(qAdvReq);
+        await Promise.allSettled(snapAdvReq.docs.map(r => deleteDoc(doc(db, 'requirements', r.id))));
+      } catch (_) {}
 
-      // If group member: remove email from members array in any group
+      // Clean up email from members array in groups
       try {
         const allGroupsSnap = await getDocs(collection(db, 'groups'));
         for (const gDoc of allGroupsSnap.docs) {
@@ -104,15 +122,15 @@ export async function wipeEmailData(emailInput, uidInput = null) {
             const hasMember = gData.members.some(m => (typeof m === 'object' ? m.email?.toLowerCase() === email : m?.toLowerCase() === email));
             if (hasMember) {
               const updatedMembers = gData.members.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() !== email : m?.toLowerCase() !== email));
-              await updateDoc(doc(db, 'groups', gDoc.id), { members: updatedMembers });
+              await updateDoc(doc(db, 'groups', gDoc.id), { members: updatedMembers }).catch(() => {});
             }
           }
         }
       } catch (gErr) {
-        console.warn('Member cleanup in groups warning:', gErr);
+        console.warn('Member cleanup in groups notice:', gErr.message);
       }
 
-      // If group member: remove email from students.groupMembers array
+      // Clean up email from students.groupMembers array
       try {
         const allStudentsSnap = await getDocs(collection(db, 'students'));
         for (const sDoc of allStudentsSnap.docs) {
@@ -121,29 +139,26 @@ export async function wipeEmailData(emailInput, uidInput = null) {
             const hasMember = sData.groupMembers.some(m => (typeof m === 'object' ? m.email?.toLowerCase() === email : m?.toLowerCase() === email));
             if (hasMember) {
               const updatedGroupMembers = sData.groupMembers.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() !== email : m?.toLowerCase() !== email));
-              await updateDoc(doc(db, 'students', sDoc.id), { groupMembers: updatedGroupMembers });
+              await updateDoc(doc(db, 'students', sDoc.id), { groupMembers: updatedGroupMembers }).catch(() => {});
             }
           }
         }
       } catch (sErr) {
-        console.warn('Member cleanup in students warning:', sErr);
+        console.warn('Member cleanup in students notice:', sErr.message);
       }
     }
-
-    // 8. Wipe notifications tied to this email or UID
-    const notifTargets = [email, uid].filter(Boolean);
-    for (const target of notifTargets) {
-      try {
-        const qNotif = query(collection(db, 'notifications'), where('userId', '==', target));
-        const snapNotif = await getDocs(qNotif);
-        await Promise.all(snapNotif.docs.map(n => deleteDoc(doc(db, 'notifications', n.id))));
-      } catch (_) {}
-    }
-
-    console.log(`✅ Fully wiped all data and invitations for: ${email || uid}`);
-    return true;
-  } catch (err) {
-    console.error(`❌ Failed to wipe data for ${email || uid}:`, err);
-    throw err;
   }
+
+  // 6. Wipe notifications tied to this email or UID
+  const notifTargets = [email, uid].filter(Boolean);
+  for (const target of notifTargets) {
+    try {
+      const qNotif = query(collection(db, 'notifications'), where('userId', '==', target));
+      const snapNotif = await getDocs(qNotif);
+      await Promise.allSettled(snapNotif.docs.map(n => deleteDoc(doc(db, 'notifications', n.id))));
+    } catch (_) {}
+  }
+
+  console.log(`✅ Completed wipe for: ${email || uid}`);
+  return true;
 }

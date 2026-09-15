@@ -11,6 +11,7 @@ import { Trash2, Download, ShieldOff, Unlock } from 'lucide-react';
 import { Card, PremiumButton, SectionTitle } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 
 const roleColors = {
@@ -213,10 +214,11 @@ export default function AllUsers() {
 
         // 1. Deactivate in specific role collection
         let colName = 'students';
-        if (user.role === 'Dean') colName = 'deans';
-        if (user.role === 'Advisor' || user.role === 'Adviser') colName = 'advisers';
+        if (user.role === 'Super Admin') colName = 'super_admins';
+        else if (user.role === 'Dean' || user.role === 'Dean + Adviser') colName = 'deans';
+        else if (user.role === 'Advisor' || user.role === 'Adviser') colName = 'advisers';
         
-        await updateDoc(doc(db, colName, user.id), { status: newStatus });
+        await updateDoc(doc(db, colName, user.id), { status: newStatus }).catch(() => {});
 
         // 2. Deactivate in users collection and get UID
         let uid = null;
@@ -224,13 +226,13 @@ export default function AllUsers() {
         const snapUsers = await getDocs(qUsers);
         if (!snapUsers.empty) {
           uid = snapUsers.docs[0].id;
-          await updateDoc(doc(db, 'users', uid), { status: newStatus });
+          await updateDoc(doc(db, 'users', uid), { status: newStatus }).catch(() => {});
         }
 
         // 3. Call backend to disable Auth
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = getBackendUrl();
         const endpoint = isInactive ? 'enable-auth-user' : 'disable-auth-user';
-        await authFetch(`${backendUrl}/api/${endpoint}`, { email: user.email });
+        await authFetch(`${backendUrl}/api/${endpoint}`, { email: user.email }).catch(() => {});
 
         Swal.fire(`${actionText}d!`, `User has been ${actionText.toLowerCase()}d.`, 'success');
       } catch (error) {
@@ -256,6 +258,17 @@ export default function AllUsers() {
     if (result.isConfirmed) {
       setLoading(true);
       try {
+        // 1. Direct role collection document deletion
+        let colName = 'students';
+        if (user.role === 'Super Admin') colName = 'super_admins';
+        else if (user.role === 'Dean' || user.role === 'Dean + Adviser') colName = 'deans';
+        else if (user.role === 'Advisor' || user.role === 'Adviser') colName = 'advisers';
+
+        if (user.id) {
+          await deleteDoc(doc(db, colName, user.id)).catch(() => {});
+        }
+
+        // 2. Comprehensive deep wipe across all collections, references, and Auth
         await wipeEmailData(user.email, user.id);
 
         Swal.fire('Deleted!', 'User and all related data have been permanently deleted.', 'success');

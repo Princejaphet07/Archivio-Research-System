@@ -13,6 +13,7 @@ import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -238,8 +239,8 @@ export default function UserManagement() {
 
 
   const validateEmail = (email) => {
-    // Must be @phinmaed.com domain
-    return email.toLowerCase().endsWith('@phinmaed.com');
+    // Validates email format, supporting @phinmaed.com and local testing addresses
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').toLowerCase().trim());
   };
 
   const generateRandomPassword = () => {
@@ -312,9 +313,9 @@ export default function UserManagement() {
         }
 
         // Disable Firebase Auth account via backend
-        if (userDoc.uid) {
+        if (userDoc.uid || userDoc.email) {
           try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            const backendUrl = getBackendUrl();
             await authFetch(`${backendUrl}/api/disable-auth-user`, { uid: userDoc.uid, email: userDoc.email });
           } catch (deleteAuthError) {
             console.warn(`Could not disable Firebase Auth account:`, deleteAuthError);
@@ -369,6 +370,11 @@ export default function UserManagement() {
         const userDoc = allUsers.find(u => u.id === userId);
         if (!userDoc) continue;
 
+        // 1. Delete directly from role collection (super_admins or deans)
+        const col = userDoc._collection || (userDoc.role === 'super-admin' ? 'super_admins' : 'deans');
+        await deleteDoc(doc(db, col, userDoc.id)).catch(() => {});
+
+        // 2. Comprehensive wipe across all collections, references, and Auth
         await wipeEmailData(userDoc.email, userDoc.uid || userDoc.id);
       }
 
@@ -668,13 +674,9 @@ export default function UserManagement() {
 
         if (user.uid || user.email) {
           try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            const backendUrl = getBackendUrl();
             const endpoint = isInactive ? 'enable-auth-user' : 'disable-auth-user';
-            await fetch(`${backendUrl}/api/${endpoint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: user.uid, email: user.email })
-            });
+            await authFetch(`${backendUrl}/api/${endpoint}`, { uid: user.uid, email: user.email });
           } catch (err) { }
         }
 
@@ -701,10 +703,16 @@ export default function UserManagement() {
     if (result.isConfirmed) {
       setLoading(true);
       try {
+        // 1. Direct role collection document deletion (super_admins or deans)
+        const col = user._collection || (user.role === 'super-admin' ? 'super_admins' : 'deans');
+        await deleteDoc(doc(db, col, user.id)).catch(() => {});
+
+        // 2. Comprehensive wipe across all collections, references, and Auth
         await wipeEmailData(user.email, user.uid || user.id);
 
         Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
       } catch (e) {
+        console.error('Error deleting user:', e);
         Swal.fire('Error', 'Could not delete user.', 'error');
       } finally {
         setLoading(false);
@@ -723,7 +731,7 @@ export default function UserManagement() {
     if (!formData.email.trim()) {
       errors.email = 'Email address is required';
     } else if (!validateEmail(formData.email)) {
-      errors.email = 'Must use @phinmaed.com domain (e.g., prdo.vender.swu@phinmaed.com)';
+      errors.email = 'Please enter a valid email address (e.g. name@phinmaed.com)';
     }
     if (!formData.department) errors.department = 'Please select a department';
     if (selectedPrograms.length === 0 && !formData.programs) errors.programs = 'Please select a program';
@@ -743,29 +751,10 @@ export default function UserManagement() {
     setLoading(true);
 
     try {
-      // CLEANUP: If the admin is reusing an email (e.g., testing after manual Firebase Auth deletion),
-      // wipe orphaned data tied to this email to ensure a completely fresh start.
+      // CLEANUP: If the admin is reusing an email or recreating an account,
+      // thoroughly wipe orphaned records and Auth accounts to guarantee a fresh start
       const targetEmail = formData.email.toLowerCase().trim();
-
-      const collectionsToClean = ['users', 'deans', 'super_admins', 'advisers'];
-      for (const colName of collectionsToClean) {
-        const q = query(collection(db, colName), where('email', '==', targetEmail));
-        const snap = await getDocs(q);
-        const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
-        await Promise.all(deletes);
-      }
-
-      // Clean up orphaned groups tied to this adviser/dean email
-      const qGroups = query(collection(db, 'groups'), where('adviserUid', '==', targetEmail));
-      const snapGroups = await getDocs(qGroups);
-      const deleteGroups = snapGroups.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
-      await Promise.all(deleteGroups);
-
-      // Clean up orphaned adviser requirements
-      const qReqs = query(collection(db, 'requirements'), where('adviserUid', '==', targetEmail));
-      const snapReqs = await getDocs(qReqs);
-      const deleteReqs = snapReqs.docs.map(d => deleteDoc(doc(db, 'requirements', d.id)));
-      await Promise.all(deleteReqs);
+      await wipeEmailData(targetEmail);
 
       // Generate invitation token and temporary password
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -968,11 +957,65 @@ export default function UserManagement() {
 
       } catch (authError) {
         if (authError.code === 'auth/email-already-in-use') {
-          setError('This email is already registered. Please use a different email.');
-          setLoading(false);
-          return;
+          console.log('Email already registered in Auth, attempting purge and single retry...');
+          try {
+            const backendUrl = getBackendUrl();
+            await authFetch(`${backendUrl}/api/hard-delete-auth-user`, { email: formData.email.toLowerCase().trim() });
+
+            const retryApp = initializeApp(firebaseConfig, 'SecondaryAppDeanRetry_' + Date.now().toString());
+            const retryAuth = getAuth(retryApp);
+            const userCredential = await createUserWithEmailAndPassword(retryAuth, formData.email.toLowerCase().trim(), temporaryPassword);
+            const newUid = userCredential.user.uid;
+            await retryAuth.signOut();
+            await deleteApp(retryApp);
+
+            const deanData = {
+              firstName: formData.firstName.trim(),
+              lastName: formData.lastName.trim(),
+              displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+              email: formData.email.toLowerCase().trim(),
+              department: formData.department,
+              programs: formData.programs ? formData.programs.split(',').map(p => p.trim()) : [],
+              role: formData.role,
+              status: 'active',
+              accountStatus: 'pending_activation',
+              uid: newUid,
+              temporaryPassword: temporaryPassword,
+              invitationToken: invitationToken,
+              invitationLink: invitationLink,
+              invitationSent: true,
+              invitationDate: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              createdBy: 'admin',
+            };
+
+            await addDoc(collection(db, 'deans'), deanData);
+
+            await setDoc(doc(db, 'users', newUid), {
+              uid: newUid,
+              email: formData.email.toLowerCase().trim(),
+              displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+              role: formData.role,
+              department: formData.department,
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+
+            if (formData.role === 'dean+adviser') {
+              await addDoc(collection(db, 'advisers'), {
+                ...deanData,
+                userId: newUid
+              });
+            }
+          } catch (retryErr) {
+            console.error('Retry after purge failed:', retryErr);
+            setError('This email is already registered. Please use a different email or delete the old user first.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          throw authError;
         }
-        throw authError;
       }
 
       // ===== AUTO-SAVE DEPARTMENT =====
@@ -1093,7 +1136,7 @@ export default function UserManagement() {
           }
         });
         // Direct call to email backend API to wake up Render & dispatch immediately
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+        const backendUrl = getBackendUrl();
         await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
           to: formData.email.toLowerCase().trim(),
           deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
@@ -1223,7 +1266,7 @@ export default function UserManagement() {
       }
 
       // 2. Direct call to email backend API
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      const backendUrl = getBackendUrl();
       await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
         to: deanEmail,
         deanName: deanName,

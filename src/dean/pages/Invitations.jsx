@@ -7,8 +7,8 @@ import Header from '../components/Header';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
-import { verifySchoolEmailOnline, validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -163,7 +163,7 @@ Please click the button below to activate your account and set up your credentia
       await addDoc(collection(db, 'advisers'), adviserData);
 
       // 1. Trigger Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+      const backendUrl = getBackendUrl();
       authFetch(`${backendUrl}/api/send-invitation-email`, {
         to: formData.email.toLowerCase().trim(),
         adviserName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
@@ -306,7 +306,7 @@ Please click the button below to activate your account and set up your credentia
 
       // 1. Resend via direct backend
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://archivio-email-service.onrender.com';
+        const backendUrl = getBackendUrl();
         await authFetch(`${backendUrl}/api/send-invitation-email`, {
           to: adviserEmail,
           adviserName: adviser?.firstName || adviser?.displayName || 'Adviser',
