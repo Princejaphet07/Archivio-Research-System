@@ -212,7 +212,7 @@ async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          sender: { name: 'ARCHIVIO SWU PHINMA', email: process.env.BREVO_SENDER_EMAIL || 'japhetvender00@gmail.com' },
+          sender: { name: 'ARCHIVIO SWU PHINMA', email: process.env.BREVO_SENDER_EMAIL || 'archivio.system@gmail.com' },
           to: [{ email: targetEmail }],
           replyTo: { email: replyTo || 'archivio.noreply@gmail.com' },
           subject,
