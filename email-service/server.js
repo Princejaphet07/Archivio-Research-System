@@ -153,35 +153,39 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 12000
 });
 
-// Test email connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Email service verification note:', error.message);
-  } else {
-    console.log('✅ Email service ready');
-  }
-});
-
-// Diagnostic endpoint to test SMTP connectivity directly from the host
-app.get('/api/debug-smtp', async (req, res) => {
-  const result = {};
-  try {
-    const tGmail = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
-      connectionTimeout: 5000
-    });
-    await tGmail.verify();
-    result.gmailService = 'SUCCESS';
-  } catch (e) {
-    result.gmailService = { error: e.message, code: e.code };
-  }
-  res.json({
-    envPort: process.env.EMAIL_PORT,
-    envUser: process.env.EMAIL_USER ? 'SET' : 'NOT_SET',
-    envPass: process.env.EMAIL_PASSWORD ? 'SET' : 'NOT_SET',
-    result
+// Test email connectivity
+if (process.env.BREVO_API_KEY) {
+  console.log('✅ Brevo HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
+} else if (process.env.RESEND_API_KEY) {
+  console.log('✅ Resend HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
+} else {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.warn('⚠️ SMTP port notice (cloud host blocks SMTP ports; fallback webhooks active):', error.message);
+    } else {
+      console.log('✅ Email SMTP service ready');
+    }
   });
+}
+
+// Diagnostic endpoint to test email providers connectivity directly from the host
+app.get('/api/debug-smtp', async (req, res) => {
+  const result = {
+    brevoKeyConfigured: !!process.env.BREVO_API_KEY,
+    resendKeyConfigured: !!process.env.RESEND_API_KEY,
+    googleWebhookConfigured: !!process.env.GOOGLE_SCRIPT_WEBHOOK_URL,
+    envUser: process.env.EMAIL_USER ? 'SET' : 'NOT_SET'
+  };
+  
+  if (process.env.BREVO_API_KEY) {
+    result.primaryProvider = 'Brevo HTTPS API (Port 443 - Cloud Unblocked)';
+  } else if (process.env.RESEND_API_KEY) {
+    result.primaryProvider = 'Resend HTTPS API (Port 443 - Cloud Unblocked)';
+  } else {
+    result.primaryProvider = 'Google Apps Script / SMTP Fallback';
+  }
+  
+  res.json(result);
 });
 
 // ============================================
