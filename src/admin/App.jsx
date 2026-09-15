@@ -8,14 +8,16 @@ import { DarkModeProvider } from './context/DarkModeContext';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
 // Lazy-load dashboard pages — only downloaded when navigated to
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const UserManagement = React.lazy(() => import('./pages/UserManagement'));
-const AllUsers = React.lazy(() => import('./pages/AllUsers'));
-const ActivityLogs = React.lazy(() => import('./pages/ActivityLogs'));
-const Reports = React.lazy(() => import('./pages/Reports'));
-const Settings = React.lazy(() => import('./pages/Settings'));
-const SuperAdminSettings = React.lazy(() => import('./pages/SuperAdminSettings'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const UserManagement = lazyWithRetry(() => import('./pages/UserManagement'));
+const AllUsers = lazyWithRetry(() => import('./pages/AllUsers'));
+const ActivityLogs = lazyWithRetry(() => import('./pages/ActivityLogs'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const SuperAdminSettings = lazyWithRetry(() => import('./pages/SuperAdminSettings'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">

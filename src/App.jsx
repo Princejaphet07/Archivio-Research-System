@@ -7,11 +7,13 @@ import DeanActivate from './pages/DeanActivate';
 import ResetPassword from './pages/ResetPassword';
 import PublicVerifyCertificate from './pages/PublicVerifyCertificate';
 
+import { lazyWithRetry } from './utils/lazyWithRetry';
+
 // Lazy-load each sub-app so the browser downloads only the portal the user needs
-const AdminApp = React.lazy(() => import('./admin/App'));
-const DeanApp = React.lazy(() => import('./dean/App'));
-const AdviserApp = React.lazy(() => import('./adviser/App'));
-const StudentApp = React.lazy(() => import('./student/App'));
+const AdminApp = lazyWithRetry(() => import('./admin/App'));
+const DeanApp = lazyWithRetry(() => import('./dean/App'));
+const AdviserApp = lazyWithRetry(() => import('./adviser/App'));
+const StudentApp = lazyWithRetry(() => import('./student/App'));
 
 // Shared loading spinner shown while a sub-app chunk downloads
 const PortalLoader = () => (

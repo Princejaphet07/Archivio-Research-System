@@ -12,15 +12,17 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AdviserProvider } from './context/AdviserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
 
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
 // Lazy-load main pages
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const MyGroups = React.lazy(() => import('./pages/MyGroups'));
-const ReviewSubmissions = React.lazy(() => import('./pages/ReviewSubmissions'));
-const ResearchCategories = React.lazy(() => import('./pages/ResearchCategories'));
-const GroupRegistrations = React.lazy(() => import('./pages/GroupRegistrations'));
-const SendInvitations = React.lazy(() => import('./pages/SendInvitations'));
-const SubmissionRequirements = React.lazy(() => import('./pages/SubmissionRequirements'));
-const MyProfile = React.lazy(() => import('./pages/MyProfile'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
+const ReviewSubmissions = lazyWithRetry(() => import('./pages/ReviewSubmissions'));
+const ResearchCategories = lazyWithRetry(() => import('./pages/ResearchCategories'));
+const GroupRegistrations = lazyWithRetry(() => import('./pages/GroupRegistrations'));
+const SendInvitations = lazyWithRetry(() => import('./pages/SendInvitations'));
+const SubmissionRequirements = lazyWithRetry(() => import('./pages/SubmissionRequirements'));
+const MyProfile = lazyWithRetry(() => import('./pages/MyProfile'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">

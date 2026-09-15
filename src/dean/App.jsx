@@ -10,15 +10,17 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import './App.css';
 
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
 // Lazy-load dashboard pages
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const ResearchRecords = React.lazy(() => import('./pages/ResearchRecords'));
-const PublishQueue = React.lazy(() => import('./pages/PublishQueue'));
-const Requirements = React.lazy(() => import('./pages/Requirements'));
-const Invitations = React.lazy(() => import('./pages/Invitations'));
-const Reports = React.lazy(() => import('./pages/Reports'));
-const UserManagement = React.lazy(() => import('./pages/UserManagement'));
-const Settings = React.lazy(() => import('./pages/Settings'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const ResearchRecords = lazyWithRetry(() => import('./pages/ResearchRecords'));
+const PublishQueue = lazyWithRetry(() => import('./pages/PublishQueue'));
+const Requirements = lazyWithRetry(() => import('./pages/Requirements'));
+const Invitations = lazyWithRetry(() => import('./pages/Invitations'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
+const UserManagement = lazyWithRetry(() => import('./pages/UserManagement'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">

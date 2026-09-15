@@ -12,10 +12,39 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("ErrorBoundary caught an error", error, errorInfo);
+    
+    // Auto reload once if it's a dynamic chunk error after new deployment
+    const isChunkError = 
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('dynamically imported module') ||
+      error?.message?.includes('MIME type') ||
+      error?.name === 'ChunkLoadError';
+
+    if (isChunkError) {
+      const pageHasBeenForceRefreshed = JSON.parse(
+        window.sessionStorage.getItem('archivio_chunk_reload_admin') || 'false'
+      );
+      if (!pageHasBeenForceRefreshed) {
+        window.sessionStorage.setItem('archivio_chunk_reload_admin', 'true');
+        window.location.reload();
+      }
+    }
   }
+
+  handleReload = () => {
+    window.sessionStorage.removeItem('archivio_chunk_reload_admin');
+    window.sessionStorage.removeItem('archivio_chunk_reload_retry');
+    window.location.reload();
+  };
 
   render() {
     if (this.state.hasError) {
+      const isChunkError = 
+        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+        this.state.error?.message?.includes('dynamically imported module') ||
+        this.state.error?.message?.includes('MIME type') ||
+        this.state.error?.name === 'ChunkLoadError';
+
       return (
         <div style={{
           height: '100vh',
@@ -35,14 +64,17 @@ class ErrorBoundary extends React.Component {
             textAlign: 'center',
             maxWidth: '500px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>Oops! Something went wrong.</h1>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{isChunkError ? '🔄' : '⚠️'}</div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>
+              {isChunkError ? 'New Update Available' : 'Oops! Something went wrong.'}
+            </h1>
             <p style={{ color: '#4b5563', marginBottom: '24px', fontSize: '15px' }}>
-              We encountered an unexpected error while loading this page. 
-              Don't worry, your data is safe.
+              {isChunkError
+                ? 'A new version of ARCHIVIO was deployed. Please refresh to load the latest updates.'
+                : "We encountered an unexpected error while loading this page. Don't worry, your data is safe."}
             </p>
             <button 
-              onClick={() => window.location.href = '/'}
+              onClick={this.handleReload}
               style={{
                 backgroundColor: '#7a2e46',
                 color: 'white',
@@ -57,7 +89,7 @@ class ErrorBoundary extends React.Component {
               onMouseOver={(e) => e.target.style.backgroundColor = '#5c2234'}
               onMouseOut={(e) => e.target.style.backgroundColor = '#7a2e46'}
             >
-              Refresh Page
+              {isChunkError ? 'Update & Refresh Page' : 'Refresh Page'}
             </button>
           </div>
         </div>
