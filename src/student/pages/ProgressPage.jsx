@@ -110,7 +110,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     const reqQ = query(collection(db, 'requirements'));
     const unsubReq = onSnapshot(reqQ, (snap) => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const active = all.filter(r => r.scope === 'global' && r.status === 'approved');
+      const active = all.filter(r => r.scope === 'global' && r.status === 'approved' && r.storageEnabled !== false && r.storageStatus !== 'suspended');
       setRequirements(active);
     });
 

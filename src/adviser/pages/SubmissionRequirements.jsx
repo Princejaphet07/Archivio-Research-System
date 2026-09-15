@@ -130,7 +130,11 @@ function SubmissionRequirements() {
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-stone-800/80 shrink-0">
                     {/* Status Badge */}
-                    {req.scope === 'global' ? (
+                    {(req.storageEnabled === false || req.storageStatus === 'suspended') ? (
+                      <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-200 dark:border-amber-800/50 flex items-center gap-1">
+                        <span>⚠️</span> Unavailable (Admin Suspended)
+                      </span>
+                    ) : req.scope === 'global' ? (
                       <span className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-blue-200 dark:border-blue-800/50">Global</span>
                     ) : req.status === 'approved' ? (
                       <span className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-green-200 dark:border-green-800/50">Approved</span>

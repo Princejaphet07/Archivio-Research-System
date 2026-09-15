@@ -429,8 +429,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   };
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalCount = requirements.length;
-  const validUploadedDocs = uploadedDocs.filter(id => requirements.some(r => r.id === id));
+  const activeRequirements = requirements.filter(r => r.storageEnabled !== false && r.storageStatus !== 'suspended');
+  const totalCount = activeRequirements.length;
+  const validUploadedDocs = uploadedDocs.filter(id => activeRequirements.some(r => r.id === id));
   const uploadedCount = validUploadedDocs.length;
   const missingCount = Math.max(0, totalCount - uploadedCount);
   const progressPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
@@ -639,24 +640,49 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 }
 
                 // ── MISSING CARD ──
+                const isSuspended = item.storageEnabled === false || item.storageStatus === 'suspended';
+
                 return (
                   <Card key={item.id} hover className={`flex flex-col h-full ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 to-red-400" />
+                    <div className={`absolute top-0 left-0 right-0 h-[3px] ${isSuspended ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : 'bg-gradient-to-r from-red-500 to-red-400'}`} />
                     <CardBody className="flex flex-col flex-1 pt-7">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center shrink-0 text-xl">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl ${isSuspended ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
                           {item.icon}
                         </div>
                         <div>
                           <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
-                          <span className="text-[9px] font-bold text-red-600 dark:text-red-400 tracking-widest uppercase bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">Required</span>
+                          {isSuspended ? (
+                            <span className="text-[9px] font-bold text-amber-800 dark:text-amber-300 tracking-widest uppercase bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                              ⚠️ Uploads Paused by Admin
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-red-600 dark:text-red-400 tracking-widest uppercase bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">
+                              Required
+                            </span>
+                          )}
                         </div>
                       </div>
                       <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-4 flex-1">{item.desc}</p>
 
                       <div
-                        className={`border-2 border-dashed border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all mt-auto ${reviewStatus === 'published' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-red-50/80 dark:hover:bg-red-900/20'}`}
+                        className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all mt-auto ${
+                          isSuspended 
+                            ? 'border-amber-300 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 cursor-not-allowed'
+                            : reviewStatus === 'published' 
+                            ? 'border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 opacity-60 cursor-not-allowed' 
+                            : 'border-red-300/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 cursor-pointer hover:bg-red-50/80 dark:hover:bg-red-900/20'
+                        }`}
                         onClick={() => {
+                          if (isSuspended) {
+                            Swal.fire({
+                              icon: 'info',
+                              title: 'Storage Allocation Paused',
+                              text: `Uploads for "${item.title}" are temporarily suspended by the System Administrator to manage institutional cloud storage.`,
+                              confirmButtonColor: '#801e38'
+                            });
+                            return;
+                          }
                           if (reviewStatus === 'published') {
                             Swal.fire('Locked', 'This research is already published. No further changes can be made.', 'info');
                             return;
@@ -670,6 +696,18 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             <div className="w-6 h-6 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
                             <span className="text-red-500 font-bold text-[12px]">Uploading...</span>
                           </div>
+                        ) : isSuspended ? (
+                          <>
+                            <div className="w-9 h-9 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-700 dark:text-amber-300 flex items-center justify-center mb-2 font-bold text-sm">
+                              🔒
+                            </div>
+                            <p className="text-amber-800 dark:text-amber-300 font-bold text-[13px]">
+                              Submissions Temporarily Paused
+                            </p>
+                            <p className="text-amber-700/80 dark:text-amber-400/80 text-[11px] mt-1">
+                              Cloud storage allocation suspended by Admin
+                            </p>
+                          </>
                         ) : (
                           <>
                             <div className="w-9 h-9 bg-red-100 dark:bg-red-900/40 rounded-xl text-red-500 flex items-center justify-center mb-2">
@@ -690,13 +728,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       </div>
 
                       {/* Hidden File Input */}
-                      <input
-                        type="file"
-                        accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
-                        ref={el => fileInputRefs.current[item.id] = el}
-                        className="hidden"
-                        onChange={(e) => handleUploadFile(item, e.target.files[0])}
-                      />
+                      {!isSuspended && (
+                        <input
+                          type="file"
+                          accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
+                          ref={el => fileInputRefs.current[item.id] = el}
+                          className="hidden"
+                          onChange={(e) => handleUploadFile(item, e.target.files[0])}
+                        />
+                      )}
                     </CardBody>
                   </Card>
                 );

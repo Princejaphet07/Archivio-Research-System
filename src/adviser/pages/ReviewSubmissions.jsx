@@ -1119,8 +1119,8 @@ function ReviewSubmissions() {
                 <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
                 <div className="space-y-3">
                   {requirements.map((req) => {
-                    const docMeta = selectedSubmission.documents?.[req.id];
-                    const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id);
+                    const docMeta = selectedSubmission.documents?.[req.id] || selectedSubmission.documents?.[req.title];
+                    const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id) || selectedSubmission.uploadedDocs?.includes(req.title) || !!docMeta;
 
                     return (
                       <div
@@ -1132,10 +1132,10 @@ function ReviewSubmissions() {
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className="text-xl shrink-0">{req.icon}</span>
+                          <span className="text-xl shrink-0">{req.icon || '📄'}</span>
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                              {req.id}
+                              {req.title || req.id}
                             </p>
                             {isUploaded && docMeta && (
                               <p className="text-xs text-gray-500 dark:text-stone-400 truncate">
@@ -1149,11 +1149,11 @@ function ReviewSubmissions() {
                             <>
                               <div className="flex flex-col items-end mr-2">
                                 <span className="text-green-700 dark:text-green-500 font-bold text-xs mb-1">✓ Submitted</span>
-                                {selectedSubmission?.documentApprovals?.[req.id] ? (
+                                {selectedSubmission?.documentApprovals?.[req.id] || selectedSubmission?.documentApprovals?.[req.title] ? (
                                   <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Checked</span>
-                                ) : selectedSubmission?.documentResubmissions?.[req.id] ? (
+                                ) : selectedSubmission?.documentResubmissions?.[req.id] || selectedSubmission?.documentResubmissions?.[req.title] ? (
                                   <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🔄 Resubmitted</span>
-                                ) : selectedSubmission?.documentRevisions?.[req.id] ? (
+                                ) : selectedSubmission?.documentRevisions?.[req.id] || selectedSubmission?.documentRevisions?.[req.title] ? (
                                   <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Revision</span>
                                 ) : null}
                               </div>
@@ -1162,7 +1162,7 @@ function ReviewSubmissions() {
                                   onClick={() => setViewerState({
                                     isOpen: true,
                                     url: docMeta.url,
-                                    title: `${selectedSubmission.groupName} - ${req.id}`,
+                                    title: `${selectedSubmission.groupName} - ${req.title || req.id}`,
                                     reqId: req.id
                                   })}
                                   className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"

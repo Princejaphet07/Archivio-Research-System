@@ -4,9 +4,9 @@ import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import { db, auth, storage } from '../../firebase/config';
-import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, setDoc, updateDoc, doc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
 import Swal from 'sweetalert2';
 
 const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
@@ -27,6 +27,8 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showPhotoDropdown, setShowPhotoDropdown] = useState(false);
+  const photoDropdownRef = useRef(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -61,56 +63,150 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   const strengthText = strengthScore === 0 ? '' : strengthScore < 3 ? 'Weak' : strengthScore === 3 ? 'Medium' : 'Strong';
   const strengthColor = strengthScore < 3 ? '#e53e3e' : strengthScore === 3 ? '#d69e2e' : '#2F855A';
 
+  // Close photo dropdown when clicking outside
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    const handleClickOutside = (e) => {
+      if (photoDropdownRef.current && !photoDropdownRef.current.contains(e.target)) {
+        setShowPhotoDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const q = query(collection(db, 'students'), where('uid', '==', uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const docSnap = snapshot.docs[0];
-        const data = docSnap.data();
-        setStudentData(data);
-        setDocId(docSnap.id);
-        
-        // Split displayName into first and last name if not explicitly stored
-        if (data.displayName) {
-          const parts = data.displayName.trim().split(' ');
-          if (parts.length > 1) {
-            setLastName(parts.pop());
-            setFirstName(parts.join(' '));
-          } else {
-            setFirstName(data.displayName);
-            setLastName('');
+  // Connect camera stream to video element when camera is opened
+  useEffect(() => {
+    if (isCameraOpen && cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(e => console.warn('Video playback notice:', e));
+    }
+  }, [isCameraOpen, cameraStream]);
+
+  // Robust Student Data Listener
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    const uid = user.uid;
+    const email = user.email?.toLowerCase().trim();
+
+    let isMounted = true;
+    let unsubSnap = null;
+
+    const populateFields = (data) => {
+      if (data.displayName || data.name) {
+        const fullName = data.displayName || data.name || '';
+        const parts = fullName.trim().split(' ');
+        if (parts.length > 1) {
+          setLastName(parts.pop());
+          setFirstName(parts.join(' '));
+        } else {
+          setFirstName(fullName);
+          setLastName('');
+        }
+      }
+      if (data.notificationPrefs) {
+        setNotificationPrefs(data.notificationPrefs);
+      }
+    };
+
+    const setupListener = async () => {
+      try {
+        // 1. Check doc(db, 'students', uid)
+        const stdDocRef = doc(db, 'students', uid);
+        const stdSnap = await getDoc(stdDocRef);
+
+        if (stdSnap.exists()) {
+          unsubSnap = onSnapshot(stdDocRef, (snap) => {
+            if (!isMounted || !snap.exists()) return;
+            const data = snap.data();
+            setStudentData(data);
+            setDocId(snap.id);
+            populateFields(data);
+          });
+          return;
+        }
+
+        // 2. Query by uid
+        const qUid = query(collection(db, 'students'), where('uid', '==', uid));
+        const snapUid = await getDocs(qUid);
+        if (!snapUid.empty) {
+          const targetDoc = snapUid.docs[0];
+          unsubSnap = onSnapshot(doc(db, 'students', targetDoc.id), (snap) => {
+            if (!isMounted || !snap.exists()) return;
+            const data = snap.data();
+            setStudentData(data);
+            setDocId(snap.id);
+            populateFields(data);
+          });
+          return;
+        }
+
+        // 3. Query by email
+        if (email) {
+          const qEmail = query(collection(db, 'students'), where('email', '==', email));
+          const snapEmail = await getDocs(qEmail);
+          if (!snapEmail.empty) {
+            const targetDoc = snapEmail.docs[0];
+            unsubSnap = onSnapshot(doc(db, 'students', targetDoc.id), (snap) => {
+              if (!isMounted || !snap.exists()) return;
+              const data = snap.data();
+              setStudentData(data);
+              setDocId(snap.id);
+              populateFields(data);
+            });
+            return;
           }
         }
 
-        if (data.notificationPrefs) {
-          setNotificationPrefs(data.notificationPrefs);
-        }
+        // 4. Default fallback: use uid as docId
+        setDocId(uid);
+      } catch (err) {
+        console.warn('Student settings listener notice:', err.message);
+        setDocId(uid);
       }
-    });
+    };
 
-    return () => unsubscribe();
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubSnap) unsubSnap();
+    };
   }, []);
 
   const handleSaveProfile = async () => {
-    if (!docId) return;
+    const user = auth.currentUser;
+    const targetDocId = docId || user?.uid;
+    if (!targetDocId) return;
+
     setIsSaving(true);
     try {
       const newDisplayName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      await updateDoc(doc(db, 'students', docId), {
+      
+      await setDoc(doc(db, 'students', targetDocId), {
         displayName: newDisplayName,
-        name: newDisplayName // Also update name just in case
-      });
+        name: newDisplayName,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      try {
+        if (user) {
+          await setDoc(doc(db, 'users', user.uid), {
+            displayName: newDisplayName,
+            name: newDisplayName
+          }, { merge: true });
+          await updateProfile(user, { displayName: newDisplayName });
+        }
+      } catch (e) {}
 
       await addDoc(collection(db, 'notifications'), {
-        userId: auth.currentUser?.uid,
+        userId: user?.uid,
         title: "Profile Updated",
         message: "Your profile information was successfully updated.",
         isRead: false,
         createdAt: serverTimestamp()
       });
+
       Swal.fire({
         title: 'Success!',
         text: 'Your profile has been updated.',
@@ -131,24 +227,30 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
   };
 
   const uploadPhotoFile = async (file) => {
-    if (!file || !docId) return;
+    if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      Swal.fire('Error', 'File size must be less than 2MB', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        title: 'File Too Large',
+        text: 'File size must be less than 5MB',
+        icon: 'error',
+        confirmButtonColor: '#7B1F35'
+      });
       return;
     }
 
     try {
       Swal.fire({
         title: 'Uploading...',
-        text: 'Please wait while we upload your photo',
+        text: 'Please wait while we update your photo',
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
         }
       });
 
-      const uid = auth.currentUser?.uid || 'student';
+      const user = auth.currentUser;
+      const uid = user?.uid || 'student';
       const fileExtension = file.name ? file.name.split('.').pop() : 'jpg';
       const timestamp = Date.now();
       const storagePath = `avatars/${uid}_${timestamp}.${fileExtension}`;
@@ -157,9 +259,35 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
-      await updateDoc(doc(db, 'students', docId), {
-        profilePhotoUrl: downloadURL
-      });
+      const targetDocId = docId || uid;
+
+      // Update student record
+      await setDoc(doc(db, 'students', targetDocId), {
+        profilePhotoUrl: downloadURL,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Update users collection
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          profilePhotoUrl: downloadURL,
+          photoURL: downloadURL
+        }, { merge: true });
+      } catch (uErr) {
+        console.warn('User profile photo sync notice:', uErr);
+      }
+
+      // Update Firebase Auth profile
+      try {
+        if (user) {
+          await updateProfile(user, { photoURL: downloadURL });
+        }
+      } catch (authErr) {
+        console.warn('Auth profile photo update notice:', authErr);
+      }
+
+      // Optimistic local state update
+      setStudentData(prev => ({ ...(prev || {}), profilePhotoUrl: downloadURL }));
       
       Swal.fire({
         title: 'Success!',
@@ -171,28 +299,95 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       });
     } catch (error) {
       console.error('Error uploading photo:', error);
-      Swal.fire('Error', 'Failed to upload photo', 'error');
+      Swal.fire({
+        title: 'Upload Failed',
+        text: error.message || 'Failed to upload photo. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#7B1F35'
+      });
     }
   };
 
   const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    uploadPhotoFile(file);
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadPhotoFile(file);
+    }
+    // Reset file input value so selecting the same file triggers change
+    e.target.value = '';
+    setShowPhotoDropdown(false);
+  };
+
+  const handleRemovePhoto = async () => {
+    setShowPhotoDropdown(false);
+    const result = await Swal.fire({
+      title: 'Remove Profile Photo?',
+      text: 'Are you sure you want to remove your profile photo?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Remove',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#7B1F35',
+      cancelButtonColor: '#6B7280'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const user = auth.currentUser;
+      const uid = user?.uid || 'student';
+      const targetDocId = docId || uid;
+
+      await setDoc(doc(db, 'students', targetDocId), {
+        profilePhotoUrl: null
+      }, { merge: true });
+
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          profilePhotoUrl: null,
+          photoURL: null
+        }, { merge: true });
+      } catch (e) {}
+
+      try {
+        if (user) {
+          await updateProfile(user, { photoURL: '' });
+        }
+      } catch (e) {}
+
+      setStudentData(prev => ({ ...(prev || {}), profilePhotoUrl: null }));
+
+      Swal.fire({
+        title: 'Removed!',
+        text: 'Profile photo removed.',
+        icon: 'success',
+        confirmButtonColor: '#7B1F35',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      Swal.fire('Error', 'Failed to remove photo.', 'error');
+    }
   };
 
   const openCamera = async () => {
+    setShowPhotoDropdown(false);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false 
+      });
       setCameraStream(stream);
       setIsCameraOpen(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
     } catch (err) {
       console.error("Camera access error:", err);
-      Swal.fire('Error', 'Unable to access camera. Please check your permissions.', 'error');
+      Swal.fire({
+        title: 'Camera Access Needed',
+        text: 'Unable to access your camera. Please check your browser permissions or use "Choose from Files".',
+        icon: 'warning',
+        confirmButtonColor: '#7B1F35'
+      });
     }
   };
 
@@ -208,40 +403,23 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      canvas.width = width;
+      canvas.height = height;
+      
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, width, height);
       
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
+          const file = new File([blob], `profile_${Date.now()}.jpg`, { type: "image/jpeg" });
           closeCamera();
           uploadPhotoFile(file);
         }
-      }, 'image/jpeg');
+      }, 'image/jpeg', 0.9);
     }
-  };
-
-  const handleChangePhotoClick = () => {
-    Swal.fire({
-      title: 'Update Profile Photo',
-      text: 'How would you like to update your photo?',
-      icon: 'question',
-      showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonText: '📸 Take Photo',
-      denyButtonText: '📁 Choose File',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#7B1F35',
-      denyButtonColor: '#475569',
-    }).then((result) => {
-      if (result.confirmed) {
-        openCamera();
-      } else if (result.denied) {
-        fileInputRef.current?.click();
-      }
-    });
   };
 
   const handlePasswordChange = async () => {
@@ -406,14 +584,16 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         initials || 'ST'
                       )}
                     </div>
-                    <div className="flex flex-col items-start gap-1.5 sm:gap-2">
+                    <div className="flex flex-col items-start gap-1.5 sm:gap-2 relative" ref={photoDropdownRef}>
                       <div>
                         <h4 className="text-[14px] font-bold text-black dark:text-stone-100">Profile Photo</h4>
-                        <p className="text-[12px] text-gray-500 dark:text-stone-400">JPG or PNG. Max 2MB.</p>
+                        <p className="text-[12px] text-gray-500 dark:text-stone-400">JPG or PNG. Max 5MB.</p>
                       </div>
+
+                      {/* Hidden File Inputs */}
                       <input 
                         type="file" 
-                        accept="image/png, image/jpeg" 
+                        accept="image/png, image/jpeg, image/webp" 
                         className="hidden" 
                         ref={fileInputRef} 
                         onChange={handlePhotoUpload} 
@@ -426,12 +606,74 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                         ref={cameraInputRef} 
                         onChange={handlePhotoUpload} 
                       />
-                      <button 
-                        onClick={handleChangePhotoClick}
-                        className="min-h-[38px] px-4 sm:px-5 py-1.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors mt-1 touch-manipulation"
-                      >
-                        Change Photo
-                      </button>
+
+                      {/* Action Trigger Button */}
+                      <div className="relative mt-1">
+                        <button 
+                          type="button"
+                          onClick={() => setShowPhotoDropdown(prev => !prev)}
+                          className="min-h-[38px] px-4 sm:px-5 py-1.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[13px] font-medium rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors flex items-center gap-1.5 shadow-sm touch-manipulation cursor-pointer"
+                        >
+                          <span>Change Photo</span>
+                          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showPhotoDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {/* Floating Action Menu */}
+                        {showPhotoDropdown && (
+                          <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-stone-900 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 py-1.5 z-40 animate-fade-in divide-y divide-stone-100 dark:divide-stone-800">
+                            <div className="py-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowPhotoDropdown(false);
+                                  fileInputRef.current?.click();
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-2.5 transition-colors cursor-pointer"
+                              >
+                                <span className="text-[16px]">📁</span>
+                                <span>Choose from Files</span>
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={openCamera}
+                                className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-2.5 transition-colors cursor-pointer"
+                              >
+                                <span className="text-[16px]">📸</span>
+                                <span>Take Live Photo (Camera)</span>
+                              </button>
+
+                              {/* Mobile Native Camera option */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowPhotoDropdown(false);
+                                  cameraInputRef.current?.click();
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-2.5 transition-colors sm:hidden cursor-pointer"
+                              >
+                                <span className="text-[16px]">📱</span>
+                                <span>Device Camera</span>
+                              </button>
+                            </div>
+
+                            {studentData?.profilePhotoUrl && (
+                              <div className="py-1">
+                                <button
+                                  type="button"
+                                  onClick={handleRemovePhoto}
+                                  className="w-full text-left px-4 py-2 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                >
+                                  <span className="text-[15px]">🗑️</span>
+                                  <span>Remove Current Photo</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

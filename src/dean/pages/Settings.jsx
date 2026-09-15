@@ -142,16 +142,50 @@ export default function Settings({ activePage, onNavigate }) {
     };
   }, [deanSettings]);
 
-  const handleUpdateStatus = async (reqId, newStatus) => {
+  const handleUpdateStatus = async (reqId, newStatus, asGlobal = false) => {
     try {
-      await updateDoc(doc(db, 'requirements', reqId), {
+      const payload = {
         status: newStatus,
         updatedAt: new Date().toISOString()
+      };
+      if (asGlobal && newStatus === 'approved') {
+        const globalReqs = requirements.filter(r => r.scope === 'global');
+        const maxPriority = globalReqs.reduce((max, r) => Math.max(max, r.priority || 0), 0);
+        payload.scope = 'global';
+        payload.priority = maxPriority + 1;
+      }
+      await updateDoc(doc(db, 'requirements', reqId), payload);
+      Swal.fire({ 
+        icon: 'success', 
+        title: asGlobal ? 'Approved as Global Requirement!' : 'Updated', 
+        text: asGlobal ? 'This requirement is now active for ALL groups department-wide.' : `Requirement has been ${newStatus}.`, 
+        confirmButtonColor: '#7a1f3d' 
       });
-      Swal.fire({ icon: 'success', title: 'Updated', text: `Requirement has been ${newStatus}.`, confirmButtonColor: '#7a1f3d' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update requirement.' });
+    }
+  };
+
+  const handlePromoteToGlobal = async (reqId) => {
+    try {
+      const globalReqs = requirements.filter(r => r.scope === 'global');
+      const maxPriority = globalReqs.reduce((max, r) => Math.max(max, r.priority || 0), 0);
+      await updateDoc(doc(db, 'requirements', reqId), {
+        scope: 'global',
+        priority: maxPriority + 1,
+        updatedAt: new Date().toISOString()
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Promoted to Global!',
+        text: 'This requirement is now a Global Completion Requirement for ALL research groups.',
+        timer: 2000,
+        confirmButtonColor: '#7a1f3d'
+      });
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to promote requirement.', 'error');
     }
   };
 
@@ -429,29 +463,39 @@ export default function Settings({ activePage, onNavigate }) {
                           <ListSkeleton items={4} />
                         </div>
                       ) : (
-                        globalRequirements.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between p-4 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800/50 opacity-90">
-                            <div className="flex items-center gap-4">
-                              <span className="text-xl">{item.icon}</span>
-                              <div>
-                                <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
-                                <p className="text-xs text-stone-500 dark:text-stone-400">{item.desc}</p>
+                        globalRequirements.map((item) => {
+                          const isSuspended = item.storageEnabled === false || item.storageStatus === 'suspended';
+                          return (
+                            <div key={item.id} className={`flex items-center justify-between p-4 border rounded-xl transition ${isSuspended ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 opacity-90'}`}>
+                              <div className="flex items-center gap-4">
+                                <span className="text-xl">{item.icon}</span>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
+                                    {isSuspended && (
+                                      <span className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-300">
+                                        ⚠️ Storage Suspended by Admin
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-stone-500 dark:text-stone-400">{item.desc}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider border border-blue-200">Global</span>
+                                <button 
+                                  onClick={() => handleDeleteGlobalRequirement(item.id)}
+                                  className="border border-stone-200 dark:border-stone-700 rounded px-2.5 py-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center"
+                                  title="Delete Requirement"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider border border-blue-200">Global</span>
-                              <button 
-                                onClick={() => handleDeleteGlobalRequirement(item.id)}
-                                className="border border-stone-200 dark:border-stone-700 rounded px-2.5 py-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center"
-                                title="Delete Requirement"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -487,10 +531,24 @@ export default function Settings({ activePage, onNavigate }) {
                               </div>
                             </div>
                             <div className="flex gap-2 shrink-0">
-                              <button onClick={() => handleUpdateStatus(item.id, 'approved')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">
-                                ✓ Approve
+                              <button 
+                                onClick={() => handleUpdateStatus(item.id, 'approved', true)} 
+                                className="bg-[#7a1f3d] hover:bg-[#5e182f] text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                                title="Approve as Global Requirement for all research groups"
+                              >
+                                🌐 Approve as Global
                               </button>
-                              <button onClick={() => handleUpdateStatus(item.id, 'declined')} className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
+                              <button 
+                                onClick={() => handleUpdateStatus(item.id, 'approved', false)} 
+                                className="bg-green-600 hover:bg-green-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition"
+                                title="Approve for this adviser only"
+                              >
+                                ✓ For Adviser Only
+                              </button>
+                              <button 
+                                onClick={() => handleUpdateStatus(item.id, 'declined')} 
+                                className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3 py-2 rounded-lg text-xs font-bold transition"
+                              >
                                 ✕ Decline
                               </button>
                             </div>
@@ -503,18 +561,45 @@ export default function Settings({ activePage, onNavigate }) {
                   {/* Approved Adviser Proposals */}
                   {approvedProposals.length > 0 && (
                     <div className="mt-8 pt-8 border-t border-stone-100">
-                      <h3 className="text-sm font-bold text-stone-400 uppercase tracking-wider mb-4">Approved Adviser Requirements</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-sm font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider">Approved Adviser Requirements</h3>
+                          <p className="text-xs text-stone-400">These apply only to the proposing adviser's groups. Click "Make Global" to apply department-wide.</p>
+                        </div>
+                        <span className="text-xs font-bold text-stone-400">{approvedProposals.length} active</span>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {approvedProposals.map(item => (
-                          <div key={item.id} className="border border-stone-200 dark:border-stone-700 rounded-lg p-3 bg-white dark:bg-stone-800 flex items-center gap-3">
-                            <span className="text-xl">{item.icon}</span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate">{item.title}</p>
-                              <p className="text-[10px] text-stone-400 truncate">For: {item.adviserUid}</p>
+                        {approvedProposals.map(item => {
+                          const isSuspended = item.storageEnabled === false || item.storageStatus === 'suspended';
+                          return (
+                            <div key={item.id} className={`border rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs transition ${isSuspended ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20' : 'border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:border-stone-300'}`}>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-xl shrink-0">{item.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate">{item.title}</p>
+                                    {isSuspended && (
+                                      <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.2 rounded border border-amber-300">
+                                        ⚠️ Suspended
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-stone-400 truncate">For: {item.adviserUid}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded">ADVISER ONLY</span>
+                                <button
+                                  onClick={() => handlePromoteToGlobal(item.id)}
+                                  className="bg-[#7a1f3d] hover:bg-[#5e182f] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs"
+                                  title="Promote to Global Completion Requirement for all students"
+                                >
+                                  <span>🌐</span> Make Global
+                                </button>
+                              </div>
                             </div>
-                            <span className="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded">APPROVED</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -397,8 +397,8 @@ function MyGroups() {
                   <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-3">Document Status</p>
                   <div className="space-y-2">
                     {requirements.map((req) => {
-                      const docMeta = sub?.documents?.[req.id];
-                      const isUploaded = sub?.uploadedDocs?.includes(req.id);
+                      const docMeta = sub?.documents?.[req.id] || sub?.documents?.[req.title];
+                      const isUploaded = sub?.uploadedDocs?.includes(req.id) || sub?.uploadedDocs?.includes(req.title) || !!docMeta;
 
                       return (
                         <div
@@ -408,9 +408,9 @@ function MyGroups() {
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="text-lg shrink-0">{req.icon}</span>
+                            <span className="text-lg shrink-0">{req.icon || '📄'}</span>
                             <div className="min-w-0 flex-1">
-                              <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{req.id}</p>
+                              <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{req.title || req.id}</p>
                               {isUploaded && docMeta && (
                                 <p className="text-xs text-gray-500 dark:text-stone-400 truncate">{docMeta.name} · {docMeta.size} · {docMeta.date}</p>
                               )}

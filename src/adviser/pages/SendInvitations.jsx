@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAdviser } from '../context/AdviserContext';
 import Layout from '../components/Layout';
@@ -18,39 +18,83 @@ function SendInvitations() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch invitations on mount
+  // Real-time synchronization of invitations and student registration status
   useEffect(() => {
-    if (adviserData?.email) {
-      fetchInvitations();
-    }
-  }, [adviserData?.email]);
-
-  const fetchInvitations = async () => {
     if (!adviserData?.email) return;
 
-    try {
-      const invitationsQuery = query(
-        collection(db, 'studentInvitations'),
-        where('adviserId', '==', adviserData.userId)
-      );
-      const snapshot = await getDocs(invitationsQuery);
-      const invitationsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    const email = adviserData.email.toLowerCase().trim();
+    const userId = adviserData.userId || adviserData.id;
+
+    // Listen to all studentInvitations
+    const qInvitations = query(collection(db, 'studentInvitations'));
+    const unsubInv = onSnapshot(qInvitations, (snapshot) => {
+      const allInvites = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      // Sort by createdAt descending
-      invitationsData.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0);
-        const dateB = new Date(b.createdAt || 0);
-        return dateB - dateA;
+      // Filter invitations sent by this adviser
+      const myInvites = allInvites.filter(inv => {
+        const invSentBy = (inv.sentBy || '').toLowerCase().trim();
+        const invAdviserId = inv.adviserId;
+        return invSentBy === email || invAdviserId === userId || invAdviserId === adviserData.userId;
       });
-      
-      setInvitations(invitationsData);
-    } catch (error) {
-      console.error('Error fetching invitations:', error);
-    }
-  };
+
+      // Listen to registered users to cross-reference active accounts
+      const qUsers = query(collection(db, 'users'));
+      const unsubUsers = onSnapshot(qUsers, (uSnap) => {
+        const registeredEmailSet = new Set(
+          uSnap.docs.map(u => (u.data().email || '').toLowerCase().trim()).filter(Boolean)
+        );
+
+        // Listen to groups to check leader emails
+        const qGroups = query(collection(db, 'groups'));
+        const unsubGroups = onSnapshot(qGroups, (gSnap) => {
+          gSnap.docs.forEach(gDoc => {
+            const gData = gDoc.data();
+            if (gData.leaderEmail) registeredEmailSet.add(gData.leaderEmail.toLowerCase().trim());
+            if (Array.isArray(gData.members)) {
+              gData.members.forEach(m => {
+                const mEmail = (typeof m === 'object' ? m.email : m)?.toLowerCase()?.trim();
+                if (mEmail) registeredEmailSet.add(mEmail);
+              });
+            }
+          });
+
+          // Map and enrich status
+          const enriched = myInvites.map(inv => {
+            const sEmail = (inv.studentEmail || '').toLowerCase().trim();
+            const isRegistered = inv.status === 'active' || inv.status === 'registered' || inv.status === 'accepted' || registeredEmailSet.has(sEmail);
+
+            // Auto-heal Firestore record if already registered in system
+            if (isRegistered && inv.status === 'pending') {
+              updateDoc(doc(db, 'studentInvitations', inv.id), {
+                status: 'active',
+                activatedAt: inv.activatedAt || new Date().toISOString()
+              }).catch(e => console.warn('Auto-heal student invitation notice:', e.message));
+            }
+
+            return {
+              ...inv,
+              status: isRegistered ? 'active' : 'pending'
+            };
+          });
+
+          // Sort by createdAt descending
+          enriched.sort((a, b) => {
+            const dateA = new Date(a.invitationSentAt || a.createdAt || 0);
+            const dateB = new Date(b.invitationSentAt || b.createdAt || 0);
+            return dateB - dateA;
+          });
+
+          setInvitations(enriched);
+        }, (err) => console.warn('Groups listener notice:', err.message));
+
+        return () => unsubGroups();
+      }, (err) => console.warn('Users listener notice:', err.message));
+
+      return () => unsubUsers();
+    }, (err) => console.warn('Invitations listener notice:', err.message));
+
+    return () => unsubInv();
+  }, [adviserData?.email, adviserData?.userId]);
 
   const handleSendInvitation = async (e) => {
     e.preventDefault();
