@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { verifySchoolEmailOnline, validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
 

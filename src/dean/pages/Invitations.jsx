@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { verifySchoolEmailOnline, validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
 
