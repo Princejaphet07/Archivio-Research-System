@@ -42,7 +42,7 @@ const TEAM_MEMBERS = [
     accentGradient: 'bg-gradient-to-r from-[#8c1c38] via-[#a82446] to-[#d6ad60]',
     github: 'https://github.com/Princejaphet07',
     email: 'mailto:japhetvender00@gmail.com',
-    portfolio: 'https://venderportfolio.netlify.app/'
+    portfolio: 'https://prince-japhet-portfolio.web.app/'
   },
   {
     name: 'Jerika Zamoras',
