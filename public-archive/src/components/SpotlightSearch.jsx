@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 
 export default function SpotlightSearch() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,10 +13,11 @@ export default function SpotlightSearch() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [hasFetched, setHasFetched] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   // Handle Ctrl+K / Cmd+K to open, Esc to close
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function SpotlightSearch() {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
-      
+
       if (!hasFetched) {
         fetchPapers();
       }
@@ -57,7 +60,7 @@ export default function SpotlightSearch() {
       // Then get published submissions
       const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
       const subSnap = await getDocs(qSubs);
-      
+
       const enrichedPapers = subSnap.docs.map(docSnap => {
         const sub = { id: docSnap.id, ...docSnap.data() };
         const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
@@ -119,6 +122,26 @@ export default function SpotlightSearch() {
 
   const navigateToPaper = (id) => {
     setIsOpen(false);
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to view and read full research manuscripts.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login', { state: { from: { pathname: `/viewer/${id}` } } });
+        }
+      });
+      return;
+    }
     navigate(`/viewer/${id}`);
   };
 
@@ -127,14 +150,14 @@ export default function SpotlightSearch() {
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] sm:pt-[20vh] px-4 font-sans">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={() => setIsOpen(false)}
       ></div>
-      
+
       {/* Search Modal */}
       <div className="relative w-full max-w-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_rgb(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgb(0,0,0,0.4)] border border-white dark:border-gray-700 overflow-hidden flex flex-col">
-        
+
         {/* Search Input Area */}
         <div className="flex items-center px-4 py-4 border-b border-stone-200/50 dark:border-gray-700/50 relative">
           <svg className="w-6 h-6 text-[#7a2039] dark:text-[#f3e5ab] ml-2 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -158,11 +181,11 @@ export default function SpotlightSearch() {
         <div className="max-h-[60vh] overflow-y-auto custom-scrollbar" ref={resultsRef}>
           {loading && (
             <div className="px-6 py-8 text-center text-stone-500 flex items-center justify-center gap-3">
-               <div className="w-5 h-5 border-2 border-[#7a2039]/30 border-t-[#7a2039] rounded-full animate-spin"></div>
-               Loading archives...
+              <div className="w-5 h-5 border-2 border-[#7a2039]/30 border-t-[#7a2039] rounded-full animate-spin"></div>
+              Loading archives...
             </div>
           )}
-          
+
           {!loading && searchQuery.trim() && filteredPapers.length === 0 && (
             <div className="px-6 py-12 text-center text-stone-500">
               <span className="text-3xl mb-3 block">📄</span>
@@ -179,13 +202,12 @@ export default function SpotlightSearch() {
                 {filteredPapers.map((paper, index) => {
                   const isSelected = index === selectedIndex;
                   return (
-                    <li 
+                    <li
                       key={paper.id}
-                      className={`px-4 py-3 mx-2 rounded-lg cursor-pointer flex items-start gap-4 transition-colors ${
-                        isSelected 
-                          ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/10 text-[#7a2039] dark:text-[#f3e5ab]' 
+                      className={`px-4 py-3 mx-2 rounded-lg cursor-pointer flex items-start gap-4 transition-colors ${isSelected
+                          ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/10 text-[#7a2039] dark:text-[#f3e5ab]'
                           : 'hover:bg-stone-50 dark:hover:bg-gray-700/50'
-                      }`}
+                        }`}
                       onClick={() => navigateToPaper(paper.id)}
                       onMouseEnter={() => setSelectedIndex(index)}
                     >

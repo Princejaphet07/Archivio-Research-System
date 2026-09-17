@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, getDocs, setDoc, addDoc, query, orderBy, serverTimestamp, deleteDoc, where } from 'firebase/firestore';
@@ -8,7 +8,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 
-const TypewriterWord = ({ content }) => {
+const GUEST_MAX_QUERIES = 3;
+
+const TypewriterWord = ({ content, onFinish }) => {
   const [visibleWords, setVisibleWords] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
   const timerRef = useRef(null);
@@ -22,6 +24,7 @@ const TypewriterWord = ({ content }) => {
         if (prev >= words.length) {
           clearInterval(timerRef.current);
           setIsTyping(false);
+          if (onFinish) onFinish();
           return prev;
         }
         return prev + 1;
@@ -34,6 +37,7 @@ const TypewriterWord = ({ content }) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setVisibleWords(words.length);
     setIsTyping(false);
+    if (onFinish) onFinish();
   };
 
   const displayedContent = words.slice(0, visibleWords).join(' ');
@@ -72,6 +76,12 @@ export default function HomepageChatbot() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isTypewriterActive, setIsTypewriterActive] = useState(false);
+  const [isCooldown, setIsCooldown] = useState(false);
+  const [guestQueriesLeft, setGuestQueriesLeft] = useState(() => {
+    const stored = localStorage.getItem('archivio_guest_queries_left');
+    return stored !== null ? Math.max(0, parseInt(stored, 10)) : GUEST_MAX_QUERIES;
+  });
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -219,7 +229,7 @@ export default function HomepageChatbot() {
   // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory, isTyping]);
+  }, [chatHistory, isTyping, isTypewriterActive]);
 
   const startNewChat = () => {
     setCurrentChatId(null);
@@ -321,8 +331,45 @@ export default function HomepageChatbot() {
   const sendMessage = async (messageText) => {
     if (!messageText.trim() || isTyping) return;
 
+    // Guest anti-spam / query limit verification
+    if (!currentUser) {
+      if (guestQueriesLeft <= 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Guest Limit Reached',
+          text: 'You have used all free guest queries. Please log in or sign up with your @phinmaed.com account to unlock unlimited AI access.',
+          confirmButtonColor: '#7a2039',
+          confirmButtonText: 'Log In Now',
+          showCancelButton: true,
+          cancelButtonText: 'Cancel',
+          customClass: {
+            popup: 'dark:bg-gray-800 dark:text-gray-100',
+            title: 'dark:text-gray-100'
+          }
+        }).then((res) => {
+          if (res.isConfirmed) {
+            window.location.href = '/login';
+          }
+        });
+        return;
+      }
+
+      if (isCooldown) {
+        return;
+      }
+    }
+
     const userMessage = messageText.trim();
     setChatInput('');
+    
+    // Decrement guest queries counter & activate anti-spam cooldown
+    if (!currentUser) {
+      const remaining = Math.max(0, guestQueriesLeft - 1);
+      setGuestQueriesLeft(remaining);
+      localStorage.setItem('archivio_guest_queries_left', remaining.toString());
+      setIsCooldown(true);
+      setTimeout(() => setIsCooldown(false), 3000);
+    }
     
     const newHistoryUser = [...chatHistory, { 
       role: 'user', 
@@ -410,12 +457,14 @@ export default function HomepageChatbot() {
       }
 
       const newHistoryModel = [...newHistoryUser, { role: 'model', content: data.text }];
+      setIsTypewriterActive(true);
       await updateAndSaveHistory(newHistoryModel, savedChatId);
       if (isVoiceEnabled) {
         speakText(data.text);
       }
     } catch (err) {
       console.error("AI Error:", err);
+      setIsTypewriterActive(false);
       const newHistoryError = [...newHistoryUser, { role: 'model', content: `**Error:** ${err.message}` }];
       await updateAndSaveHistory(newHistoryError, savedChatId);
     } finally {
@@ -428,12 +477,16 @@ export default function HomepageChatbot() {
     await sendMessage(chatInput);
   };
 
-  const suggestions = [
+  // Guest users get introductory navigation prompts; Logged-in users get full research prompts
+  const suggestions = currentUser ? [
     "💡 Help me formulate a research title",
     "📝 How do I write a good abstract?",
     "💻 Suggest a thesis topic for IT",
     "📄 What are the latest research papers here?",
     "📋 What are the requirements for uploading?"
+  ] : [
+    "🏛️ What is ARCHIVIO?",
+    "🎓 How do students submit research here?"
   ];
 
   // Hide the chatbot on the viewer page (has its own AI) and login page
@@ -457,8 +510,17 @@ export default function HomepageChatbot() {
               )}
               <img src={logo} alt="Archivio AI" className="w-10 h-10 object-contain bg-white rounded-full p-1 shadow-sm" />
               <div>
-                <h3 className="font-bold text-[15px]">Archivio AI</h3>
-                <p className="text-xs text-[#f3e5ab] opacity-90">Always here to help</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-[15px]">Archivio AI</h3>
+                  {!currentUser && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${guestQueriesLeft > 0 ? 'bg-amber-400/20 text-amber-200 border-amber-300/30' : 'bg-red-500/20 text-red-200 border-red-400/30'}`}>
+                      {guestQueriesLeft > 0 ? `${guestQueriesLeft} free query left` : 'Limit reached'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#f3e5ab] opacity-90">
+                  {currentUser ? 'Always here to help' : 'Guest Mode (Limited)'}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -533,7 +595,7 @@ export default function HomepageChatbot() {
                   <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039]/90 text-white rounded-tl-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm' : 'bg-white/80 dark:bg-black/40 border border-white/40 dark:border-white/10 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm'}`}>
                       {msg.role === 'model' && idx === chatHistory.length - 1 ? (
-                        <TypewriterWord content={msg.content} />
+                        <TypewriterWord content={msg.content} onFinish={() => setIsTypewriterActive(false)} />
                       ) : (
                         msg.role === 'model' ? (
                           <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
@@ -565,6 +627,35 @@ export default function HomepageChatbot() {
                 </div>
               ))
             )}
+
+            {/* Guest Limit Lock Card - only shown AFTER the AI finishes generating and typing */}
+            {!currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive && (
+              <div className="bg-gradient-to-br from-amber-500/15 via-[#7a2039]/20 to-amber-600/15 border border-amber-500/40 rounded-2xl p-4 text-center my-2 shadow-xl backdrop-blur-md animate-fade-in-up">
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-[#7a2039] text-amber-300 flex items-center justify-center shadow-md">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h4 className="text-sm font-bold text-stone-900 dark:text-white">Free Guest Limit Reached</h4>
+                <p className="text-xs text-stone-700 dark:text-stone-200 mt-1 mb-3 leading-relaxed">
+                  Sign in with your <strong>@phinmaed.com</strong> account to unlock unlimited AI consultations, thesis assistance, and full research PDF viewing.
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <Link
+                    to="/login"
+                    className="px-3.5 py-1.5 bg-[#7a2039] hover:bg-[#5a1528] text-white text-xs font-semibold rounded-lg shadow transition"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/login"
+                    state={{ isSignUp: true }}
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-stone-900 text-xs font-semibold rounded-lg shadow transition"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              </div>
+            )}
+
             {isTyping && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
@@ -581,13 +672,13 @@ export default function HomepageChatbot() {
           </div>
 
           {/* Suggestions */}
-          {chatHistory.length <= 1 && !isTyping && (
+          {chatHistory.length <= 1 && !isTyping && !isTypewriterActive && (currentUser || guestQueriesLeft > 0) && (
             <div className="flex flex-wrap gap-2 px-4 pb-3 bg-transparent border-b border-stone-200/50 dark:border-gray-700">
               {suggestions.map((text, idx) => (
                 <button
                   key={idx}
                   onClick={() => sendMessage(text)}
-                  className="text-xs bg-white dark:bg-gray-800 border border-[#7a2039]/40 text-[#7a2039] dark:text-[#f3e5ab] px-3 py-1.5 rounded-full hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-[#7a2039] transition-colors text-left shadow-sm"
+                  className="text-xs bg-white dark:bg-gray-800 border border-[#7a2039]/40 text-[#7a2039] dark:text-[#f3e5ab] px-3 py-1.5 rounded-full hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-[#7a2039] transition-colors text-left shadow-sm cursor-pointer"
                 >
                   {text}
                 </button>
@@ -602,14 +693,14 @@ export default function HomepageChatbot() {
                 type="text" 
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                disabled={isTyping}
-                placeholder={isListening ? "Listening..." : "Ask me anything..."}
+                disabled={isTyping || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
+                placeholder={!currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive ? "Log in to continue chatting with AI..." : (isListening ? "Listening..." : "Ask me anything...")}
                 className="flex-1 min-w-0 border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors placeholder-stone-500" 
               />
               <button
                 type="button"
                 onClick={startListening}
-                disabled={isTyping || isListening}
+                disabled={isTyping || isListening || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shadow-md shrink-0 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-stone-200 dark:bg-gray-700 text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-gray-600'}`}
                 title="Use Voice Input"
               >
@@ -617,7 +708,7 @@ export default function HomepageChatbot() {
               </button>
               <button 
                 type="submit"
-                disabled={isTyping || !chatInput.trim()}
+                disabled={isTyping || isTypewriterActive || !chatInput.trim() || (!currentUser && guestQueriesLeft <= 0)}
                 className="bg-[#7a2039] text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#5a1528] transition cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>

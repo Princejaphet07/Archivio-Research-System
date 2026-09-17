@@ -39,7 +39,7 @@ function App() {
         <span className="text-6xl mb-6">🛠️</span>
         <h1 className="text-3xl font-serif font-bold text-[#801e38] mb-4">System Under Maintenance</h1>
         <p className="text-stone-600 max-w-md mx-auto">
-          ARCHIVIO is currently undergoing scheduled maintenance and updates. 
+          ARCHIVIO is currently undergoing scheduled maintenance and updates.
           Please check back later. We apologize for the inconvenience.
         </p>
       </div>
@@ -50,32 +50,32 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
-        <Routes>
-          <Route path="/" element={<ArchiveHome />} />
-          <Route path="/login" element={<ArchiveLogin />} />
-          <Route path="/forgot-password" element={<ArchiveForgotPassword />} />
-          <Route path="/reset-password" element={<ArchiveResetPassword />} />
-          <Route path="/browse" element={<ArchiveBrowse />} />
-          <Route path="/about" element={<ArchiveAbout />} />
-          <Route path="/verify/:id" element={<ArchiveVerifyCertificate />} />
+          <Routes>
+            <Route path="/" element={<ArchiveHome />} />
+            <Route path="/login" element={<ArchiveLogin />} />
+            <Route path="/forgot-password" element={<ArchiveForgotPassword />} />
+            <Route path="/reset-password" element={<ArchiveResetPassword />} />
+            <Route path="/browse" element={<ArchiveBrowse />} />
+            <Route path="/about" element={<ArchiveAbout />} />
+            <Route path="/verify/:id" element={<ArchiveVerifyCertificate />} />
 
-          
-          {/* Protected Routes */}
-          <Route path="/bookmarks" element={
-            <ProtectedRoute>
-              <ArchiveBookmarks />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/viewer/:id" element={
-            <ProtectedRoute>
-              <ArchivePaperViewer />
-            </ProtectedRoute>
-          } />
-        </Routes>
-        <SpotlightSearch />
-        <HomepageChatbot />
-      </Router>
+
+            {/* Protected Routes */}
+            <Route path="/bookmarks" element={
+              <ProtectedRoute>
+                <ArchiveBookmarks />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/viewer/:id" element={
+              <ProtectedRoute>
+                <ArchivePaperViewer />
+              </ProtectedRoute>
+            } />
+          </Routes>
+          <SpotlightSearch />
+          <HomepageChatbot />
+        </Router>
       </AuthProvider>
     </ThemeProvider>
   );

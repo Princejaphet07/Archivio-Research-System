@@ -7,12 +7,12 @@ import { collection, onSnapshot, query, where, doc, updateDoc, setDoc, arrayUnio
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
-import { 
-  trackSearch, 
-  trackDepartmentFilter, 
-  trackYearFilter, 
-  trackBookmark, 
-  trackCitation 
+import {
+  trackSearch,
+  trackDepartmentFilter,
+  trackYearFilter,
+  trackBookmark,
+  trackCitation
 } from '../utils/analytics';
 
 const HighlightedText = ({ text, highlight }) => {
@@ -105,12 +105,7 @@ function ArchiveBrowse() {
 
   useEffect(() => {
     if (!currentUser) {
-      try {
-        const localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-        setUserBookmarks(localBookmarks);
-      } catch (e) {
-        setUserBookmarks([]);
-      }
+      setUserBookmarks([]);
       return;
     }
 
@@ -128,7 +123,23 @@ function ArchiveBrowse() {
   const handleLike = async (e, paper) => {
     e.preventDefault();
     if (!currentUser) {
-      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in with your @phinmaed.com account to like research papers.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login');
+        }
+      });
       return;
     }
     const paperRef = doc(db, 'submissions', paper.id);
@@ -142,6 +153,28 @@ function ArchiveBrowse() {
 
   const handleBookmarkToggle = async (e, paper) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to save research papers to your Bookmarks.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login');
+        }
+      });
+      return;
+    }
+
     const isBookmarked = userBookmarks.includes(paper.id);
 
     if (isBookmarked) {
@@ -156,22 +189,6 @@ function ArchiveBrowse() {
 
     trackBookmark(paper, 'add');
 
-    if (!currentUser) {
-      // Guest logic
-      try {
-        let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-        if (!localBookmarks.includes(paper.id)) {
-          localBookmarks.push(paper.id);
-          localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
-          setUserBookmarks(localBookmarks);
-        }
-        Swal.fire({ title: 'Saved!', text: 'Paper saved to your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
-      } catch (err) {
-        console.error('Guest bookmark error:', err);
-      }
-      return;
-    }
-
     // Authenticated logic
     try {
       const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
@@ -181,6 +198,31 @@ function ArchiveBrowse() {
       console.error('Bookmark error:', err);
       Swal.fire('Error', 'Failed to update bookmarks', 'error');
     }
+  };
+
+  const handleViewPaper = (e, paperId) => {
+    if (e) e.preventDefault();
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to view and read full research manuscripts.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login', { state: { from: { pathname: `/viewer/${paperId}` } } });
+        }
+      });
+      return;
+    }
+    navigate(`/viewer/${paperId}`);
   };
 
   const handleShare = async (paper) => {
@@ -240,7 +282,7 @@ function ArchiveBrowse() {
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
           department: group?.department || sub.department,
-          authorDisplay: group 
+          authorDisplay: group
             ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
         };
@@ -274,18 +316,18 @@ function ArchiveBrowse() {
     const keywords = (paper.keywords || []).join(' ').toLowerCase();
     const program = (paper.program || paper.department || paper.category || '').toLowerCase();
     const matchesSearch = !q || title.includes(q) || author.includes(q) || keywords.includes(q) || program.includes(q);
-    
+
     // Year filter logic
     const pubYear = new Date(paper.publishedAt || paper.createdAt || currentDate).getFullYear().toString();
     const matchesYear = selectedYears.length === 0 || selectedYears.includes(pubYear);
-    
+
     // Department filter logic
     const matchesDept = selectedDepartments.length === 0 || selectedDepartments.some(dept => {
       const targetDept = normalizeDepartment(dept).toLowerCase();
       const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
       return normPaperDept === targetDept;
     });
-    
+
     return matchesSearch && matchesYear && matchesDept;
   }).sort((a, b) => {
     if (sortOption === 'Newest First') {
@@ -325,13 +367,13 @@ function ArchiveBrowse() {
   // Calculate popular keywords (Dynamic by Department)
   const getPopularKeywords = () => {
     const counts = {};
-    
+
     // Filter papers by selected department first if any
-    const papersToAnalyze = selectedDepartments.length > 0 
+    const papersToAnalyze = selectedDepartments.length > 0
       ? publishedPapers.filter(paper => {
-          const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
-          return selectedDepartments.some(dept => normalizeDepartment(dept).toLowerCase() === normPaperDept);
-        })
+        const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
+        return selectedDepartments.some(dept => normalizeDepartment(dept).toLowerCase() === normPaperDept);
+      })
       : publishedPapers;
 
     papersToAnalyze.forEach(paper => {
@@ -341,7 +383,7 @@ function ArchiveBrowse() {
       } else if (typeof paper.keywords === 'string') {
         kws = paper.keywords.split(',').map(k => k.trim());
       }
-      
+
       kws.forEach(kw => {
         const k = kw?.trim().toLowerCase();
         if (k) counts[k] = (counts[k] || 0) + 1;
@@ -360,7 +402,7 @@ function ArchiveBrowse() {
     publishedPapers.forEach(paper => {
       const authors = (paper.authorDisplay || '').split(',').map(a => a.trim()).filter(a => a);
       authors.forEach(author => {
-        if(author.toLowerCase() !== 'unknown author' && author.length > 3) {
+        if (author.toLowerCase() !== 'unknown author' && author.length > 3) {
           counts[author] = (counts[author] || 0) + 1;
         }
       });
@@ -395,24 +437,24 @@ function ArchiveBrowse() {
             <span className="absolute left-3 top-2.5 text-stone-400">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </span>
-            <input 
-              type="text" 
-              placeholder="Search title, author, keywords..." 
+            <input
+              type="text"
+              placeholder="Search title, author, keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full py-2.5 pl-10 pr-4 rounded bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 outline-none focus:border-[#7a2039] text-sm text-stone-700 dark:text-gray-200 shadow-sm transition-colors"
             />
           </div>
           {/* FILTER BUTTON FOR MOBILE */}
-          <button 
+          <button
             onClick={() => setIsMobileFiltersOpen(true)}
             className="md:hidden bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 p-2.5 rounded text-stone-600 dark:text-gray-300 shadow-sm hover:bg-stone-50 dark:hover:bg-gray-600 transition flex items-center justify-center cursor-pointer"
             aria-label="Refine Results"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
           </button>
-          
-          <select 
+
+          <select
             value={sortOption}
             onChange={(e) => { setSortOption(e.target.value); setDisplayLimit(5); }}
             className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded px-4 py-2.5 text-sm text-stone-600 dark:text-gray-300 outline-none shadow-sm cursor-pointer hidden md:block transition-colors"
@@ -430,7 +472,7 @@ function ArchiveBrowse() {
 
       {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 max-w-7xl mx-auto w-full relative">
-        
+
         {/* Mobile Filter Overlay */}
         {isMobileFiltersOpen && (
           <div className="md:hidden fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMobileFiltersOpen(false)}></div>
@@ -468,8 +510,8 @@ function ArchiveBrowse() {
               <div className="space-y-2">
                 {['2026', '2025', '2024', '2023', '2022'].map(year => (
                   <label key={year} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 accent-[#7a2039] cursor-pointer"
                       checked={selectedYears.includes(year)}
                       onChange={() => toggleYear(year)}
@@ -485,8 +527,8 @@ function ArchiveBrowse() {
               <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
                 {['Information Technology', 'Computer Science', 'Information Systems', 'Nursing', 'Business Administration', 'Education', 'Engineering', 'Architecture', 'Pharmacy', 'Criminology'].map(dept => (
                   <label key={dept} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 accent-[#7a2039] cursor-pointer"
                       checked={selectedDepartments.some(d => normalizeDepartment(d) === dept)}
                       onChange={() => toggleDepartment(dept)}
@@ -532,7 +574,7 @@ function ArchiveBrowse() {
                 </h3>
                 <div className="flex flex-col gap-4">
                   {trendingPapers.map((paper) => (
-                    <div 
+                    <div
                       key={paper.id}
                       onClick={() => setPreviewPaper(paper)}
                       className="group cursor-pointer bg-white/50 dark:bg-gray-700/50 p-3 rounded-lg border border-stone-100 dark:border-gray-600 hover:border-orange-200 dark:hover:border-orange-900 transition-colors shadow-sm"
@@ -591,7 +633,7 @@ function ArchiveBrowse() {
         {/* RESULTS FEED */}
         <main className="flex-1 p-6 md:p-10 font-sans max-w-4xl">
           <div className="space-y-6">
-            
+
             {loading ? (
               <div className="space-y-6">
                 {[1, 2, 3].map((n) => (
@@ -635,21 +677,21 @@ function ArchiveBrowse() {
                       </span>
                     </div>
                   </div>
-                  
+
                   <h3 className="font-bold text-xl text-stone-900 dark:text-gray-100 mb-2 leading-tight">
                     <HighlightedText text={paper.researchTitle || 'Untitled Research'} highlight={searchQuery} />
                   </h3>
-                  
+
                   <p className="text-sm text-[#7a2039] dark:text-[#f3e5ab] font-medium mb-3">
                     {paper.authorDisplay} • Adviser: {paper.adviserName || 'Unknown'}
                   </p>
-                  
+
                   <div className="mb-4">
                     <p className={`text-sm text-stone-600 dark:text-gray-400 leading-relaxed ${expandedAbstracts[paper.id] ? '' : 'line-clamp-3'}`}>
                       <HighlightedText text={paper.abstract || 'No abstract provided.'} highlight={searchQuery} />
                     </p>
                     {(paper.abstract || '').length > 180 && (
-                      <button 
+                      <button
                         onClick={() => toggleAbstract(paper.id)}
                         className="text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline mt-1 focus:outline-none uppercase tracking-wide"
                       >
@@ -657,7 +699,7 @@ function ArchiveBrowse() {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2 mb-6">
                     {paper.keywords?.slice(0, 4).map((tag, i) => (
                       <span key={i} className="px-2.5 py-1 bg-[#fcfbf7] dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full text-xs hover:bg-stone-100 dark:hover:bg-gray-600 cursor-pointer transition">
@@ -665,11 +707,11 @@ function ArchiveBrowse() {
                       </span>
                     ))}
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row justify-between sm:items-center border-t border-stone-100 dark:border-gray-700 pt-4 gap-4 sm:gap-0">
                     <div className="flex gap-4 text-xs font-medium text-stone-500 dark:text-gray-400">
-                      <span 
-                        onClick={(e) => handleLike(e, paper)} 
+                      <span
+                        onClick={(e) => handleLike(e, paper)}
                         className="flex items-center gap-1.5 text-stone-500 hover:text-rose-500 cursor-pointer transition-transform"
                       >
                         {paper.likes?.includes(currentUser?.uid) ? (
@@ -684,14 +726,14 @@ function ArchiveBrowse() {
                         {paper.views || 0}
                       </span>
                       <span onClick={() => handleShare(paper)} className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
-                      <span 
-                        onClick={(e) => handleBookmarkToggle(e, paper)} 
+                      <span
+                        onClick={(e) => handleBookmarkToggle(e, paper)}
                         className={`flex items-center gap-1.5 cursor-pointer transition ${userBookmarks.includes(paper.id) ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'hover:text-[#7a2039] dark:hover:text-[#f3e5ab] text-stone-500 dark:text-gray-400'}`}
                       >
                         {userBookmarks.includes(paper.id) ? (
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>
                         ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>
                         )}
                         Save
                       </span>
@@ -700,9 +742,9 @@ function ArchiveBrowse() {
                       <button onClick={() => setPreviewPaper(paper)} className="px-5 py-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 text-sm font-medium rounded hover:bg-stone-200 dark:hover:bg-gray-600 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
                         Quick Preview
                       </button>
-                      <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
+                      <button onClick={(e) => handleViewPaper(e, paper.id)} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
                         Read Full Text
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -713,15 +755,15 @@ function ArchiveBrowse() {
 
           {/* Pagination Placeholder */}
           {!loading && filteredPapers.length > 0 && displayLimit < filteredPapers.length && (
-             <div className="flex justify-center mt-12 font-sans">
-                <button 
-                  onClick={() => setDisplayLimit(p => p + 5)}
-                  className="px-8 py-3 rounded-full bg-white dark:bg-gray-800 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_25px_rgba(122,32,57,0.15)] hover:-translate-y-1 transition-all duration-300 border border-stone-200 dark:border-gray-700 cursor-pointer flex items-center gap-2"
-                >
-                  Load More Papers 
-                  <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                </button>
-             </div>
+            <div className="flex justify-center mt-12 font-sans">
+              <button
+                onClick={() => setDisplayLimit(p => p + 5)}
+                className="px-8 py-3 rounded-full bg-white dark:bg-gray-800 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_25px_rgba(122,32,57,0.15)] hover:-translate-y-1 transition-all duration-300 border border-stone-200 dark:border-gray-700 cursor-pointer flex items-center gap-2"
+              >
+                Load More Papers
+                <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+              </button>
+            </div>
           )}
         </main>
       </div>
@@ -731,7 +773,7 @@ function ArchiveBrowse() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
           <div className="absolute inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm cursor-pointer" onClick={() => setPreviewPaper(null)}></div>
           <div className="relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl w-full max-w-3xl rounded-2xl shadow-2xl border border-white/50 dark:border-gray-700/50 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-            
+
             {/* Modal Header */}
             <div className="p-6 border-b border-stone-200 dark:border-gray-800 flex justify-between items-start bg-white/50 dark:bg-gray-800/50">
               <div>
@@ -756,7 +798,7 @@ function ArchiveBrowse() {
               <p className="text-stone-600 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
                 <HighlightedText text={previewPaper.abstract || 'No abstract provided.'} highlight={searchQuery} />
               </p>
-              
+
               <div className="mt-8">
                 <h3 className="font-bold text-stone-800 dark:text-gray-200 uppercase text-xs tracking-wider mb-3">Keywords</h3>
                 <div className="flex flex-wrap gap-2">
@@ -774,10 +816,10 @@ function ArchiveBrowse() {
               <button onClick={() => setPreviewPaper(null)} className="px-6 py-2.5 rounded font-medium text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-gray-800 transition cursor-pointer">
                 Close
               </button>
-              <Link to={`/viewer/${previewPaper.id}`} className="px-8 py-2.5 bg-[#7a2039] text-white font-bold rounded shadow-lg hover:bg-[#5a1528] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
+              <button onClick={(e) => { setPreviewPaper(null); handleViewPaper(e, previewPaper.id); }} className="px-8 py-2.5 bg-[#7a2039] text-white font-bold rounded shadow-lg hover:bg-[#5a1528] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
                 Open Full PDF
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-              </Link>
+              </button>
             </div>
           </div>
         </div>

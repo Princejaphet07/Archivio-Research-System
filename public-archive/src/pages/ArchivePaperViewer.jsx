@@ -11,12 +11,12 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import ForceGraph2D from 'react-force-graph-2d';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
-import { 
-  trackPaperView, 
-  trackBookmark, 
-  trackLike, 
-  trackCitation, 
-  trackAiChat 
+import {
+  trackPaperView,
+  trackBookmark,
+  trackLike,
+  trackCitation,
+  trackAiChat
 } from '../utils/analytics';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -154,13 +154,7 @@ function ArchivePaperViewer() {
           }
         });
       } else {
-        // Guest user initialization
-        try {
-          const localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-          setIsBookmarked(localBookmarks.includes(paper.id));
-        } catch (e) {
-          setIsBookmarked(false);
-        }
+        setIsBookmarked(false);
       }
     }
     return () => unsubBookmark();
@@ -549,7 +543,23 @@ function ArchivePaperViewer() {
 
   const handleLike = async () => {
     if (!currentUser) {
-      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in with your @phinmaed.com account to like research papers.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login');
+        }
+      });
       return;
     }
     trackLike(paper);
@@ -563,6 +573,27 @@ function ArchivePaperViewer() {
   };
 
   const handleBookmarkToggle = async () => {
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to save research papers to your Bookmarks.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login');
+        }
+      });
+      return;
+    }
+
     if (isBookmarked) {
       Swal.fire({
         title: 'Already Saved',
@@ -574,23 +605,6 @@ function ArchivePaperViewer() {
     }
 
     trackBookmark(paper, 'add');
-
-    if (!currentUser) {
-      // Guest logic
-      try {
-        let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-
-        if (!localBookmarks.includes(paper.id)) {
-          localBookmarks.push(paper.id);
-          localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
-        }
-        setIsBookmarked(true);
-        Swal.fire({ title: 'Saved!', text: 'Paper saved to your offline Library.', icon: 'success', timer: 1500, showConfirmButton: false });
-      } catch (err) {
-        console.error('Guest bookmark error:', err);
-      }
-      return;
-    }
 
     // Authenticated logic
     try {
@@ -692,7 +706,7 @@ function ArchivePaperViewer() {
             <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer shrink-0" title="Back to Browse">←</Link>
             <div className="hidden sm:flex items-center gap-2 text-xs text-gray-300 truncate">
               <span className="w-2.5 h-2.5 bg-[#ff8c00] rounded-full shrink-0"></span>
-              <span className="font-bold text-white">View-only access</span> 
+              <span className="font-bold text-white">View-only access</span>
               <span className="text-gray-400 hidden lg:inline">— protected for academic integrity.</span>
             </div>
           </div>
@@ -721,7 +735,7 @@ function ArchivePaperViewer() {
 
       {/* MAIN CONTENT WORKSPACE */}
       <div className="flex flex-1 overflow-hidden relative">
-        
+
         {/* THIN LEFT NAVIGATION (ICONS) - Hide on mobile if fullscreen */}
         <div className={`w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors ${isFullscreen ? 'hidden md:flex' : 'flex'}`}>
           <button onClick={() => handleTabClick('abstract')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'abstract' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Abstract">
@@ -733,27 +747,27 @@ function ArchivePaperViewer() {
           <button onClick={() => handleTabClick('pages')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'pages' && !isFullscreen ? 'bg-[#f5ebed] text-[#7a2039]' : 'text-stone-500 hover:bg-stone-100'}`} title="Pages">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
           </button>
-          
+
           <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
-          
+
           <button onClick={toggleFullscreen} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Fullscreen">⛶</button>
-          <button 
+          <button
             onClick={handleBookmarkToggle}
-            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`} 
+            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
             title={isBookmarked ? "Remove Bookmark" : "Bookmark"}
           >
-            {isBookmarked ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>}
+            {isBookmarked ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>}
           </button>
           <div className="flex flex-col items-center gap-1 mt-2">
-            <button 
+            <button
               onClick={handleLike}
-              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600' : 'text-stone-500 dark:text-gray-400'}`} 
+              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600' : 'text-stone-500 dark:text-gray-400'}`}
               title={paper.likes?.includes(currentUser?.uid) ? "Unlike" : "Like"}
             >
               {paper.likes?.includes(currentUser?.uid) ? (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
               )}
             </button>
             <span className="text-[10px] font-bold text-stone-500 dark:text-gray-400">{paper.likes?.length || 0}</span>
@@ -762,15 +776,15 @@ function ArchivePaperViewer() {
               {paper.views || 0}
             </span>
           </div>
-          
+
           <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Cite">❞</button>
-          
+
           <button onClick={() => handleTabClick('share')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'share' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Share">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
           </button>
-          
+
           <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
 
           <button onClick={() => handleTabClick('related')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'related' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Related Researches">
@@ -1299,8 +1313,8 @@ function ArchivePaperViewer() {
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' && (
               <div
                 className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 bg-[#242b35]/90 backdrop-blur px-5 py-2.5 rounded-full z-50 border border-[#1f252e] transition-all duration-300 pointer-events-auto ${isScrolling
-                    ? 'opacity-25 hover:opacity-100 shadow-sm'
-                    : 'opacity-100 shadow-xl'
+                  ? 'opacity-25 hover:opacity-100 shadow-sm'
+                  : 'opacity-100 shadow-xl'
                   }`}
                 style={{ minWidth: '280px' }}
               >

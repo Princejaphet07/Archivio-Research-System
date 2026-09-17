@@ -70,19 +70,8 @@ function ArchiveBookmarks() {
     };
 
     if (!currentUser) {
-      // Guest User: Fetch from LocalStorage
-      try {
-        const localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-        if (localBookmarks.length > 0) {
-          fetchPaperDetails(localBookmarks);
-        } else {
-          setBookmarkedPapers([]);
-          setLoading(false);
-        }
-      } catch (e) {
-        setBookmarkedPapers([]);
-        setLoading(false);
-      }
+      setBookmarkedPapers([]);
+      setLoading(false);
       return;
     }
 
@@ -103,19 +92,7 @@ function ArchiveBookmarks() {
 
   const handleRemoveBookmark = async (paperId) => {
     trackBookmark({ id: paperId }, 'remove');
-    if (!currentUser) {
-      // Guest User: Remove from LocalStorage
-      try {
-        let localBookmarks = JSON.parse(localStorage.getItem('guest_bookmarks') || '[]');
-        localBookmarks = localBookmarks.filter(id => id !== paperId);
-        localStorage.setItem('guest_bookmarks', JSON.stringify(localBookmarks));
-        setBookmarkedPapers(prev => prev.filter(p => p.id !== paperId));
-        Swal.fire({ icon: 'success', title: 'Removed', text: 'Bookmark removed from offline Library', timer: 1500, showConfirmButton: false });
-      } catch (e) {
-        console.error(e);
-      }
-      return;
-    }
+    if (!currentUser) return;
 
     // Logged-in User: Remove from Firestore
     try {
@@ -161,10 +138,22 @@ function ArchiveBookmarks() {
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-8">
         
         {!currentUser ? (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-stone-800 dark:text-gray-200 mb-4">Please Log In</h2>
-            <p className="text-stone-500 dark:text-gray-400 mb-6">You need to log in to view and save bookmarks.</p>
-            <Link to="/login" className="px-6 py-2 bg-[#7a2039] text-white rounded">Go to Login</Link>
+          <div className="max-w-md mx-auto my-12 p-8 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-stone-200/80 dark:border-gray-700/80 rounded-3xl shadow-xl text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#7a2039]/10 dark:bg-[#7a2039]/30 text-[#7a2039] dark:text-[#f3e5ab] flex items-center justify-center">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h2 className="text-2xl font-bold text-stone-800 dark:text-gray-100 mb-2">Sign In Required</h2>
+            <p className="text-stone-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
+              Please log in or create an account with your <strong>@phinmaed.com</strong> email to view and manage your saved bookmarks.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Link to="/login" className="px-6 py-2.5 bg-[#7a2039] hover:bg-[#5a1528] text-white text-sm font-semibold rounded-xl shadow transition cursor-pointer">
+                Log In
+              </Link>
+              <Link to="/login" state={{ isSignUp: true }} className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-stone-900 text-sm font-semibold rounded-xl shadow transition cursor-pointer">
+                Sign Up
+              </Link>
+            </div>
           </div>
         ) : loading ? (
           <div className="flex flex-col gap-4 w-full">

@@ -34,7 +34,7 @@ function ArchiveHome() {
 
     const type = () => {
       const currentPhrase = phrases[phraseIndex];
-      
+
       if (isDeleting) {
         setPlaceholderText(currentPhrase.substring(0, charIndex - 1));
         charIndex--;
@@ -84,7 +84,23 @@ function ArchiveHome() {
   const handleLike = async (e, paper) => {
     e.preventDefault();
     if (!currentUser) {
-      Swal.fire('Login Required', 'Please log in to like a research paper.', 'info');
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in with your @phinmaed.com account to like research papers.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login');
+        }
+      });
       return;
     }
     trackLike(paper);
@@ -95,6 +111,31 @@ function ArchiveHome() {
     } else {
       await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
     }
+  };
+
+  const handleViewPaper = (e, paperId) => {
+    if (e) e.preventDefault();
+    if (!currentUser) {
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to view and read full research manuscripts.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login', { state: { from: { pathname: `/viewer/${paperId}` } } });
+        }
+      });
+      return;
+    }
+    navigate(`/viewer/${paperId}`);
   };
 
   useEffect(() => {
@@ -247,10 +288,10 @@ function ArchiveHome() {
                 Popular:
               </span>
               {popularDepartments.map(dept => (
-                <button 
+                <button
                   type="button"
-                  key={dept} 
-                  onClick={() => handleTagClick(dept)} 
+                  key={dept}
+                  onClick={() => handleTagClick(dept)}
                   className="px-3 py-1.5 border border-[#d6ad60]/40 text-[#f3e5ab] rounded-full cursor-pointer hover:bg-[#d6ad60]/20 hover:border-[#d6ad60]/60 backdrop-blur-sm whitespace-nowrap transition-all font-medium max-w-[280px] sm:max-w-none truncate"
                   title={`View research in ${dept}`}
                 >
@@ -306,7 +347,7 @@ function ArchiveHome() {
               <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden">
                 {/* Subtle Glow Effect on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                
+
                 <div className="relative z-10">
                   <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
                     <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[180px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
@@ -346,9 +387,12 @@ function ArchiveHome() {
                       {paper.views || 0}
                     </span>
                   </div>
-                  <Link to={`/viewer/${paper.id}`} className="px-5 py-2 bg-[#7a2039] text-white text-xs font-medium rounded-lg hover:bg-[#5a1528] transition-colors cursor-pointer inline-block shadow-sm">
+                  <button
+                    onClick={(e) => handleViewPaper(e, paper.id)}
+                    className="px-5 py-2 bg-[#7a2039] text-white text-xs font-medium rounded-lg hover:bg-[#5a1528] transition-colors cursor-pointer inline-block shadow-sm"
+                  >
                     View Paper
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))
