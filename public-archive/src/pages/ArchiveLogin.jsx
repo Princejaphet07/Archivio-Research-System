@@ -279,19 +279,19 @@ function ArchiveLogin() {
     <div className="flex flex-col md:flex-row min-h-screen w-full font-serif bg-[#24050f] md:bg-[#faf7f2] dark:bg-[#0d090b]">
       
       {/* LEFT SIDE: Maroon Panel */}
-      <div className="w-full md:w-[42%] lg:w-[40%] bg-[#24050f] text-white flex flex-col justify-between p-6 sm:p-8 md:p-10 lg:p-12 relative z-20 shadow-xl md:shadow-[15px_0_30px_-5px_rgba(0,0,0,0.6)] shrink-0">
-        <div className="flex flex-col items-center text-center my-auto space-y-2 md:space-y-5 relative z-30">
+      <div className="w-full md:w-[42%] lg:w-[40%] bg-[#24050f] text-white flex flex-col justify-between p-4 sm:p-6 md:p-8 lg:p-12 relative z-20 shadow-xl md:shadow-[15px_0_30px_-5px_rgba(0,0,0,0.6)] shrink-0">
+        <div className="flex flex-col items-center text-center my-auto space-y-1.5 md:space-y-5 relative z-30">
           <div className="bg-white/5 p-2 rounded-full mb-1 hidden md:block">
             <img src={logo} alt="Archivio Logo" className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain drop-shadow-lg" />
           </div>
           {/* Mobile Logo row */}
-          <div className="md:hidden flex items-center gap-3">
-            <img src={logo} alt="Archivio Logo" className="w-9 h-9 object-contain drop-shadow-lg" />
-            <h1 className="text-3xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
+          <div className="md:hidden flex items-center gap-2.5 py-1">
+            <img src={logo} alt="Archivio Logo" className="w-8 h-8 object-contain drop-shadow-lg" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
           </div>
           
           <h1 className="hidden md:block text-3xl md:text-4xl lg:text-5xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
-          <h2 className="text-xs md:text-sm font-medium tracking-wide text-amber-200/80 italic mb-2">Research Archive Management System</h2>
+          <h2 className="text-[11px] sm:text-xs md:text-sm font-medium tracking-wide text-amber-200/80 italic mb-1 md:mb-2">Research Archive Management System</h2>
           
           {/* PREMIUM FEATURES CHECKLIST */}
           <div className="hidden md:flex flex-col gap-2 mt-2 text-left w-full max-w-sm mx-auto">
@@ -332,7 +332,7 @@ function ArchiveLogin() {
 
       {/* RIGHT SIDE: Welcome Panel */}
       <div 
-        className="w-full md:w-[58%] lg:w-[60%] min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10 relative z-10 transition-colors bg-[#faf7f2] dark:bg-[#0d090b] bg-cover bg-center bg-no-repeat"
+        className="w-full md:w-[58%] lg:w-[60%] flex-1 md:min-h-screen flex items-center justify-center p-3.5 sm:p-6 md:p-8 lg:p-10 relative z-10 transition-colors bg-[#faf7f2] dark:bg-[#0d090b] bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: `url(${bg})`
         }}
@@ -347,7 +347,7 @@ function ArchiveLogin() {
         <button
           type="button"
           onClick={toggleTheme}
-          className="absolute top-4 right-4 z-30 p-2 sm:p-2.5 rounded-full bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 border border-stone-300/80 dark:border-white/15 text-stone-700 dark:text-[#f3e5ab] shadow-sm hover:scale-105 transition-all cursor-pointer backdrop-blur-md"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 p-2 sm:p-2.5 rounded-full bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 border border-stone-300/80 dark:border-white/15 text-stone-700 dark:text-[#f3e5ab] shadow-sm hover:scale-105 transition-all cursor-pointer backdrop-blur-md"
           title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           aria-label="Toggle Theme"
         >
@@ -355,7 +355,7 @@ function ArchiveLogin() {
         </button>
 
         {/* Elevated Sign In / Sign Up Card */}
-        <div className="bg-white/95 dark:bg-[#1c1518]/95 backdrop-blur-xl p-5 sm:p-7 md:p-8 rounded-2xl sm:rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] max-w-[420px] w-full border border-stone-200/90 dark:border-white/15 flex flex-col items-center transition-all my-auto relative z-10">
+        <div className="bg-white/95 dark:bg-[#1c1518]/95 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] max-w-[420px] w-full border border-stone-200/90 dark:border-white/15 flex flex-col items-center transition-all my-auto relative z-10">
           
           {/* Animated Toggle Switch */}
           <div className="flex bg-stone-200/70 dark:bg-black/50 p-1 rounded-full mb-4 w-full max-w-[210px] relative border border-stone-300/60 dark:border-white/10">
