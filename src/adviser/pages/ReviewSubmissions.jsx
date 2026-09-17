@@ -601,17 +601,17 @@ function ReviewSubmissions() {
       case 'dean_revision':
         return <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] px-2.5 py-1 rounded-full font-bold border border-amber-300 dark:border-amber-700">🏛️ Returned by Dean</span>;
       case 'in_progress':
-        return <span className="bg-blue-50 text-blue-700 text-[11px] px-2.5 py-1 rounded-full font-bold">In Progress</span>;
+        return <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">In Progress</span>;
       case 'pending':
-        return <span className="bg-yellow-50 text-yellow-700 text-[11px] px-2.5 py-1 rounded-full font-bold">Pending Review</span>;
+        return <span className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200/60 dark:border-yellow-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">Pending Review</span>;
       case 'reviewed':
-        return <span className="bg-purple-50 text-purple-700 text-[11px] px-2.5 py-1 rounded-full font-bold">Reviewed</span>;
+        return <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">Reviewed</span>;
       case 'approved':
-        return <span className="bg-green-50 text-green-700 text-[11px] px-2.5 py-1 rounded-full font-bold">Approved</span>;
+        return <span className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200/60 dark:border-green-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">Approved</span>;
       case 'published':
-        return <span className="bg-emerald-50 text-emerald-700 text-[11px] px-2.5 py-1 rounded-full font-bold">Published</span>;
+        return <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">Published</span>;
       default:
-        return <span className="bg-gray-50 text-gray-600 text-[11px] px-2.5 py-1 rounded-full font-bold">{status}</span>;
+        return <span className="bg-gray-50 dark:bg-stone-800 text-gray-600 dark:text-stone-300 border border-gray-200/60 dark:border-stone-700 text-[11px] px-2.5 py-1 rounded-full font-bold">{status}</span>;
     }
   };
 

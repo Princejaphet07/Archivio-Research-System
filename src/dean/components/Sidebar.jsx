@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext';
 import logo from '../../assets/logo.png';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
+import RoleSwitchModal from '../../components/RoleSwitchModal';
 
 const NAV_ITEMS_MAIN = [
   {
@@ -98,6 +99,7 @@ export default function Sidebar({ onNavigate }) {
   const activePage = location.pathname.split('/').pop() || 'dashboard';
   const { deanData } = useUser();
   const [counts, setCounts] = useState({ researchRecordsNew: 0, researchRecordsTotal: 0, publishQueue: 0, userManagement: 0 });
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
 
   useEffect(() => {
     // Wait for deanData to load so badge counts match filtered data
@@ -260,7 +262,8 @@ export default function Sidebar({ onNavigate }) {
   };
 
   return (
-    <aside className="w-[260px] bg-[#4a1024] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0">
+    <>
+      <aside className="w-[260px] bg-[#4a1024] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0">
 
       {/* LOGO AREA */}
       <div className="p-6 flex items-center gap-3">
@@ -361,7 +364,8 @@ export default function Sidebar({ onNavigate }) {
       {isDeanAndAdviser && (
         <div className="px-4 pb-3">
           <button
-            onClick={() => window.location.href = '/adviser/dashboard'}
+            type="button"
+            onClick={() => setShowSwitchModal(true)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/60 rounded-xl text-emerald-300 hover:text-emerald-100 text-xs font-bold transition-all duration-200 shadow-sm group cursor-pointer"
             title="Switch to Research Adviser Portal"
           >
@@ -376,7 +380,7 @@ export default function Sidebar({ onNavigate }) {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 hover:border-red-600/60 rounded-lg text-red-300 hover:text-red-100 text-sm font-bold transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 hover:border-red-600/60 rounded-lg text-red-300 hover:text-red-100 text-sm font-bold transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isLoggingOut ? (
             <div className="w-4 h-4 border-2 border-red-300/30 border-t-red-300 rounded-full animate-spin"></div>
@@ -390,5 +394,12 @@ export default function Sidebar({ onNavigate }) {
       </div>
 
     </aside>
+
+    <RoleSwitchModal
+      isOpen={showSwitchModal}
+      onClose={() => setShowSwitchModal(false)}
+      targetRole="adviser"
+    />
+  </>
   );
 }

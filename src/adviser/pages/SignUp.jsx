@@ -17,6 +17,7 @@ function SignUp() {
   const [isPrefilled, setIsPrefilled] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -66,6 +67,9 @@ function SignUp() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSignUp = async (e) => {
@@ -73,31 +77,46 @@ function SignUp() {
     setError('');
     setSuccess('');
 
+    const errors = {};
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    
     const trimmedEmail = formData.email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      errors.email = 'Email address is required';
+    } else if (!trimmedEmail.endsWith('@phinmaed.com')) {
+      errors.email = 'Only @phinmaed.com email is allowed';
+    }
+
     const trimmedPassword = formData.password.trim();
-
-    // Validate institutional email
-    if (!trimmedEmail.endsWith('@phinmaed.com')) {
-      setError('❌ Please use your institutional email (@phinmaed.com) to register.');
-      return;
+    if (!trimmedPassword) {
+      errors.password = 'Password is required';
+    } else if (!hasEightChars || !hasNumber || !hasUpper || !hasSpecial) {
+      errors.password = 'Password must be 8+ chars with uppercase, number, and special character';
     }
 
-    // Validate password match
-    if (trimmedPassword !== formData.confirmPassword.trim()) {
-      setError('❌ Passwords do not match.');
-      return;
-    }
-
-    // Validate password strength
-    if (!hasEightChars || !hasNumber || !hasUpper || !hasSpecial) {
-      setError('❌ Password must be at least 8 characters with an uppercase letter, number, and special character.');
-      return;
+    if (!formData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (trimmedPassword !== formData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     if (!formData.agreeTerms) {
-      setError('❌ You must agree to the Terms of Use and Privacy Policy.');
+      errors.agreeTerms = 'You must agree to the Terms of Use and Privacy Policy';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Please resolve all highlighted fields in red before submitting.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`adviser-signup-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
+    setFormErrors({});
 
     setLoading(true);
 
@@ -109,6 +128,8 @@ function SignUp() {
 
       if (snapshot.empty) {
         setError('❌ No invitation found for this email. Please make sure you are using the email that was invited by your Dean.');
+        setFormErrors({ email: 'No pending invitation found for this email' });
+        document.getElementById('adviser-signup-email')?.focus();
         setLoading(false);
         return;
       }
@@ -200,23 +221,68 @@ function SignUp() {
           <div className="grid grid-cols-2 gap-3 mb-2">
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">First Name <span className="text-red-500">*</span></label>
-              <input name="firstName" value={formData.firstName} onChange={handleChange} type="text" placeholder="e.g. Maria" 
-                className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
-                readOnly={isPrefilled} required disabled={loading} />
+              <input 
+                id="adviser-signup-firstName"
+                name="firstName" 
+                value={formData.firstName} 
+                onChange={handleChange} 
+                type="text" 
+                placeholder="e.g. Maria" 
+                className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                  formErrors.firstName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
+                readOnly={isPrefilled} 
+                disabled={loading} 
+              />
+              {formErrors.firstName && (
+                <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                  <span>⚠️</span> {formErrors.firstName}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">Last Name <span className="text-red-500">*</span></label>
-              <input name="lastName" value={formData.lastName} onChange={handleChange} type="text" placeholder="e.g. Cendana" 
-                className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
-                readOnly={isPrefilled} required disabled={loading} />
+              <input 
+                id="adviser-signup-lastName"
+                name="lastName" 
+                value={formData.lastName} 
+                onChange={handleChange} 
+                type="text" 
+                placeholder="e.g. Cendana" 
+                className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                  formErrors.lastName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
+                readOnly={isPrefilled} 
+                disabled={loading} 
+              />
+              {formErrors.lastName && (
+                <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                  <span>⚠️</span> {formErrors.lastName}
+                </p>
+              )}
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Email Address <span className="text-red-500">*</span></label>
-            <input name="email" value={formData.email} onChange={handleChange} type="email" placeholder="e.g. adviser.cendana@phinmaed.com" 
-              className={`w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50 ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
-              readOnly={isPrefilled} required disabled={loading} />
+            <input 
+              id="adviser-signup-email"
+              name="email" 
+              value={formData.email} 
+              onChange={handleChange} 
+              type="email" 
+              placeholder="e.g. adviser.cendana@phinmaed.com" 
+              className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                formErrors.email ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+              } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
+              readOnly={isPrefilled} 
+              disabled={loading} 
+            />
+            {formErrors.email && (
+              <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                <span>⚠️</span> {formErrors.email}
+              </p>
+            )}
           </div>
 
           {/* Password */}
@@ -226,13 +292,17 @@ function SignUp() {
             </label>
             <div className="relative">
               <input 
+                id="adviser-signup-password"
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-[#f0f4f8] dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B1F35]/20 focus:border-[#7B1F35] dark:focus:border-[#D05353] transition-all text-sm font-medium"
+                className={`w-full px-4 py-2.5 rounded-xl focus:outline-none transition-all text-sm font-medium ${
+                  formErrors.password 
+                    ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' 
+                    : 'bg-[#f0f4f8] dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 focus:ring-2 focus:ring-[#7B1F35]/20 focus:border-[#7B1F35] dark:focus:border-[#D05353]'
+                }`}
                 placeholder="••••••••••••"
-                required
               />
               <button
                 type="button"
@@ -242,10 +312,15 @@ function SignUp() {
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.978 9.978 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.978 9.978 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                 )}
               </button>
             </div>
+            {formErrors.password && (
+              <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                <span>⚠️</span> {formErrors.password}
+              </p>
+            )}
 
             {/* Password Strength indicator */}
             {formData.password && (
@@ -297,11 +372,18 @@ function SignUp() {
             <label className="block text-xs font-bold text-stone-700 mb-1">Confirm Password <span className="text-red-500">*</span></label>
             <div className="relative">
               <input 
-                name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
+                id="adviser-signup-confirmPassword"
+                name="confirmPassword" 
+                value={formData.confirmPassword} 
+                onChange={handleChange}
                 type={showConfirmPassword ? "text" : "password"} 
                 placeholder="Confirm your password" 
-                className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
-                required disabled={loading}
+                className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                  formErrors.confirmPassword 
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
+                    : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] bg-white text-stone-800'
+                }`} 
+                disabled={loading}
               />
               <button 
                 type="button" 
@@ -315,28 +397,38 @@ function SignUp() {
                 )}
               </button>
             </div>
-            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+            {formErrors.confirmPassword && (
               <p className="text-[10px] text-red-500 font-semibold mt-1.5 pl-1 flex items-center gap-1">
-                <span>❌</span> Passwords do not match
+                <span>⚠️</span> {formErrors.confirmPassword}
               </p>
             )}
           </div>
 
-          <div className="flex items-start gap-3 mt-2 bg-stone-50/50 p-2 rounded-lg border border-stone-100">
+          <div className={`flex items-start gap-3 mt-2 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}>
             <input 
-              name="agreeTerms" checked={formData.agreeTerms} onChange={handleChange} 
+              id="adviser-signup-agreeTerms"
+              name="agreeTerms" 
+              checked={formData.agreeTerms} 
+              onChange={handleChange} 
               type="checkbox" 
               className="w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5" 
               disabled={loading}
             />
-            <label className="text-xs text-stone-600 leading-relaxed">
-              I agree to the <span onClick={() => setShowTerms(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span onClick={() => setShowPrivacy(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
-            </label>
+            <div>
+              <label className="text-xs text-stone-600 leading-relaxed">
+                I agree to the <span onClick={() => setShowTerms(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span onClick={() => setShowPrivacy(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
+              </label>
+              {formErrors.agreeTerms && (
+                <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                  <span>⚠️</span> {formErrors.agreeTerms}
+                </p>
+              )}
+            </div>
           </div>
 
           <button 
             type="submit" 
-            disabled={loading || !formData.agreeTerms || formData.password !== formData.confirmPassword}
+            disabled={loading}
             className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#7a1f3d]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
           >
             {loading ? (

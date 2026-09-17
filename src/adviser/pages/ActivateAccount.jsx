@@ -26,6 +26,7 @@ export default function ActivateAccount() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // Validate token on mount
   useEffect(() => {
@@ -98,6 +99,9 @@ export default function ActivateAccount() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const validatePassword = (password) => {
@@ -122,27 +126,38 @@ export default function ActivateAccount() {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.password || !formData.confirmPassword) {
-      setError('❌ Please fill in all fields');
-      return;
+    const errors = {};
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        errors.password = 'Password must meet complexity requirements';
+      }
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('❌ Passwords do not match');
-      return;
-    }
-
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.isValid) {
-      setError('❌ Password does not meet requirements');
-      return;
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     if (!formData.agreeTerms) {
-      setError('❌ You must agree to the terms and conditions');
+      errors.agreeTerms = 'You must agree to the terms and conditions';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('❌ Please resolve all highlighted fields before activating.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`adviser-activate-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
+    setFormErrors({});
 
     // Validate email domain - only @phinmaed.com allowed
     if (!adviserData.email.toLowerCase().endsWith('@phinmaed.com')) {
@@ -267,6 +282,7 @@ export default function ActivateAccount() {
               <label className="block text-xs font-bold text-stone-700 mb-2">New Password <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
+                  id="adviser-activate-password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
@@ -275,7 +291,11 @@ export default function ActivateAccount() {
                   onCut={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   placeholder="Create a strong password" 
-                  className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
+                  className={`w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                    formErrors.password 
+                      ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
+                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                  }`} 
                   disabled={loading}
                 />
                 <button 
@@ -290,6 +310,11 @@ export default function ActivateAccount() {
                   )}
                 </button>
               </div>
+              {formErrors.password && (
+                <p className="text-[11px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                  <span>⚠️</span> {formErrors.password}
+                </p>
+              )}
 
               {/* Password Requirements */}
               {formData.password && (
@@ -319,6 +344,7 @@ export default function ActivateAccount() {
               <label className="block text-xs font-bold text-stone-700 mb-2">Confirm Password <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
+                  id="adviser-activate-confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
@@ -327,7 +353,11 @@ export default function ActivateAccount() {
                   onCut={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   placeholder="Confirm your password" 
-                  className="w-full bg-white text-stone-800 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] transition-all disabled:opacity-50" 
+                  className={`w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all disabled:opacity-50 ${
+                    formErrors.confirmPassword 
+                      ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
+                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                  }`} 
                   disabled={loading}
                 />
                 <button 
@@ -342,16 +372,17 @@ export default function ActivateAccount() {
                   )}
                 </button>
               </div>
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+              {formErrors.confirmPassword && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1.5 pl-1 flex items-center gap-1">
-                  <span>❌</span> Passwords do not match
+                  <span>⚠️</span> {formErrors.confirmPassword}
                 </p>
               )}
             </div>
 
             {/* Terms & Conditions */}
-            <div className="flex items-start gap-3 mt-4 bg-stone-50/50 p-3 rounded-lg border border-stone-100">
+            <div className={`flex items-start gap-3 mt-4 p-3 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}>
               <input 
+                id="adviser-activate-agreeTerms"
                 type="checkbox" 
                 name="agreeTerms"
                 checked={formData.agreeTerms}
@@ -359,9 +390,16 @@ export default function ActivateAccount() {
                 disabled={loading}
                 className="w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5" 
               />
-              <label className="text-xs text-stone-600 leading-relaxed">
-                I agree to the <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
-              </label>
+              <div>
+                <label htmlFor="adviser-activate-agreeTerms" className="text-xs text-stone-600 leading-relaxed">
+                  I agree to the <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
+                </label>
+                {formErrors.agreeTerms && (
+                  <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                    <span>⚠️</span> {formErrors.agreeTerms}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Submit Button */}

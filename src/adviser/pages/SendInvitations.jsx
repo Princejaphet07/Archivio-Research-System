@@ -96,14 +96,19 @@ function SendInvitations() {
     return () => unsubInv();
   }, [adviserData?.email, adviserData?.userId]);
 
+  const [emailError, setEmailError] = useState('');
+
   const handleSendInvitation = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setEmailError('');
 
     // Validation
-    if (!studentEmail) {
-      setError('Please enter student email');
+    if (!studentEmail.trim()) {
+      setEmailError('Student email address is required');
+      const el = document.getElementById('adviser-send-invite-email');
+      if (el) el.focus();
       return;
     }
 
@@ -118,8 +123,10 @@ function SendInvitations() {
       // 1. Strictly verify official SWU PHINMA student email (.swu@phinmaed.com) & MX records
       const verification = await verifySchoolEmailOnline(studentEmail, 'student');
       if (!verification.isValid) {
-        setError(`❌ ${verification.error}`);
+        setEmailError(verification.error);
         setLoading(false);
+        const el = document.getElementById('adviser-send-invite-email');
+        if (el) el.focus();
         return;
       }
       const emailToInvite = verification.normalizedEmail;
@@ -136,17 +143,32 @@ function SendInvitations() {
         return;
       }
 
-      // 2. Check if email already has a pending invitation
+      // 2. Check if email already has a pending invitation FROM THIS ADVISER
+      const adviserId = adviserData.userId || adviserData.id;
+      const adviserEmail = adviserData.email.toLowerCase().trim();
+
+      // Query all pending invitations for this student email
       const qInvite = query(
         collection(db, 'studentInvitations'),
         where('studentEmail', '==', emailToInvite),
         where('status', '==', 'pending')
       );
       const snapInvite = await getDocs(qInvite);
+
       if (!snapInvite.empty) {
-        setError('This email already has a pending invitation. You can resend or remove it in the table below.');
-        setLoading(false);
-        return;
+        // Check if any of these pending invitations belong to THIS adviser
+        const myPendingInvite = snapInvite.docs.find(d => {
+          const data = d.data();
+          const invSentBy = (data.sentBy || '').toLowerCase().trim();
+          return invSentBy === adviserEmail || data.adviserId === adviserId;
+        });
+
+        if (myPendingInvite) {
+          setError('This email already has a pending invitation from you. You can resend or remove it in the table below.');
+          setLoading(false);
+          return;
+        }
+        // If pending from another adviser, allow this adviser to also send
       }
 
       // 3. Auto-cleanup any stale or orphaned data for this email to guarantee a 100% clean invitation
@@ -445,34 +467,49 @@ function SendInvitations() {
         )}
 
         {/* Action Card */}
-        <Card glass={true} className="border-2 border-dashed border-stone-200 dark:border-stone-800 p-5 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center">
+        <Card glass={true} className="p-5 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center">
           <div className="text-3xl sm:text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-2 sm:mb-3">✉️</div>
           <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
           <p className="text-gray-500 dark:text-stone-400 text-xs sm:text-sm max-w-lg mb-5 sm:mb-6">
             Type the student's institutional email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
           </p>
-          <form onSubmit={handleSendInvitation} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full max-w-md">
-            <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">📧</span>
-              <input 
-                type="email" 
-                value={studentEmail}
-                onChange={(e) => setStudentEmail(e.target.value.trim())}
-                placeholder="e.g. jcreyes.swu@phinmaed.com" 
-                className="w-full bg-white dark:bg-stone-950 border border-gray-300 dark:border-stone-700 text-gray-900 dark:text-stone-100 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] disabled:opacity-50"
+          <form onSubmit={handleSendInvitation} className="flex flex-col gap-2 w-full max-w-md">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full">
+              <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">📧</span>
+                <input 
+                  id="adviser-send-invite-email"
+                  type="email" 
+                  value={studentEmail}
+                  onChange={(e) => {
+                    setStudentEmail(e.target.value.trim());
+                    if (emailError) setEmailError('');
+                  }}
+                  placeholder="e.g. jcreyes.swu@phinmaed.com" 
+                  className={`w-full bg-white dark:bg-stone-950 border text-gray-900 dark:text-stone-100 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm outline-none transition-colors disabled:opacity-50 ${
+                    emailError
+                      ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
+                      : 'border-gray-300 dark:border-stone-700 focus:border-[#7a2e46] dark:focus:border-[#f8d070]'
+                  }`}
+                  disabled={loading}
+                />
+              </div>
+              <PremiumButton 
+                type="submit"
                 disabled={loading}
-              />
+                variant="primary"
+                className="w-full sm:w-auto justify-center"
+              >
+                {loading ? 'Sending...' : 'Send Link'}
+              </PremiumButton>
             </div>
-            <PremiumButton 
-              type="submit"
-              disabled={loading}
-              variant="primary"
-              className="w-full sm:w-auto justify-center"
-            >
-              {loading ? 'Sending...' : 'Send Link'}
-            </PremiumButton>
+            {emailError && (
+              <p className="text-xs text-red-500 text-left flex items-center gap-1 font-semibold pl-1">
+                <span>⚠️</span> {emailError}
+              </p>
+            )}
           </form>
-          <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-3 sm:mt-4">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
+          <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-2">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
         </Card>
 
         {/* History: Mobile Cards for Phones */}
@@ -532,7 +569,7 @@ function SendInvitations() {
                       disabled={loading}
                       variant="ghost"
                       size="sm"
-                      className="justify-center text-[11px] px-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="justify-center text-[11px] px-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       ❌ Remove
                     </PremiumButton>

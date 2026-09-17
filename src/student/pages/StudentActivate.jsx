@@ -12,6 +12,7 @@ export default function StudentActivate() {
   const [validating, setValidating] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -92,6 +93,9 @@ export default function StudentActivate() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const validatePassword = (password) => {
@@ -116,32 +120,41 @@ export default function StudentActivate() {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.firstName || !formData.lastName) {
-      setError('❌ Please fill in all fields');
-      return;
+    const errors = {};
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        errors.password = 'Password must be 8+ chars with uppercase, lowercase, number, and special character';
+      }
     }
 
-    if (!formData.password || !formData.confirmPassword) {
-      setError('❌ Please fill in password fields');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('❌ Passwords do not match');
-      return;
-    }
-
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.isValid) {
-      setError('❌ Password does not meet requirements');
-      return;
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     if (!formData.agreeTerms) {
-      setError('❌ You must agree to the terms and conditions');
+      errors.agreeTerms = 'You must agree to the Terms and Conditions';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('❌ Please fill in all required fields highlighted in red');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`student-activate-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
+    setFormErrors({});
 
     setLoading(true);
 
@@ -245,28 +258,44 @@ export default function StudentActivate() {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">First Name <span className="text-red-500">*</span></label>
                 <input 
+                  id="student-activate-firstName"
                   type="text" 
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
                   placeholder="e.g. Juan" 
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
+                  className={`w-full rounded-lg px-4 py-3 text-gray-900 focus:outline-none transition ${
+                    formErrors.firstName ? 'border border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'bg-gray-50 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                  }`} 
                   disabled={loading}
                 />
+                {formErrors.firstName && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.firstName}
+                  </p>
+                )}
               </div>
 
               {/* Last Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">Last Name <span className="text-red-500">*</span></label>
                 <input 
+                  id="student-activate-lastName"
                   type="text" 
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
                   placeholder="e.g. Dela Cruz" 
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
+                  className={`w-full rounded-lg px-4 py-3 text-gray-900 focus:outline-none transition ${
+                    formErrors.lastName ? 'border border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'bg-gray-50 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                  }`} 
                   disabled={loading}
                 />
+                {formErrors.lastName && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.lastName}
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -275,6 +304,7 @@ export default function StudentActivate() {
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">🔒</span>
                   <input 
+                    id="student-activate-password"
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
@@ -283,7 +313,9 @@ export default function StudentActivate() {
                     onCut={(e) => e.preventDefault()}
                     onPaste={(e) => e.preventDefault()}
                     placeholder="Create a strong password" 
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
+                    className={`w-full rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none transition ${
+                      formErrors.password ? 'border border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'bg-gray-50 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                    }`} 
                     disabled={loading}
                   />
                   <button 
@@ -294,6 +326,11 @@ export default function StudentActivate() {
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
+                {formErrors.password && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.password}
+                  </p>
+                )}
               </div>
 
               {/* Confirm Password */}
@@ -302,6 +339,7 @@ export default function StudentActivate() {
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">🔒</span>
                   <input 
+                    id="student-activate-confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
@@ -310,7 +348,9 @@ export default function StudentActivate() {
                     onCut={(e) => e.preventDefault()}
                     onPaste={(e) => e.preventDefault()}
                     placeholder="Confirm your password" 
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" 
+                    className={`w-full rounded-lg pl-12 pr-24 py-3 text-gray-900 focus:outline-none transition ${
+                      formErrors.confirmPassword ? 'border border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'bg-gray-50 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                    }`} 
                     disabled={loading}
                   />
                   <button 
@@ -321,14 +361,17 @@ export default function StudentActivate() {
                     {showConfirmPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-sm text-red-600 mt-2">❌ Passwords do not match</p>
+                {formErrors.confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.confirmPassword}
+                  </p>
                 )}
               </div>
 
               {/* Terms & Conditions */}
-              <div className="flex items-start gap-3 mt-6">
+              <div className={`flex items-start gap-3 mt-6 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : ''}`}>
                 <input 
+                  id="student-activate-agreeTerms"
                   type="checkbox" 
                   name="agreeTerms"
                   checked={formData.agreeTerms}
@@ -336,9 +379,16 @@ export default function StudentActivate() {
                   disabled={loading}
                   className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5 cursor-pointer" 
                 />
-                <label className="text-sm text-gray-700">
-                  I agree to the <span className="font-semibold text-blue-600">Terms and Conditions</span> and <span className="font-semibold text-blue-600">Privacy Policy</span> of ARCHIVIO
-                </label>
+                <div>
+                  <label htmlFor="student-activate-agreeTerms" className="text-sm text-gray-700">
+                    I agree to the <span className="font-semibold text-blue-600">Terms and Conditions</span> and <span className="font-semibold text-blue-600">Privacy Policy</span> of ARCHIVIO
+                  </label>
+                  {formErrors.agreeTerms && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
+                      <span>⚠️</span> {formErrors.agreeTerms}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Submit Button */}

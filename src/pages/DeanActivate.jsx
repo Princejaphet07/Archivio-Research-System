@@ -13,6 +13,7 @@ function DeanActivate() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   
   const [activationData, setActivationData] = useState(null);
 
@@ -78,15 +79,31 @@ function DeanActivate() {
     e.preventDefault();
     setError('');
 
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+    const errors = {};
+    if (!newPassword) {
+      errors.newPassword = 'Password is required';
+    } else if (strengthCount < 4) {
+      errors.newPassword = 'Password must meet all requirements (8+ chars, upper, number, special)';
     }
 
-    if (strengthCount < 4) {
-      setError('Password must meet all requirements');
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (newPassword !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Please resolve all highlighted fields in red before submitting.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`dean-activate-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
+    setFormErrors({});
 
     if (!activationData) {
       setError('Session data missing. Please sign in again.');
@@ -192,17 +209,24 @@ function DeanActivate() {
 
         <form className="space-y-6" onSubmit={handleChangePassword}>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider ml-1">New Password</label>
+            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider ml-1">New Password <span className="text-red-500">*</span></label>
             <div className="relative group">
               <input
+                id="dean-activate-newPassword"
                 type={showNewPassword ? "text" : "password"}
-                required
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (formErrors.newPassword) setFormErrors(p => ({ ...p, newPassword: '' }));
+                }}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
                 onPaste={(e) => e.preventDefault()}
-                className="w-full rounded-xl border border-stone-300 bg-white py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20 shadow-sm"
+                className={`w-full rounded-xl border py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all shadow-sm ${
+                  formErrors.newPassword 
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' 
+                    : 'border-stone-300 bg-white focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20'
+                }`}
                 placeholder="Enter new password"
               />
               <button
@@ -218,20 +242,32 @@ function DeanActivate() {
                 )}
               </button>
             </div>
+            {formErrors.newPassword && (
+              <p className="text-[11px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                <span>⚠️</span> {formErrors.newPassword}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider ml-1">Confirm Password</label>
+            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider ml-1">Confirm Password <span className="text-red-500">*</span></label>
             <div className="relative group">
               <input
+                id="dean-activate-confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
-                required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (formErrors.confirmPassword) setFormErrors(p => ({ ...p, confirmPassword: '' }));
+                }}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
                 onPaste={(e) => e.preventDefault()}
-                className="w-full rounded-xl border border-stone-300 bg-white py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20 shadow-sm"
+                className={`w-full rounded-xl border py-3.5 pl-4 pr-12 text-stone-800 outline-none transition-all shadow-sm ${
+                  formErrors.confirmPassword 
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' 
+                    : 'border-stone-300 bg-white focus:border-[#7a1f3d] focus:ring-2 focus:ring-[#7a1f3d]/20'
+                }`}
                 placeholder="Confirm new password"
               />
               <button
@@ -247,6 +283,11 @@ function DeanActivate() {
                 )}
               </button>
             </div>
+            {formErrors.confirmPassword && (
+              <p className="text-[11px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
+                <span>⚠️</span> {formErrors.confirmPassword}
+              </p>
+            )}
           </div>
 
           {newPassword && (

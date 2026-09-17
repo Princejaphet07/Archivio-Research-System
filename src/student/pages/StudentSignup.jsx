@@ -20,6 +20,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [showTerms, setShowTerms] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [isPrefilled, setIsPrefilled] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // Step 1 — Personal Info
   const [personalInfo, setPersonalInfo] = useState({
@@ -104,26 +105,40 @@ export default function StudentSignup({ onSwitchPage }) {
   const strengthColor = ['', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][strength];
 
   const handlePersonalChange = (e) => {
-    setPersonalInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setPersonalInfo(prev => ({ ...prev, [name]: value }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleAddMember = () => {
     const email = memberInput.trim().toLowerCase();
     const name = memberNameInput.trim();
-    if (!email || !name) {
-      setError('Please provide both the member\'s name and email');
-      return;
+    const mErrors = {};
+    if (!name) mErrors.memberNameInput = 'Member name is required';
+    if (!email) {
+      mErrors.memberInput = 'Member email is required';
+    } else {
+      const memberEmailCheck = validateStudentSchoolEmail(email);
+      if (!memberEmailCheck.isValid) {
+        mErrors.memberInput = memberEmailCheck.error;
+      }
     }
-    const memberEmailCheck = validateStudentSchoolEmail(email);
-    if (!memberEmailCheck.isValid) {
-      setError(`Member email error: ${memberEmailCheck.error}`);
+    if (Object.keys(mErrors).length > 0) {
+      setFormErrors(prev => ({ ...prev, ...mErrors }));
+      setError('Please provide valid member details');
+      const firstKey = Object.keys(mErrors)[0];
+      document.getElementById(`signup-${firstKey}`)?.focus();
       return;
     }
     if (groupInfo.members.find(m => m.email === email)) {
+      setFormErrors(prev => ({ ...prev, memberInput: 'This member is already added' }));
       setError('This member is already added');
       return;
     }
     setError('');
+    setFormErrors(prev => ({ ...prev, memberInput: '', memberNameInput: '' }));
     setGroupInfo(prev => ({
       ...prev,
       members: [...prev.members, { email, name }]
@@ -150,15 +165,33 @@ export default function StudentSignup({ onSwitchPage }) {
 
   const validateStep1 = () => {
     const { firstName, lastName, studentNumber, schoolEmail, course, yearLevel } = personalInfo;
-    if (!firstName || !lastName || !studentNumber || !schoolEmail || !course || !yearLevel) {
-      setError('Please fill in all required fields.');
+    const errors = {};
+    if (!firstName.trim()) errors.firstName = 'First name is required';
+    if (!lastName.trim()) errors.lastName = 'Last name is required';
+    if (!studentNumber.trim()) errors.studentNumber = 'Student number is required';
+    if (!schoolEmail.trim()) {
+      errors.schoolEmail = 'School email is required';
+    } else {
+      const studentEmailCheck = validateStudentSchoolEmail(schoolEmail);
+      if (!studentEmailCheck.isValid) {
+        errors.schoolEmail = studentEmailCheck.error;
+      }
+    }
+    if (!course) errors.course = 'Course is required';
+    if (!yearLevel) errors.yearLevel = 'Year level is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Please fill in all required fields highlighted in red.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`signup-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return false;
     }
-    const studentEmailCheck = validateStudentSchoolEmail(schoolEmail);
-    if (!studentEmailCheck.isValid) {
-      setError(studentEmailCheck.error);
-      return false;
-    }
+    setFormErrors({});
     setError('');
     return true;
   };
@@ -174,6 +207,8 @@ export default function StudentSignup({ onSwitchPage }) {
 
       if (snapshot.empty) {
         setError('❌ No invitation found for this email. Please make sure you are using the email address that was invited.');
+        setFormErrors({ schoolEmail: 'No pending invitation found for this email' });
+        document.getElementById('signup-schoolEmail')?.focus();
         setLoading(false);
         return;
       }
@@ -203,10 +238,23 @@ export default function StudentSignup({ onSwitchPage }) {
   };
 
   const validateStep2 = () => {
-    if (!groupInfo.groupName || !groupInfo.researchTitle || !groupInfo.category) {
-      setError('Please provide your Group Name, Research Title, and Category.');
+    const errors = {};
+    if (!groupInfo.groupName.trim()) errors.groupName = 'Group name is required';
+    if (!groupInfo.researchTitle.trim()) errors.researchTitle = 'Research title is required';
+    if (!groupInfo.category) errors.category = 'Category is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Please fill in all required fields highlighted in red.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`signup-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return false;
     }
+    setFormErrors({});
     setError('');
     return true;
   };
@@ -214,19 +262,36 @@ export default function StudentSignup({ onSwitchPage }) {
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     setError('');
+    const errors = {};
 
-    if (securityInfo.password !== securityInfo.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
+    if (!securityInfo.password) {
+      errors.password = 'Password is required';
+    } else if (strength < 3) {
+      errors.password = 'Please use a stronger password (uppercase, number, and special character required)';
     }
-    if (strength < 3) {
-      setError('Please use a stronger password (uppercase, number, and special character required).');
-      return;
+
+    if (!securityInfo.confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (securityInfo.password !== securityInfo.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
+
     if (!securityInfo.agreeTerms) {
-      setError('You must agree to the Terms and Conditions.');
+      errors.agreeTerms = 'You must agree to the Terms and Conditions';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Please resolve all highlighted errors before submitting.');
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`signup-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
+    setFormErrors({});
 
     setLoading(true);
 
@@ -495,39 +560,97 @@ export default function StudentSignup({ onSwitchPage }) {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">* First Name</label>
-                <input name="firstName" value={personalInfo.firstName} onChange={handlePersonalChange}
-                  type="text" placeholder="Juan"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-firstName"
+                  name="firstName" 
+                  value={personalInfo.firstName} 
+                  onChange={handlePersonalChange}
+                  type="text" 
+                  placeholder="Juan"
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                    formErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
+                {formErrors.firstName && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.firstName}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">Middle Name</label>
-                <input name="middleName" value={personalInfo.middleName} onChange={handlePersonalChange}
-                  type="text" placeholder="Carlos"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-middleName"
+                  name="middleName" 
+                  value={personalInfo.middleName} 
+                  onChange={handlePersonalChange}
+                  type="text" 
+                  placeholder="Carlos"
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" 
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Last Name</label>
-                <input name="lastName" value={personalInfo.lastName} onChange={handlePersonalChange}
-                  type="text" placeholder="Reyes"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-lastName"
+                  name="lastName" 
+                  value={personalInfo.lastName} 
+                  onChange={handlePersonalChange}
+                  type="text" 
+                  placeholder="Reyes"
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                    formErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
+                {formErrors.lastName && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.lastName}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Student Number</label>
-                <input name="studentNumber" value={personalInfo.studentNumber} onChange={handlePersonalChange}
-                  type="text" placeholder="20-2222-001"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-studentNumber"
+                  name="studentNumber" 
+                  value={personalInfo.studentNumber} 
+                  onChange={handlePersonalChange}
+                  type="text" 
+                  placeholder="20-2222-001"
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                    formErrors.studentNumber ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
+                {formErrors.studentNumber && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.studentNumber}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="mb-3">
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* School Email</label>
-              <input name="schoolEmail" value={personalInfo.schoolEmail} onChange={handlePersonalChange}
-                type="email" placeholder="jcreyes.swu@phinmaed.com"
+              <input 
+                id="signup-schoolEmail"
+                name="schoolEmail" 
+                value={personalInfo.schoolEmail} 
+                onChange={handlePersonalChange}
+                type="email" 
+                placeholder="jcreyes.swu@phinmaed.com"
                 readOnly={isPrefilled}
-                className={`w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A] ${isPrefilled ? 'opacity-70 cursor-not-allowed bg-gray-100/50' : ''}`} />
+                className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                  formErrors.schoolEmail ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                } ${isPrefilled ? 'opacity-70 cursor-not-allowed bg-gray-100/50' : ''}`} 
+              />
+              {formErrors.schoolEmail && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.schoolEmail}
+                </p>
+              )}
               <p className="text-[10px] text-gray-400 mt-1 pl-2">
                 {isPrefilled ? "Pre-filled from your invitation link (Cannot be edited)" : "Must be a valid @phinmaed.com email"}
               </p>
@@ -536,18 +659,37 @@ export default function StudentSignup({ onSwitchPage }) {
             <div className="grid grid-cols-2 gap-3 mb-5">
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Course</label>
-                <select name="course" value={personalInfo.course} onChange={handlePersonalChange}
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs text-gray-500 focus:outline-none focus:border-[#6B0F1A] appearance-none">
+                <select 
+                  id="signup-course"
+                  name="course" 
+                  value={personalInfo.course} 
+                  onChange={handlePersonalChange}
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
+                    formErrors.course ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`}
+                >
                   <option value="">Select your course</option>
                   {programsList.map(prog => (
                     <option key={prog.id || prog.code} value={prog.name}>{prog.name}</option>
                   ))}
                 </select>
+                {formErrors.course && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.course}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Year Level</label>
-                <select name="yearLevel" value={personalInfo.yearLevel} onChange={handlePersonalChange}
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs text-gray-500 focus:outline-none focus:border-[#6B0F1A] appearance-none">
+                <select 
+                  id="signup-yearLevel"
+                  name="yearLevel" 
+                  value={personalInfo.yearLevel} 
+                  onChange={handlePersonalChange}
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
+                    formErrors.yearLevel ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`}
+                >
                   <option value="">Select year</option>
                   <option>1st Year</option>
                   <option>2nd Year</option>
@@ -555,6 +697,11 @@ export default function StudentSignup({ onSwitchPage }) {
                   <option>4th Year</option>
                   <option>5th Year</option>
                 </select>
+                {formErrors.yearLevel && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                    <span>⚠️</span> {formErrors.yearLevel}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -584,28 +731,67 @@ export default function StudentSignup({ onSwitchPage }) {
             <div className="mb-3">
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Group Name</label>
               <div className="relative">
-                <input value={groupInfo.groupName} onChange={e => setGroupInfo(p => ({ ...p, groupName: e.target.value }))}
-                  type="text" placeholder="e.g., Group HealthAI"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-groupName"
+                  value={groupInfo.groupName} 
+                  onChange={e => {
+                    setGroupInfo(p => ({ ...p, groupName: e.target.value }));
+                    if (formErrors.groupName) setFormErrors(p => ({ ...p, groupName: '' }));
+                  }}
+                  type="text" 
+                  placeholder="e.g., Group HealthAI"
+                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors ${
+                    formErrors.groupName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
                 <span className="absolute right-3 top-2.5 text-gray-300 text-sm">👥</span>
               </div>
+              {formErrors.groupName && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.groupName}
+                </p>
+              )}
             </div>
 
             <div className="mb-4">
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Research Title</label>
               <div className="relative">
-                <input value={groupInfo.researchTitle} onChange={e => setGroupInfo(p => ({ ...p, researchTitle: e.target.value }))}
-                  type="text" placeholder="e.g., ML-Based Health Monitor"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                <input 
+                  id="signup-researchTitle"
+                  value={groupInfo.researchTitle} 
+                  onChange={e => {
+                    setGroupInfo(p => ({ ...p, researchTitle: e.target.value }));
+                    if (formErrors.researchTitle) setFormErrors(p => ({ ...p, researchTitle: '' }));
+                  }}
+                  type="text" 
+                  placeholder="e.g., ML-Based Health Monitor"
+                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors ${
+                    formErrors.researchTitle ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
                 <span className="absolute right-3 top-2.5 text-gray-300 text-sm">📄</span>
               </div>
+              {formErrors.researchTitle && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.researchTitle}
+                </p>
+              )}
             </div>
 
             <div className="mb-4">
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Category</label>
               <div className="relative">
-                <select value={groupInfo.category} onChange={e => setGroupInfo(p => ({ ...p, category: e.target.value }))}
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs text-gray-500 focus:outline-none focus:border-[#6B0F1A] appearance-none">
+                <select 
+                  id="signup-category"
+                  value={groupInfo.category} 
+                  onChange={e => {
+                    setGroupInfo(p => ({ ...p, category: e.target.value }));
+                    if (formErrors.category) setFormErrors(p => ({ ...p, category: '' }));
+                  }}
+                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
+                    formErrors.category ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`}
+                >
                   <option value="">Select Category</option>
                   {categoriesList.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -613,6 +799,11 @@ export default function StudentSignup({ onSwitchPage }) {
                 </select>
                 <span className="absolute right-3 top-2.5 text-gray-300 text-sm pointer-events-none">▼</span>
               </div>
+              {formErrors.category && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.category}
+                </p>
+              )}
             </div>
 
             {/* Team Members */}
@@ -649,15 +840,47 @@ export default function StudentSignup({ onSwitchPage }) {
               {/* Add member input */}
               <div className="flex gap-2 mt-2">
                 <div className="flex-1 flex flex-col gap-2">
-                  <input
-                    value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)}
-                    type="text" placeholder="Full Name (e.g. Juan Dela Cruz)"
-                    className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
-                  <input
-                    value={memberInput} onChange={e => setMemberInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
-                    type="email" placeholder="Email (member.swu@phinmaed.com)"
-                    className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" />
+                  <div>
+                    <input
+                      id="signup-memberNameInput"
+                      value={memberNameInput} 
+                      onChange={e => {
+                        setMemberNameInput(e.target.value);
+                        if (formErrors.memberNameInput) setFormErrors(p => ({ ...p, memberNameInput: '' }));
+                      }}
+                      type="text" 
+                      placeholder="Full Name (e.g. Juan Dela Cruz)"
+                      className={`w-full bg-[#faf6f0] border rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${
+                        formErrors.memberNameInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                      }`} 
+                    />
+                    {formErrors.memberNameInput && (
+                      <p className="text-[10px] text-red-500 mt-0.5 font-semibold pl-1">
+                        <span>⚠️</span> {formErrors.memberNameInput}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      id="signup-memberInput"
+                      value={memberInput} 
+                      onChange={e => {
+                        setMemberInput(e.target.value);
+                        if (formErrors.memberInput) setFormErrors(p => ({ ...p, memberInput: '' }));
+                      }}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
+                      type="email" 
+                      placeholder="Email (member.swu@phinmaed.com)"
+                      className={`w-full bg-[#faf6f0] border rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${
+                        formErrors.memberInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                      }`} 
+                    />
+                    {formErrors.memberInput && (
+                      <p className="text-[10px] text-red-500 mt-0.5 font-semibold pl-1">
+                        <span>⚠️</span> {formErrors.memberInput}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <button type="button" onClick={handleAddMember}
                   className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition self-stretch min-h-[44px] touch-manipulation flex items-center justify-center">
@@ -690,9 +913,13 @@ export default function StudentSignup({ onSwitchPage }) {
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Password</label>
               <div className="relative">
                 <input 
+                  id="signup-password"
                   name="password"
                   value={securityInfo.password}
-                  onChange={e => setSecurityInfo(p => ({ ...p, password: e.target.value }))}
+                  onChange={e => {
+                    setSecurityInfo(p => ({ ...p, password: e.target.value }));
+                    if (formErrors.password) setFormErrors(p => ({ ...p, password: '' }));
+                  }}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter a strong password"
                   data-password="true"
@@ -701,13 +928,20 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A] select-none" 
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none select-none transition-colors ${
+                    formErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
+              {formErrors.password && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.password}
+                </p>
+              )}
 
               {/* Password Strength indicator */}
               {securityInfo.password && (
@@ -754,9 +988,13 @@ export default function StudentSignup({ onSwitchPage }) {
               <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Confirm Password</label>
               <div className="relative">
                 <input
+                  id="signup-confirmPassword"
                   name="confirmPassword"
                   value={securityInfo.confirmPassword}
-                  onChange={e => setSecurityInfo(p => ({ ...p, confirmPassword: e.target.value }))}
+                  onChange={e => {
+                    setSecurityInfo(p => ({ ...p, confirmPassword: e.target.value }));
+                    if (formErrors.confirmPassword) setFormErrors(p => ({ ...p, confirmPassword: '' }));
+                  }}
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Re-enter your password"
                   data-password="true"
@@ -765,24 +1003,44 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B0F1A] pr-10 select-none"
-                  required />
+                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none pr-10 select-none transition-colors ${
+                    formErrors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`}
+                />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-2 text-gray-400 hover:text-[#6B0F1A] text-base">
                   {showConfirmPassword ? '🙈' : '👁'}
                 </button>
               </div>
+              {formErrors.confirmPassword && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.confirmPassword}
+                </p>
+              )}
             </div>
 
             {/* Terms */}
-            <div className="flex items-start gap-2 mb-5">
-              <input type="checkbox" id="agreeTerms"
+            <div className={`flex items-start gap-2 mb-5 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : ''}`}>
+              <input 
+                type="checkbox" 
+                id="signup-agreeTerms"
                 checked={securityInfo.agreeTerms}
-                onChange={e => setSecurityInfo(p => ({ ...p, agreeTerms: e.target.checked }))}
-                className="w-3.5 h-3.5 mt-0.5 text-[#6B0F1A] border-gray-300 rounded" />
-              <label htmlFor="agreeTerms" className="text-[11px] text-gray-600">
-                I agree to the <span onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-[#6B0F1A] font-semibold cursor-pointer hover:underline">Terms and Conditions and Privacy Policy</span>
-              </label>
+                onChange={e => {
+                  setSecurityInfo(p => ({ ...p, agreeTerms: e.target.checked }));
+                  if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+                }}
+                className="w-3.5 h-3.5 mt-0.5 text-[#6B0F1A] border-gray-300 rounded" 
+              />
+              <div>
+                <label htmlFor="signup-agreeTerms" className="text-[11px] text-gray-600">
+                  I agree to the <span onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-[#6B0F1A] font-semibold cursor-pointer hover:underline">Terms and Conditions and Privacy Policy</span>
+                </label>
+                {formErrors.agreeTerms && (
+                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold">
+                    <span>⚠️</span> {formErrors.agreeTerms}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -792,12 +1050,8 @@ export default function StudentSignup({ onSwitchPage }) {
               </button>
               <button
                 type="submit"
-                disabled={loading || !securityInfo.agreeTerms}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                style={{
-                  backgroundColor: securityInfo.agreeTerms && !loading ? '#6B0F1A' : '#9ca3af',
-                  color: 'white'
-                }}>
+                disabled={loading}
+                className="flex-1 min-h-[44px] touch-manipulation py-2.5 rounded-full text-sm font-semibold transition disabled:opacity-50 bg-[#6B0F1A] hover:bg-[#540c14] text-white flex items-center justify-center">
                 {loading ? 'Creating...' : 'Create Account ✓'}
               </button>
             </div>

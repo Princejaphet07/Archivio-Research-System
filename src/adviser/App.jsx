@@ -13,6 +13,7 @@ import { AdviserProvider } from './context/AdviserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import LoadingScreen from './components/LoadingScreen';
 
 // Lazy-load main pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
@@ -24,11 +25,7 @@ const SendInvitations = lazyWithRetry(() => import('./pages/SendInvitations'));
 const SubmissionRequirements = lazyWithRetry(() => import('./pages/SubmissionRequirements'));
 const MyProfile = lazyWithRetry(() => import('./pages/MyProfile'));
 
-const PageLoader = () => (
-  <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">
-    <div className="w-10 h-10 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin"></div>
-  </div>
-);
+const PageLoader = () => <LoadingScreen text="LOADING ADVISER..." />;
 
 function App() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);

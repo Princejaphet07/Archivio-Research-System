@@ -56,14 +56,33 @@ export default function Settings({ activePage, onNavigate }) {
     publications: []
   });
 
+  // Organizational Membership Modal State
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
+  const [membershipForm, setMembershipForm] = useState({
+    organizationName: '',
+    role: '',
+    yearJoined: ''
+  });
+  const [membershipErrors, setMembershipErrors] = useState({});
+
+  // Research Publication Modal State
+  const [showPublicationModal, setShowPublicationModal] = useState(false);
+  const [publicationForm, setPublicationForm] = useState({
+    title: '',
+    link: '',
+    year: '',
+    publisher: ''
+  });
+  const [publicationErrors, setPublicationErrors] = useState({});
+
   useEffect(() => {
     if (deanData) {
       setProfile({
         firstName: deanData.firstName || deanData.displayName?.split(' ')[0] || '',
         lastName: deanData.lastName || deanData.displayName?.split(' ').slice(1).join(' ') || '',
         title: deanData.title || 'Dr.',
-        memberships: deanData.memberships || [],
-        publications: deanData.publications || []
+        memberships: Array.isArray(deanData.memberships) ? deanData.memberships : [],
+        publications: Array.isArray(deanData.publications) ? deanData.publications : []
       });
     }
   }, [deanData]);
@@ -262,20 +281,148 @@ export default function Settings({ activePage, onNavigate }) {
     });
   };
 
+  // Organizational Membership Handlers
+  const handleOpenMembershipModal = () => {
+    setMembershipForm({ organizationName: '', role: '', yearJoined: '' });
+    setMembershipErrors({});
+    setShowMembershipModal(true);
+  };
+
+  const handleAddMembership = (e) => {
+    e.preventDefault();
+    const errors = {};
+    if (!membershipForm.organizationName?.trim()) {
+      errors.organizationName = 'Organization name is required';
+    }
+    if (Object.keys(errors).length > 0) {
+      setMembershipErrors(errors);
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      organizationName: membershipForm.organizationName.trim(),
+      role: membershipForm.role?.trim() || '',
+      yearJoined: membershipForm.yearJoined?.trim() || ''
+    };
+
+    setProfile(prev => ({
+      ...prev,
+      memberships: [...(prev.memberships || []), newItem]
+    }));
+    setShowMembershipModal(false);
+  };
+
+  const handleDeleteMembership = async (id) => {
+    const res = await Swal.fire({
+      title: 'Remove membership?',
+      text: 'Are you sure you want to remove this organizational membership?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#7a1f3d',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, remove'
+    });
+
+    if (res.isConfirmed) {
+      setProfile(prev => ({
+        ...prev,
+        memberships: (prev.memberships || []).filter(m => m.id !== id)
+      }));
+    }
+  };
+
+  // Research Publication Handlers
+  const handleOpenPublicationModal = () => {
+    setPublicationForm({ title: '', link: '', year: '', publisher: '' });
+    setPublicationErrors({});
+    setShowPublicationModal(true);
+  };
+
+  const handleAddPublication = (e) => {
+    e.preventDefault();
+    const errors = {};
+    if (!publicationForm.title?.trim()) {
+      errors.title = 'Research title is required';
+    }
+    if (!publicationForm.link?.trim()) {
+      errors.link = 'Publication link is required';
+    }
+    if (Object.keys(errors).length > 0) {
+      setPublicationErrors(errors);
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      title: publicationForm.title.trim(),
+      link: publicationForm.link.trim(),
+      year: publicationForm.year?.trim() || '',
+      publisher: publicationForm.publisher?.trim() || ''
+    };
+
+    setProfile(prev => ({
+      ...prev,
+      publications: [...(prev.publications || []), newItem]
+    }));
+    setShowPublicationModal(false);
+  };
+
+  const handleDeletePublication = async (id) => {
+    const res = await Swal.fire({
+      title: 'Remove publication?',
+      text: 'Are you sure you want to remove this research publication?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#7a1f3d',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, remove'
+    });
+
+    if (res.isConfirmed) {
+      setProfile(prev => ({
+        ...prev,
+        publications: (prev.publications || []).filter(p => p.id !== id)
+      }));
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        displayName: `${profile.firstName} ${profile.lastName}`,
-        title: profile.title,
-        memberships: profile.memberships,
-        publications: profile.publications
+      const payload = {
+        firstName: profile.firstName?.trim() || '',
+        lastName: profile.lastName?.trim() || '',
+        displayName: `${profile.firstName?.trim() || ''} ${profile.lastName?.trim() || ''}`.trim(),
+        title: profile.title || 'Dr.',
+        memberships: profile.memberships || [],
+        publications: profile.publications || [],
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save to 'users' collection
+      try {
+        await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
+      } catch (err) {
+        console.warn('Could not update users document:', err);
+      }
+
+      // Also save to 'deans' collection
+      const targetDeanDocId = deanData?.docId || user.uid;
+      try {
+        await setDoc(doc(db, 'deans', targetDeanDocId), payload, { merge: true });
+      } catch (err) {
+        console.warn('Could not update deans document:', err);
+      }
+
+      Swal.fire({ 
+        icon: 'success', 
+        title: 'Saved', 
+        text: 'Profile updated successfully.', 
+        confirmButtonColor: '#7a1f3d' 
       });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Profile updated successfully.', confirmButtonColor: '#7a1f3d' });
     } catch (error) {
-      console.error(error);
+      console.error('Error saving profile:', error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update profile.' });
     }
   };
@@ -514,7 +661,7 @@ export default function Settings({ activePage, onNavigate }) {
 
                     <div className="space-y-3">
                       {pendingProposals.length === 0 ? (
-                        <div className="bg-stone-50 dark:bg-stone-800/50 border border-dashed border-stone-300 dark:border-stone-600 rounded-xl p-8 text-center">
+                        <div className="bg-stone-50/60 dark:bg-stone-800/30 border border-stone-200 dark:border-stone-800 rounded-xl p-8 text-center">
                           <p className="text-stone-500 dark:text-stone-400 text-sm font-medium">No pending proposals at this time.</p>
                         </div>
                       ) : (
@@ -533,7 +680,7 @@ export default function Settings({ activePage, onNavigate }) {
                             <div className="flex gap-2 shrink-0">
                               <button 
                                 onClick={() => handleUpdateStatus(item.id, 'approved', true)} 
-                                className="bg-[#7a1f3d] hover:bg-[#5e182f] text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                                className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5e182f] text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
                                 title="Approve as Global Requirement for all research groups"
                               >
                                 🌐 Approve as Global
@@ -547,7 +694,7 @@ export default function Settings({ activePage, onNavigate }) {
                               </button>
                               <button 
                                 onClick={() => handleUpdateStatus(item.id, 'declined')} 
-                                className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3 py-2 rounded-lg text-xs font-bold transition"
+                                className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 hover:border-red-200 px-3 py-2 rounded-lg text-xs font-bold transition"
                               >
                                 ✕ Decline
                               </button>
@@ -560,7 +707,7 @@ export default function Settings({ activePage, onNavigate }) {
 
                   {/* Approved Adviser Proposals */}
                   {approvedProposals.length > 0 && (
-                    <div className="mt-8 pt-8 border-t border-stone-100">
+                    <div className="mt-8 pt-8 border-t border-stone-100 dark:border-stone-800">
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="text-sm font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider">Approved Adviser Requirements</h3>
@@ -642,7 +789,7 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100">
+                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100 dark:border-stone-800">
                     <button 
                       onClick={handleResetEmailTemplate}
                       className="px-6 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition"
@@ -723,42 +870,141 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
 
                     {/* Organizational Memberships */}
-                    <div className="pt-6 border-t border-stone-100">
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="pt-6 border-t border-stone-100 dark:border-stone-700/50">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">ORGANIZATIONAL MEMBERSHIP</h4>
                           <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Add your professional or academic organizational memberships.</p>
                         </div>
-                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
+                        <button 
+                          type="button"
+                          onClick={handleOpenMembershipModal}
+                          className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition shadow-sm"
+                          title="Add Organizational Membership"
+                        >
                           +
                         </button>
                       </div>
-                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No organizational memberships added yet</p>
-                        <p className="text-xs text-stone-400 mt-1">Click the + button above to add your first membership</p>
-                      </div>
+                      
+                      {(!profile.memberships || profile.memberships.length === 0) ? (
+                        <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No organizational memberships added yet</p>
+                          <p className="text-xs text-stone-400 mt-1">Click the + button above to add your first membership</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {profile.memberships.map((item) => (
+                            <div 
+                              key={item.id} 
+                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-center justify-between hover:border-[#7a1f3d]/30 transition group"
+                            >
+                              <div className="space-y-1">
+                                <h5 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                                  {item.organizationName}
+                                </h5>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+                                  {item.role && (
+                                    <span className="px-2 py-0.5 bg-stone-200/70 dark:bg-stone-700 rounded text-stone-700 dark:text-stone-300 font-medium">
+                                      {item.role}
+                                    </span>
+                                  )}
+                                  {item.yearJoined && (
+                                    <span>Joined: <strong className="font-semibold text-stone-700 dark:text-stone-300">{item.yearJoined}</strong></span>
+                                  )}
+                                </div>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteMembership(item.id)}
+                                className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                                title="Remove Membership"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Research Publications */}
-                    <div className="pt-6 border-t border-stone-100">
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="pt-6 border-t border-stone-100 dark:border-stone-700/50">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">RESEARCH PUBLICATIONS</h4>
                           <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Add your published research papers with their publication links.</p>
                         </div>
-                        <button className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition">
+                        <button 
+                          type="button"
+                          onClick={handleOpenPublicationModal}
+                          className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition shadow-sm"
+                          title="Add Research Publication"
+                        >
                           +
                         </button>
                       </div>
-                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No research publications added yet</p>
-                        <p className="text-xs text-stone-400 mt-1">Click the + button above to add your first publication</p>
-                      </div>
+                      
+                      {(!profile.publications || profile.publications.length === 0) ? (
+                        <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">No research publications added yet</p>
+                          <p className="text-xs text-stone-400 mt-1">Click the + button above to add your research title and publication link</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {profile.publications.map((item) => (
+                            <div 
+                              key={item.id} 
+                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-start justify-between hover:border-[#7a1f3d]/30 transition group"
+                            >
+                              <div className="space-y-1.5 max-w-[85%]">
+                                <h5 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-snug">
+                                  {item.title}
+                                </h5>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+                                  {item.publisher && (
+                                    <span className="font-medium text-stone-700 dark:text-stone-300">
+                                      {item.publisher}
+                                    </span>
+                                  )}
+                                  {item.year && (
+                                    <span>({item.year})</span>
+                                  )}
+                                  {item.link && (
+                                    <a 
+                                      href={item.link.startsWith('http') ? item.link : `https://${item.link}`} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-[#7a1f3d] dark:text-[#f8d070] font-medium hover:underline inline-flex items-center gap-1 break-all"
+                                    >
+                                      <span>Link</span>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeletePublication(item.id)}
+                                className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                                title="Remove Publication"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                   </div>
 
-                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100">
+                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100 dark:border-stone-800">
                     <button 
                       onClick={handleSaveProfile}
                       className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
@@ -779,13 +1025,13 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
                     <button 
                       onClick={() => setShowSYModal(true)}
-                      className="px-4 py-2 border border-[#7a1f3d] text-[#7a1f3d] dark:text-[#f8d070] rounded-lg text-sm font-bold hover:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:text-white transition"
+                      className="px-4 py-2 border border-[#7a1f3d] dark:border-[#d4af37] text-[#7a1f3d] dark:text-[#f8d070] rounded-lg text-sm font-bold hover:bg-[#7a1f3d] hover:text-white dark:hover:bg-[#d4af37] dark:hover:text-[#4a1024] transition"
                     >
                       + Add School Year
                     </button>
                   </div>
 
-                  <div className="bg-amber-50 text-amber-800 text-xs px-4 py-3 rounded-lg mb-6 flex items-center gap-2 border border-amber-200">
+                  <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs px-4 py-3 rounded-lg mb-6 flex items-center gap-2 border border-amber-200 dark:border-amber-900/50">
                     ⚠️ Setting a new Active SY will archive the current one. This affects the dashboard and all submissions.
                   </div>
 
@@ -800,7 +1046,7 @@ export default function Settings({ activePage, onNavigate }) {
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">ACTIONS</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-stone-100 bg-white dark:bg-stone-800">
+                      <tbody className="divide-y divide-stone-100 dark:divide-stone-700/70 bg-white dark:bg-stone-800">
                         {schoolYears.length === 0 ? (
                           <tr>
                             <td colSpan="5" className="px-6 py-8 text-center text-stone-500 dark:text-stone-400">No school years added yet.</td>
@@ -881,47 +1127,47 @@ export default function Settings({ activePage, onNavigate }) {
                   
                   <div className="space-y-6">
                     {/* Toggle Item */}
-                    <div className="flex items-center justify-between pb-6 border-b border-stone-100">
+                    <div className="flex items-center justify-between pb-6 border-b border-stone-100 dark:border-stone-800">
                       <div>
                         <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Research Submission Updates</h4>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Get notified when a group submits or updates their requirements.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.researchUpdates} onChange={() => setNotifications({...notifications, researchUpdates: !notifications.researchUpdates})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
-                    <div className="flex items-center justify-between pb-6 border-b border-stone-100">
+                    <div className="flex items-center justify-between pb-6 border-b border-stone-100 dark:border-stone-800">
                       <div>
                         <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Adviser Activity Alerts</h4>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Receive alerts when an adviser marks a submission as reviewed.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.adviserAlerts} onChange={() => setNotifications({...notifications, adviserAlerts: !notifications.adviserAlerts})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
-                    <div className="flex items-center justify-between pb-6 border-b border-stone-100">
+                    <div className="flex items-center justify-between pb-6 border-b border-stone-100 dark:border-stone-800">
                       <div>
                         <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Publication Notifications</h4>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Notify when a paper is published to the public archive.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.publicationNotifs} onChange={() => setNotifications({...notifications, publicationNotifs: !notifications.publicationNotifs})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
-                    <div className="flex items-center justify-between pb-6 border-b border-stone-100">
+                    <div className="flex items-center justify-between pb-6 border-b border-stone-100 dark:border-stone-800">
                       <div>
                         <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">System Announcements</h4>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Receive general announcements from the System Administrator.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.systemAnnouncements} onChange={() => setNotifications({...notifications, systemAnnouncements: !notifications.systemAnnouncements})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
@@ -1068,7 +1314,7 @@ export default function Settings({ activePage, onNavigate }) {
 
               {/* Fallback for unhandled tabs */}
               {activeTab !== 'completion' && activeTab !== 'email' && activeTab !== 'profile' && activeTab !== 'schoolyear' && activeTab !== 'notifications' && activeTab !== 'security' && (
-                <div className="flex items-center justify-center h-64 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-dashed border-stone-200 dark:border-stone-700">
+                <div className="flex items-center justify-center h-64 bg-stone-50/60 dark:bg-stone-800/30 rounded-xl border border-stone-200 dark:border-stone-800">
                   <p className="text-stone-500 dark:text-stone-400 font-medium">Select Completion Requirements tab to see the updates.</p>
                 </div>
               )}
@@ -1086,51 +1332,51 @@ export default function Settings({ activePage, onNavigate }) {
             </div>
             <form onSubmit={handleAddGlobalRequirement} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Requirement Title</label>
+                <label className="block text-xs font-bold text-stone-600 dark:text-stone-300 mb-1">Requirement Title</label>
                 <input 
                   required
                   type="text" 
                   value={newReq.title}
                   onChange={e => setNewReq({...newReq, title: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
                   placeholder="e.g. Clearance Form"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Description</label>
+                <label className="block text-xs font-bold text-stone-600 dark:text-stone-300 mb-1">Description</label>
                 <input 
                   required
                   type="text" 
                   value={newReq.desc}
                   onChange={e => setNewReq({...newReq, desc: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
                   placeholder="e.g. Required clearance from accounting"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Input Type</label>
+                  <label className="block text-xs font-bold text-stone-600 dark:text-stone-300 mb-1">Input Type</label>
                   <select 
                     value={newReq.type}
                     onChange={e => setNewReq({...newReq, type: e.target.value, icon: e.target.value === 'url' ? '🔗' : '📄'})}
-                    className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d]"
+                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]"
                   >
                     <option value="file">File Upload</option>
                     <option value="url">URL / Link</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Icon (Emoji)</label>
+                  <label className="block text-xs font-bold text-stone-600 dark:text-stone-300 mb-1">Icon (Emoji)</label>
                   <input 
                     type="text" 
                     value={newReq.icon}
                     onChange={e => setNewReq({...newReq, icon: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d]" 
+                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm font-bold hover:bg-gray-50">Cancel</button>
+              <div className="flex gap-3 pt-4 border-t border-stone-100 dark:border-stone-700">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700">Cancel</button>
                 <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2 text-sm font-bold hover:bg-[#631932]">Add Requirement</button>
               </div>
             </form>
@@ -1142,7 +1388,7 @@ export default function Settings({ activePage, onNavigate }) {
       {(showSYModal || showEditSYModal) && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-stone-800 rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center p-5 border-b border-stone-100">
+            <div className="flex justify-between items-center p-5 border-b border-stone-100 dark:border-stone-700">
               <h2 className="font-bold text-xl font-serif text-stone-900 dark:text-stone-100">{showEditSYModal ? 'Edit School Year' : 'Add School Year'}</h2>
               <button onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="text-stone-400 hover:text-stone-600 dark:text-stone-400">✕</button>
             </div>
@@ -1180,6 +1426,157 @@ export default function Settings({ activePage, onNavigate }) {
               <div className="flex gap-3 pt-6">
                 <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition">Cancel</button>
                 <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#631932] transition">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Organizational Membership Modal */}
+      {showMembershipModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden p-6 sm:p-8 animate-in fade-in zoom-in duration-150">
+            <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900 dark:text-stone-100 mb-1">Add Organizational Membership</h2>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6">Enter details of your professional or academic membership.</p>
+            
+            <form onSubmit={handleAddMembership} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">ORGANIZATION NAME *</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.organizationName}
+                  onChange={e => {
+                    setMembershipForm({ ...membershipForm, organizationName: e.target.value });
+                    if (membershipErrors.organizationName) setMembershipErrors({ ...membershipErrors, organizationName: null });
+                  }}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  placeholder="e.g. Philippine Computer Society"
+                />
+                {membershipErrors.organizationName && (
+                  <p className="text-xs text-red-500 mt-1">{membershipErrors.organizationName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">ROLE / POSITION</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.role}
+                  onChange={e => setMembershipForm({ ...membershipForm, role: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  placeholder="e.g. Member, Chairperson"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">YEAR JOINED</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.yearJoined}
+                  onChange={e => setMembershipForm({ ...membershipForm, yearJoined: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  placeholder="e.g. 2021"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6 border-t border-stone-100 dark:border-stone-700/50">
+                <button 
+                  type="button" 
+                  onClick={() => setShowMembershipModal(false)} 
+                  className="px-5 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 text-sm font-semibold hover:bg-stone-50 dark:hover:bg-stone-700 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-semibold hover:bg-[#631932] transition shadow-sm"
+                >
+                  Add Membership
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Research Publication Modal */}
+      {showPublicationModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden p-6 sm:p-8 animate-in fade-in zoom-in duration-150">
+            <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900 dark:text-stone-100 mb-1">Add Research Publication</h2>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6">Enter the title and link of your published research paper.</p>
+            
+            <form onSubmit={handleAddPublication} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">RESEARCH TITLE *</label>
+                <input 
+                  type="text" 
+                  value={publicationForm.title}
+                  onChange={e => {
+                    setPublicationForm({ ...publicationForm, title: e.target.value });
+                    if (publicationErrors.title) setPublicationErrors({ ...publicationErrors, title: null });
+                  }}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.title ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  placeholder="e.g. AI-Driven Health Monitoring System"
+                />
+                {publicationErrors.title && (
+                  <p className="text-xs text-red-500 mt-1">{publicationErrors.title}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">PUBLICATION LINK *</label>
+                <input 
+                  type="text" 
+                  value={publicationForm.link}
+                  onChange={e => {
+                    setPublicationForm({ ...publicationForm, link: e.target.value });
+                    if (publicationErrors.link) setPublicationErrors({ ...publicationErrors, link: null });
+                  }}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.link ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  placeholder="e.g. https://doi.org/10.xxxx/xxxxx"
+                />
+                {publicationErrors.link && (
+                  <p className="text-xs text-red-500 mt-1">{publicationErrors.link}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">YEAR PUBLISHED</label>
+                <input 
+                  type="text" 
+                  value={publicationForm.year}
+                  onChange={e => setPublicationForm({ ...publicationForm, year: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  placeholder="e.g. 2024"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">PUBLISHER / JOURNAL</label>
+                <input 
+                  type="text" 
+                  value={publicationForm.publisher}
+                  onChange={e => setPublicationForm({ ...publicationForm, publisher: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  placeholder="e.g. IEEE Access, ResearchGate"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6 border-t border-stone-100 dark:border-stone-700/50">
+                <button 
+                  type="button" 
+                  onClick={() => setShowPublicationModal(false)} 
+                  className="px-5 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 text-sm font-semibold hover:bg-stone-50 dark:hover:bg-stone-700 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-semibold hover:bg-[#631932] transition shadow-sm"
+                >
+                  Add Publication
+                </button>
               </div>
             </form>
           </div>

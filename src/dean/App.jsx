@@ -12,6 +12,8 @@ import './App.css';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
+import LoadingScreen from './components/LoadingScreen';
+
 // Lazy-load dashboard pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const ResearchRecords = lazyWithRetry(() => import('./pages/ResearchRecords'));
@@ -22,11 +24,7 @@ const Reports = lazyWithRetry(() => import('./pages/Reports'));
 const UserManagement = lazyWithRetry(() => import('./pages/UserManagement'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 
-const PageLoader = () => (
-  <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">
-    <div className="w-10 h-10 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin"></div>
-  </div>
-);
+const PageLoader = () => <LoadingScreen text="LOADING DEAN..." />;
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -43,12 +41,7 @@ function App() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#fcfbfa]">
-        <div className="w-12 h-12 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin mb-4"></div>
-        <p className="text-sm font-bold text-[#7a1f3d] tracking-widest uppercase">Loading ARCHIVIO</p>
-      </div>
-    );
+    return <LoadingScreen text="LOADING DEAN..." />;
   }
 
   return (

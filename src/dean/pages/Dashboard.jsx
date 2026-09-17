@@ -12,6 +12,15 @@ import TableSkeleton from '../components/skeletons/TableSkeleton';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 
+const parseDate = (val) => {
+  if (!val) return null;
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (val.seconds !== undefined) return new Date(val.seconds * 1000);
+  if (val._seconds !== undefined) return new Date(val._seconds * 1000);
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 export default function Dashboard({ activePage }) {
   const { deanData } = useUser();
   const navigate = useNavigate();
@@ -38,7 +47,19 @@ export default function Dashboard({ activePage }) {
   const [activeIndex, setActiveIndex] = useState(-1);
 
   // Derive available years from data
-  const availableYears = ['All', ...Array.from(new Set(allPapers.map(p => new Date(p.createdAt || Date.now()).getFullYear().toString())))].sort().reverse();
+  const availableYears = [
+    'All',
+    ...Array.from(
+      new Set(
+        allPapers
+          .map(p => {
+            const d = parseDate(p.createdAt);
+            return d ? d.getFullYear().toString() : new Date().getFullYear().toString();
+          })
+          .filter(Boolean)
+      )
+    )
+  ].sort().reverse();
 
   useEffect(() => {
     // Wait for deanData to load
@@ -92,7 +113,6 @@ export default function Dashboard({ activePage }) {
 
   // Process stats safely once both groups and submissions are loaded
   useEffect(() => {
-
     let approvedCount = 0;
     let publishedCount = 0;
     let pendingCount = 0;
@@ -100,6 +120,7 @@ export default function Dashboard({ activePage }) {
     const papers = [];
     const categoriesMap = {};
     const yearMap = {};
+    const monthMap = {};
 
     allGroups.forEach(group => {
       // Find submission strictly matching the group
@@ -123,30 +144,24 @@ export default function Dashboard({ activePage }) {
       }
       if (status === 'pending' || status === 'revision') pendingCount++;
       
-      const dateObj = new Date(data.createdAt || Date.now());
-      
-      let label = '';
-      if (chartFilter === 'year') {
-        label = dateObj.getFullYear().toString();
-      } else {
-        // By month: 'Jan', 'Feb', etc for the current year, or just format
-        const currentYear = new Date().getFullYear();
-        if (dateObj.getFullYear() === currentYear) {
-          label = dateObj.toLocaleString('default', { month: 'short' });
-        } else {
-          // If past year, maybe 'Jan 2025'
-          label = `${dateObj.toLocaleString('default', { month: 'short' })} '${dateObj.getFullYear().toString().slice(2)}`;
-        }
-      }
+      const dateObj = parseDate(data.createdAt) || parseDate(group.createdAt) || new Date();
+      const yKey = dateObj.getFullYear().toString();
+      const mKey = `${dateObj.getFullYear()}-${dateObj.getMonth()}`;
 
-      if (!yearMap[label]) yearMap[label] = { count: 0, approved: 0, published: 0 };
-      yearMap[label].count++;
-      if (status === 'approved' || status === 'endorsed' || status === 'published') yearMap[label].approved++;
-      if (status === 'published') yearMap[label].published++;
+      if (!yearMap[yKey]) yearMap[yKey] = { count: 0, approved: 0, published: 0 };
+      yearMap[yKey].count++;
+      if (status === 'approved' || status === 'endorsed' || status === 'published') yearMap[yKey].approved++;
+      if (status === 'published') yearMap[yKey].published++;
+
+      if (!monthMap[mKey]) monthMap[mKey] = { count: 0, approved: 0, published: 0 };
+      monthMap[mKey].count++;
+      if (status === 'approved' || status === 'endorsed' || status === 'published') monthMap[mKey].approved++;
+      if (status === 'published') monthMap[mKey].published++;
       
       const adviserUid = group.adviserUid || data.adviserUid;
       if (adviserUid) {
-        const pubYear = new Date(data.createdAt || Date.now()).getFullYear().toString();
+        const pubDate = parseDate(data.createdAt) || parseDate(group.createdAt) || new Date();
+        const pubYear = pubDate.getFullYear().toString();
         
         if (adviserTableYear === 'All' || pubYear === adviserTableYear) {
           const advName = group.adviserName || data.adviserName || 'Unknown Adviser';
@@ -176,16 +191,30 @@ export default function Dashboard({ activePage }) {
     catArray.sort((a, b) => b.count - a.count);
     setTopCategories(catArray.slice(0, 7));
     
-    const yearArray = Object.keys(yearMap).map(l => ({ label: l, count: yearMap[l].count, approved: yearMap[l].approved, published: yearMap[l].published }));
+    // Generate clean timeline chart data
+    const currentYear = new Date().getFullYear();
     if (chartFilter === 'year') {
-      yearArray.sort((a, b) => parseInt(a.label) - parseInt(b.label));
+      // Last 4 consecutive years, guaranteed valid integers
+      const years = [currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
+      const yearArray = years.map(y => {
+        const yStr = y.toString();
+        const stat = yearMap[yStr] || { count: 0, approved: 0, published: 0 };
+        return { label: yStr, ...stat };
+      });
+      setYearlyStats(yearArray);
     } else {
-      // Month sorting is tricky if we mix years, but if it's mostly chronological we rely on it, or sort by parsed date.
-      // Easiest is to parse back or assume chronological if we just map. But for now, rely on chronological map keys or sort by parsed string.
-      // Let's sort by Date parsed from label
-      yearArray.sort((a, b) => new Date(a.label + (a.label.includes("'") ? "" : ` ${new Date().getFullYear()}`)) - new Date(b.label + (b.label.includes("'") ? "" : ` ${new Date().getFullYear()}`)));
+      // Last 6 consecutive months leading to current month
+      const now = new Date();
+      const monthArray = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+        const label = d.toLocaleString('en-US', { month: 'short' });
+        const stat = monthMap[mKey] || { count: 0, approved: 0, published: 0 };
+        monthArray.push({ label, ...stat });
+      }
+      setYearlyStats(monthArray);
     }
-    setYearlyStats(yearArray);
 
   }, [allRawSubmissions, allGroups, chartFilter, adviserTableYear]);
 
@@ -239,24 +268,8 @@ export default function Dashboard({ activePage }) {
     return 'Good evening';
   };
   
-  const currentYear = new Date().getFullYear();
-  let chartData = [...yearlyStats].slice(-4);
-  
-  if (chartFilter === 'year' && chartData.length < 4) {
-    const padCount = 4 - chartData.length;
-    const startYear = chartData.length > 0 ? parseInt(chartData[0].label) - padCount : currentYear - 3;
-    const padding = Array.from({length: padCount}, (_, i) => ({ label: (startYear + i).toString(), count: 0, approved: 0, published: 0 }));
-    chartData = [...padding, ...chartData];
-  } else if (chartFilter === 'month' && chartData.length === 0) {
-    // If no data for month, pad with generic months
-    chartData = [
-      { label: 'Jan', count: 0, approved: 0, published: 0 },
-      { label: 'Feb', count: 0, approved: 0, published: 0 },
-      { label: 'Mar', count: 0, approved: 0, published: 0 },
-      { label: 'Apr', count: 0, approved: 0, published: 0 }
-    ];
-  }
-  const maxCount = Math.max(...chartData.map(d => d.count), 10);
+  const chartData = yearlyStats;
+  const maxCount = Math.max(...chartData.map(d => d.count || 0), 10);
   
   // Color palette for charts
   const COLORS = ['#7a1f3d', '#2563eb', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
@@ -276,7 +289,8 @@ export default function Dashboard({ activePage }) {
 
     const headers = ["Title", "Adviser", "Department", "Status", "Date Submitted"];
     const rows = allPapers.map(paper => {
-      const date = paper.createdAt ? new Date(paper.createdAt).toLocaleDateString() : 'N/A';
+      const pDate = parseDate(paper.createdAt);
+      const date = pDate ? pDate.toLocaleDateString() : 'N/A';
       return [
         `"${(paper.title || '').replace(/"/g, '""')}"`,
         `"${(paper.adviserName || '').replace(/"/g, '""')}"`,
@@ -414,10 +428,12 @@ export default function Dashboard({ activePage }) {
               </div>
             </Card>
 
-            {/* Yearly Summary */}
+            {/* Timeline Summary */}
             <Card glass={true} className="p-6 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Yearly Summary</h3>
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">
+                  {chartFilter === 'year' ? 'Yearly Summary' : 'Monthly Summary'}
+                </h3>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 flex-1 justify-center content-center">
                 {chartData.map((d, i) => {
@@ -433,7 +449,15 @@ export default function Dashboard({ activePage }) {
                   else { growthText = "0%"; }
                   
                   return (
-                    <YearMetricBox key={d.label || i} year={d.label} count={d.count} badge={badge} growth={growthText} textGreen={textGreen} active={false} />
+                    <YearMetricBox 
+                      key={`${chartFilter}-${d.label}-${i}`} 
+                      year={d.label} 
+                      count={d.count} 
+                      badge={badge} 
+                      growth={growthText} 
+                      textGreen={textGreen} 
+                      active={false} 
+                    />
                   );
                 })}
               </div>
@@ -535,10 +559,10 @@ export default function Dashboard({ activePage }) {
 
           {/* ================= ADVISER UPLOAD STATISTICS ================= */}
           <Card glass={true} className="overflow-hidden">
-            <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50">
+            <div className="p-5 border-b border-stone-100 dark:border-stone-700/80 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Adviser Upload Statistics</h3>
-                <p className="text-xs text-amber-600 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
               </div>
               <div className="flex gap-2">
                 <select 
@@ -570,7 +594,7 @@ export default function Dashboard({ activePage }) {
                     <th className="py-3 px-5 w-44">Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 font-medium text-stone-700 dark:text-stone-300">
+                <tbody className="divide-y divide-stone-100 dark:divide-stone-700/60 font-medium text-stone-700 dark:text-stone-300">
                   {adviserStats.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="py-6 text-center text-stone-400 text-sm">
@@ -582,7 +606,7 @@ export default function Dashboard({ activePage }) {
                       const isYou = adv.uid === deanData?.uid;
                       const initials = adv.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
                       return (
-                        <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 hover:bg-amber-50/60' : 'hover:bg-stone-50 dark:hover:bg-stone-700'} transition-colors`}>
+                        <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/60 dark:hover:bg-amber-950/30' : 'hover:bg-stone-50 dark:hover:bg-stone-700'} transition-colors`}>
                           <td className="py-3.5 px-5 flex items-center gap-3">
                             <div className={`w-7 h-7 rounded-full ${isYou ? 'bg-amber-500/20 text-amber-800' : 'bg-purple-100 text-purple-700'} font-bold flex items-center justify-center text-[11px]`}>{initials}</div>
                             <div>
@@ -665,7 +689,7 @@ function PaperRow({ rank, title, author, count, icon, highlight }) {
           <p className="text-[10px] text-stone-400 font-medium truncate mt-0.5">{author}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 shadow-sm">
+      <div className="flex items-center gap-1 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 dark:border-stone-700/80 shadow-sm">
         <span>{icon || '👍'}</span> {count}
       </div>
     </div>

@@ -241,7 +241,7 @@ export default function Reports() {
                       className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200 dark:border-stone-700/70 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                     >
                       <div className="flex items-start justify-between">
-                        <span className="text-xl bg-stone-50 dark:bg-stone-800/50 p-1.5 rounded-lg border border-stone-100">{type.icon}</span>
+                        <span className="text-xl bg-stone-50 dark:bg-stone-800/50 p-1.5 rounded-lg border border-stone-100 dark:border-stone-700/80">{type.icon}</span>
                         {isActive && <span className="text-emerald-600 bg-emerald-100/60 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✓</span>}
                       </div>
                       <h4 className="font-bold text-stone-800 dark:text-stone-200 text-xs mt-3">{type.title}</h4>
@@ -252,7 +252,7 @@ export default function Reports() {
               </div>
             </div>
 
-            <hr className="border-stone-100 no-print" />
+            <hr className="border-stone-100 dark:border-stone-700/80 no-print" />
 
             <div className="space-y-4 no-print">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -298,7 +298,7 @@ export default function Reports() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-100 bg-white dark:bg-stone-800">
+                    <tbody className="divide-y divide-stone-100 dark:divide-stone-700/70 bg-white dark:bg-stone-800">
                       {reportData.map((row, idx) => (
                         <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-stone-700">
                           {Object.values(row).map((val, i) => (
@@ -310,7 +310,7 @@ export default function Reports() {
                   </table>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl bg-stone-50 dark:bg-stone-800/50 p-12 text-center flex flex-col items-center justify-center no-print">
+                <div className="border border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50/60 dark:bg-stone-800/30 p-12 text-center flex flex-col items-center justify-center no-print">
                   <span className="text-3xl mb-2">📄</span>
                   <h4 className="font-bold text-stone-700 dark:text-stone-300 text-xs">No Data Found</h4>
                   <p className="text-[10px] text-stone-400 max-w-xs mt-1">Try adjusting your filters or select a different report type.</p>

@@ -476,18 +476,12 @@ function UnifiedLogin() {
             </button>
           </form>
 
-          {/* INVITATION INFO */}
-          <div className="mt-10 pt-6 border-t border-[#d2c9b6]/60 text-center">
-            <span className="text-[13px] text-[#5c4a40] font-bold block mb-1">Don't have an account?</span>
-            <span className="text-[12px] text-[#7d6f65] italic leading-relaxed">
-              Access to ARCHIVIO is strictly by invitation only. <br /> Please contact your Dean or Research Adviser.
-            </span>
-            <div className="mt-5">
+          {/* IT Support Contact */}
+          <div className="mt-8 text-center">
               <a href="mailto:archivio.noreply@gmail.com" className="text-[12px] font-bold text-[#7a1f3d] hover:text-[#5c172e] flex items-center justify-center gap-1.5 hover:underline underline-offset-4 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 Having trouble logging in? Contact IT Support
               </a>
-            </div>
           </div>
         </div>
 

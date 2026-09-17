@@ -519,7 +519,10 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
           initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={studentName}
+          onLogout={onLogout}
         />
 
         {/* SUBTITLE */}

@@ -3,6 +3,8 @@ import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
+import LoadingScreen from '../components/LoadingScreen';
+
 const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
@@ -76,7 +78,7 @@ export function UserProvider({ children }) {
   }, []);
 
   if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#e8e3d6]"><div className="w-8 h-8 border-4 border-[#801e38] border-t-transparent rounded-full animate-spin"></div></div>;
+    return <LoadingScreen text="LOADING ADMIN..." />;
   }
 
   return (

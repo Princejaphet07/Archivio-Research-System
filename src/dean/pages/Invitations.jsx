@@ -17,6 +17,7 @@ export default function Invitations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -64,18 +65,16 @@ Please click the button below to activate your account and set up your credentia
         ...doc.data()
       }));
 
-      // Sort by createdAt descending in JavaScript
+      // Sort by invitationDate or createdAt descending
       advisersData.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0);
-        const dateB = new Date(b.createdAt || 0);
+        const dateA = new Date(a.invitationSentAt || a.createdAt || 0);
+        const dateB = new Date(b.invitationSentAt || b.createdAt || 0);
         return dateB - dateA;
       });
 
       setAdvisers(advisersData);
-      setError('');
     }, (error) => {
       console.error('Error fetching advisers:', error);
-      setError('Error loading invitations');
     });
 
     return () => unsubscribe();
@@ -87,6 +86,12 @@ Please click the button below to activate your account and set up your credentia
       ...prev,
       [name]: value
     }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleSendInvitation = async (e) => {
@@ -94,12 +99,28 @@ Please click the button below to activate your account and set up your credentia
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      setError('Please fill in all required fields');
+    // Per-field validation with auto-focus and highlights
+    const errors = {};
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    if (!formData.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!formData.email.toLowerCase().endsWith('@phinmaed.com')) {
+      errors.email = 'Must use an @phinmaed.com institutional email';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      const firstKey = Object.keys(errors)[0];
+      const el = document.getElementById(`dean-invite-${firstKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
 
+    setFormErrors({});
     setLoading(true);
 
     try {
@@ -417,41 +438,72 @@ Please click the button below to activate your account and set up your credentia
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
                     <input
+                      id="dean-invite-firstName"
                       type="text"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
                       placeholder="e.g. Maria"
-                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
+                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
+                        formErrors.firstName
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
+                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
+                      }`}
                       disabled={loading}
                     />
+                    {formErrors.firstName && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
+                        <span>⚠️</span> {formErrors.firstName}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
                     <input
+                      id="dean-invite-lastName"
                       type="text"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
                       placeholder="e.g. Reyes"
-                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
+                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
+                        formErrors.lastName
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
+                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
+                      }`}
                       disabled={loading}
                     />
+                    {formErrors.lastName && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
+                        <span>⚠️</span> {formErrors.lastName}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
                     <input
+                      id="dean-invite-email"
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="adviser@phinmaed.com"
-                      className="w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700 rounded-xl outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] disabled:opacity-50"
+                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
+                        formErrors.email
+                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
+                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
+                      }`}
                       disabled={loading}
                     />
-                    <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
+                    {formErrors.email ? (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
+                        <span>⚠️</span> {formErrors.email}
+                      </p>
+                    ) : (
+                      <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
+                    )}
                   </div>
 
                   <div>
@@ -491,7 +543,7 @@ Please click the button below to activate your account and set up your credentia
 
             {/* Right Column: Tracker Log Panel */}
             <Card glass={true} className="lg:col-span-8 p-5">
-              <div className="flex justify-between items-center border-b border-stone-100 pb-4 mb-4">
+              <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-700/80 pb-4 mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Sent Invitations</h3>
                   <p className="text-[11px] text-stone-400">Track invitation status and resend if needed</p>
@@ -506,7 +558,7 @@ Please click the button below to activate your account and set up your credentia
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100">
+                      <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 dark:border-stone-700/80">
                         <th className="pb-3 w-1/3">Recipient</th>
                         <th className="pb-3 w-1/4">Email</th>
                         <th className="pb-3">Sent</th>
@@ -514,7 +566,7 @@ Please click the button below to activate your account and set up your credentia
                         <th className="pb-3 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50 font-medium text-stone-700 dark:text-stone-300">
+                    <tbody className="divide-y divide-stone-50 dark:divide-stone-700/60 font-medium text-stone-700 dark:text-stone-300">
                       {advisers.map((adviser) => (
                         <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700">
                           <td className="py-3.5 flex items-center gap-3">
@@ -528,7 +580,7 @@ Please click the button below to activate your account and set up your credentia
                             {adviser.invitationSentAt ? new Date(adviser.invitationSentAt).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="py-3.5">
-                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${adviser.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${adviser.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border border-amber-100 dark:border-amber-800/60'}`}>
                               {adviser.status === 'active' ? 'Accepted' : 'Pending'}
                             </span>
                           </td>

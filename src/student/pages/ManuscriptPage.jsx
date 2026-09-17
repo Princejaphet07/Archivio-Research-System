@@ -460,7 +460,10 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={studentName}
+          onLogout={onLogout}
         />
 
         {/* SCROLLABLE BODY */}

@@ -294,17 +294,17 @@ export default function ResearchRecords() {
           <Card glass={true} className="overflow-hidden">
 
             {/* ---- Filter Bar ---- */}
-            <div className="p-4 border-b border-stone-100 bg-stone-50 dark:bg-stone-800/50">
+            <div className="p-4 border-b border-stone-100 dark:border-stone-700/80 bg-stone-50 dark:bg-stone-800/50">
               <div className="flex flex-wrap gap-2.5 items-center">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
-                  <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 text-xs pointer-events-none">🔍</span>
+                  <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 dark:text-stone-400 text-xs pointer-events-none">🔍</span>
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                     placeholder="Search title, group, adviser..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-400 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070]"
                   />
                 </div>
 
@@ -456,7 +456,7 @@ export default function ResearchRecords() {
             </div>
 
             {/* ---- Pagination Footer ---- */}
-            <div className="px-5 py-3.5 border-t border-stone-100 flex items-center justify-between bg-stone-50 dark:bg-stone-800/30">
+            <div className="px-5 py-3.5 border-t border-stone-100 dark:border-stone-700/80 flex items-center justify-between bg-stone-50 dark:bg-stone-800/30">
               <div className="flex items-center gap-4">
                 <p className="text-[11px] text-stone-400 font-medium">
                   Showing {paginated.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} record{filtered.length !== 1 ? 's' : ''}
@@ -554,7 +554,7 @@ export default function ResearchRecords() {
               {selectedSubmission.abstract && (
                 <div>
                   <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Abstract</h4>
-                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100">
+                  <p className="text-stone-600 dark:text-stone-400 text-sm leading-relaxed bg-stone-50 dark:bg-stone-800/50 rounded-lg p-4 border border-stone-100 dark:border-stone-700/80">
                     {selectedSubmission.abstract}
                   </p>
                 </div>

@@ -6,6 +6,7 @@ import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { logActivity } from '../../firebase/logActivity';
+import RoleSwitchModal from '../../components/RoleSwitchModal';
 
 function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
   const location = useLocation();
@@ -14,6 +15,7 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
   const { adviserData, userRole } = useAdviser();
   const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
 
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [groupCountNew, setGroupCountNew] = useState(0);
   const [groupCountTotal, setGroupCountTotal] = useState(0);
   const [pendingRegCount, setPendingRegCount] = useState(0);
@@ -364,11 +366,12 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
         {isDualRole && (
           <div className="px-4 pb-2 shrink-0">
             <button
+              type="button"
               onClick={() => {
                 onCloseMobile();
-                window.location.href = '/dean/dashboard';
+                setShowSwitchModal(true);
               }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#f8d070]/20 hover:bg-[#f8d070]/30 border border-[#f8d070]/40 hover:border-[#f8d070]/60 rounded-xl text-[#f8d070] hover:text-amber-200 text-xs font-bold transition-all duration-200 shadow-md group cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#7B1F35]/40 hover:bg-[#7B1F35]/60 border border-[#f8d070]/40 hover:border-[#f8d070]/70 rounded-xl text-[#f8d070] hover:text-amber-200 text-xs font-bold transition-all duration-200 shadow-md group cursor-pointer"
               title="Switch to Dean Portal"
             >
               <span className="text-base group-hover:scale-125 transition-transform">⇄</span>
@@ -390,6 +393,12 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
           </button>
         </div>
       </aside>
+
+      <RoleSwitchModal
+        isOpen={showSwitchModal}
+        onClose={() => setShowSwitchModal(false)}
+        targetRole="dean"
+      />
     </>
   );
 }

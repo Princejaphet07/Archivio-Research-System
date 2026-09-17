@@ -233,18 +233,18 @@ export default function UserManagement() {
           {/* Table Container Card */}
           <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700/60 dark:border-stone-700 overflow-hidden">
             {/* View Switching Tabs */}
-            <div className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-100 px-4 flex gap-6 text-xs font-bold text-stone-400">
+            <div className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-100 dark:border-stone-700 px-4 flex gap-6 text-xs font-bold text-stone-400">
               <button 
                 onClick={() => setActiveTab('advisers')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600 dark:text-stone-400'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] dark:border-[#f8d070] text-[#4a1024] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
               >
-                🧑‍🏫 Research Advisers <span className={`${activeTab === 'advisers' ? 'bg-[#4a1024] dark:bg-stone-950/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
+                🧑‍🏫 Research Advisers <span className={`${activeTab === 'advisers' ? 'bg-[#4a1024]/10 dark:bg-[#f8d070]/20 text-[#4a1024] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
               </button>
               <button 
                 onClick={() => setActiveTab('students')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#4a1024] text-[#4a1024]' : 'border-b-2 border-transparent hover:text-stone-600 dark:text-stone-400'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#4a1024] dark:border-[#f8d070] text-[#4a1024] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
               >
-                🎓 Students <span className={`${activeTab === 'students' ? 'bg-[#4a1024] dark:bg-stone-950/10 text-[#4a1024]' : 'bg-stone-200 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
+                🎓 Students <span className={`${activeTab === 'students' ? 'bg-[#4a1024]/10 dark:bg-[#f8d070]/20 text-[#4a1024] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
               </button>
             </div>
 
@@ -261,7 +261,7 @@ export default function UserManagement() {
                 ) : (
                 <table className="w-full text-left text-xs border-collapse font-medium">
                   <thead>
-                    <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100">
+                    <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 dark:border-stone-700">
                       {activeTab === 'advisers' ? (
                         <>
                           <th className="pb-3">Adviser</th>
@@ -283,7 +283,7 @@ export default function UserManagement() {
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-50 text-stone-700 dark:text-stone-300">
+                  <tbody className="divide-y divide-stone-50 dark:divide-stone-700/60 text-stone-700 dark:text-stone-300">
                     {activeTab === 'advisers' ? (
                       enrichedAdvisers.length === 0 ? (
                          <tr><td colSpan="6" className="py-8 text-center text-stone-500 dark:text-stone-400">No advisers found.</td></tr>
@@ -436,13 +436,13 @@ export default function UserManagement() {
               {selectedUser.type === 'adviser' ? (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100">
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100 dark:border-stone-700">
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Groups Supervised</p>
                       <p className="text-2xl font-bold text-stone-800 dark:text-stone-200">{selectedUser.groupsCount}</p>
                     </div>
-                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100">
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100 dark:border-stone-700">
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Published</p>
-                      <p className="text-2xl font-bold text-[#4a1024]">{selectedUser.publishedCount}</p>
+                      <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedUser.publishedCount}</p>
                     </div>
                   </div>
                   <div>
@@ -461,16 +461,16 @@ export default function UserManagement() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Program</p>
-                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.program}</p>
+                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.program}</p>
                     </div>
                     <div>
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Research Group</p>
-                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.groupName}</p>
+                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.groupName}</p>
                     </div>
                     {selectedUser.studentNumber && (
                       <div>
                         <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Student Number</p>
-                        <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100">{selectedUser.studentNumber}</p>
+                        <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.studentNumber}</p>
                       </div>
                     )}
                   </div>

@@ -204,6 +204,98 @@ export default function PublishQueue({ activePage, onNavigate }) {
     }
   };
 
+  const notifyStudentsPublished = async (item) => {
+    try {
+      const recipientUids = new Set();
+      if (item.studentUid) recipientUids.add(item.studentUid);
+      if (item.leaderUid) recipientUids.add(item.leaderUid);
+
+      const group = groups.find(g => 
+        (item.studentUid && g.leaderUid === item.studentUid) ||
+        (item.leaderEmail && g.leaderEmail === item.leaderEmail) ||
+        (item.groupName && g.groupName === item.groupName)
+      );
+
+      if (group) {
+        if (group.leaderUid) recipientUids.add(group.leaderUid);
+        if (Array.isArray(group.members)) {
+          for (const member of group.members) {
+            if (typeof member === 'object' && member !== null) {
+              if (member.uid) recipientUids.add(member.uid);
+              else if (member.id) recipientUids.add(member.id);
+              else if (member.email) {
+                try {
+                  const studentSnap = await getDocs(query(collection(db, 'students'), where('email', '==', member.email)));
+                  studentSnap.forEach(sDoc => recipientUids.add(sDoc.id));
+                } catch (e) { /* ignore */ }
+              }
+            } else if (typeof member === 'string' && member.includes('@')) {
+              try {
+                const studentSnap = await getDocs(query(collection(db, 'students'), where('email', '==', member)));
+                studentSnap.forEach(sDoc => recipientUids.add(sDoc.id));
+              } catch (e) { /* ignore */ }
+            }
+          }
+        }
+      }
+
+      if (recipientUids.size === 0 && item.leaderEmail) {
+        try {
+          const studentSnap = await getDocs(query(collection(db, 'students'), where('email', '==', item.leaderEmail)));
+          studentSnap.forEach(sDoc => recipientUids.add(sDoc.id));
+        } catch (e) { /* ignore */ }
+      }
+
+      const paperTitle = item.researchTitle || item.title || 'Research Paper';
+
+      for (const uid of recipientUids) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: uid,
+          title: 'Research Paper Published! 🎉',
+          message: `Congratulations! Your manuscript "${paperTitle}" is now officially published in the ARCHIVIO public archive.`,
+          type: 'publication',
+          link: 'manuscript',
+          submissionId: item.id,
+          isRead: false,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      if (item.leaderEmail) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: item.leaderEmail,
+            message: {
+              subject: `Congratulations! Your manuscript is now Published: ${paperTitle}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                    <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                  </div>
+                  <div style="padding: 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0;">Hi ${item.leaderName || 'Student'},</h2>
+                    <p style="color: #4a5568; line-height: 1.6;">Great news! The status of your submission <strong>"${paperTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">published</span></p>
+                    <p style="color: #4a5568; line-height: 1.6;">Your research is now available in the ARCHIVIO public archive.</p>
+                    
+                    <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                      Best regards,<br>
+                      <strong>ARCHIVIO System</strong>
+                    </p>
+                  </div>
+                </div>
+              `
+            }
+          });
+        } catch (mailErr) {
+          console.error('Failed to send publication email:', mailErr);
+        }
+      }
+    } catch (notifErr) {
+      console.error('Failed to notify students of publication:', notifErr);
+    }
+  };
+
   const handlePublish = async (item) => {
     const res = await Swal.fire({
       title: 'Publish Research?',
@@ -236,7 +328,10 @@ export default function PublishQueue({ activePage, onNavigate }) {
           status: 'Success'
         });
 
-        Swal.fire({ icon: 'success', title: 'Published!', text: 'The research is now live.', confirmButtonColor: '#c9a227' });
+        // Notify students in-app and email
+        await notifyStudentsPublished(item);
+
+        Swal.fire({ icon: 'success', title: 'Published!', text: 'The research is now live and students have been notified.', confirmButtonColor: '#c9a227' });
       } catch (err) {
         console.error(err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to publish.', confirmButtonColor: '#c9a227' });
@@ -473,38 +568,9 @@ export default function PublishQueue({ activePage, onNavigate }) {
           createdAt: serverTimestamp()
         });
 
-        // Send automated publication emails
+        // Notify students in-app and send automated publication emails
         for (const item of eligibleItems) {
-          if (item.leaderEmail) {
-            try {
-              await addDoc(collection(db, 'mail'), {
-                to: item.leaderEmail,
-                message: {
-                  subject: `Congratulations! Your manuscript is now Published: ${item.researchTitle}`,
-                  html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
-                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
-                      </div>
-                      <div style="padding: 30px; background-color: #ffffff;">
-                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${item.leaderName || 'Student'},</h2>
-                        <p style="color: #4a5568; line-height: 1.6;">Great news! The status of your submission <strong>"${item.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">published</span></p>
-                        <p style="color: #4a5568; line-height: 1.6;">Your research is now available in the ARCHIVIO public archive.</p>
-                        
-                        <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
-                          Best regards,<br>
-                          <strong>ARCHIVIO System</strong>
-                        </p>
-                      </div>
-                    </div>
-                  `
-                }
-              });
-            } catch (e) {
-              console.error('Failed to send publish email', e);
-            }
-          }
+          await notifyStudentsPublished(item);
         }
 
         Swal.fire({ icon: 'success', title: 'Published!', text: `Successfully published ${eligibleCount} researches.`, confirmButtonColor: '#c9a227' });
@@ -545,7 +611,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
             <Card glass={true} className="col-span-2 overflow-hidden flex flex-col">
 
               {/* Card Header with Tabs */}
-              <div className="px-6 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-stone-800 z-10 sticky top-0">
+              <div className="px-6 py-4 border-b border-stone-100 dark:border-stone-700/80 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-stone-800 z-10 sticky top-0">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setQueueTab('ready')}
@@ -604,7 +670,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
               </div>
 
               {/* Items */}
-              <div className="divide-y divide-stone-100 overflow-y-auto flex-1">
+              <div className="divide-y divide-stone-100 dark:divide-stone-700/60 overflow-y-auto flex-1">
                 {loading ? (
                   <div className="p-4">
                     <ListSkeleton items={4} />
@@ -838,7 +904,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                 <div className="space-y-1">
 
                   {/* Pending */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700/80">
                     <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -861,7 +927,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   </div>
 
                   {/* Approved */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700/80">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -884,7 +950,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   </div>
 
                   {/* Published */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-100">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700/80">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="9" />
@@ -900,9 +966,9 @@ export default function PublishQueue({ activePage, onNavigate }) {
                 </div>
 
                 {/* Warning note */}
-                <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <div className="mt-4 flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
                   <span className="text-amber-500 text-sm">⚠</span>
-                  <p className="text-[10px] font-bold text-amber-700">100% completion required to publish</p>
+                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">100% completion required to publish</p>
                 </div>
               </Card>
 

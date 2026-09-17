@@ -380,7 +380,10 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           initials={initials || getInitials(displayName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={displayName || studentName}
+          onLogout={onLogout}
         />
 
         {/* SCROLLABLE BODY */}

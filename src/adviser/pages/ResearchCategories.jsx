@@ -198,8 +198,8 @@ function ResearchCategories() {
                 <CardBody className="flex flex-col h-full p-4 sm:p-5">
                   <div className="flex-1 w-full">
                     <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform origin-left">{cat.icon || '🔗'}</div>
-                    <h3 className="font-bold text-[#2A1115] text-base sm:text-lg text-left group-hover:text-[#7a2e46] transition-colors leading-snug">{cat.name}</h3>
-                    <p className="text-[11px] sm:text-xs text-gray-400 text-left mt-0.5">Adviser Category</p>
+                    <h3 className="font-bold text-[#2A1115] dark:text-stone-100 text-base sm:text-lg text-left group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] transition-colors leading-snug">{cat.name}</h3>
+                    <p className="text-[11px] sm:text-xs text-gray-400 dark:text-stone-500 text-left mt-0.5">Adviser Category</p>
                   </div>
                   <div className="flex items-center gap-2 mt-4 pt-2 border-t border-gray-100 dark:border-stone-800">
                     <button 
@@ -225,10 +225,10 @@ function ResearchCategories() {
           <Card 
             hover={true}
             onClick={openAddModal}
-            className="border-2 border-dashed border-stone-300 dark:border-stone-700 bg-transparent flex flex-col items-center justify-center min-h-[160px] group text-stone-500 hover:border-[#7B1F35] hover:text-[#7B1F35] cursor-pointer"
+            className="border-2 border-dashed border-stone-300 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/40 hover:bg-white dark:hover:bg-stone-900/80 flex flex-col items-center justify-center min-h-[160px] group text-stone-500 dark:text-stone-400 hover:border-[#7B1F35] dark:hover:border-[#f8d070] hover:text-[#7B1F35] dark:hover:text-[#f8d070] cursor-pointer transition-all"
           >
-            <span className="text-3xl font-light mb-1.5 group-hover:scale-110 transition-transform">+</span>
-            <span className="text-xs sm:text-[13px] font-bold">Add New Category</span>
+            <span className="text-3xl font-light mb-1.5 group-hover:scale-110 transition-transform text-stone-400 dark:text-stone-400 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070]">+</span>
+            <span className="text-xs sm:text-[13px] font-bold text-stone-600 dark:text-stone-300 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070] transition-colors">Add New Category</span>
           </Card>
         </div>
 

@@ -475,7 +475,10 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           initials={displayInitials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={studentName}
+          onLogout={onLogout}
         />
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-10">

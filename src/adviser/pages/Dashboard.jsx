@@ -370,7 +370,7 @@ function Dashboard() {
                 <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 flex items-center gap-2">
                   <span className="text-lg">⏳</span> Pending Actions
                 </h3>
-                <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200">
+                <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200 dark:border-yellow-700/50">
                   {pendingReviewCount} pending
                 </span>
               </CardHeader>

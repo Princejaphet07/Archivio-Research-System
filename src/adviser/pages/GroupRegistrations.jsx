@@ -159,7 +159,7 @@ function GroupRegistrations() {
           action={
             <div className="relative w-full sm:w-80">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-stone-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-stone-400 dark:text-stone-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -168,7 +168,7 @@ function GroupRegistrations() {
                 placeholder="Search groups..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm border border-stone-200 dark:border-stone-800 rounded-lg focus:ring-[#7B1F35] focus:border-[#7B1F35] w-full text-sm outline-none transition-all shadow-sm"
+                className="pl-10 pr-4 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#7B1F35] focus:border-[#7B1F35] dark:focus:border-[#f8d070] w-full text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 outline-none transition-all shadow-sm"
               />
             </div>
           }
@@ -182,9 +182,9 @@ function GroupRegistrations() {
           {loading ? (
             <HorizontalCardSkeleton count={3} />
           ) : pendingGroups.filter(filterGroup).length === 0 ? (
-            <div className="bg-white dark:bg-stone-900 border border-dashed border-gray-300 dark:border-stone-700 rounded-xl p-8 text-center text-gray-500 dark:text-stone-400">
+            <Card glass={true} className="p-8 text-center text-gray-500 dark:text-stone-400">
               No pending group registrations found.
-            </div>
+            </Card>
           ) : (
             pendingGroups.filter(filterGroup).map((req) => (
               <Card key={req.id} glass={true} hover={true} className="p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-orange-200 dark:border-orange-800/50">

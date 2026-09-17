@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import LoadingScreen from './components/LoadingScreen';
 
 // Lazy-load dashboard pages — only downloaded when navigated to
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
@@ -19,11 +20,7 @@ const Reports = lazyWithRetry(() => import('./pages/Reports'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 const SuperAdminSettings = lazyWithRetry(() => import('./pages/SuperAdminSettings'));
 
-const PageLoader = () => (
-  <div className="flex items-center justify-center h-screen bg-[#fcfbfa]">
-    <div className="w-10 h-10 border-4 border-[#7a1f3d]/20 border-t-[#7a1f3d] rounded-full animate-spin"></div>
-  </div>
-);
+const PageLoader = () => <LoadingScreen text="LOADING ADMIN..." />;
 
 function App() {
   return (

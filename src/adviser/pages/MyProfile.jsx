@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { logActivity } from '../../firebase/logActivity';
 import Layout from '../components/Layout';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, updateDoc, setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import Swal from 'sweetalert2';
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -16,28 +17,64 @@ function MyProfile() {
     email: '',
     department: 'College of Information Technology',
     title: 'Prof.',
-    docId: null
+    docId: null,
+    memberships: []
   });
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
+
+  // Organizational Membership Modal State
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
+  const [membershipForm, setMembershipForm] = useState({
+    organizationName: '',
+    role: '',
+    yearJoined: ''
+  });
+  const [membershipErrors, setMembershipErrors] = useState({});
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserData(prev => ({ ...prev, email: user.email }));
         try {
-          const q = query(collection(db, 'advisers'), where('userId', '==', user.uid));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const document = querySnapshot.docs[0];
-            const data = document.data();
+          let foundDocId = null;
+          let foundData = null;
+
+          // 1. Try finding in 'advisers' by userId == user.uid
+          const q1 = query(collection(db, 'advisers'), where('userId', '==', user.uid));
+          const snap1 = await getDocs(q1);
+          if (!snap1.empty) {
+            foundDocId = snap1.docs[0].id;
+            foundData = snap1.docs[0].data();
+          }
+
+          // 2. If not found, try finding in 'advisers' by email
+          if (!foundData && user.email) {
+            const q2 = query(collection(db, 'advisers'), where('email', '==', user.email));
+            const snap2 = await getDocs(q2);
+            if (!snap2.empty) {
+              foundDocId = snap2.docs[0].id;
+              foundData = snap2.docs[0].data();
+            }
+          }
+
+          // 3. Fallback to direct 'users' document
+          if (!foundData) {
+            const uSnap = await getDoc(doc(db, 'users', user.uid));
+            if (uSnap.exists()) {
+              foundData = uSnap.data();
+            }
+          }
+
+          if (foundData) {
             setUserData(prev => ({
               ...prev,
-              firstName: data.firstName || '',
-              lastName: data.lastName || '',
-              department: data.department || 'College of Information Technology',
-              title: data.title || 'Prof.',
-              docId: document.id
+              firstName: foundData.firstName || foundData.displayName?.split(' ')[0] || '',
+              lastName: foundData.lastName || foundData.displayName?.split(' ').slice(1).join(' ') || '',
+              department: foundData.department || 'College of Information Technology',
+              title: foundData.title || 'Prof.',
+              docId: foundDocId,
+              memberships: Array.isArray(foundData.memberships) ? foundData.memberships : []
             }));
           }
         } catch (error) {
@@ -51,23 +88,110 @@ function MyProfile() {
     return () => unsubscribe();
   }, [navigate]);
 
+  // Organizational Membership Handlers
+  const handleOpenMembershipModal = () => {
+    setMembershipForm({ organizationName: '', role: '', yearJoined: '' });
+    setMembershipErrors({});
+    setShowMembershipModal(true);
+  };
+
+  const handleAddMembership = (e) => {
+    e.preventDefault();
+    const errors = {};
+    if (!membershipForm.organizationName?.trim()) {
+      errors.organizationName = 'Organization name is required';
+    }
+    if (Object.keys(errors).length > 0) {
+      setMembershipErrors(errors);
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      organizationName: membershipForm.organizationName.trim(),
+      role: membershipForm.role?.trim() || '',
+      yearJoined: membershipForm.yearJoined?.trim() || ''
+    };
+
+    setUserData(prev => ({
+      ...prev,
+      memberships: [...(prev.memberships || []), newItem]
+    }));
+    setShowMembershipModal(false);
+  };
+
+  const handleDeleteMembership = async (id) => {
+    const res = await Swal.fire({
+      title: 'Remove membership?',
+      text: 'Are you sure you want to remove this organizational membership?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#7a2e46',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, remove'
+    });
+
+    if (res.isConfirmed) {
+      setUserData(prev => ({
+        ...prev,
+        memberships: (prev.memberships || []).filter(m => m.id !== id)
+      }));
+    }
+  };
+
   const handleSaveChanges = async () => {
-    if (!userData.docId) return;
     setSaveStatus('Saving...');
     try {
-      const adviserRef = doc(db, 'advisers', userData.docId);
-      await updateDoc(adviserRef, {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        department: userData.department,
-        title: userData.title,
-        displayName: `${userData.title} ${userData.firstName} ${userData.lastName}`
-      });
+      const payload = {
+        firstName: userData.firstName?.trim() || '',
+        lastName: userData.lastName?.trim() || '',
+        department: userData.department || 'College of Information Technology',
+        title: userData.title || 'Prof.',
+        memberships: userData.memberships || [],
+        displayName: `${userData.title || 'Prof.'} ${userData.firstName?.trim() || ''} ${userData.lastName?.trim() || ''}`.trim(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // 1. Update advisers collection
+      if (userData.docId) {
+        const adviserRef = doc(db, 'advisers', userData.docId);
+        await updateDoc(adviserRef, payload);
+      } else if (auth.currentUser?.uid) {
+        await setDoc(doc(db, 'advisers', auth.currentUser.uid), {
+          ...payload,
+          email: auth.currentUser.email,
+          userId: auth.currentUser.uid
+        }, { merge: true });
+      }
+
+      // 2. Also sync to users collection
+      if (auth.currentUser?.uid) {
+        try {
+          await setDoc(doc(db, 'users', auth.currentUser.uid), payload, { merge: true });
+        } catch (err) {
+          console.warn('Could not sync to users document:', err);
+        }
+      }
+
       setSaveStatus('Profile updated successfully!');
+      Swal.fire({
+        icon: 'success',
+        title: 'Profile Updated',
+        text: 'Your profile and organizational memberships have been saved.',
+        confirmButtonColor: '#7a2e46',
+        timer: 2000,
+        showConfirmButton: false
+      });
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
       setSaveStatus('Failed to update profile.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: error.message || 'Failed to update profile.',
+        confirmButtonColor: '#7a2e46'
+      });
     }
   };
 
@@ -84,7 +208,7 @@ function MyProfile() {
       const email = auth.currentUser?.email;
       if (email) {
         await logActivity({
-          user: profile.displayName || email,
+          user: `${userData.firstName} ${userData.lastName}`.trim() || email,
           role: 'Adviser',
           action: 'Log out',
           status: 'Success'
@@ -263,15 +387,57 @@ function MyProfile() {
                         <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-stone-100 uppercase tracking-wider">ORGANIZATIONAL MEMBERSHIP</h3>
                         <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Add your professional or academic memberships.</p>
                       </div>
-                      <button className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm">
+                      <button 
+                        type="button"
+                        onClick={handleOpenMembershipModal}
+                        className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm"
+                        title="Add Organizational Membership"
+                      >
                         +
                       </button>
                     </div>
                     
-                    <div className="border border-dashed border-gray-300 dark:border-stone-700 rounded-xl py-6 sm:py-8 text-center bg-gray-50/50 dark:bg-stone-800/40">
-                      <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-stone-300">No organizational memberships added yet</p>
-                      <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400 mt-1">Click the + button above to add your first membership</p>
-                    </div>
+                    {(!userData.memberships || userData.memberships.length === 0) ? (
+                      <div className="border border-stone-200 dark:border-stone-800 rounded-xl py-6 sm:py-8 text-center bg-gray-50/50 dark:bg-stone-900/40">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-stone-300">No organizational memberships added yet</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400 mt-1">Click the + button above to add your first membership</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {userData.memberships.map((item) => (
+                          <div 
+                            key={item.id} 
+                            className="bg-gray-50/70 dark:bg-stone-800/60 border border-gray-200 dark:border-stone-700 rounded-xl p-4 flex items-center justify-between hover:border-[#7a2e46]/40 dark:hover:border-[#f8d070]/40 transition group"
+                          >
+                            <div className="space-y-1">
+                              <h5 className="text-sm font-bold text-gray-900 dark:text-stone-100">
+                                {item.organizationName}
+                              </h5>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-stone-400">
+                                {item.role && (
+                                  <span className="px-2 py-0.5 bg-gray-200/80 dark:bg-stone-700 rounded text-gray-700 dark:text-stone-300 font-medium">
+                                    {item.role}
+                                  </span>
+                                )}
+                                {item.yearJoined && (
+                                  <span>Joined: <strong className="font-semibold text-gray-700 dark:text-stone-300">{item.yearJoined}</strong></span>
+                                )}
+                              </div>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteMembership(item.id)}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                              title="Remove Membership"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="pt-4 flex justify-end">
@@ -431,6 +597,72 @@ function MyProfile() {
           </Card>
         </div>
       </div>
+      {/* Add Organizational Membership Modal */}
+      {showMembershipModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden p-6 sm:p-8 animate-in fade-in zoom-in duration-150">
+            <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900 dark:text-stone-100 mb-1">Add Organizational Membership</h2>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6">Enter details of your professional or academic membership.</p>
+            
+            <form onSubmit={handleAddMembership} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">ORGANIZATION NAME *</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.organizationName}
+                  onChange={e => {
+                    setMembershipForm({ ...membershipForm, organizationName: e.target.value });
+                    if (membershipErrors.organizationName) setMembershipErrors({ ...membershipErrors, organizationName: null });
+                  }}
+                  className={`w-full bg-stone-50 dark:bg-stone-900/60 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]`}
+                  placeholder="e.g. Philippine Computer Society"
+                />
+                {membershipErrors.organizationName && (
+                  <p className="text-xs text-red-500 mt-1">{membershipErrors.organizationName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">ROLE / POSITION</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.role}
+                  onChange={e => setMembershipForm({ ...membershipForm, role: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                  placeholder="e.g. Member, Chairperson"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-2 uppercase tracking-wider">YEAR JOINED</label>
+                <input 
+                  type="text" 
+                  value={membershipForm.yearJoined}
+                  onChange={e => setMembershipForm({ ...membershipForm, yearJoined: e.target.value })}
+                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                  placeholder="e.g. 2021"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6 border-t border-stone-100 dark:border-stone-700/50">
+                <button 
+                  type="button" 
+                  onClick={() => setShowMembershipModal(false)} 
+                  className="px-5 py-2.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 text-sm font-semibold hover:bg-stone-50 dark:hover:bg-stone-700 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 rounded-lg bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-sm font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm"
+                >
+                  Add Membership
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

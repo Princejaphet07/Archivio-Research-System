@@ -374,7 +374,10 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
           initials={initials || getInitials(studentName)} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={studentName}
+          onLogout={onLogout}
         />
 
         {/* SCROLLABLE BODY */}

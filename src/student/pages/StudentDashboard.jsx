@@ -199,7 +199,10 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
           initials={initials} 
           setSidebarOpen={setSidebarOpen} 
           setActiveTab={setActiveTab}
-          profilePhotoUrl={profilePhotoUrl} role={role}
+          profilePhotoUrl={profilePhotoUrl} 
+          role={role}
+          studentName={studentName}
+          onLogout={onLogout}
         />
 
         {/* SCROLLABLE BODY */}

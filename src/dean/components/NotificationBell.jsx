@@ -301,16 +301,16 @@ export default function NotificationBell() {
                 <div 
                   key={n.id} 
                   onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700' : 'bg-white dark:bg-stone-800 opacity-75'}`}
+                  className={`p-4 border-b border-stone-100 dark:border-stone-700/80 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-stone-800/90 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700' : 'bg-white dark:bg-stone-800 opacity-75'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">
                       <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
                       <div className="flex flex-col">
-                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35]' : 'text-gray-700'}`}>
+                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300'}`}>
                           {n.title}
                         </span>
-                        <p className="text-[12px] text-gray-600 leading-snug mt-0.5">{n.message}</p>
+                        <p className="text-[12px] text-stone-600 dark:text-stone-400 leading-snug mt-0.5">{n.message}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
@@ -318,7 +318,7 @@ export default function NotificationBell() {
                       <button 
                         type="button"
                         onClick={(e) => deleteNotification(n.id, e)}
-                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        className="text-stone-300 dark:text-stone-500 hover:text-red-500 transition-colors"
                         title="Remove"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +328,7 @@ export default function NotificationBell() {
                     </div>
                   </div>
                   {n.createdAt && (
-                    <span className="text-[10px] text-gray-400 font-medium self-end -mt-1">
+                    <span className="text-[10px] text-stone-400 font-medium self-end -mt-1">
                       {getRelativeTime(n.createdAt)}
                     </span>
                   )}

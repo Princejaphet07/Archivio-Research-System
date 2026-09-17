@@ -176,7 +176,7 @@ export default function Requirements({ activePage, onNavigate }) {
                     <th className="py-3.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 font-medium">
+                <tbody className="divide-y divide-stone-100 dark:divide-stone-700/60 font-medium">
                   {paginatedRows.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="py-8 text-center text-stone-500 dark:text-stone-400">No approved groups found.</td>

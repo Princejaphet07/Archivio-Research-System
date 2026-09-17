@@ -22,6 +22,7 @@ const getRelativeTime = (timestamp) => {
 const getIcon = (title, message) => {
   const lowerTitle = (title || '').toLowerCase();
   const lowerMsg = (message || '').toLowerCase();
+  if (lowerTitle.includes('publish') || lowerMsg.includes('publish')) return '🎉';
   if (lowerTitle.includes('manuscript') || lowerMsg.includes('document')) return '📄';
   if (lowerTitle.includes('message') || lowerTitle.includes('invite') || lowerTitle.includes('welcome')) return '✉️';
   if (lowerTitle.includes('task') || lowerTitle.includes('progress')) return '📋';
