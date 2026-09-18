@@ -65,7 +65,7 @@ export default function Settings() {
   const [storageQuotaGB, setStorageQuotaGB] = useState(25);
   const [isArchiving, setIsArchiving] = useState(false);
 
-  // Storage Checkboxes (Persistent via localStorage)
+  // Storage Checkboxes (Persistent via Cloud Firestore & localStorage fallback)
   const [storageFiles, setStorageFiles] = useState(() => {
     try {
       const saved = localStorage.getItem('archivio_admin_archive_checked_v1');
@@ -101,10 +101,23 @@ export default function Settings() {
       }
     });
 
+    const unsubStoragePref = onSnapshot(doc(db, 'settings', 'storage_archive_preferences'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && typeof data === 'object') {
+          setStorageFiles(prev => ({ ...prev, ...data }));
+          try {
+            localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify({ ...storageFiles, ...data }));
+          } catch (_) {}
+        }
+      }
+    });
+
     return () => {
       unsubSystem();
       unsubInst();
       unsubQuota();
+      unsubStoragePref();
     };
   }, []);
 
@@ -163,16 +176,6 @@ export default function Settings() {
     } finally {
       setSavingInst(false);
     }
-  };
-
-  const handleStorageCheck = (key) => {
-    setStorageFiles(prev => {
-      const updated = { ...prev, [key]: !prev[key] };
-      try {
-        localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify(updated));
-      } catch (_) {}
-      return updated;
-    });
   };
 
   // Helper: Fetch Current 6-digit Master PIN from Firestore (Default fallback: '123456')
@@ -942,6 +945,65 @@ export default function Settings() {
     return `${(mb).toFixed(1)} MB`;
   }, [storageFiles, storageMetrics]);
 
+  // Toggle individual requirement checkbox & persist to Firestore + localStorage
+  const handleStorageCheck = async (title) => {
+    if (!title) return;
+    const currentVal = Boolean(storageFiles[title]);
+    const updated = { ...storageFiles, [title]: !currentVal };
+    setStorageFiles(updated);
+
+    try {
+      localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify(updated));
+      await setDoc(doc(db, 'settings', 'storage_archive_preferences'), {
+        [title]: !currentVal,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.email || 'Admin'
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save storage archive preference:", err);
+    }
+  };
+
+  // Select all requirement categories
+  const handleSelectAllStorage = async () => {
+    const updated = { ...storageFiles };
+    (storageMetrics.items || []).forEach(item => {
+      updated[item.title] = true;
+    });
+    setStorageFiles(updated);
+
+    try {
+      localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify(updated));
+      await setDoc(doc(db, 'settings', 'storage_archive_preferences'), {
+        ...updated,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.email || 'Admin'
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save select all storage preferences:", err);
+    }
+  };
+
+  // Deselect all requirement categories
+  const handleDeselectAllStorage = async () => {
+    const updated = { ...storageFiles };
+    (storageMetrics.items || []).forEach(item => {
+      updated[item.title] = false;
+    });
+    setStorageFiles(updated);
+
+    try {
+      localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify(updated));
+      await setDoc(doc(db, 'settings', 'storage_archive_preferences'), {
+        ...updated,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.email || 'Admin'
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save deselect all storage preferences:", err);
+    }
+  };
+
   // Handle Edit Storage Quota Target
   const handleEditQuota = async () => {
     const { value: newQuota } = await Swal.fire({
@@ -1608,11 +1670,30 @@ export default function Settings() {
 
           {/* Dynamic Requirements Checklist from System Database */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 tracking-widest uppercase">
-                Select Requirement Categories To Archive
-              </p>
-              <span className="text-[10px] text-stone-400 font-medium">Auto-Saved Preferences Active</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 tracking-widest uppercase">
+                  Select Requirement Categories To Archive
+                </p>
+                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 px-2 py-0.5 rounded-full font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Cloud-Synced
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <button
+                  onClick={handleSelectAllStorage}
+                  className="text-[11px] font-semibold text-[#801e38] dark:text-rose-400 hover:text-[#601328] bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 px-2.5 py-1 rounded-md transition-colors"
+                >
+                  ✓ Select All
+                </button>
+                <button
+                  onClick={handleDeselectAllStorage}
+                  className="text-[11px] font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-900 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 px-2.5 py-1 rounded-md transition-colors"
+                >
+                  ✕ Deselect All
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2.5">

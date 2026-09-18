@@ -102,6 +102,10 @@ service cloud.firestore {
     match /dean_settings/{userId} {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isDean() || isSystemAdmin());
     }
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isSystemAdmin();
+    }
     match /requirements/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
