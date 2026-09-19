@@ -342,7 +342,7 @@ export default function HomepageChatbot() {
         { role: 'user', content: userMsg },
         {
           role: 'assistant',
-          content: "⚠️ **Offline Mode:** Pasensya na, walay aktibong koneksyon sa internet ang imong device. Dili makatubag ang AI karon. Palihug ikonekta sa Wi-Fi o mobile data ug sulayi pag-usab."
+          content: "⚠️ **Offline Mode:** Your device has no active internet connection. Archivio AI cannot respond right now. Please reconnect to Wi-Fi or mobile data and try again."
         }
       ]);
       return;
@@ -512,10 +512,10 @@ export default function HomepageChatbot() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-80 sm:w-96 h-[500px] mb-4 bg-white/10 dark:bg-black/20 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/30 dark:border-white/10 transition-all origin-bottom-right relative animate-fade-in-up">
+        <div className="w-[calc(100vw-2rem)] sm:w-96 max-w-[400px] h-[500px] max-h-[82vh] mb-3 sm:mb-4 bg-white/10 dark:bg-black/20 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/30 dark:border-white/10 transition-all origin-bottom-right relative animate-fade-in-up">
           
           {/* Header */}
           <div className="bg-[#7a2039]/90 backdrop-blur-sm text-white p-4 flex justify-between items-center shrink-0 z-40 relative shadow-sm border-b border-white/10">
@@ -718,7 +718,7 @@ export default function HomepageChatbot() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={!isOnline || isTyping || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
-                placeholder={!isOnline ? "⚠️ Offline ka karon. Sumpaya imong koneksyon..." : !currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive ? "Log in to continue chatting with AI..." : (isListening ? "Listening..." : "Ask me anything...")}
+                placeholder={!isOnline ? "⚠️ Offline. Please check your internet connection..." : !currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive ? "Log in to continue chatting with AI..." : (isListening ? "Listening..." : "Ask me anything...")}
                 className="flex-1 min-w-0 border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors placeholder-stone-500" 
               />
               <button

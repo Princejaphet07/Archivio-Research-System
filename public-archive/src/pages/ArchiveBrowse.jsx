@@ -15,7 +15,6 @@ import {
   trackCitation
 } from '../utils/analytics';
 import { useNetworkStatus } from '../components/NetworkStatusPill';
-import { WifiOff } from 'lucide-react';
 
 const HighlightedText = ({ text, highlight }) => {
   if (!highlight.trim() || !text) return <>{text}</>;
@@ -499,12 +498,6 @@ function ArchiveBrowse() {
           </select>
         </div>
         <div className="flex items-center gap-3">
-          {!isOnline && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-              <WifiOff className="w-3.5 h-3.5" />
-              <span>Offline Cached Mode</span>
-            </span>
-          )}
           <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
             Showing {paginatedPapers.length > 0 ? 1 : 0}–{paginatedPapers.length} of {filteredPapers.length} results
           </div>
