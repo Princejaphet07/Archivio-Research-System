@@ -186,63 +186,69 @@ Please click the button below to activate your account and set up your credentia
 
       // 1. Trigger Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
       const backendUrl = getBackendUrl();
-      authFetch(`${backendUrl}/api/send-invitation-email`, {
-        to: formData.email.toLowerCase().trim(),
-        adviserName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-        subject: defaultSubject,
-        message: formData.message || defaultMessage,
-        invitationLink: invitationLink,
-        senderName: deanData?.displayName || 'Dean',
-        senderDepartment: deanData?.department || 'SWU Phinma'
-      }).then(res => {
-        console.log('✅ Direct backend invitation dispatch response:', res);
-      }).catch(err => {
-        console.warn('⚠️ Direct backend dispatch notice:', err.message);
-      });
-
-      // 2. Redundant Log in Firestore 'mail' collection (for mail-listener)
+      let sentDirectly = false;
       try {
-        await addDoc(collection(db, 'mail'), {
-          to: formData.email,
-          message: {
-            subject: defaultSubject,
-            html: `
-              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                </div>
-                
-                <div style="padding: 40px 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName}!</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
-                  
-                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
-                    <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
-                    <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
-                  </div>
-                  
-                  <div style="text-align: center; margin: 40px 0 10px 0;">
-                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Set up your account</a>
-                  </div>
-                  
-                  <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                    Best regards,<br>
-                    <strong>${deanData?.displayName || 'Dean'}</strong><br>
-                    ${deanData?.department || 'SWU Phinma'}<br>
-                  </p>
-                </div>
-                
-                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                </div>
-              </div>
-            `
-          }
+        await authFetch(`${backendUrl}/api/send-invitation-email`, {
+          to: formData.email.toLowerCase().trim(),
+          adviserName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+          subject: defaultSubject,
+          message: formData.message || defaultMessage,
+          invitationLink: invitationLink,
+          senderName: deanData?.displayName || 'Dean',
+          senderDepartment: deanData?.department || 'SWU Phinma'
         });
-      } catch (mailErr) {
-        console.warn('Firestore mail logging notice:', mailErr.message);
+        sentDirectly = true;
+        console.log('✅ Direct backend invitation dispatch successful');
+      } catch (err) {
+        console.warn('⚠️ Direct backend dispatch notice, falling back to mail queue:', err.message);
+      }
+
+      // 2. Fallback in Firestore 'mail' collection only if direct dispatch failed (prevents duplicate emails)
+      if (!sentDirectly) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: formData.email.toLowerCase().trim(),
+            message: {
+              subject: defaultSubject,
+              html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+                  </div>
+                  
+                  <div style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName}!</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
+                    
+                    <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+                      <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
+                      <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 40px 0 10px 0;">
+                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Set up your account</a>
+                    </div>
+                    
+                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+                      Best regards,<br>
+                      <strong>${deanData?.displayName || 'Dean'}</strong><br>
+                      ${deanData?.department || 'SWU Phinma'}<br>
+                    </p>
+                  </div>
+                  
+                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+                  </div>
+                </div>
+              `
+            }
+          });
+          console.log('📨 Fallback adviser invitation enqueued to Firestore mail collection');
+        } catch (mErr) {
+          console.warn('Firestore mail queue fallback notice:', mErr);
+        }
       }
 
       // Show comprehensive success modal with immediate copy link
@@ -327,6 +333,7 @@ Please click the button below to activate your account and set up your credentia
       const link = adviser?.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviserEmail)}`;
 
       // 1. Resend via direct backend
+      let sentDirectly = false;
       try {
         const backendUrl = getBackendUrl();
         await authFetch(`${backendUrl}/api/send-invitation-email`, {
@@ -338,21 +345,26 @@ Please click the button below to activate your account and set up your credentia
           senderName: deanData?.displayName || 'Dean',
           senderDepartment: deanData?.department || 'SWU Phinma'
         });
+        sentDirectly = true;
+        console.log('✅ Direct backend adviser invitation resend successful');
       } catch (emailError) {
-        console.warn('Backend resend notice:', emailError);
+        console.warn('Backend resend notice, falling back to mail queue:', emailError);
       }
 
-      // 2. Redundant queue in Firestore 'mail'
-      try {
-        await addDoc(collection(db, 'mail'), {
-          to: adviserEmail,
-          message: {
-            subject: defaultSubject,
-            text: `Reminder: You have been invited as a Research Adviser in ARCHIVIO. Access link: ${link}`
-          }
-        });
-      } catch (mErr) {
-        console.warn('Firestore mail resend notice:', mErr);
+      // 2. Fallback queue in Firestore 'mail' only if direct dispatch failed (prevents duplicate emails)
+      if (!sentDirectly) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: adviserEmail,
+            message: {
+              subject: defaultSubject,
+              text: `Reminder: You have been invited as a Research Adviser in ARCHIVIO. Access link: ${link}`
+            }
+          });
+          console.log('📨 Fallback adviser invitation resend enqueued to Firestore mail collection');
+        } catch (mErr) {
+          console.warn('Firestore mail resend notice:', mErr);
+        }
       }
 
       Swal.fire({

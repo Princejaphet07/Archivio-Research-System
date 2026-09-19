@@ -7,11 +7,13 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
+
     function getUserRole() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid))
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
         : 'none';
     }
+
     function isSystemAdmin() {
       return isAuthenticated() && (
         getUserRole() == 'super-admin' || 
@@ -19,6 +21,7 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/super_admins/$(request.auth.uid))
       );
     }
+
     function isDean() {
       return isAuthenticated() && (
         getUserRole() == 'dean' || 
@@ -26,6 +29,7 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/deans/$(request.auth.uid))
       );
     }
+
     function isAdviser() {
       return isAuthenticated() && (
         getUserRole() == 'adviser' || 
@@ -33,143 +37,186 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/advisers/$(request.auth.uid))
       );
     }
+
     function isGroupMember(groupId) {
       let groupData = get(/databases/$(database)/documents/groups/$(groupId)).data;
-      return isAuthenticated() && (request.auth.uid == groupData.leaderUid ||
-        (groupData.coAuthors != null && request.auth.uid in groupData.coAuthors));
+      return isAuthenticated() && (
+        request.auth.uid == groupData.leaderUid ||
+        (groupData.members != null && (request.auth.uid in groupData.members || request.auth.token.email in groupData.members)) ||
+        (groupData.coAuthors != null && request.auth.uid in groupData.coAuthors)
+      );
     }
+
     // -----------------------------------------------------------------
     // 2. Protect Users & Profiles
     // -----------------------------------------------------------------
     match /users/{userId} {
       allow read: if isAuthenticated();
+
+      // UPDATE: Admins can update anything. Users can only update their own profile,
+      // and CANNOT escalate their role, status, or tamper with their UID.
       allow update: if isSystemAdmin()
-                    || (request.auth.uid == userId &&
+                    || (isAuthenticated() && request.auth.uid == userId &&
                         !request.resource.data.diff(resource.data).affectedKeys()
-                          .hasAny(['role']));
-      // CREATE: Only admins, deans, or the user themselves (setup scripts removed)
+                          .hasAny(['role', 'status', 'uid']));
+
+      // CREATE:
+      // - Admins and Deans can register accounts.
+      // - Self-registration: authenticated user creating their own document.
+      // - CRITICAL SECURITY: 'admin' and 'super-admin' can NEVER be self-assigned.
+      //   Students self-register with role 'student'.
+      //   Advisers and Deans can register if their role is appropriate, but never admin.
       allow create: if isSystemAdmin()
                     || isDean()
-                    || (request.auth.uid == userId &&
-                        (request.resource.data.role in ['adviser', 'student', 'dean', 'dean+adviser', 'admin']));
+                    || (isAuthenticated() && request.auth.uid == userId && (
+                        request.resource.data.role == 'student' ||
+                        request.resource.data.role == 'adviser' ||
+                        (request.resource.data.role in ['dean', 'dean+adviser'] &&
+                         exists(/databases/$(database)/documents/deans/$(request.auth.uid)))
+                    ));
+
       allow delete: if isSystemAdmin() || isDean();
     }
+
     // -----------------------------------------------------------------
-    // 3. Other collections
+    // 3. User Roles Collections (Students, Advisers, Deans)
     // -----------------------------------------------------------------
     match /students/{docId} {
       allow read: if isAuthenticated();
+      // Only Admins, Deans, Advisers, or the student themselves (strictly by docId or existing resource uid)
       allow write: if isSystemAdmin() || isDean() || isAdviser()
-                    || request.auth.uid == docId
-                    || (resource != null && request.auth.uid == resource.data.uid)
-                    || request.auth.uid == request.resource.data.uid;
+                    || (isAuthenticated() && request.auth.uid == docId)
+                    || (resource != null && isAuthenticated() && request.auth.uid == resource.data.uid);
     }
+
     match /advisers/{docId} {
+      // Public read required for unauthenticated email lookup during adviser onboarding
       allow read: if true;
       allow write: if isSystemAdmin() || isDean()
-                    || request.auth.uid == docId
-                    || (resource != null && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.uid))
-                    || request.auth.uid == request.resource.data.userId
-                    || request.auth.uid == request.resource.data.uid;
+                    || (isAuthenticated() && request.auth.uid == docId)
+                    || (resource != null && isAuthenticated() && (
+                        request.auth.uid == resource.data.userId ||
+                        request.auth.uid == resource.data.uid ||
+                        request.auth.token.email == resource.data.email
+                    ));
     }
+
     match /deans/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean()
-                    || request.auth.uid == docId
-                    || (resource != null && request.auth.uid == resource.data.uid)
-                    || request.auth.uid == request.resource.data.uid;
+                    || (isAuthenticated() && request.auth.uid == docId)
+                    || (resource != null && isAuthenticated() && request.auth.uid == resource.data.uid);
     }
+
     // -----------------------------------------------------------------
     // 4. System Config & Logs
     // -----------------------------------------------------------------
     match /settings/{docId} {
       allow read: if true;
-      // Only admins/deans can create/update settings (removed unauthenticated backdoor)
-      allow create: if isSystemAdmin() || isDean();
-      allow write: if isSystemAdmin() || isDean();
+      allow create, write: if isSystemAdmin() || isDean();
     }
+
     match /activity_logs/{docId} {
       allow read: if isSystemAdmin() || isDean();
-      // Require login to create logs (removed open 'if true' rule)
+      // Require authentication to write logs
       allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin();
     }
+
     match /systemLogs/{docId} {
       allow read: if isSystemAdmin() || isDean();
       allow create: if isAuthenticated();
       allow update, delete: if isSystemAdmin();
     }
+
     match /dean_settings/{userId} {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isDean() || isSystemAdmin());
     }
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isSystemAdmin();
-    }
+
     match /requirements/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
+
     match /departments/{docId} {
       allow read: if true;
-      // Only admins can create departments (removed unauthenticated backdoor)
-      allow create: if isSystemAdmin();
-      allow write: if isSystemAdmin();
+      allow create, write: if isSystemAdmin();
     }
+
     match /programs/{docId} {
       allow read: if true;
       allow write: if isSystemAdmin();
     }
+
     match /super_admins/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSystemAdmin();
     }
+
     // -----------------------------------------------------------------
     // 5. Research Data, Invitations & Submissions
     // -----------------------------------------------------------------
     match /research/{docId} {
       allow read: if true;
-      // Only admins/deans can create research records (removed unauthenticated backdoor)
-      allow create: if isSystemAdmin() || isDean();
-      allow write: if isSystemAdmin();
+      allow create, write: if isSystemAdmin() || isDean();
     }
+
     match /groups/{docId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.leaderUid == request.auth.uid;
       allow update, delete: if isSystemAdmin()
                             || isDean()
                             || isAdviser()
-                            || resource.data.leaderUid == request.auth.uid;
+                            || (isAuthenticated() && resource.data.leaderUid == request.auth.uid);
     }
+
     match /submissions/{docId} {
       allow read: if true;
-      allow create: if isAuthenticated() && (isSystemAdmin() || isDean()
-                     || request.resource.data.studentUid == request.auth.uid);
+      allow create: if isAuthenticated() && (
+        isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid
+      );
       allow update: if isSystemAdmin() || isDean() || isAdviser()
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
-                     || request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['views', 'likes']);
+                     // Public view count increment (must be numeric and cannot decrease)
+                     || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+                         && request.resource.data.views is number
+                         && request.resource.data.views >= resource.data.views)
+                     // Authenticated user like toggling (must only affect likes list)
+                     || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+                         && request.resource.data.likes is list);
       allow delete: if isSystemAdmin() || isDean() || isAdviser()
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
     }
+
     match /studentInvitations/{docId} {
-      // Allow public read for signup verification
+      // Public read required for pre-signup email verification on student signup form
       allow read: if true;
-      allow write: if isSystemAdmin() || isDean() || isAdviser();
+      // Allow Advisers/Deans/Admins to invite, and student leaders to invite group members, or member to accept
+      allow write: if isSystemAdmin() || isDean() || isAdviser()
+                    || (isAuthenticated() && (
+                        request.resource.data.sentBy == request.auth.uid ||
+                        (resource != null && (
+                          resource.data.sentBy == request.auth.uid ||
+                          resource.data.studentEmail == request.auth.token.email
+                        ))
+                    ));
     }
+
     match /invitations/{docId} {
-      // Allow public read for signup verification
       allow read: if true;
       allow write: if isSystemAdmin() || isDean() || isAdviser();
     }
+
     match /mail/{docId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isSystemAdmin();
     }
+
     match /emails/{docId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isSystemAdmin();
     }
+
     match /notifications/{docId} {
       allow read, update, delete: if isAuthenticated() && (
         request.auth.uid == resource.data.userId
@@ -180,26 +227,30 @@ service cloud.firestore {
       );
       allow create: if isAuthenticated();
     }
+
     match /userChats/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
+
     match /chats/{groupId}/messages/{messageId} {
       allow read, write: if isAuthenticated()
                          && (isSystemAdmin() || isDean()
                              || isAdviser() || isGroupMember(groupId));
     }
+
     match /user_bookmarks/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
+
     match /activity_logs_backup/{docId} {
-      allow read: if isSystemAdmin();
+      allow read, write: if isSystemAdmin();
     }
+
     match /categories/{docId} {
       allow read: if true;
-      // Only admins/deans/advisers can create categories (removed unauthenticated backdoor)
-      allow create: if isSystemAdmin() || isDean() || isAdviser();
-      allow write: if isSystemAdmin() || isDean() || isAdviser();
+      allow create, write: if isSystemAdmin() || isDean() || isAdviser();
     }
+
     // -----------------------------------------------------------------
     // 6. Fallback Default Deny
     // -----------------------------------------------------------------

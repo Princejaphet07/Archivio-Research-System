@@ -1082,68 +1082,80 @@ export default function UserManagement() {
         }
       }
 
-      // Trigger Firebase Email Extension to send dean invitation
+      // Dispatch Dean Invitation Email (Primary: Direct Backend API, Fallback: Firestore 'mail' collection)
       try {
         const isDualRole = formData.role === 'dean+adviser';
         const roleTitle = isDualRole ? "Dean & Research Adviser (Dual Role)" : "Dean";
-        await addDoc(collection(db, 'mail'), {
-          to: formData.email.toLowerCase().trim(),
-          message: {
-            subject: `Invitation to Join ARCHIVIO as a ${roleTitle}`,
-            html: `
-              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                </div>
-                
-                <div style="padding: 40px 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()}!</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
-                    You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
-                    ${isDualRole 
-                      ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
-                      : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
-                  </p>
-                  
-                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
-                    <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
-                    
-                    <div style="margin-bottom: 12px;">
-                      <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Email Address</span>
-                      <strong style="color: #2d3748; font-size: 15px;">${formData.email.toLowerCase().trim()}</strong>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                      <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Temporary Password</span>
-                      <code style="background-color: #ffffff; padding: 8px 16px; border-radius: 6px; color: #541b2f; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
-                    </div>
-                    
-                    <p style="margin: 0; color: #e53e3e; font-size: 13px; font-style: italic;">* You will be prompted to set a new, secure password upon your first login.</p>
-                  </div>
-                  
-                  <div style="text-align: center; margin: 40px 0 10px 0;">
-                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
-                  </div>
-                </div>
-                
-                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                </div>
-              </div>
-            `
-          }
-        });
-        // Direct call to email backend API to wake up Render & dispatch immediately
         const backendUrl = getBackendUrl();
-        await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
-          to: formData.email.toLowerCase().trim(),
-          deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-          invitationLink: invitationLink,
-          temporaryPassword: temporaryPassword,
-          role: formData.role
-        }).catch(apiErr => console.warn('Direct backend dean email dispatch note:', apiErr));
+        let sentDirectly = false;
+
+        try {
+          await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
+            to: formData.email.toLowerCase().trim(),
+            deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+            invitationLink: invitationLink,
+            temporaryPassword: temporaryPassword,
+            role: formData.role
+          });
+          sentDirectly = true;
+          console.log('✅ Direct backend dean invitation sent successfully');
+        } catch (apiErr) {
+          console.warn('Direct backend dean email dispatch failed, falling back to Firestore mail queue:', apiErr);
+        }
+
+        // Only enqueue to Firestore 'mail' collection if direct dispatch failed (prevents duplicate emails)
+        if (!sentDirectly) {
+          await addDoc(collection(db, 'mail'), {
+            to: formData.email.toLowerCase().trim(),
+            message: {
+              subject: `Invitation to Join ARCHIVIO as a ${roleTitle}`,
+              html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+                  </div>
+                  
+                  <div style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()}!</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
+                      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
+                      ${isDualRole 
+                        ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
+                        : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
+                    </p>
+                    
+                    <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+                      <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
+                      
+                      <div style="margin-bottom: 12px;">
+                        <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Email Address</span>
+                        <strong style="color: #2d3748; font-size: 15px;">${formData.email.toLowerCase().trim()}</strong>
+                      </div>
+                      
+                      <div style="margin-bottom: 15px;">
+                        <span style="color: #718096; font-size: 13px; display: block; margin-bottom: 4px;">Temporary Password</span>
+                        <code style="background-color: #ffffff; padding: 8px 16px; border-radius: 6px; color: #541b2f; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
+                      </div>
+                      
+                      <p style="margin: 0; color: #e53e3e; font-size: 13px; font-style: italic;">* You will be prompted to set a new, secure password upon your first login.</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 40px 0 10px 0;">
+                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
+                    </div>
+                  </div>
+                  
+                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+                  </div>
+                </div>
+              `
+            }
+          });
+          console.log('📨 Fallback dean invitation enqueued to Firestore mail collection');
+        }
       } catch (emailError) {
         console.warn('Email service error (dean account still created):', emailError);
       }
@@ -1223,57 +1235,68 @@ export default function UserManagement() {
         invitationSent: true
       });
 
-      // 1. Call email service queue
+      // Dispatch Dean Invitation Reminder (Primary: Direct Backend API, Fallback: Firestore 'mail' collection)
       try {
-        await addDoc(collection(db, 'mail'), {
-          to: deanEmail,
-          message: {
-            subject: "Reminder: Invitation to Join ARCHIVIO as a Dean",
-            html: `
-              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                </div>
-                
-                <div style="padding: 40px 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${deanName},</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
+        const backendUrl = getBackendUrl();
+        let sentDirectly = false;
 
-                  ${temporaryPassword ? `
-                  <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 18px; margin: 25px 0;">
-                    <p style="margin: 0 0 8px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Your Temporary Credentials</p>
-                    <p style="margin: 0 0 6px 0; color: #2d3748; font-size: 14px;"><strong>Email:</strong> ${deanEmail}</p>
-                    <p style="margin: 0; color: #718096; font-size: 13px;">Temporary Password: <code style="background: #ffffff; color: #541b2f; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #d5c9bb; font-size: 15px;">${temporaryPassword}</code></p>
+        try {
+          await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
+            to: deanEmail,
+            deanName: deanName,
+            invitationLink: invitationLink,
+            temporaryPassword: temporaryPassword || 'Your established password',
+            role: deanData?.role || 'dean'
+          });
+          sentDirectly = true;
+          console.log('✅ Direct backend dean reminder sent successfully');
+        } catch (err) {
+          console.warn('Direct backend resend dispatch failed, falling back to mail queue:', err);
+        }
+
+        // Only enqueue to Firestore 'mail' collection if direct dispatch failed (prevents duplicate emails)
+        if (!sentDirectly) {
+          await addDoc(collection(db, 'mail'), {
+            to: deanEmail,
+            message: {
+              subject: "Reminder: Invitation to Join ARCHIVIO as a Dean",
+              html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
                   </div>
-                  ` : ''}
                   
-                  <div style="text-align: center; margin: 30px 0 10px 0;">
-                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
+                  <div style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${deanName},</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
+
+                    ${temporaryPassword ? `
+                    <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 18px; margin: 25px 0;">
+                      <p style="margin: 0 0 8px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Your Temporary Credentials</p>
+                      <p style="margin: 0 0 6px 0; color: #2d3748; font-size: 14px;"><strong>Email:</strong> ${deanEmail}</p>
+                      <p style="margin: 0; color: #718096; font-size: 13px;">Temporary Password: <code style="background: #ffffff; color: #541b2f; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #d5c9bb; font-size: 15px;">${temporaryPassword}</code></p>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="text-align: center; margin: 30px 0 10px 0;">
+                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
+                    </div>
+                  </div>
+                  
+                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
                   </div>
                 </div>
-                
-                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                </div>
-              </div>
-            `
-          }
-        });
+              `
+            }
+          });
+          console.log('📨 Fallback dean reminder enqueued to Firestore mail collection');
+        }
       } catch (emailError) {
-        console.warn('Email service queue error:', emailError);
+        console.warn('Email service error during resend:', emailError);
       }
-
-      // 2. Direct call to email backend API
-      const backendUrl = getBackendUrl();
-      await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
-        to: deanEmail,
-        deanName: deanName,
-        invitationLink: invitationLink,
-        temporaryPassword: temporaryPassword || 'Your established password',
-        role: deanData?.role || 'dean'
-      }).catch(err => console.warn('Direct backend resend dispatch note:', err));
 
       await Swal.fire({
         title: 'Invitation Dispatched!',

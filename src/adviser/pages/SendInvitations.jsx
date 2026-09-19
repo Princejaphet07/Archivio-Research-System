@@ -196,66 +196,72 @@ function SendInvitations() {
 
       const docRef = await addDoc(collection(db, 'studentInvitations'), invitationData);
 
-      // 1. Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
+      // 1. Direct Backend Dispatch (try first)
       const backendUrl = getBackendUrl();
-      authFetch(`${backendUrl}/api/send-student-invitation-email`, {
-        to: studentEmail.toLowerCase().trim(),
-        invitationLink: invitationLink,
-        senderName: adviserData.displayName || 'Research Adviser',
-        senderDepartment: adviserData.department || 'SWU Phinma'
-      }).then(res => {
-        console.log('✅ Direct student invitation dispatch response:', res);
-      }).catch(err => {
-        console.warn('⚠️ Direct student invitation notice:', err.message);
-      });
-
-      // 2. Redundant Log in Firestore 'mail' collection (for mail-listener)
+      let sentDirectly = false;
       try {
-        await addDoc(collection(db, 'mail'), {
-          to: studentEmail,
-          message: {
-            subject: "Invitation to Join ARCHIVIO",
-            html: `
-              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                </div>
-                
-                <div style="padding: 40px 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, Student!</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
-                  
-                  <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                    <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">📋 How to Access Your Account:</strong>
-                    <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      <li>Click the <strong>"Create Your Account"</strong> button below</li>
-                      <li>Register using your <strong>@phinmaed.com</strong> email address</li>
-                      <li>After signing up, you can join your research group</li>
-                    </ol>
-                  </div>
-                  
-                  <div style="text-align: center; margin: 40px 0 10px 0;">
-                    <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
-                  </div>
-                  
-                  <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                    Best regards,<br>
-                    <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
-                    ${adviserData.department || 'SWU Phinma'}<br>
-                  </p>
-                </div>
-                
-                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                </div>
-              </div>
-            `
-          }
+        await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
+          to: studentEmail.toLowerCase().trim(),
+          invitationLink: invitationLink,
+          senderName: adviserData.displayName || 'Research Adviser',
+          senderDepartment: adviserData.department || 'SWU Phinma'
         });
-      } catch (mailErr) {
-        console.warn('Firestore mail logging notice:', mailErr.message);
+        sentDirectly = true;
+        console.log('✅ Direct student invitation dispatch successful');
+      } catch (err) {
+        console.warn('⚠️ Direct student invitation notice, falling back to mail queue:', err.message);
+      }
+
+      // 2. Fallback in Firestore 'mail' collection only if direct dispatch failed (prevents duplicate emails)
+      if (!sentDirectly) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: studentEmail,
+            message: {
+              subject: "Invitation to Join ARCHIVIO",
+              html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+                  </div>
+                  
+                  <div style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, Student!</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
+                    
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                      <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">📋 How to Access Your Account:</strong>
+                      <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                        <li>Click the <strong>"Create Your Account"</strong> button below</li>
+                        <li>Register using your <strong>@phinmaed.com</strong> email address</li>
+                        <li>After signing up, you can join your research group</li>
+                      </ol>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 40px 0 10px 0;">
+                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+                    </div>
+                    
+                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+                      Best regards,<br>
+                      <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+                      ${adviserData.department || 'SWU Phinma'}<br>
+                    </p>
+                  </div>
+                  
+                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+                  </div>
+                </div>
+              `
+            }
+          });
+          console.log('📨 Fallback student invitation enqueued to Firestore mail collection');
+        } catch (mErr) {
+          console.warn('Firestore mail queue fallback notice:', mErr);
+        }
       }
 
       // Refresh invitations list
@@ -337,6 +343,7 @@ function SendInvitations() {
       const link = invitation?.invitationLink || `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail)}`;
 
       // 1. Direct Backend Resend
+      let sentDirectly = false;
       try {
         const backendUrl = getBackendUrl();
         await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
@@ -345,53 +352,58 @@ function SendInvitations() {
           senderName: adviserData.displayName || 'Research Adviser',
           senderDepartment: adviserData.department || 'SWU Phinma'
         });
+        sentDirectly = true;
+        console.log('✅ Direct backend student invitation resend successful');
       } catch (emailError) {
-        console.warn('Backend resend notice:', emailError);
+        console.warn('Backend resend notice, falling back to mail queue:', emailError);
       }
 
-      // 2. Redundant queue in Firestore 'mail'
-      try {
-        await addDoc(collection(db, 'mail'), {
-          to: studentEmail,
-          message: {
-            subject: "Reminder: Invitation to Join ARCHIVIO",
-            html: `
-              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                  <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                  <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                  <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                </div>
-                
-                <div style="padding: 40px 30px; background-color: #ffffff;">
-                  <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Reminder: Action Required</h2>
-                  <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
-                  
-                  <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 20px 0; display: flex; align-items: flex-start; gap: 10px;">
-                    <span style="font-size: 16px;">⏰</span>
-                    <p style="margin: 0;"><strong>Important:</strong> Please activate your account to begin managing your research projects with your adviser.</p>
+      // 2. Fallback queue in Firestore 'mail' only if direct dispatch failed (prevents duplicate emails)
+      if (!sentDirectly) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: studentEmail,
+            message: {
+              subject: "Reminder: Invitation to Join ARCHIVIO",
+              html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
                   </div>
                   
-                  <div style="text-align: center; margin: 40px 0 10px 0;">
-                    <a href="${link}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+                  <div style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Reminder: Action Required</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
+                    
+                    <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 20px 0; display: flex; align-items: flex-start; gap: 10px;">
+                      <span style="font-size: 16px;">⏰</span>
+                      <p style="margin: 0;"><strong>Important:</strong> Please activate your account to begin managing your research projects with your adviser.</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 40px 0 10px 0;">
+                      <a href="${link}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+                    </div>
+                    
+                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+                      Best regards,<br>
+                      <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+                      ${adviserData.department || 'SWU Phinma'}<br>
+                    </p>
                   </div>
                   
-                  <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                    Best regards,<br>
-                    <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
-                    ${adviserData.department || 'SWU Phinma'}<br>
-                  </p>
+                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+                  </div>
                 </div>
-                
-                <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                  <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                </div>
-              </div>
-            `
-          }
-        });
-      } catch (emailError) {
-        console.warn('Email service error:', emailError);
+              `
+            }
+          });
+          console.log('📨 Fallback student invitation resend enqueued to Firestore mail collection');
+        } catch (mErr) {
+          console.warn('Firestore mail resend notice:', mErr);
+        }
       }
 
       await fetchInvitations();

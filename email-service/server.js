@@ -929,7 +929,7 @@ app.post('/api/send-invitation-email', verifyToken, async (req, res) => {
 // ============================================
 app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
   try {
-    const { to, deanName, invitationLink, temporaryPassword, message } = req.body;
+    const { to, deanName, invitationLink, temporaryPassword, message, role } = req.body;
 
     // Validate required fields
     if (!to || !deanName || !invitationLink || !temporaryPassword) {
@@ -940,6 +940,9 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
     if (!to.includes('@')) {
       return res.status(400).json({ error: 'Please provide a valid email address' });
     }
+
+    const isDualRole = role === 'dean+adviser';
+    const roleTitle = isDualRole ? "Dean & Research Adviser (Dual Role)" : "Dean";
 
     // Email template for dean invitation
     const emailHTML = `
@@ -952,7 +955,12 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
   
   <div style="padding: 40px 30px; background-color: #ffffff;">
     <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${deanName}!</h2>
-    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Step into your portal to oversee, manage, and empower the research initiatives within your department.</p>
+    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
+      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
+      ${isDualRole 
+        ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
+        : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
+    </p>
     
     <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
       <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Your Temporary Credentials</p>
@@ -971,7 +979,7 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
     </div>
     
     <div style="text-align: center; margin: 40px 0 10px 0;">
-      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
+      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
     </div>
   </div>
   
@@ -983,10 +991,10 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
 
     const dispatchInfo = await sendSystemEmail({
       to: to.toLowerCase().trim(),
-      subject: `Dean Invitation: Join ARCHIVIO Research Management System`,
+      subject: `${roleTitle} Invitation: Join ARCHIVIO Research Management System`,
       html: emailHTML
     });
-    console.log(`✅ Dean invitation email sent to ${to}`);
+    console.log(`✅ ${roleTitle} invitation email sent to ${to}`);
     
     res.status(200).json({
       success: true,
