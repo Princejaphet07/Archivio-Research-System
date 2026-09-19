@@ -65,9 +65,6 @@ export default function HomepageChatbot() {
   const location = useLocation();
   const { currentUser } = useAuth();
   const { isOnline } = useNetworkStatus();
-  
-  // Hide on authentication pages
-  if (location.pathname === '/login' || location.pathname === '/forgot-password' || location.pathname === '/reset-password') return null;
 
   const [isOpen, setIsOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -506,8 +503,9 @@ export default function HomepageChatbot() {
     "🎓 How do students submit research here?"
   ];
 
-  // Hide the chatbot on the viewer page (has its own AI) and login page
-  if (location.pathname.startsWith('/viewer') || location.pathname.startsWith('/login')) {
+  // Hide on authentication pages and viewer (all hooks are above — safe to return null here)
+  const hiddenPaths = ['/login', '/forgot-password', '/reset-password', '/viewer'];
+  if (hiddenPaths.some(p => location.pathname.startsWith(p))) {
     return null;
   }
 

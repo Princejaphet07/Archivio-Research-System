@@ -176,3 +176,150 @@ input[data-password="true"]::selection {
     display: none !important;
   }
 }
+
+/* ==================================================== */
+/* SweetAlert2 Global Dark Mode Support                */
+/* ==================================================== */
+html.dark .swal2-popup,
+.dark .swal2-popup {
+  background-color: #1e1e1e !important;
+  color: #f5f5f5 !important;
+  border: 1px solid #333333 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .swal2-title,
+.dark .swal2-title {
+  color: #f5f5f5 !important;
+}
+
+html.dark .swal2-html-container,
+.dark .swal2-html-container,
+html.dark .swal2-content,
+.dark .swal2-content {
+  color: #d4d4d4 !important;
+}
+
+html.dark .swal2-footer,
+.dark .swal2-footer {
+  border-top: 1px solid #333333 !important;
+  color: #a3a3a3 !important;
+}
+
+html.dark .swal2-close,
+.dark .swal2-close {
+  color: #a3a3a3 !important;
+}
+
+html.dark .swal2-close:hover,
+.dark .swal2-close:hover {
+  color: #ffffff !important;
+}
+
+html.dark .swal2-input,
+html.dark .swal2-textarea,
+html.dark .swal2-select,
+.dark .swal2-input,
+.dark .swal2-textarea,
+.dark .swal2-select {
+  background-color: #2a2a2a !important;
+  color: #f5f5f5 !important;
+  border: 1px solid #444444 !important;
+}
+
+html.dark .swal2-input:focus,
+html.dark .swal2-textarea:focus,
+html.dark .swal2-select:focus,
+.dark .swal2-input:focus,
+.dark .swal2-textarea:focus,
+.dark .swal2-select:focus {
+  border-color: #d6ad60 !important;
+  box-shadow: 0 0 0 2px rgba(214, 173, 96, 0.25) !important;
+}
+
+html.dark .swal2-validation-message,
+.dark .swal2-validation-message {
+  background-color: #2a2a2a !important;
+  color: #f87171 !important;
+}
+
+html.dark .swal2-cancel,
+.dark .swal2-cancel {
+  background-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+html.dark .swal2-cancel:hover,
+.dark .swal2-cancel:hover {
+  background-color: #374151 !important;
+}
+
+/* Toast dark mode support */
+html.dark .swal2-toast,
+.dark .swal2-toast {
+  background-color: #1e1e1e !important;
+  color: #f5f5f5 !important;
+  border: 1px solid #333333 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark .swal2-toast .swal2-title,
+.dark .swal2-toast .swal2-title {
+  color: #f5f5f5 !important;
+}
+
+/* Icons styling in dark mode */
+html.dark .swal2-icon.swal2-question,
+.dark .swal2-icon.swal2-question {
+  border-color: #8b5cf6 !important;
+  color: #a78bfa !important;
+}
+
+html.dark .swal2-icon.swal2-info,
+.dark .swal2-icon.swal2-info {
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+
+html.dark .swal2-icon.swal2-warning,
+.dark .swal2-icon.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #fbbf24 !important;
+}
+
+html.dark .swal2-icon.swal2-error,
+.dark .swal2-icon.swal2-error {
+  border-color: #ef4444 !important;
+  color: #f87171 !important;
+}
+
+html.dark .swal2-icon.swal2-error [class^='swal2-x-mark-line'],
+.dark .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+  background-color: #f87171 !important;
+}
+
+html.dark .swal2-icon.swal2-success,
+.dark .swal2-icon.swal2-success {
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+}
+
+html.dark .swal2-icon.swal2-success [class^='swal2-success-line'],
+.dark .swal2-icon.swal2-success [class^='swal2-success-line'] {
+  background-color: #34d399 !important;
+}
+
+html.dark .swal2-icon.swal2-success .swal2-success-ring,
+.dark .swal2-icon.swal2-success .swal2-success-ring {
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+/* Fix circular line background mask in dark mode */
+html.dark .swal2-icon.swal2-success .swal2-success-circular-line-left,
+html.dark .swal2-icon.swal2-success .swal2-success-circular-line-right,
+html.dark .swal2-icon.swal2-success .swal2-success-fix,
+.dark .swal2-icon.swal2-success .swal2-success-circular-line-left,
+.dark .swal2-icon.swal2-success .swal2-success-circular-line-right,
+.dark .swal2-icon.swal2-success .swal2-success-fix {
+  background-color: #1e1e1e !important;
+}

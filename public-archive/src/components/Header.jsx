@@ -71,6 +71,32 @@ function Header() {
     }
   };
 
+  const handleBookmarksClick = (e) => {
+    if (!currentUser) {
+      e.preventDefault();
+      Swal.fire({
+        title: 'Sign In Required',
+        text: 'Please log in or sign up with your @phinmaed.com account to view and manage your saved bookmarks.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2039',
+        confirmButtonText: 'Log In Now',
+        cancelButtonText: 'Cancel',
+        background: isDarkMode ? '#1e1e1e' : '#fff',
+        color: isDarkMode ? '#f5f5f5' : '#000',
+        customClass: {
+          popup: 'dark:bg-gray-800 dark:text-gray-100',
+          title: 'dark:text-gray-100'
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          navigate('/login', { state: { from: { pathname: '/bookmarks' } } });
+        }
+      });
+      return;
+    }
+  };
+
   return (
     <nav className="flex justify-between items-center px-4 md:px-12 py-4 bg-[#3d0c1b] text-white sticky top-0 z-50 shadow-md w-full transition-all">
       <Link to="/" className="flex items-center space-x-3">
@@ -80,7 +106,7 @@ function Header() {
       <div className="hidden md:flex space-x-8 text-sm font-sans">
         <Link to="/" className={`${path === '/' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>Home</Link>
         <Link to="/browse" className={`${path === '/browse' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>Browse</Link>
-        <Link to="/bookmarks" className={`${path === '/bookmarks' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>Bookmarks</Link>
+        <Link to="/bookmarks" onClick={handleBookmarksClick} className={`${path === '/bookmarks' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>Bookmarks</Link>
         <Link to="/about" className={`${path === '/about' ? 'text-[#d6ad60]' : 'hover:text-amber-200'} transition`}>About</Link>
       </div>
       <div className="hidden md:flex space-x-4 font-sans text-sm items-center">
@@ -179,7 +205,7 @@ function Header() {
         <div className="absolute top-full left-0 w-full bg-[#3d0c1b] border-t border-white/10 md:hidden shadow-xl font-sans text-sm flex flex-col z-50">
           <Link to="/" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/' ? 'text-[#d6ad60]' : 'text-white'}`}>Home</Link>
           <Link to="/browse" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/browse' ? 'text-[#d6ad60]' : 'text-white'}`}>Browse</Link>
-          <Link to="/bookmarks" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/bookmarks' ? 'text-[#d6ad60]' : 'text-white'}`}>Bookmarks</Link>
+          <Link to="/bookmarks" onClick={(e) => { setIsMenuOpen(false); handleBookmarksClick(e); }} className={`px-6 py-4 border-b border-white/5 ${path === '/bookmarks' ? 'text-[#d6ad60]' : 'text-white'}`}>Bookmarks</Link>
           <Link to="/about" onClick={() => setIsMenuOpen(false)} className={`px-6 py-4 border-b border-white/5 ${path === '/about' ? 'text-[#d6ad60]' : 'text-white'}`}>About</Link>
           
           {/* MOBILE AUTH LINKS */}

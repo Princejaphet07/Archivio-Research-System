@@ -21,20 +21,18 @@ export default function ProtectedRoute({ children }) {
         customClass: {
           popup: 'dark:bg-gray-800 dark:text-gray-100',
           title: 'dark:text-gray-100'
-        }
+        },
+        allowOutsideClick: false
       }).then((res) => {
         if (res.isConfirmed) {
           navigate('/login', { state: { from: location } });
         } else {
-          if (window.history.length > 1) {
-            navigate(-1);
-          } else {
-            navigate('/browse');
-          }
+          // Cancel pressed — safely go to home page, NEVER redirect to /login
+          navigate('/', { replace: true });
         }
       });
     }
-  }, [currentUser, location, navigate]);
+  }, [currentUser]);
 
   if (!currentUser) {
     return null;
