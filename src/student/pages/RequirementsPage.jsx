@@ -11,6 +11,7 @@ import PortalHeader from '../components/PortalHeader';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 // Dynamic requirements fetched from DB instead of hardcoded array
 
@@ -169,21 +170,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         : (file.size / 1024).toFixed(1) + ' KB';
 
       let pageCount = null;
-      let base64Pdf = null;
       if (item.title === 'Final Manuscript' && file.type === 'application/pdf') {
         try {
-          // Get base64 for AI extraction
-          const reader = new FileReader();
-          base64Pdf = await new Promise((resolve) => {
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.readAsDataURL(file);
-          });
-
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await PDFDocument.load(arrayBuffer);
           pageCount = pdfDoc.getPageCount();
         } catch (pdfErr) {
-          console.warn('Failed to extract PDF pages or base64:', pdfErr);
+          console.warn('Failed to extract PDF page count:', pdfErr);
         }
       }
 
@@ -206,8 +199,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         status: 'Success'
       });
 
-      // Background AI Abstract Extraction
-      if (item.title === 'Final Manuscript' && savedDocId && (base64Pdf || (fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')))) {
+      // Background AI Abstract Extraction (lightweight URL-based dispatch with auto-dismiss)
+      if (item.title === 'Final Manuscript' && savedDocId && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')) {
         Swal.fire({
           toast: true,
           position: 'bottom-end',
@@ -218,39 +211,43 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         });
 
         setTimeout(async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s safety timeout
+
           try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
-            const payload = base64Pdf ? { pdfBase64: base64Pdf } : { pdfUrl: fileUrl };
-            
+            const backendUrl = getBackendUrl();
             const res = await fetch(`${backendUrl}/api/ai/extract-abstract`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
+              body: JSON.stringify({ pdfUrl: fileUrl }),
+              signal: controller.signal
             });
-            const data = await res.json();
-            if (res.ok && data.abstract) {
-              await updateDoc(doc(db, 'submissions', savedDocId), { abstract: data.abstract });
-              
-              Swal.fire({
-                toast: true,
-                position: 'bottom-end',
-                icon: 'success',
-                title: 'AI successfully generated an abstract for this PDF!',
-                showConfirmButton: false,
-                timer: 4000
-              });
-            } else if (!res.ok) {
-              Swal.fire({
-                toast: true,
-                position: 'bottom-end',
-                icon: 'error',
-                title: 'AI failed to generate an abstract',
-                showConfirmButton: false,
-                timer: 4000
-              });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data.abstract) {
+                await updateDoc(doc(db, 'submissions', savedDocId), { abstract: data.abstract });
+                
+                Swal.fire({
+                  toast: true,
+                  position: 'bottom-end',
+                  icon: 'success',
+                  title: 'AI successfully generated an abstract for this PDF!',
+                  showConfirmButton: false,
+                  timer: 4000
+                });
+                return;
+              }
             }
+
+            // Close the loading toast if no abstract was returned
+            Swal.close();
           } catch (aiErr) {
-            console.error('Background AI extraction failed:', aiErr);
+            clearTimeout(timeoutId);
+            console.warn('Background AI extraction notice (abstract can be set in manuscript settings):', aiErr.message || aiErr);
+            // Dismiss the toast so it doesn't get stuck on screen
+            Swal.close();
           }
         }, 1000); // slight delay to let UI breathe
       }
