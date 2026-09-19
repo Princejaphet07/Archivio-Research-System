@@ -276,19 +276,6 @@ Please click the button below to activate your account and set up your credentia
     }
   };
 
-  const handleCopyInvitationLink = (link) => {
-    if (!link) return;
-    navigator.clipboard.writeText(link);
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Invitation link copied!',
-      showConfirmButton: false,
-      timer: 2000
-    });
-  };
-
   const handleResendInvitation = async (adviserId, adviserEmail) => {
     setLoading(true);
     try {
@@ -568,15 +555,6 @@ Please click the button below to activate your account and set up your credentia
                           <td className="py-3.5 text-center">
                             {adviser.status === 'pending' && (
                               <div className="flex items-center justify-center gap-2">
-                                <PremiumButton
-                                  onClick={() => handleCopyInvitationLink(adviser.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviser.email)}`)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-1 text-stone-700 dark:text-stone-300"
-                                  title="Copy direct invitation link"
-                                >
-                                  📋 Copy Link
-                                </PremiumButton>
                                 <PremiumButton
                                   onClick={() => handleResendInvitation(adviser.id, adviser.email)}
                                   disabled={loading}
