@@ -7,6 +7,7 @@ import logo from '../assets/logo.png';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
+import { useNetworkStatus } from './NetworkStatusPill';
 
 const GUEST_MAX_QUERIES = 3;
 
@@ -63,6 +64,7 @@ const TypewriterWord = ({ content, onFinish }) => {
 export default function HomepageChatbot() {
   const location = useLocation();
   const { currentUser } = useAuth();
+  const { isOnline } = useNetworkStatus();
   
   // Hide on authentication pages
   if (location.pathname === '/login' || location.pathname === '/forgot-password' || location.pathname === '/reset-password') return null;
@@ -331,6 +333,21 @@ export default function HomepageChatbot() {
   const sendMessage = async (messageText) => {
     if (!messageText.trim() || isTyping) return;
 
+    // Offline check
+    if (!isOnline) {
+      const userMsg = messageText.trim();
+      setChatInput('');
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: userMsg },
+        {
+          role: 'assistant',
+          content: "⚠️ **Offline Mode:** Pasensya na, walay aktibong koneksyon sa internet ang imong device. Dili makatubag ang AI karon. Palihug ikonekta sa Wi-Fi o mobile data ug sulayi pag-usab."
+        }
+      ]);
+      return;
+    }
+
     // Guest anti-spam / query limit verification
     if (!currentUser) {
       if (guestQueriesLeft <= 0) {
@@ -512,14 +529,21 @@ export default function HomepageChatbot() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-[15px]">Archivio AI</h3>
-                  {!currentUser && (
+                  {!isOnline ? (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-500/20 text-amber-200 border-amber-400/30 flex items-center gap-1">
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39m3.66 0A10.94 10.94 0 0119 12.55M8.53 16.11a6 6 0 016.95 0M12 20h.01" />
+                      </svg>
+                      Offline
+                    </span>
+                  ) : !currentUser && (
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${guestQueriesLeft > 0 ? 'bg-amber-400/20 text-amber-200 border-amber-300/30' : 'bg-red-500/20 text-red-200 border-red-400/30'}`}>
                       {guestQueriesLeft > 0 ? `${guestQueriesLeft} free query left` : 'Limit reached'}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-[#f3e5ab] opacity-90">
-                  {currentUser ? 'Always here to help' : 'Guest Mode (Limited)'}
+                  {!isOnline ? 'Network Disconnected' : currentUser ? 'Always here to help' : 'Guest Mode (Limited)'}
                 </p>
               </div>
             </div>
@@ -693,14 +717,14 @@ export default function HomepageChatbot() {
                 type="text" 
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                disabled={isTyping || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
-                placeholder={!currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive ? "Log in to continue chatting with AI..." : (isListening ? "Listening..." : "Ask me anything...")}
+                disabled={!isOnline || isTyping || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
+                placeholder={!isOnline ? "⚠️ Offline ka karon. Sumpaya imong koneksyon..." : !currentUser && guestQueriesLeft <= 0 && !isTyping && !isTypewriterActive ? "Log in to continue chatting with AI..." : (isListening ? "Listening..." : "Ask me anything...")}
                 className="flex-1 min-w-0 border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm text-stone-800 dark:text-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#7a2039] focus:ring-1 focus:ring-[#7a2039] disabled:opacity-50 transition-colors placeholder-stone-500" 
               />
               <button
                 type="button"
                 onClick={startListening}
-                disabled={isTyping || isListening || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
+                disabled={!isOnline || isTyping || isListening || isTypewriterActive || (!currentUser && guestQueriesLeft <= 0)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shadow-md shrink-0 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-stone-200 dark:bg-gray-700 text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-gray-600'}`}
                 title="Use Voice Input"
               >
@@ -708,7 +732,7 @@ export default function HomepageChatbot() {
               </button>
               <button 
                 type="submit"
-                disabled={isTyping || isTypewriterActive || !chatInput.trim() || (!currentUser && guestQueriesLeft <= 0)}
+                disabled={!isOnline || isTyping || isTypewriterActive || !chatInput.trim() || (!currentUser && guestQueriesLeft <= 0)}
                 className="bg-[#7a2039] text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#5a1528] transition cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>

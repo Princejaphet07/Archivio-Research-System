@@ -14,6 +14,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomepageChatbot from './components/HomepageChatbot';
 import SpotlightSearch from './components/SpotlightSearch';
+import NetworkStatusPill from './components/NetworkStatusPill';
 
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -50,6 +51,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <NetworkStatusPill />
           <Routes>
             <Route path="/" element={<ArchiveHome />} />
             <Route path="/login" element={<ArchiveLogin />} />

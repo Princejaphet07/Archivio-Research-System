@@ -6,6 +6,7 @@ import UnifiedLogin from './pages/UnifiedLogin';
 import DeanActivate from './pages/DeanActivate';
 import ResetPassword from './pages/ResetPassword';
 import PublicVerifyCertificate from './pages/PublicVerifyCertificate';
+import NetworkStatusPill from './components/NetworkStatusPill';
 
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
@@ -44,6 +45,7 @@ const PortalLoader = ({ text }) => {
 function App() {
   return (
     <Router>
+      <NetworkStatusPill />
       <Suspense fallback={<PortalLoader />}>
         <Routes>
           {/* The Unified Login Page */}

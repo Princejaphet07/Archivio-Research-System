@@ -8,8 +8,12 @@ import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
 import { trackBookmark } from '../utils/analytics';
+import { useNetworkStatus } from '../components/NetworkStatusPill';
+import { WifiOff, HardDrive } from 'lucide-react';
 
 function ArchiveBookmarks() {
+  const { isOnline } = useNetworkStatus();
+  const [isOfflineLoaded, setIsOfflineLoaded] = useState(false);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -65,8 +69,16 @@ function ArchiveBookmarks() {
       });
 
       const results = await Promise.all(paperPromises);
-      setBookmarkedPapers(results.filter(p => p !== null));
+      const validPapers = results.filter(p => p !== null);
+      setBookmarkedPapers(validPapers);
+      setIsOfflineLoaded(false);
       setLoading(false);
+
+      if (currentUser?.uid && validPapers.length > 0) {
+        try {
+          localStorage.setItem('archivio_cached_bookmarks_' + currentUser.uid, JSON.stringify(validPapers));
+        } catch (_) {}
+      }
     };
 
     if (!currentUser) {
@@ -75,17 +87,46 @@ function ArchiveBookmarks() {
       return;
     }
 
+    // Attempt offline cache instant load first if offline or on initial mount
+    const cached = localStorage.getItem('archivio_cached_bookmarks_' + currentUser.uid);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBookmarkedPapers(parsed);
+          if (!navigator.onLine) {
+            setIsOfflineLoaded(true);
+            setLoading(false);
+          }
+        }
+      } catch (_) {}
+    }
+
     // Logged-in User: Fetch from Firestore
-    const unsub = onSnapshot(doc(db, 'user_bookmarks', currentUser.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const paperIds = data.bookmarks || [];
-        fetchPaperDetails(paperIds);
-      } else {
-        setBookmarkedPapers([]);
+    const unsub = onSnapshot(
+      doc(db, 'user_bookmarks', currentUser.uid),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const paperIds = data.bookmarks || [];
+          fetchPaperDetails(paperIds);
+        } else {
+          setBookmarkedPapers([]);
+          setLoading(false);
+        }
+      },
+      (error) => {
+        console.warn("Bookmarks onSnapshot network error (offline fallback):", error);
+        const cachedFallback = localStorage.getItem('archivio_cached_bookmarks_' + currentUser.uid);
+        if (cachedFallback) {
+          try {
+            setBookmarkedPapers(JSON.parse(cachedFallback));
+            setIsOfflineLoaded(true);
+          } catch (_) {}
+        }
         setLoading(false);
       }
-    });
+    );
 
     return () => unsub();
   }, [currentUser]);
@@ -186,6 +227,30 @@ function ArchiveBookmarks() {
           </div>
         ) : (
           <>
+            {/* OFFLINE READER MODE BANNER */}
+            {(!isOnline || isOfflineLoaded) && (
+              <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 flex items-center justify-between gap-4 text-amber-900 dark:text-amber-200 animate-in fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                    <WifiOff className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      <span>Offline Reader Mode Active</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 uppercase tracking-wider font-semibold">Cached</span>
+                    </h4>
+                    <p className="text-xs text-stone-600 dark:text-stone-300">
+                      Gipakita ang imong mga na-save nga bookmarks gikan sa device memory. Mabasa gihapon nimo ang abstract, authors, ug details bisan walay internet.
+                    </p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-xs font-semibold text-amber-800 dark:text-amber-200 shrink-0">
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>{sortedPapers.length} Saved Offline</span>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-end border-b border-stone-300 dark:border-gray-700 mb-6 pb-2 font-sans relative">
               <div className="flex gap-6">
                 <button className="text-[#7a2039] border-b-2 border-[#7a2039] pb-2 px-1 font-bold text-sm translate-y-[9px]">

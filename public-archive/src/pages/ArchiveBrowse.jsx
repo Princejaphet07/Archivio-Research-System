@@ -14,6 +14,8 @@ import {
   trackBookmark,
   trackCitation
 } from '../utils/analytics';
+import { useNetworkStatus } from '../components/NetworkStatusPill';
+import { WifiOff } from 'lucide-react';
 
 const HighlightedText = ({ text, highlight }) => {
   if (!highlight.trim() || !text) return <>{text}</>;
@@ -35,6 +37,7 @@ const HighlightedText = ({ text, highlight }) => {
 };
 
 function ArchiveBrowse() {
+  const { isOnline } = useNetworkStatus();
   const [publishedPapers, setPublishedPapers] = useState([]);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(location.state?.q || '');
@@ -255,6 +258,20 @@ function ArchiveBrowse() {
   };
 
   useEffect(() => {
+    // Attempt instant load from cache if offline
+    const cached = localStorage.getItem('archivio_cached_browse_papers');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPublishedPapers(parsed);
+          if (!navigator.onLine) {
+            setLoading(false);
+          }
+        }
+      } catch (_) {}
+    }
+
     const qSubs = query(
       collection(db, 'submissions'),
       where('reviewStatus', '==', 'published')
@@ -289,18 +306,34 @@ function ArchiveBrowse() {
       });
 
       setPublishedPapers(enrichedPapers);
+      if (enrichedPapers.length > 0) {
+        try {
+          localStorage.setItem('archivio_cached_browse_papers', JSON.stringify(enrichedPapers));
+        } catch (_) {}
+      }
       setTimeout(() => setLoading(false), 800);
+    };
+
+    const handleOfflineFallback = (err) => {
+      console.warn("Browse offline fallback triggered:", err);
+      const cachedFallback = localStorage.getItem('archivio_cached_browse_papers');
+      if (cachedFallback) {
+        try {
+          setPublishedPapers(JSON.parse(cachedFallback));
+        } catch (_) {}
+      }
+      setLoading(false);
     };
 
     const unsubSubs = onSnapshot(qSubs, (snapshot) => {
       subsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       computeData();
-    });
+    }, handleOfflineFallback);
 
     const unsubGroups = onSnapshot(qGroups, (snapshot) => {
       groupsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       computeData();
-    });
+    }, handleOfflineFallback);
 
     return () => {
       unsubSubs();
@@ -465,8 +498,16 @@ function ArchiveBrowse() {
             <option value="A-Z">Sort: A-Z</option>
           </select>
         </div>
-        <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
-          Showing {paginatedPapers.length > 0 ? 1 : 0}–{paginatedPapers.length} of {filteredPapers.length} results
+        <div className="flex items-center gap-3">
+          {!isOnline && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+              <WifiOff className="w-3.5 h-3.5" />
+              <span>Offline Cached Mode</span>
+            </span>
+          )}
+          <div className="text-xs text-stone-500 dark:text-gray-400 font-sans hidden md:block">
+            Showing {paginatedPapers.length > 0 ? 1 : 0}–{paginatedPapers.length} of {filteredPapers.length} results
+          </div>
         </div>
       </div>
 
