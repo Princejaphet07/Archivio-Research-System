@@ -264,9 +264,6 @@ function SendInvitations() {
         }
       }
 
-      // Refresh invitations list
-      await fetchInvitations();
-
       // Show comprehensive success modal with immediate copy link
       await Swal.fire({
         title: 'Invitation Dispatched!',
@@ -406,7 +403,6 @@ function SendInvitations() {
         }
       }
 
-      await fetchInvitations();
       Swal.fire({
         title: 'Sent!',
         text: `Invitation resent to ${studentEmail}`,
@@ -434,7 +430,6 @@ function SendInvitations() {
       setLoading(true);
       try {
         await wipeEmailData(studentEmail);
-        await fetchInvitations();
         Swal.fire({
           title: 'Removed!',
           text: 'The invitation and all associated email data have been permanently removed.',
