@@ -150,9 +150,14 @@ function ArchivePaperViewer() {
   const [pdfSource, setPdfSource] = useState(null);
   const [isPdfLoading, setIsPdfLoading] = useState(true);
 
-  // Dynamic Table of Contents detection
-  const [tableOfContents, setTableOfContents] = useState([]);
-  const [isDetectingToc, setIsDetectingToc] = useState(false);
+  // Accurate page destinations for each of the 5 canonical chapters
+  const [chapterPages, setChapterPages] = useState({
+    chap1: 1,
+    chap2: 5,
+    chap3: 10,
+    chap4: 15,
+    chap5: 20
+  });
 
   // PDF.js options to disable range requests & streaming (which cause Firebase Storage redirect errors)
   const pdfOptions = useMemo(() => ({
@@ -228,37 +233,39 @@ function ArchivePaperViewer() {
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, +(prev - 0.25).toFixed(2)));
   const handleResetZoom = () => setZoomLevel(1);
 
-  // Proportional baseline TOC based on paper length
-  const defaultToc = useMemo(() => {
-    if (!numPages || numPages <= 1) {
-      return [
-        { title: 'Chapter 1: Introduction', page: 1 },
-        { title: 'Chapter 2: Review of Literature', page: 5 },
-        { title: 'Chapter 3: Methodology', page: 10 },
-        { title: 'Chapter 4: Results & Discussion', page: 15 },
-        { title: 'Chapter 5: Conclusion', page: 20 }
-      ];
-    }
-    return [
-      { title: 'Chapter 1: Introduction', page: Math.max(1, Math.round(numPages * 0.08)) },
-      { title: 'Chapter 2: Review of Literature', page: Math.max(2, Math.round(numPages * 0.16)) },
-      { title: 'Chapter 3: Methodology', page: Math.max(3, Math.round(numPages * 0.40)) },
-      { title: 'Chapter 4: Results & Discussion', page: Math.max(4, Math.round(numPages * 0.65)) },
-      { title: 'Chapter 5: Conclusion', page: Math.max(5, Math.round(numPages * 0.85)) },
-    ];
-  }, [numPages]);
-
-  // Deep detection: scan PDF bookmarks and chapter headings across pages
+  // Deep detection: scan PDF outline and chapter headings to accurately find page numbers
   const detectChapters = useCallback(async (pdfDoc) => {
     if (!pdfDoc) return;
-    setIsDetectingToc(true);
+    const total = pdfDoc.numPages || 1;
+    const detected = {};
 
-    // 1. Try embedded PDF bookmarks / outline
+    // Helper: recursively flatten outline tree so all bookmarks are examined
+    const flattenOutline = (items) => {
+      let list = [];
+      if (!items || !Array.isArray(items)) return list;
+      for (const it of items) {
+        list.push(it);
+        if (it.items && Array.isArray(it.items) && it.items.length > 0) {
+          list = list.concat(flattenOutline(it.items));
+        }
+      }
+      return list;
+    };
+
+    // 1. Check embedded PDF outline/bookmarks first
     try {
-      const outline = await pdfDoc.getOutline();
+      const rawOutline = await pdfDoc.getOutline();
+      const outline = flattenOutline(rawOutline);
       if (outline && outline.length > 0) {
-        const parsedOutline = [];
         for (const item of outline) {
+          if (!item.title || !item.title.trim()) continue;
+          const cleanTitle = item.title.trim().toLowerCase();
+
+          // Skip generic or non-chapter outline bookmarks
+          if (cleanTitle.includes('table of contents') || cleanTitle.includes('title page') || cleanTitle.includes('approval') || cleanTitle.includes('acknowledgement') || cleanTitle.includes('dedication')) {
+            continue;
+          }
+
           let pageNum = null;
           try {
             if (typeof item.dest === 'string') {
@@ -272,104 +279,95 @@ function ArchivePaperViewer() {
               pageNum = pageIdx + 1;
             }
           } catch (_) {}
-          if (pageNum && item.title) {
-            parsedOutline.push({ title: item.title.trim(), page: pageNum });
+
+          if (pageNum && pageNum >= 1 && pageNum <= total) {
+            if (!detected.chap1 && (cleanTitle.includes('chapter 1') || cleanTitle.includes('chapter i') || cleanTitle === 'introduction' || cleanTitle.startsWith('introduction') || cleanTitle.includes('the problem'))) {
+              detected.chap1 = pageNum;
+            } else if (!detected.chap2 && (cleanTitle.includes('chapter 2') || cleanTitle.includes('chapter ii') || cleanTitle.includes('review of related literature') || cleanTitle.includes('review of literature') || cleanTitle.includes('literature'))) {
+              detected.chap2 = pageNum;
+            } else if (!detected.chap3 && (cleanTitle.includes('chapter 3') || cleanTitle.includes('chapter iii') || cleanTitle.includes('methodology') || cleanTitle.includes('research method') || cleanTitle.includes('methods of research'))) {
+              detected.chap3 = pageNum;
+            } else if (!detected.chap4 && (cleanTitle.includes('chapter 4') || cleanTitle.includes('chapter iv') || cleanTitle.includes('results') || cleanTitle.includes('presentation') || cleanTitle.includes('analysis of data') || cleanTitle.includes('findings'))) {
+              detected.chap4 = pageNum;
+            } else if (!detected.chap5 && (cleanTitle.includes('chapter 5') || cleanTitle.includes('chapter v') || cleanTitle.includes('conclusion') || cleanTitle.includes('summary') || cleanTitle.includes('recommendation'))) {
+              detected.chap5 = pageNum;
+            }
           }
-        }
-        if (parsedOutline.length > 0) {
-          setTableOfContents(parsedOutline);
-          setIsDetectingToc(false);
-          return;
         }
       }
     } catch (_) {}
 
-    // 2. High-speed batch text scan across pages to locate exact chapter pages
-    try {
-      const total = pdfDoc.numPages;
-      const foundChapters = {};
-      const chapterPatterns = [
-        { key: 'c1', label: 'Chapter 1: Introduction', regex: /\bCHAPTER\s*(?:1|I)\b/i },
-        { key: 'c2', label: 'Chapter 2: Review of Literature', regex: /\bCHAPTER\s*(?:2|II)\b/i },
-        { key: 'c3', label: 'Chapter 3: Methodology', regex: /\bCHAPTER\s*(?:3|III)\b/i },
-        { key: 'c4', label: 'Chapter 4: Results & Discussion', regex: /\bCHAPTER\s*(?:4|IV)\b/i },
-        { key: 'c5', label: 'Chapter 5: Conclusion', regex: /\bCHAPTER\s*(?:5|V)\b/i },
-        { key: 'ref', label: 'References', regex: /\b(REFERENCES|BIBLIOGRAPHY)\b/i },
-        { key: 'app', label: 'Appendices', regex: /\b(APPENDICES|APPENDIX)\b/i },
-      ];
+    // 2. Background batch text scan for any chapter not found in outline
+    const missingKeys = ['chap1', 'chap2', 'chap3', 'chap4', 'chap5'].filter(k => !detected[k]);
+    if (missingKeys.length > 0) {
+      try {
+        const batchSize = 10;
+        for (let i = 1; i <= total; i += batchSize) {
+          const batch = [];
+          for (let j = i; j < i + batchSize && j <= total; j++) {
+            batch.push((async (pNum) => {
+              try {
+                const page = await pdfDoc.getPage(pNum);
+                const tc = await page.getTextContent();
+                const text = tc.items.map(it => it.str).join(' ');
+                return { pNum, text };
+              } catch (_) {
+                return { pNum, text: '' };
+              }
+            })(j));
+          }
 
-      const batchSize = 10;
-      for (let i = 1; i <= total; i += batchSize) {
-        const batch = [];
-        for (let j = i; j < i + batchSize && j <= total; j++) {
-          batch.push((async (pNum) => {
-            try {
-              const page = await pdfDoc.getPage(pNum);
-              const tc = await page.getTextContent();
-              const text = tc.items.map(it => it.str).join(' ');
-              return { pNum, text };
-            } catch (_) {
-              return { pNum, text: '' };
+          const results = await Promise.all(batch);
+          for (const { pNum, text } of results) {
+            if (!text) continue;
+
+            // Skip Table of Contents list pages that list multiple chapters together
+            let mentionCount = 0;
+            if (/\bCHAPTER\s*(?:1|I)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*(?:2|II)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*(?:3|III)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*(?:4|IV)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*(?:5|V)\b/i.test(text)) mentionCount++;
+            if (mentionCount >= 2 || /\bTABLE\s+OF\s+CONTENTS\b/i.test(text)) continue;
+
+            if (!detected.chap1 && (/\bCHAPTER\s*(?:1|I)\b/i.test(text) || (pNum > 2 && pNum < total * 0.35 && /\bINTRODUCTION\b/i.test(text)))) {
+              detected.chap1 = pNum;
             }
-          })(j));
-        }
+            if (!detected.chap2 && pNum > (detected.chap1 || 0) && (/\bCHAPTER\s*(?:2|II)\b/i.test(text) || /\bREVIEW\s+OF\s+(?:RELATED\s+)?LITERATURE\b/i.test(text))) {
+              detected.chap2 = pNum;
+            }
+            if (!detected.chap3 && pNum > (detected.chap2 || detected.chap1 || 0) && (/\bCHAPTER\s*(?:3|III)\b/i.test(text) || /\b(?:RESEARCH\s+)?METHODOLOGY\b/i.test(text) || /\bMETHODS?\s+OF\s+RESEARCH\b/i.test(text))) {
+              detected.chap3 = pNum;
+            }
+            if (!detected.chap4 && pNum > (detected.chap3 || detected.chap2 || 0) && (/\bCHAPTER\s*(?:4|IV)\b/i.test(text) || /\bRESULTS?\s+(?:AND|&)\s+DISCUSSION\b/i.test(text) || /\bPRESENTATION(?:,\s*ANALYSIS)?\s+(?:AND|&)\s+(?:INTERPRETATION\s+OF\s+)?DATA\b/i.test(text))) {
+              detected.chap4 = pNum;
+            }
+            if (!detected.chap5 && pNum > (detected.chap4 || detected.chap3 || 0) && (/\bCHAPTER\s*(?:5|V)\b/i.test(text) || /\b(?:SUMMARY\s+(?:OF\s+FINDINGS)?,\s*)?CONCLUSIONS?(?:\s+(?:AND|&)\s+RECOMMENDATIONS)?\b/i.test(text))) {
+              detected.chap5 = pNum;
+            }
+          }
 
-        const results = await Promise.all(batch);
-        for (const { pNum, text } of results) {
-          if (!text) continue;
-
-          // Ignore Table of Contents summary pages that list multiple chapters together
-          let mentionCount = 0;
-          if (/\bCHAPTER\s*(?:1|I)\b/i.test(text)) mentionCount++;
-          if (/\bCHAPTER\s*(?:2|II)\b/i.test(text)) mentionCount++;
-          if (/\bCHAPTER\s*(?:3|III)\b/i.test(text)) mentionCount++;
-          if (/\bCHAPTER\s*(?:4|IV)\b/i.test(text)) mentionCount++;
-          if (/\bCHAPTER\s*(?:5|V)\b/i.test(text)) mentionCount++;
-          if (mentionCount >= 2) continue;
-
-          if (!foundChapters.c1 && /\bCHAPTER\s*(?:1|I)\b/i.test(text)) {
-            foundChapters.c1 = { title: 'Chapter 1: Introduction', page: pNum };
-          }
-          if (!foundChapters.c2 && /\bCHAPTER\s*(?:2|II)\b/i.test(text)) {
-            foundChapters.c2 = { title: 'Chapter 2: Review of Literature', page: pNum };
-          }
-          if (!foundChapters.c3 && /\bCHAPTER\s*(?:3|III)\b/i.test(text)) {
-            foundChapters.c3 = { title: 'Chapter 3: Methodology', page: pNum };
-          }
-          if (!foundChapters.c4 && /\bCHAPTER\s*(?:4|IV)\b/i.test(text)) {
-            foundChapters.c4 = { title: 'Chapter 4: Results & Discussion', page: pNum };
-          }
-          if (!foundChapters.c5 && /\bCHAPTER\s*(?:5|V)\b/i.test(text)) {
-            foundChapters.c5 = { title: 'Chapter 5: Conclusion', page: pNum };
-          }
-          if (!foundChapters.ref && /\b(REFERENCES|BIBLIOGRAPHY)\b/i.test(text) && pNum > (foundChapters.c5?.page || total * 0.6)) {
-            foundChapters.ref = { title: 'References', page: pNum };
-          }
-          if (!foundChapters.app && /\b(APPENDICES|APPENDIX)\b/i.test(text) && pNum > (foundChapters.ref?.page || total * 0.75)) {
-            foundChapters.app = { title: 'Appendices', page: pNum };
+          if (detected.chap1 && detected.chap2 && detected.chap3 && detected.chap4 && detected.chap5) {
+            break;
           }
         }
-
-        if (foundChapters.c1 && foundChapters.c2 && foundChapters.c3 && foundChapters.c4 && foundChapters.c5 && foundChapters.ref) {
-          break;
-        }
-      }
-
-      const detectedList = [];
-      chapterPatterns.forEach(chap => {
-        if (foundChapters[chap.key]) {
-          detectedList.push(foundChapters[chap.key]);
-        }
-      });
-
-      if (detectedList.length > 0) {
-        setTableOfContents(detectedList);
-      }
-    } catch (err) {
-      console.warn("Chapter detection error:", err);
-    } finally {
-      setIsDetectingToc(false);
+      } catch (_) {}
     }
+
+    // Set accurate destination pages with guaranteed strictly ascending order
+    const c1 = detected.chap1 || (total > 15 ? Math.max(1, Math.round(total * 0.08)) : 1);
+    const c2 = Math.max(c1 + 1, detected.chap2 || (total > 15 ? Math.round(total * 0.22) : 5));
+    const c3 = Math.max(c2 + 1, detected.chap3 || (total > 15 ? Math.round(total * 0.45) : 10));
+    const c4 = Math.max(c3 + 1, detected.chap4 || (total > 15 ? Math.round(total * 0.65) : 15));
+    const c5 = Math.min(total, Math.max(c4 + 1, detected.chap5 || (total > 15 ? Math.round(total * 0.82) : 20)));
+
+    setChapterPages({
+      chap1: c1,
+      chap2: c2,
+      chap3: c3,
+      chap4: c4,
+      chap5: c5,
+    });
   }, []);
 
   const onDocumentLoadSuccess = useCallback((pdfDoc) => {
@@ -1084,36 +1082,53 @@ function ArchivePaperViewer() {
     }
 
     if (activeTab === 'toc') {
-      const activeList = tableOfContents.length > 0 ? tableOfContents : defaultToc;
+      const chapters = [
+        { label: 'Chapter 1: Introduction', page: chapterPages.chap1 },
+        { label: 'Chapter 2: Review of Literature', page: chapterPages.chap2 },
+        { label: 'Chapter 3: Methodology', page: chapterPages.chap3 },
+        { label: 'Chapter 4: Results & Discussion', page: chapterPages.chap4 },
+        { label: 'Chapter 5: Conclusion', page: chapterPages.chap5 },
+      ];
+
       return (
         <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800">
           <div className="flex justify-between items-center mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">
-            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Table of Contents</h2>
-            {isDetectingToc && (
-              <span className="text-[10px] text-stone-400 dark:text-gray-400 animate-pulse font-medium">Scanning chapters...</span>
-            )}
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">
+              Table of Contents
+            </h2>
           </div>
           <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
-            {activeList.map((chap, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleChapterClick(chap.page)}
-                className={`text-left px-3.5 py-2.5 text-xs font-medium rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between group ${
-                  currentPage === chap.page
-                    ? 'bg-[#5a1528] text-white ring-2 ring-[#7a2039]'
-                    : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'
-                }`}
-              >
-                <div className="flex flex-col gap-0.5 pr-2">
-                  <span className="font-semibold">{chap.title}</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] bg-black/25 px-2 py-0.5 rounded text-white/90 font-mono">p. {chap.page}</span>
-                  <span className="text-[11px] opacity-75 group-hover:translate-x-0.5 transition-transform">›</span>
-                </div>
-              </button>
-            ))}
+            {chapters.map((chap, idx) => {
+              const nextPage = chapters[idx + 1]?.page;
+              const isCurrent =
+                currentPage >= chap.page && (!nextPage || currentPage < nextPage);
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    handleChapterClick(chap.page);
+                    if (isDrawer) setIsMobileDrawerOpen(false);
+                  }}
+                  className={`text-left px-3.5 py-2.5 text-xs font-medium rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between group ${
+                    isCurrent
+                      ? 'bg-[#5a1528] text-white ring-2 ring-[#7a2039]'
+                      : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'
+                  }`}
+                >
+                  <span className="font-semibold">{chap.label}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] bg-black/25 px-2 py-0.5 rounded text-white/90 font-mono">
+                      p. {chap.page}
+                    </span>
+                    <span className="text-[11px] opacity-75 group-hover:translate-x-0.5 transition-transform">
+                      ›
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       );
