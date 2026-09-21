@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -167,7 +168,7 @@ export default function UserManagement() {
         // Toggle Auth via backend
         if (user.uid || user.email) {
           try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+            const backendUrl = getBackendUrl();
             const endpoint = newStatus === 'inactive' ? 'disable-auth-user' : 'enable-auth-user';
             await authFetch(`${backendUrl}/api/${endpoint}`, { uid: user.uid, email: user.email });
           } catch (err) {

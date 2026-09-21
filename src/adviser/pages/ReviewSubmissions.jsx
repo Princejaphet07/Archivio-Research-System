@@ -9,6 +9,7 @@ import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
+import { getBackendUrl } from '../../utils/backendUrl';
 import CertificateModal from '../../components/CertificateModal';
 
 function ReviewSubmissions() {
@@ -37,7 +38,7 @@ function ReviewSubmissions() {
   const [msgStatus, setMsgStatus] = useState(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [certModalItem, setCertModalItem] = useState(null);
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+  const BACKEND_URL = getBackendUrl();
 
   // Fetch real data from Firebase
   useEffect(() => {

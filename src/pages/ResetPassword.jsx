@@ -5,6 +5,7 @@ import { verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
 import newIcon from '../assets/new icon.png';
 import loginBg from '../assets/parchment.png';
 import Swal from 'sweetalert2';
+import { getBackendUrl } from '../utils/backendUrl';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -15,9 +16,7 @@ export default function ResetPassword() {
   const oobCode = searchParams.get('oobCode') || searchParams.get('code') || '';
   const paramEmail = searchParams.get('email') || '';
 
-  const API_URL = import.meta.env.VITE_BACKEND_URL 
-    ? `${import.meta.env.VITE_BACKEND_URL}/api` 
-    : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:3001/api');
+  const API_URL = `${getBackendUrl()}/api`;
 
   const [email, setEmail] = useState(paramEmail);
   const [verifyingCode, setVerifyingCode] = useState(true);

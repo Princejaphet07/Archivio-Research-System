@@ -7,6 +7,7 @@ import newIcon from '../../assets/new icon.png';
 import loginBg from '../../assets/parchment.png';
 import Swal from 'sweetalert2';
 import ReCaptcha from '../../components/ReCaptcha';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function ForgotPassword() {
   const [captchaToken, setCaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
   
-  const API_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:3001/api';
+  const API_URL = `${getBackendUrl()}/api`;
 
   useEffect(() => {
     let timer;
