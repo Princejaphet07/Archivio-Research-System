@@ -150,6 +150,10 @@ function ArchivePaperViewer() {
   const [pdfSource, setPdfSource] = useState(null);
   const [isPdfLoading, setIsPdfLoading] = useState(true);
 
+  // Dynamic Table of Contents detection
+  const [tableOfContents, setTableOfContents] = useState([]);
+  const [isDetectingToc, setIsDetectingToc] = useState(false);
+
   // PDF.js options to disable range requests & streaming (which cause Firebase Storage redirect errors)
   const pdfOptions = useMemo(() => ({
     disableRange: true,
@@ -224,9 +228,157 @@ function ArchivePaperViewer() {
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, +(prev - 0.25).toFixed(2)));
   const handleResetZoom = () => setZoomLevel(1);
 
-  function onDocumentLoadSuccess({ numPages }) {
-    setNumPages(numPages);
-  }
+  // Proportional baseline TOC based on paper length
+  const defaultToc = useMemo(() => {
+    if (!numPages || numPages <= 1) {
+      return [
+        { title: 'Chapter 1: Introduction', page: 1 },
+        { title: 'Chapter 2: Review of Literature', page: 5 },
+        { title: 'Chapter 3: Methodology', page: 10 },
+        { title: 'Chapter 4: Results & Discussion', page: 15 },
+        { title: 'Chapter 5: Conclusion', page: 20 }
+      ];
+    }
+    return [
+      { title: 'Chapter 1: Introduction', page: Math.max(1, Math.round(numPages * 0.08)) },
+      { title: 'Chapter 2: Review of Literature', page: Math.max(2, Math.round(numPages * 0.16)) },
+      { title: 'Chapter 3: Methodology', page: Math.max(3, Math.round(numPages * 0.40)) },
+      { title: 'Chapter 4: Results & Discussion', page: Math.max(4, Math.round(numPages * 0.65)) },
+      { title: 'Chapter 5: Conclusion', page: Math.max(5, Math.round(numPages * 0.85)) },
+    ];
+  }, [numPages]);
+
+  // Deep detection: scan PDF bookmarks and chapter headings across pages
+  const detectChapters = useCallback(async (pdfDoc) => {
+    if (!pdfDoc) return;
+    setIsDetectingToc(true);
+
+    // 1. Try embedded PDF bookmarks / outline
+    try {
+      const outline = await pdfDoc.getOutline();
+      if (outline && outline.length > 0) {
+        const parsedOutline = [];
+        for (const item of outline) {
+          let pageNum = null;
+          try {
+            if (typeof item.dest === 'string') {
+              const dest = await pdfDoc.getDestination(item.dest);
+              if (dest && dest[0]) {
+                const pageIdx = await pdfDoc.getPageIndex(dest[0]);
+                pageNum = pageIdx + 1;
+              }
+            } else if (Array.isArray(item.dest) && item.dest[0]) {
+              const pageIdx = await pdfDoc.getPageIndex(item.dest[0]);
+              pageNum = pageIdx + 1;
+            }
+          } catch (_) {}
+          if (pageNum && item.title) {
+            parsedOutline.push({ title: item.title.trim(), page: pageNum });
+          }
+        }
+        if (parsedOutline.length > 0) {
+          setTableOfContents(parsedOutline);
+          setIsDetectingToc(false);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 2. High-speed batch text scan across pages to locate exact chapter pages
+    try {
+      const total = pdfDoc.numPages;
+      const foundChapters = {};
+      const chapterPatterns = [
+        { key: 'c1', label: 'Chapter 1: Introduction', regex: /\bCHAPTER\s*(?:1|I)\b/i },
+        { key: 'c2', label: 'Chapter 2: Review of Literature', regex: /\bCHAPTER\s*(?:2|II)\b/i },
+        { key: 'c3', label: 'Chapter 3: Methodology', regex: /\bCHAPTER\s*(?:3|III)\b/i },
+        { key: 'c4', label: 'Chapter 4: Results & Discussion', regex: /\bCHAPTER\s*(?:4|IV)\b/i },
+        { key: 'c5', label: 'Chapter 5: Conclusion', regex: /\bCHAPTER\s*(?:5|V)\b/i },
+        { key: 'ref', label: 'References', regex: /\b(REFERENCES|BIBLIOGRAPHY)\b/i },
+        { key: 'app', label: 'Appendices', regex: /\b(APPENDICES|APPENDIX)\b/i },
+      ];
+
+      const batchSize = 10;
+      for (let i = 1; i <= total; i += batchSize) {
+        const batch = [];
+        for (let j = i; j < i + batchSize && j <= total; j++) {
+          batch.push((async (pNum) => {
+            try {
+              const page = await pdfDoc.getPage(pNum);
+              const tc = await page.getTextContent();
+              const text = tc.items.map(it => it.str).join(' ');
+              return { pNum, text };
+            } catch (_) {
+              return { pNum, text: '' };
+            }
+          })(j));
+        }
+
+        const results = await Promise.all(batch);
+        for (const { pNum, text } of results) {
+          if (!text) continue;
+
+          // Ignore Table of Contents summary pages that list multiple chapters together
+          let mentionCount = 0;
+          if (/\bCHAPTER\s*(?:1|I)\b/i.test(text)) mentionCount++;
+          if (/\bCHAPTER\s*(?:2|II)\b/i.test(text)) mentionCount++;
+          if (/\bCHAPTER\s*(?:3|III)\b/i.test(text)) mentionCount++;
+          if (/\bCHAPTER\s*(?:4|IV)\b/i.test(text)) mentionCount++;
+          if (/\bCHAPTER\s*(?:5|V)\b/i.test(text)) mentionCount++;
+          if (mentionCount >= 2) continue;
+
+          if (!foundChapters.c1 && /\bCHAPTER\s*(?:1|I)\b/i.test(text)) {
+            foundChapters.c1 = { title: 'Chapter 1: Introduction', page: pNum };
+          }
+          if (!foundChapters.c2 && /\bCHAPTER\s*(?:2|II)\b/i.test(text)) {
+            foundChapters.c2 = { title: 'Chapter 2: Review of Literature', page: pNum };
+          }
+          if (!foundChapters.c3 && /\bCHAPTER\s*(?:3|III)\b/i.test(text)) {
+            foundChapters.c3 = { title: 'Chapter 3: Methodology', page: pNum };
+          }
+          if (!foundChapters.c4 && /\bCHAPTER\s*(?:4|IV)\b/i.test(text)) {
+            foundChapters.c4 = { title: 'Chapter 4: Results & Discussion', page: pNum };
+          }
+          if (!foundChapters.c5 && /\bCHAPTER\s*(?:5|V)\b/i.test(text)) {
+            foundChapters.c5 = { title: 'Chapter 5: Conclusion', page: pNum };
+          }
+          if (!foundChapters.ref && /\b(REFERENCES|BIBLIOGRAPHY)\b/i.test(text) && pNum > (foundChapters.c5?.page || total * 0.6)) {
+            foundChapters.ref = { title: 'References', page: pNum };
+          }
+          if (!foundChapters.app && /\b(APPENDICES|APPENDIX)\b/i.test(text) && pNum > (foundChapters.ref?.page || total * 0.75)) {
+            foundChapters.app = { title: 'Appendices', page: pNum };
+          }
+        }
+
+        if (foundChapters.c1 && foundChapters.c2 && foundChapters.c3 && foundChapters.c4 && foundChapters.c5 && foundChapters.ref) {
+          break;
+        }
+      }
+
+      const detectedList = [];
+      chapterPatterns.forEach(chap => {
+        if (foundChapters[chap.key]) {
+          detectedList.push(foundChapters[chap.key]);
+        }
+      });
+
+      if (detectedList.length > 0) {
+        setTableOfContents(detectedList);
+      }
+    } catch (err) {
+      console.warn("Chapter detection error:", err);
+    } finally {
+      setIsDetectingToc(false);
+    }
+  }, []);
+
+  const onDocumentLoadSuccess = useCallback((pdfDoc) => {
+    const pages = pdfDoc?.numPages || 0;
+    setNumPages(pages);
+    if (pdfDoc) {
+      detectChapters(pdfDoc);
+    }
+  }, [detectChapters]);
 
   const scrollToPage = useCallback((pg) => {
     const clamped = Math.max(1, Math.min(numPages || pg, pg));
@@ -708,16 +860,10 @@ function ArchivePaperViewer() {
     });
   };
 
-  const handleChapterClick = (chap) => {
-    const map = {
-      'Chapter 1: Introduction': 1,
-      'Chapter 2: Review of Literature': 5,
-      'Chapter 3: Methodology': 10,
-      'Chapter 4: Results & Discussion': 15,
-      'Chapter 5: Conclusion': 20
-    };
-    if (map[chap]) {
-      scrollToPage(map[chap]);
+  const handleChapterClick = (targetPage) => {
+    const pageNum = typeof targetPage === 'number' ? targetPage : parseInt(targetPage, 10);
+    if (!isNaN(pageNum) && pageNum >= 1) {
+      scrollToPage(pageNum);
       if (isMobile) {
         setIsMobileDrawerOpen(false);
       }
@@ -938,18 +1084,34 @@ function ArchivePaperViewer() {
     }
 
     if (activeTab === 'toc') {
+      const activeList = tableOfContents.length > 0 ? tableOfContents : defaultToc;
       return (
         <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800">
-          <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200 mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">Table of Contents</h2>
-          <div className="flex flex-col gap-2 flex-1">
-            {['Chapter 1: Introduction', 'Chapter 2: Review of Literature', 'Chapter 3: Methodology', 'Chapter 4: Results & Discussion', 'Chapter 5: Conclusion'].map((chap, idx) => (
+          <div className="flex justify-between items-center mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Table of Contents</h2>
+            {isDetectingToc && (
+              <span className="text-[10px] text-stone-400 dark:text-gray-400 animate-pulse font-medium">Scanning chapters...</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            {activeList.map((chap, idx) => (
               <button
                 key={idx}
-                onClick={() => handleChapterClick(chap)}
-                className="text-left px-3.5 py-2.5 text-xs font-medium bg-[#7a2039] hover:bg-[#5a1528] text-white rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between"
+                type="button"
+                onClick={() => handleChapterClick(chap.page)}
+                className={`text-left px-3.5 py-2.5 text-xs font-medium rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between group ${
+                  currentPage === chap.page
+                    ? 'bg-[#5a1528] text-white ring-2 ring-[#7a2039]'
+                    : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'
+                }`}
               >
-                <span>{chap}</span>
-                <span className="text-[10px] opacity-75">›</span>
+                <div className="flex flex-col gap-0.5 pr-2">
+                  <span className="font-semibold">{chap.title}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] bg-black/25 px-2 py-0.5 rounded text-white/90 font-mono">p. {chap.page}</span>
+                  <span className="text-[11px] opacity-75 group-hover:translate-x-0.5 transition-transform">›</span>
+                </div>
               </button>
             ))}
           </div>
