@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import { useNetworkStatus } from './NetworkStatusPill';
+import { getBackendUrl } from '../utils/backendUrl';
 
 const GUEST_MAX_QUERIES = 3;
 
@@ -444,7 +445,7 @@ export default function HomepageChatbot() {
         - If the user speaks in Cebuano/Bisaya, reply in pure, natural, and conversational Bisaya (Cebuano). Do not use awkward slang or Tagalog-Bisaya mix unless the user does. Your Bisaya must be extremely fluent and authentic.
         ${systemData}
       `;
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {

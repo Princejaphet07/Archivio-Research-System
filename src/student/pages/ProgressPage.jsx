@@ -9,8 +9,7 @@ import PortalHeader from '../components/PortalHeader';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
 import CertificateModal from '../../components/CertificateModal';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
 
@@ -201,7 +200,8 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     setMsgSending(true);
     setMsgStatus(null);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/send-student-message`, {
+      const backendUrl = getBackendUrl();
+      const res = await authFetch(`${backendUrl}/api/send-student-message`, {
           adviserEmail: adviserEmail,
           adviserName: adviserName,
           studentName: studentData?.displayName || 'Student',

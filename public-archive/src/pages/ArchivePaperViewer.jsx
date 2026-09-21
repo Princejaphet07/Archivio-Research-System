@@ -18,6 +18,7 @@ import {
   trackCitation,
   trackAiChat
 } from '../utils/analytics';
+import { getBackendUrl } from '../utils/backendUrl';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -357,7 +358,7 @@ function ArchivePaperViewer() {
     trackAiChat(paper, userMessage.length);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {

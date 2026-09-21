@@ -5,6 +5,7 @@ import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
 import ReCaptcha from '../../components/ReCaptcha';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function StudentForgotPassword({ onSwitchPage }) {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export default function StudentForgotPassword({ onSwitchPage }) {
   const [captchaToken, setCaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:3001/api';
+  const API_URL = `${getBackendUrl()}/api`;
 
   useEffect(() => {
     let timer;

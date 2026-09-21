@@ -7,6 +7,7 @@ import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/parchment.png';
 import Swal from 'sweetalert2';
 import ReCaptcha from '../components/ReCaptcha';
+import { getBackendUrl } from '../utils/backendUrl';
 
 export default function ArchiveForgotPassword() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -62,9 +63,7 @@ export default function ArchiveForgotPassword() {
     setLoading(true);
 
     try {
-      const API_URL = import.meta.env.VITE_BACKEND_URL 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api` 
-        : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://archivio-email-service.onrender.com/api');
+      const API_URL = `${getBackendUrl()}/api`;
 
       let sentSuccessfully = false;
 

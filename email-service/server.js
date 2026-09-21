@@ -12,7 +12,7 @@ const axios = require('axios');
 const dns = require('dns');
 require('dotenv').config();
 
-const { initializeApp, cert } = require('firebase-admin/app');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
 
@@ -38,16 +38,20 @@ if (!serviceAccount) {
   try {
     serviceAccount = require('./firebase-service-account.json');
   } catch (e) {
-    console.warn('Could not load local ./firebase-service-account.json');
+    // Expected in cloud deployment where Google Cloud default credentials are used
   }
 }
 
-if (serviceAccount) {
-  initializeApp({
-    credential: cert(serviceAccount)
-  });
-} else {
-  console.error('CRITICAL: No Firebase credentials found! Set FIREBASE_SERVICE_ACCOUNT or provide firebase-service-account.json.');
+if (getApps().length === 0) {
+  if (serviceAccount) {
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+    console.log('✅ Firebase Admin initialized with service account.');
+  } else {
+    initializeApp();
+    console.log('✅ Firebase Admin initialized with Google Cloud default credentials.');
+  }
 }
 
 const app = express();
@@ -156,19 +160,21 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 12000
 });
 
-// Test email connectivity
-if (process.env.BREVO_API_KEY) {
-  console.log('✅ Brevo HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
-} else if (process.env.RESEND_API_KEY) {
-  console.log('✅ Resend HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
-} else {
-  transporter.verify((error, success) => {
-    if (error) {
-      console.warn('⚠️ SMTP port notice (cloud host blocks SMTP ports; fallback webhooks active):', error.message);
-    } else {
-      console.log('✅ Email SMTP service ready');
-    }
-  });
+// Test email connectivity in standalone mode
+if (require.main === module) {
+  if (process.env.BREVO_API_KEY) {
+    console.log('✅ Brevo HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
+  } else if (process.env.RESEND_API_KEY) {
+    console.log('✅ Resend HTTPS API configured (Port 443 — Unblocked cloud delivery active)');
+  } else {
+    transporter.verify((error, success) => {
+      if (error) {
+        console.warn('⚠️ SMTP port notice (cloud host blocks SMTP ports; fallback webhooks active):', error.message);
+      } else {
+        console.log('✅ Email SMTP service ready');
+      }
+    });
+  }
 }
 
 // Diagnostic endpoint to test email providers connectivity directly from the host
@@ -1605,10 +1611,11 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // and cascading automatically if one model is throttled or exhausted.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-flash-lite-latest',
-  'gemini-3.1-flash-lite',
-  'gemini-3.5-flash-lite',
-  'gemini-3.5-flash'
+  'gemini-3.5-flash-lite',    // Fastest, most cost-effective
+  'gemini-3.1-flash-lite',    // Legacy but stable
+  'gemini-3.5-flash',          // Balanced speed and capability
+  'gemini-3.6-flash',          // Previous gen with good performance
+  'gemini-2.5-flash'           // Fallback to 2.5 series
 ];
 
 async function generateAIContentWithFallback(genAI, options, generatePayload) {
@@ -1885,8 +1892,8 @@ app.post('/api/ai/extract-abstract', async (req, res) => {
       arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
     }
     
-    // Parse PDF text using pdf-parse
-    const pdfData = await pdfParse(arrayBuffer);
+    // Parse PDF text using pdf-parse (limit to first 10 pages for speed - abstracts and intros are always at the start!)
+    const pdfData = await pdfParse(arrayBuffer, { max: 10 });
     const pdfText = pdfData.text.substring(0, 12000); // Truncate for GROQ limits
 
     // Use GROQ instead of Gemini
@@ -1943,7 +1950,7 @@ app.post('/api/ai/summarize-pdf', async (req, res) => {
     if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
     
     const arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
-    const pdfData = await pdfParse(arrayBuffer);
+    const pdfData = await pdfParse(arrayBuffer, { max: 10 });
     
     // Take first 10,000 characters for GROQ (it has smaller context limit than Gemini)
     const pdfText = pdfData.text.substring(0, 10000); 
@@ -2427,7 +2434,7 @@ app.post('/api/ai/similarity-check', async (req, res) => {
 });
 
 // Start the server if executed directly (e.g. node server.js)
-if (process.env.NODE_ENV !== 'test') {
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`
 ╔═══════════════════════════════════════╗

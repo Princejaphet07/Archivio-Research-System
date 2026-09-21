@@ -1,5 +1,5 @@
 /**
- * Centralized Backend URL resolver for ARCHIVIO.
+ * Centralized Backend URL resolver for ARCHIVIO Public Archive.
  * 
  * Automatically resolves to:
  * - http://localhost:3001 when running locally on localhost/127.0.0.1

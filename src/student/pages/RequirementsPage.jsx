@@ -199,57 +199,43 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         status: 'Success'
       });
 
-      // Background AI Abstract Extraction (lightweight URL-based dispatch with auto-dismiss)
+      // Background AI Abstract Extraction (sets persistent abstractGenerating flag in Firestore)
       if (item.title === 'Final Manuscript' && savedDocId && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')) {
-        Swal.fire({
-          toast: true,
-          position: 'bottom-end',
-          title: 'AI is reading your PDF...',
-          text: 'Generating an abstract based on your research, please wait.',
-          showConfirmButton: false,
-          didOpen: () => { Swal.showLoading(); }
-        });
+        try {
+          await updateDoc(doc(db, 'submissions', savedDocId), { abstractGenerating: true });
+        } catch (e) {
+          console.warn('Failed to set abstractGenerating flag:', e);
+        }
 
-        setTimeout(async () => {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s safety timeout
-
+        // Detached background execution: user can navigate to any tab while indicator stays active
+        (async () => {
           try {
             const backendUrl = getBackendUrl();
             const res = await fetch(`${backendUrl}/api/ai/extract-abstract`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pdfUrl: fileUrl }),
-              signal: controller.signal
+              body: JSON.stringify({ pdfUrl: fileUrl })
             });
-            clearTimeout(timeoutId);
 
             if (res.ok) {
               const data = await res.json();
               if (data.abstract) {
-                await updateDoc(doc(db, 'submissions', savedDocId), { abstract: data.abstract });
-                
-                Swal.fire({
-                  toast: true,
-                  position: 'bottom-end',
-                  icon: 'success',
-                  title: 'AI successfully generated an abstract for this PDF!',
-                  showConfirmButton: false,
-                  timer: 4000
+                await updateDoc(doc(db, 'submissions', savedDocId), { 
+                  abstract: data.abstract,
+                  abstractGenerating: false
                 });
                 return;
               }
             }
 
-            // Close the loading toast if no abstract was returned
-            Swal.close();
+            await updateDoc(doc(db, 'submissions', savedDocId), { abstractGenerating: false });
           } catch (aiErr) {
-            clearTimeout(timeoutId);
             console.warn('Background AI extraction notice (abstract can be set in manuscript settings):', aiErr.message || aiErr);
-            // Dismiss the toast so it doesn't get stuck on screen
-            Swal.close();
+            try {
+              await updateDoc(doc(db, 'submissions', savedDocId), { abstractGenerating: false });
+            } catch (e) {}
           }
-        }, 1000); // slight delay to let UI breathe
+        })();
       }
 
     } catch (error) {

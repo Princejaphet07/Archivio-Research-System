@@ -22,12 +22,13 @@ jobs:
         run: |
           npm install
           npm --prefix public-archive install
+          npm --prefix email-service install
 
       - name: Configure Production Environment Variables
         run: |
-          echo "VITE_BACKEND_URL=https://archivio-email-service.onrender.com" > .env
+          echo "VITE_BACKEND_URL=" > .env
           echo "VITE_RECAPTCHA_SITE_KEY=6Lf197otAAAAAKWaNv2gSG5G2pJBQeHa0Vh8v5IB" >> .env
-          echo "VITE_BACKEND_URL=https://archivio-email-service.onrender.com" > public-archive/.env
+          echo "VITE_BACKEND_URL=" > public-archive/.env
           echo "VITE_RECAPTCHA_SITE_KEY=6Lf197otAAAAAKWaNv2gSG5G2pJBQeHa0Vh8v5IB" >> public-archive/.env
 
       - name: Build Both Applications
@@ -38,5 +39,5 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      - name: Deploy to Firebase Hosting (Multi-Site)
-        run: npx firebase-tools deploy --only hosting
+      - name: Deploy to Firebase Hosting & Functions
+        run: npx firebase-tools deploy --only hosting,functions

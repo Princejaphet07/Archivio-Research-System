@@ -24,6 +24,9 @@ function App() {
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
+  const [showAbstractSuccess, setShowAbstractSuccess] = useState(false);
+  const prevGeneratingRef = React.useRef(false);
 
   React.useEffect(() => {
     const unsub = onSnapshot(
@@ -61,6 +64,42 @@ function App() {
     const interval = setInterval(updatePresence, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Persistent AI Abstract listener for student's submission (keeps indicator visible across tab switches)
+  React.useEffect(() => {
+    if (!studentInfo?.uid) return;
+    const lookupUid = (studentInfo.role === 'member' && studentInfo.leaderUid) ? studentInfo.leaderUid : studentInfo.uid;
+    if (!lookupUid) return;
+
+    const subQ = query(collection(db, 'submissions'), where('studentUid', '==', lookupUid));
+    const unsub = onSnapshot(subQ, (snapshot) => {
+      if (!snapshot.empty) {
+        const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        subs.sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        const latest = subs[0];
+        const generating = !!latest.abstractGenerating;
+
+        if (prevGeneratingRef.current && !generating && latest.abstract) {
+          setShowAbstractSuccess(true);
+          const t = setTimeout(() => setShowAbstractSuccess(false), 5000);
+          return () => clearTimeout(t);
+        }
+
+        prevGeneratingRef.current = generating;
+        setIsGeneratingAbstract(generating);
+      } else {
+        setIsGeneratingAbstract(false);
+      }
+    }, (err) => {
+      console.warn('Submissions listener notice in App.jsx:', err.message);
+    });
+
+    return () => unsub();
+  }, [studentInfo?.uid, studentInfo?.leaderUid, studentInfo?.role]);
 
   // Check if URL has activation token or signup path
   React.useEffect(() => {
@@ -378,6 +417,31 @@ function App() {
               setActiveTab={handleNavigation}
             />
           </div>
+
+          {/* PERSISTENT FLOATING AI ABSTRACT GENERATION INDICATOR (naas ubos) */}
+          {isGeneratingAbstract && (
+            <div className="fixed bottom-6 right-6 z-[9999] bg-[#7B1F35] dark:bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700 flex items-center gap-3 animate-fade-in pointer-events-auto">
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0"></div>
+              <div>
+                <p className="text-[13px] font-bold leading-tight flex items-center gap-1.5">
+                  <span>✨</span> AI is reading your PDF...
+                </p>
+                <p className="text-[11px] text-white/80 dark:text-stone-300">
+                  Generating abstract in the background
+                </p>
+              </div>
+            </div>
+          )}
+
+          {showAbstractSuccess && (
+            <div className="fixed bottom-6 right-6 z-[9999] bg-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-fade-in pointer-events-auto">
+              <svg className="w-5 h-5 text-emerald-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+              <div>
+                <p className="text-[13px] font-bold leading-tight">AI Abstract Generated!</p>
+                <p className="text-[11px] text-emerald-100">Abstract has been updated in Manuscript.</p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

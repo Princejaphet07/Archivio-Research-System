@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo.png';
 import bgTexture from '../assets/parchment.png';
 import Swal from 'sweetalert2';
+import { getBackendUrl } from '../utils/backendUrl';
 
 export default function ArchiveResetPassword() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -17,9 +18,7 @@ export default function ArchiveResetPassword() {
   const oobCode = searchParams.get('oobCode') || searchParams.get('code') || '';
   const paramEmail = searchParams.get('email') || '';
 
-  const API_URL = import.meta.env.VITE_BACKEND_URL 
-    ? `${import.meta.env.VITE_BACKEND_URL}/api` 
-    : 'https://archivio-email-service.onrender.com/api';
+  const API_URL = `${getBackendUrl()}/api`;
 
   const [email, setEmail] = useState(paramEmail);
   const [verifyingCode, setVerifyingCode] = useState(true);

@@ -9,6 +9,7 @@ import { Card, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import CertificateModal from '../../components/CertificateModal';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role, leaderUid }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -123,7 +124,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     
     setExtractingKeywords(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/ai/extract-keywords`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -189,7 +190,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             aiBtn.innerHTML = '⏳ Extracting...';
             aiBtn.style.opacity = '0.7';
             try {
-              const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+              const backendUrl = getBackendUrl();
               const res = await fetch(`${backendUrl}/api/ai/extract-keywords`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -252,7 +253,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     });
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/ai/precheck`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -377,7 +378,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     });
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/ai/similarity-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -615,9 +616,19 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       </button>
                     </div>
                   </div>
-                  <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 dark:text-stone-500 italic' : 'text-gray-600 dark:text-stone-300'}`}>
-                    {abstract}
-                  </p>
+                  {submission?.abstractGenerating ? (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-xl text-amber-900 dark:text-amber-200">
+                      <div className="w-4 h-4 border-2 border-[#7B1F35] dark:border-amber-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                      <div>
+                        <p className="text-[13px] font-bold">AI is reading your manuscript PDF...</p>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">Generating abstract in the background. It will automatically appear here once completed.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 dark:text-stone-500 italic' : 'text-gray-600 dark:text-stone-300'}`}>
+                      {abstract}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
