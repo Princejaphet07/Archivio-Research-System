@@ -13,7 +13,7 @@ import SettingsPage from './pages/SettingsPage'; // 1. Added SettingsPage import
 import { logActivity } from '../firebase/logActivity';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
 function App() {
@@ -23,14 +23,16 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Global Maintenance Mode Listener
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-  const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
   const [showAbstractSuccess, setShowAbstractSuccess] = useState(false);
+  const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
   const prevGeneratingRef = React.useRef(false);
 
   React.useEffect(() => {
     const unsub = onSnapshot(
-      doc(db, 'settings', 'system_preferences'),
+      doc(db, 'system', 'preferences'),
       (snap) => {
         if (snap.exists() && snap.data().maintenance === true) {
           setIsMaintenanceMode(true);
@@ -49,14 +51,31 @@ function App() {
   React.useEffect(() => {
     const updatePresence = async () => {
       const user = auth.currentUser;
-      if (user) {
-        try {
-          await updateDoc(doc(db, 'users', user.uid), {
+      if (!user) return;
+
+      try {
+        // 1. Update presence in students collection (primary student document)
+        await setDoc(doc(db, 'students', user.uid), {
+          lastActive: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+
+        // 2. Ensure/update users collection for cross-portal presence tracking (ChatWidget)
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef).catch(() => null);
+        if (userSnap && userSnap.exists()) {
+          await updateDoc(userRef, {
             lastActive: serverTimestamp()
-          });
-        } catch (e) {
-          console.error('Failed to update presence', e);
+          }).catch(() => {});
+        } else {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email || '',
+            role: 'student',
+            lastActive: serverTimestamp()
+          }, { merge: true }).catch(() => {});
         }
+      } catch (e) {
+        console.warn('Presence ping notice (non-fatal):', e?.message || e);
       }
     };
     
