@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { db } from '../firebase/config';
@@ -36,6 +36,7 @@ const HighlightedText = ({ text, highlight }) => {
 };
 
 function ArchiveBrowse() {
+  const navigate = useNavigate();
   const { isOnline } = useNetworkStatus();
   const [publishedPapers, setPublishedPapers] = useState([]);
   const location = useLocation();
@@ -203,7 +204,10 @@ function ArchiveBrowse() {
   };
 
   const handleViewPaper = (e, paperId) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!currentUser) {
       Swal.fire({
         title: 'Sign In Required',
@@ -772,11 +776,21 @@ function ArchiveBrowse() {
                         Save
                       </span>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                      <button onClick={() => setPreviewPaper(paper)} className="px-5 py-2 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 text-sm font-medium rounded hover:bg-stone-200 dark:hover:bg-gray-600 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPaper(paper)}
+                        className="px-5 py-2.5 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-gray-600 transition active:scale-95 cursor-pointer text-center w-full sm:w-auto"
+                        style={{ touchAction: 'manipulation' }}
+                      >
                         Quick Preview
                       </button>
-                      <button onClick={(e) => handleViewPaper(e, paper.id)} className="px-5 py-2 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-medium rounded hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition cursor-pointer text-center sm:text-left w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={(e) => handleViewPaper(e, paper.id)}
+                        className="px-5 py-2.5 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-semibold rounded-lg hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition active:scale-95 cursor-pointer text-center w-full sm:w-auto"
+                        style={{ touchAction: 'manipulation' }}
+                      >
                         Read Full Text
                       </button>
                     </div>
@@ -846,13 +860,27 @@ function ArchiveBrowse() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-stone-200 dark:border-gray-800 bg-stone-50/50 dark:bg-gray-900/50 flex justify-end gap-3">
-              <button onClick={() => setPreviewPaper(null)} className="px-6 py-2.5 rounded font-medium text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-gray-800 transition cursor-pointer">
+            <div className="p-4 sm:p-6 border-t border-stone-200 dark:border-gray-800 bg-stone-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row justify-end gap-2.5 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPreviewPaper(null)}
+                className="px-6 py-2.5 rounded-lg font-medium text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-gray-800 transition active:scale-95 cursor-pointer text-center w-full sm:w-auto order-2 sm:order-1"
+              >
                 Close
               </button>
-              <button onClick={(e) => { setPreviewPaper(null); handleViewPaper(e, previewPaper.id); }} className="px-8 py-2.5 bg-[#7a2039] text-white font-bold rounded shadow-lg hover:bg-[#5a1528] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
-                Open Full PDF
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              <button
+                type="button"
+                onClick={(e) => {
+                  setPreviewPaper(null);
+                  handleViewPaper(e, previewPaper.id);
+                }}
+                className="px-8 py-2.5 bg-[#7a2039] text-white font-bold rounded-lg shadow-lg hover:bg-[#5a1528] hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto order-1 sm:order-2"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <span>Open Full PDF</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </button>
             </div>
           </div>
