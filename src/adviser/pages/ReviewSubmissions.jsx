@@ -171,7 +171,7 @@ function ReviewSubmissions() {
     });
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/ai/similarity-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
