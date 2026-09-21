@@ -30,17 +30,91 @@ const reportTypes = [
   },
 ];
 
-const formatDepartment = (deptStr) => {
-  if (!deptStr) return 'N/A';
-  if (deptStr.toLowerCase().includes('information tech')) return 'College of Information Technology';
-  if (deptStr.toLowerCase().includes('business') || deptStr.toLowerCase().includes('accountancy')) return 'College of Business and Accountancy';
-  if (deptStr.toLowerCase().includes('education')) return 'College of Education';
-  if (deptStr.toLowerCase().includes('arts') || deptStr.toLowerCase().includes('sciences')) return 'College of Arts and Sciences';
-  if (deptStr.toLowerCase().includes('criminology')) return 'College of Criminology';
-  if (deptStr.toLowerCase().includes('engineering')) return 'College of Engineering';
-  if (deptStr.toLowerCase().includes('nursing')) return 'College of Nursing';
-  if (deptStr.toLowerCase().includes('maritime')) return 'College of Maritime Education';
-  return deptStr;
+const formatDepartment = (deptStr, activeDepartments = [], activePrograms = []) => {
+  const defaultDept = (activeDepartments && activeDepartments.length > 0)
+    ? (activeDepartments.find(d => d.status === 'Active')?.name || activeDepartments[0]?.name || 'College of Information Technology')
+    : 'College of Information Technology';
+
+  if (!deptStr || typeof deptStr !== 'string') return defaultDept;
+
+  const trimmed = deptStr.trim();
+  if (['uncategorized', 'unknown', 'n/a', 'none', ''].includes(trimmed.toLowerCase())) {
+    return defaultDept;
+  }
+
+  const lower = trimmed.toLowerCase();
+
+  // Check matching against database departments
+  if (activeDepartments && activeDepartments.length > 0) {
+    const found = activeDepartments.find(d => {
+      if (!d.name) return false;
+      const dLower = d.name.toLowerCase();
+      return dLower === lower || lower.includes(dLower) || dLower.includes(lower);
+    });
+    if (found?.name) return found.name;
+  }
+
+  // Check matching against database programs
+  if (activePrograms && activePrograms.length > 0) {
+    const foundProg = activePrograms.find(p => {
+      const pNameLower = (p.name || '').toLowerCase();
+      const pCodeLower = (p.code || '').toLowerCase();
+      return (pCodeLower && (pCodeLower === lower || lower.includes(pCodeLower))) ||
+             (pNameLower && (pNameLower === lower || lower.includes(pNameLower) || pNameLower.includes(lower)));
+    });
+    if (foundProg?.school) return foundProg.school;
+  }
+
+  // Standard College keywords matching
+  if (
+    lower.includes('information tech') ||
+    lower.includes('bsit') ||
+    lower.includes('computer') ||
+    lower.includes('bscs') ||
+    lower.includes('it ') ||
+    lower === 'it' ||
+    lower.includes('cit') ||
+    lower.includes('software')
+  ) {
+    return 'College of Information Technology';
+  }
+
+  if (
+    lower.includes('business') ||
+    lower.includes('accountancy') ||
+    lower.includes('bsba') ||
+    lower.includes('bsa') ||
+    lower.includes('cba')
+  ) {
+    return 'College of Business and Accountancy';
+  }
+
+  if (lower.includes('education') || lower.includes('bsed') || lower.includes('beed')) {
+    return 'College of Education';
+  }
+
+  if (lower.includes('arts') || lower.includes('sciences') || lower.includes('cas')) {
+    return 'College of Arts and Sciences';
+  }
+
+  if (lower.includes('criminology') || lower.includes('crim')) {
+    return 'College of Criminology';
+  }
+
+  if (lower.includes('engineering') || lower.includes('eng')) {
+    return 'College of Engineering';
+  }
+
+  if (lower.includes('nursing') || lower.includes('bsn')) {
+    return 'College of Nursing';
+  }
+
+  if (lower.includes('maritime')) {
+    return 'College of Maritime Education';
+  }
+
+  // If no known college matched, default to school's active department
+  return defaultDept;
 };
 
 export default function Reports() {
@@ -49,6 +123,8 @@ export default function Reports() {
 
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [activeUsersTab, setActiveUsersTab] = useState(0);
 
@@ -60,6 +136,12 @@ export default function Reports() {
     });
     const unsubGroup = onSnapshot(collection(db, 'groups'), (snap) => {
       setGroups(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubDepts = onSnapshot(collection(db, 'departments'), (snap) => {
+      setDepartments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
+      setPrograms(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     let deansData = [];
@@ -79,7 +161,7 @@ export default function Reports() {
     const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Dean', dept: formatDepartment(d.data().department || 'N/A'), prog: 'Faculty / Head', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Dean', dept: formatDepartment(d.data().department), prog: 'Faculty / Head', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -88,7 +170,7 @@ export default function Reports() {
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       advisersData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Advisor', dept: formatDepartment(d.data().department || 'N/A'), prog: 'Faculty', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Advisor', dept: formatDepartment(d.data().department), prog: 'Faculty', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -97,14 +179,14 @@ export default function Reports() {
     const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
       studentsData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Student', dept: formatDepartment(d.data().course || 'N/A'), prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Student', dept: formatDepartment(d.data().course || d.data().department), prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
     });
 
     return () => {
-      unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents();
+      unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubDepts(); unsubProgs();
     };
   }, []);
 
@@ -113,20 +195,27 @@ export default function Reports() {
     return filteredSubs
       .filter(s => s.reviewStatus === 'published')
       .map((s, index) => {
-        const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
+        const group = groups.find(g => 
+          (g.id && (g.id === s.groupId || g.id === s.groupDocId)) ||
+          (s.studentUid && g.leaderUid === s.studentUid) ||
+          (s.groupName && g.groupName && g.groupName.trim().toLowerCase() === s.groupName.trim().toLowerCase()) ||
+          (g.researchTitle && (s.researchTitle || s.title) && g.researchTitle.trim().toLowerCase() === (s.researchTitle || s.title).trim().toLowerCase())
+        );
+        const student = allUsers.find(u => u.role === 'Student' && (u.id === s.studentUid || u.name === s.studentName));
+        const rawDept = s.department || group?.department || s.course || group?.course || student?.course || s.program || group?.program || student?.dept;
         const dDate = new Date(s.createdAt);
         return {
           docId: s.id,
           id: (index + 1).toString().padStart(2, '0'),
           title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
-          dept: formatDepartment(group?.program || s.program || group?.department || 'Unknown'),
-          cat: group?.category || s.category || 'Uncategorized',
+          dept: formatDepartment(rawDept, departments, programs),
+          cat: group?.category || s.category || 'General',
           sy: s.schoolYear || '2025-2026',
           date: dDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         };
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [submissions, groups, selectedYear, filterByAcademicYear]);
+  }, [submissions, groups, departments, programs, allUsers, selectedYear, filterByAcademicYear]);
 
   const usersData = useMemo(() => {
     let u = filterByAcademicYear(allUsers, 'createdAt');
@@ -140,9 +229,29 @@ export default function Reports() {
   const deptData = useMemo(() => {
     const filteredSubs = filterByAcademicYear(submissions, 'createdAt');
     const deptsMap = {};
+
+    // Initialize with active departments from DB or default
+    if (departments.length > 0) {
+      departments.forEach(d => {
+        if (d.name && d.name !== 'Uncategorized') {
+          deptsMap[d.name] = { sub: 0, pub: 0, end: 0, pend: 0 };
+        }
+      });
+    } else {
+      deptsMap['College of Information Technology'] = { sub: 0, pub: 0, end: 0, pend: 0 };
+    }
+
     filteredSubs.forEach(s => {
-      const group = groups.find(g => g.leaderUid === s.studentUid && (g.groupName === s.groupName || g.researchTitle === (s.researchTitle || s.title)));
-      const deptName = formatDepartment(group?.department || s.program || group?.program || 'Uncategorized');
+      const group = groups.find(g => 
+        (g.id && (g.id === s.groupId || g.id === s.groupDocId)) ||
+        (s.studentUid && g.leaderUid === s.studentUid) ||
+        (s.groupName && g.groupName && g.groupName.trim().toLowerCase() === s.groupName.trim().toLowerCase()) ||
+        (g.researchTitle && (s.researchTitle || s.title) && g.researchTitle.trim().toLowerCase() === (s.researchTitle || s.title).trim().toLowerCase())
+      );
+      const student = allUsers.find(u => u.role === 'Student' && (u.id === s.studentUid || u.name === s.studentName));
+      const rawDept = s.department || group?.department || s.course || group?.course || student?.course || s.program || group?.program || student?.dept || '';
+      const deptName = formatDepartment(rawDept, departments, programs);
+
       if (!deptsMap[deptName]) deptsMap[deptName] = { sub: 0, pub: 0, end: 0, pend: 0 };
       
       deptsMap[deptName].sub += 1;
@@ -151,11 +260,14 @@ export default function Reports() {
       if (s.reviewStatus === 'pending') deptsMap[deptName].pend += 1;
     });
 
-    return Object.entries(deptsMap).map(([dept, stats]) => {
-      const rate = stats.sub > 0 ? ((stats.pub / stats.sub) * 100).toFixed(1) + '%' : '—';
-      return { dept, ...stats, rate, status: stats.sub > 0 ? 'On Track' : 'Pending Setup' };
-    });
-  }, [submissions, groups, selectedYear, filterByAcademicYear]);
+    return Object.entries(deptsMap)
+      .filter(([dept]) => dept && dept !== 'Uncategorized' && dept !== 'N/A' && dept !== 'Unknown')
+      .map(([dept, stats]) => {
+        const rate = stats.sub > 0 ? ((stats.pub / stats.sub) * 100).toFixed(1) + '%' : '—';
+        return { dept, ...stats, rate, status: stats.sub > 0 ? 'On Track' : 'Pending Setup' };
+      })
+      .sort((a, b) => b.sub - a.sub);
+  }, [submissions, groups, departments, programs, allUsers, selectedYear, filterByAcademicYear]);
 
   // Analytics Data Preparation
   const COLORS = ['#7B1F35', '#D97706', '#1E8E3E', '#2563EB', '#8B5CF6', '#EC4899', '#059669'];
@@ -185,8 +297,10 @@ export default function Reports() {
     // 2. Top Departments
     const deptMap = {};
     publishedPapers.forEach(paper => {
-      const dept = formatDepartment(paper.department || paper.program);
-      deptMap[dept] = (deptMap[dept] || 0) + 1;
+      const dept = formatDepartment(paper.department || paper.program, departments, programs);
+      if (dept && dept !== 'Uncategorized' && dept !== 'N/A' && dept !== 'Unknown') {
+        deptMap[dept] = (deptMap[dept] || 0) + 1;
+      }
     });
     const deptData = Object.keys(deptMap).map(dept => ({
       name: dept.replace('College of ', ''), // Shorten for chart
@@ -194,7 +308,7 @@ export default function Reports() {
     })).sort((a, b) => b.value - a.value);
 
     return { yearlyData, deptData };
-  }, [submissions]);
+  }, [submissions, departments, programs]);
 
   const handlePrint = () => {
     window.print();
@@ -465,8 +579,13 @@ export default function Reports() {
                 )}
                 {selected === 'dept' && (
                   <>
-                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All SY</option></select>
-                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Departments</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>{selectedYear || 'All SY'}</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none">
+                      <option value="all">All Departments</option>
+                      {deptData.map(d => (
+                        <option key={d.dept} value={d.dept}>{d.dept}</option>
+                      ))}
+                    </select>
                   </>
                 )}
                 <button className="px-4 py-2 text-sm font-semibold text-stone-600 dark:text-stone-300 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525]">
@@ -676,7 +795,7 @@ export default function Reports() {
                       <span className="w-1 h-5 bg-[#801e38] rounded-full inline-block"></span>
                       Published, Endorsed & Pending — Department Breakdown
                     </h4>
-                    <p className="text-xs text-stone-500 dark:text-stone-400 ml-3">Clustered bars per department • each bar represents one metric • SY 2025–2026</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 ml-3">Clustered bars per department • each bar represents one metric • {selectedYear || 'All SY'}</p>
                   </div>
 
                   <div className="relative pl-32 py-4 border-l border-b border-stone-200 dark:border-stone-700">
