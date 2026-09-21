@@ -25,6 +25,86 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+// Thumbnail component with on-scroll IntersectionObserver to dynamically load all page previews
+function SidebarThumbnailItem({
+  pageNum,
+  currentPage,
+  isMobile,
+  scrollToPage,
+  isDrawer,
+  setIsMobileDrawerOpen,
+}) {
+  const [isVisible, setIsVisible] = useState(() => Math.abs(pageNum - currentPage) <= 4 || pageNum <= 6);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (isVisible) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '350px 0px',
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  return (
+    <div ref={containerRef} className="flex flex-col items-center gap-1.5 mb-2">
+      <button
+        type="button"
+        onClick={() => {
+          scrollToPage(pageNum);
+          if (isDrawer) setIsMobileDrawerOpen(false);
+        }}
+        className={`w-24 sm:w-28 bg-white dark:bg-gray-700 cursor-pointer transition-all overflow-hidden rounded ${
+          currentPage === pageNum
+            ? 'ring-2 ring-[#7a2039] dark:ring-[#f3e5ab] shadow-md'
+            : 'border border-stone-300 dark:border-gray-600 hover:border-stone-400 shadow-sm'
+        }`}
+      >
+        {isVisible ? (
+          <Page
+            pageNumber={pageNum}
+            width={isMobile ? 96 : 112}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+            loading={
+              <div className="h-32 bg-stone-100 dark:bg-gray-700 flex flex-col items-center justify-center text-stone-400 text-xs animate-pulse">
+                <span>P. {pageNum}</span>
+              </div>
+            }
+          />
+        ) : (
+          <div className="h-32 bg-stone-100 dark:bg-gray-700 flex items-center justify-center text-stone-400 text-xs">
+            P. {pageNum}
+          </div>
+        )}
+      </button>
+      <span
+        className={`text-[11px] font-bold ${
+          currentPage === pageNum
+            ? 'text-[#7a2039] dark:text-[#f3e5ab]'
+            : 'text-stone-500 dark:text-gray-400'
+        }`}
+      >
+        Page {pageNum}
+      </span>
+    </div>
+  );
+}
+
 function ArchivePaperViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -886,37 +966,17 @@ function ArchivePaperViewer() {
           <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 items-center custom-scrollbar">
             {numPages && pdfSource ? (
               <Document file={pdfSource} options={pdfOptions}>
-                {Array.from({ length: numPages }).map((_, idx) => {
-                  const pageNum = idx + 1;
-                  const isNearCurrent = Math.abs(pageNum - currentPage) <= 4;
-                  return (
-                    <div key={idx} className="flex flex-col items-center gap-1.5 mb-2">
-                      <button
-                        onClick={() => {
-                          scrollToPage(pageNum);
-                          if (isDrawer) setIsMobileDrawerOpen(false);
-                        }}
-                        className={`w-24 sm:w-28 bg-white cursor-pointer transition-all overflow-hidden rounded ${currentPage === pageNum ? 'ring-2 ring-[#7a2039] shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
-                      >
-                        {isNearCurrent ? (
-                          <Page
-                            pageNumber={pageNum}
-                            width={isMobile ? 96 : 112}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                          />
-                        ) : (
-                          <div className="h-32 bg-stone-100 dark:bg-gray-700 flex items-center justify-center text-stone-400 text-xs">
-                            P. {pageNum}
-                          </div>
-                        )}
-                      </button>
-                      <span className={`text-[11px] font-bold ${currentPage === pageNum ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}>
-                        Page {pageNum}
-                      </span>
-                    </div>
-                  );
-                })}
+                {Array.from({ length: numPages }).map((_, idx) => (
+                  <SidebarThumbnailItem
+                    key={idx}
+                    pageNum={idx + 1}
+                    currentPage={currentPage}
+                    isMobile={isMobile}
+                    scrollToPage={scrollToPage}
+                    isDrawer={isDrawer}
+                    setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+                  />
+                ))}
               </Document>
             ) : (
               <div className="text-stone-400 text-xs p-4 text-center">Loading pages...</div>
@@ -1478,8 +1538,8 @@ function ArchivePaperViewer() {
                   {numPages ? (
                     Array.from({ length: numPages }, (_, index) => {
                       const pageNum = index + 1;
-                      // Virtualization window: render only current page +/- 2 pages to keep memory under 30MB
-                      const isVisible = Math.abs(pageNum - currentPage) <= 2;
+                      // Virtualization window: render current page +/- 4 pages to keep memory light and reading seamless
+                      const isVisible = Math.abs(pageNum - currentPage) <= 4;
                       const pageHeight = currentPdfHeight;
 
                       return (
