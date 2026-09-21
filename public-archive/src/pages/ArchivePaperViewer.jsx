@@ -168,6 +168,13 @@ function ArchivePaperViewer() {
 
   useEffect(() => {
     const rawUrl = paper?.documents?.['Final Manuscript']?.url;
+    setChapterPages({
+      chap1: 1,
+      chap2: 5,
+      chap3: 10,
+      chap4: 15,
+      chap5: 20
+    });
     if (!rawUrl || rawUrl === '#') {
       setPdfSource(null);
       setIsPdfLoading(false);
@@ -323,26 +330,26 @@ function ArchivePaperViewer() {
 
             // Skip Table of Contents list pages that list multiple chapters together
             let mentionCount = 0;
-            if (/\bCHAPTER\s*(?:1|I)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*(?:2|II)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*(?:3|III)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*(?:4|IV)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*(?:5|V)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*[:.-]?\s*(?:1|I|ONE)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*[:.-]?\s*(?:2|II|TWO)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*[:.-]?\s*(?:3|III|THREE)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*[:.-]?\s*(?:4|IV|FOUR)\b/i.test(text)) mentionCount++;
+            if (/\bCHAPTER\s*[:.-]?\s*(?:5|V|FIVE)\b/i.test(text)) mentionCount++;
             if (mentionCount >= 2 || /\bTABLE\s+OF\s+CONTENTS\b/i.test(text)) continue;
 
-            if (!detected.chap1 && (/\bCHAPTER\s*(?:1|I)\b/i.test(text) || (pNum > 2 && pNum < total * 0.35 && /\bINTRODUCTION\b/i.test(text)))) {
+            if (!detected.chap1 && (/\bCHAPTER\s*[:.-]?\s*(?:1|I|ONE)\b/i.test(text) || (pNum > 2 && pNum < total * 0.35 && /\bINTRODUCTION\b/i.test(text)))) {
               detected.chap1 = pNum;
             }
-            if (!detected.chap2 && pNum > (detected.chap1 || 0) && (/\bCHAPTER\s*(?:2|II)\b/i.test(text) || /\bREVIEW\s+OF\s+(?:RELATED\s+)?LITERATURE\b/i.test(text))) {
+            if (!detected.chap2 && pNum > (detected.chap1 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:2|II|TWO)\b/i.test(text) || /\bREVIEW\s+OF\s+(?:RELATED\s+)?LITERATURE\b/i.test(text))) {
               detected.chap2 = pNum;
             }
-            if (!detected.chap3 && pNum > (detected.chap2 || detected.chap1 || 0) && (/\bCHAPTER\s*(?:3|III)\b/i.test(text) || /\b(?:RESEARCH\s+)?METHODOLOGY\b/i.test(text) || /\bMETHODS?\s+OF\s+RESEARCH\b/i.test(text))) {
+            if (!detected.chap3 && pNum > (detected.chap2 || detected.chap1 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:3|III|THREE)\b/i.test(text) || /\b(?:RESEARCH\s+)?METHODOLOGY\b/i.test(text) || /\bMETHODS?\s+OF\s+RESEARCH\b/i.test(text))) {
               detected.chap3 = pNum;
             }
-            if (!detected.chap4 && pNum > (detected.chap3 || detected.chap2 || 0) && (/\bCHAPTER\s*(?:4|IV)\b/i.test(text) || /\bRESULTS?\s+(?:AND|&)\s+DISCUSSION\b/i.test(text) || /\bPRESENTATION(?:,\s*ANALYSIS)?\s+(?:AND|&)\s+(?:INTERPRETATION\s+OF\s+)?DATA\b/i.test(text))) {
+            if (!detected.chap4 && pNum > (detected.chap3 || detected.chap2 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:4|IV|FOUR)\b/i.test(text) || /\bRESULTS?\s+(?:AND|&)\s+DISCUSSION\b/i.test(text) || /\bPRESENTATION(?:,\s*ANALYSIS)?\s+(?:AND|&)\s+(?:INTERPRETATION\s+OF\s+)?DATA\b/i.test(text))) {
               detected.chap4 = pNum;
             }
-            if (!detected.chap5 && pNum > (detected.chap4 || detected.chap3 || 0) && (/\bCHAPTER\s*(?:5|V)\b/i.test(text) || /\b(?:SUMMARY\s+(?:OF\s+FINDINGS)?,\s*)?CONCLUSIONS?(?:\s+(?:AND|&)\s+RECOMMENDATIONS)?\b/i.test(text))) {
+            if (!detected.chap5 && pNum > (detected.chap4 || detected.chap3 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:5|V|FIVE)\b/i.test(text) || /\b(?:SUMMARY\s+(?:OF\s+FINDINGS)?,\s*)?CONCLUSIONS?(?:\s+(?:AND|&)\s+RECOMMENDATIONS)?\b/i.test(text))) {
               detected.chap5 = pNum;
             }
           }
