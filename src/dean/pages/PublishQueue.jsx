@@ -10,6 +10,7 @@ import ListSkeleton from '../components/skeletons/ListSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import CertificateModal from '../../components/CertificateModal';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function PublishQueue({ activePage, onNavigate }) {
   const { deanData } = useUser();
@@ -158,7 +159,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
     });
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/ai/similarity-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

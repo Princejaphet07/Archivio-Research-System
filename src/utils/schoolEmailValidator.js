@@ -2,6 +2,7 @@
  * Official Southwestern University PHINMA School Email Validator
  * Enforces authentic institutional email formats and guards against fake/made-up emails.
  */
+import { getBackendUrl } from './backendUrl';
 
 // Blacklist of obvious placeholders and fake username prefixes
 const BLACKLISTED_USERNAMES = [
@@ -143,7 +144,7 @@ export async function verifySchoolEmailOnline(email, role = 'student') {
 
   // Next perform MX and backend verification
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
+    const backendUrl = getBackendUrl();
     const res = await fetch(`${backendUrl}/api/verify-school-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
