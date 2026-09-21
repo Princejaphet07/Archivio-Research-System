@@ -78,12 +78,27 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     const unsubscribeSubmission = onSnapshot(submissionQuery, (snapshot) => {
       if (!snapshot.empty) {
         const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const getTime = (val) => {
+          if (!val) return 0;
+          if (typeof val.toMillis === 'function') return val.toMillis();
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+          if (val.seconds) return val.seconds * 1000;
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
         subs.sort((a, b) => {
-          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
           return timeB - timeA;
         });
         const latestSub = subs[0];
+
+        // Auto-heal: If abstract is already saved, ensure abstractGenerating flag is cleared in Firestore
+        if (latestSub?.id && latestSub.abstractGenerating && latestSub.abstract && !latestSub.abstract.toLowerCase().includes('no abstract')) {
+          updateDoc(doc(db, 'submissions', latestSub.id), { abstractGenerating: false }).catch(() => {});
+        }
+
         setSubmission(latestSub);
         setSubmissionId(latestSub.id);
         setDocumentResubmissions(latestSub.documentResubmissions || {});
@@ -227,7 +242,10 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
     if (formValues) {
       try {
-        await updateDoc(doc(db, 'submissions', submissionId), formValues);
+        await updateDoc(doc(db, 'submissions', submissionId), {
+          ...formValues,
+          abstractGenerating: false
+        });
         
         await addDoc(collection(db, 'notifications'), {
           userId: auth.currentUser?.uid,
@@ -616,7 +634,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       </button>
                     </div>
                   </div>
-                  {submission?.abstractGenerating ? (
+                  {submission?.abstractGenerating && (!abstract || abstract.toLowerCase().includes('no abstract')) ? (
                     <div className="flex items-center gap-3 p-4 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-xl text-amber-900 dark:text-amber-200">
                       <div className="w-4 h-4 border-2 border-[#7B1F35] dark:border-amber-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
                       <div>

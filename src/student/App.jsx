@@ -94,22 +94,49 @@ function App() {
     const unsub = onSnapshot(subQ, (snapshot) => {
       if (!snapshot.empty) {
         const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const getTime = (val) => {
+          if (!val) return 0;
+          if (typeof val.toMillis === 'function') return val.toMillis();
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+          if (val.seconds) return val.seconds * 1000;
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
         subs.sort((a, b) => {
-          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
           return timeB - timeA;
         });
-        const latest = subs[0];
-        const generating = !!latest.abstractGenerating;
 
-        if (prevGeneratingRef.current && !generating && latest.abstract) {
+        const latest = subs[0];
+
+        // An abstract is already generated if it is non-empty, long enough (> 20 chars), and not placeholder
+        const hasValidAbstract = !!(
+          latest?.abstract &&
+          typeof latest.abstract === 'string' &&
+          latest.abstract.trim().length > 20 &&
+          !latest.abstract.toLowerCase().includes('no abstract')
+        );
+
+        // ONLY considered generating if the flag is true AND an abstract is not yet present
+        const isGenerating = !!latest?.abstractGenerating && !hasValidAbstract;
+
+        // Auto-heal: If abstract is already saved in Firestore but abstractGenerating flag remained true, clear it
+        if (latest?.id && latest.abstractGenerating && hasValidAbstract) {
+          updateDoc(doc(db, 'submissions', latest.id), { abstractGenerating: false }).catch(() => {});
+        }
+
+        // Show brief success alert when generation transitions from active to finished
+        if (prevGeneratingRef.current && !isGenerating && hasValidAbstract) {
           setShowAbstractSuccess(true);
           const t = setTimeout(() => setShowAbstractSuccess(false), 5000);
           return () => clearTimeout(t);
         }
 
-        prevGeneratingRef.current = generating;
-        setIsGeneratingAbstract(generating);
+        prevGeneratingRef.current = isGenerating;
+        setIsGeneratingAbstract(isGenerating);
       } else {
         setIsGeneratingAbstract(false);
       }
@@ -171,6 +198,7 @@ function App() {
               adviserName,
               profilePhotoUrl,
               role,
+              leaderUid: studentData.leaderUid || null,
               groupStatus
             });
 
