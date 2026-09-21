@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { doc, collection, getDocs, query, where, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -24,15 +24,21 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
+
 function ArchivePaperViewer() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [paper, setPaper] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Responsive & Mobile Drawer State
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
   // View state
-  const [activeTab, setActiveTab] = useState(window.innerWidth > 640 ? 'toc' : null);
+  const [activeTab, setActiveTab] = useState(typeof window !== 'undefined' && window.innerWidth >= 768 ? 'toc' : null);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,23 +62,30 @@ function ArchivePaperViewer() {
     y: 0
   });
 
-  // Responsive PDF width - fit exactly to available screen space
-  const [pdfWidth, setPdfWidth] = useState(800);
+  // Responsive PDF base width & zoom level
+  const [pdfBaseWidth, setPdfBaseWidth] = useState(800);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
     const handleResize = () => {
-      const leftNavWidth = (window.innerWidth < 768 && isFullscreen) ? 0 : 56;
-      const padding = 16;
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      const leftNavWidth = (mobile || isFullscreen) ? 0 : 56;
+      const padding = mobile ? 12 : 24;
       const availableWidth = window.innerWidth - leftNavWidth - padding;
-      setPdfWidth(window.innerWidth < 850 ? availableWidth : 800);
+      setPdfBaseWidth(Math.min(Math.max(280, availableWidth), 850));
     };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isFullscreen]);
 
-  const handleZoomIn = () => setPdfWidth(prev => prev + 150);
-  const handleZoomOut = () => setPdfWidth(prev => Math.max(300, prev - 150));
+  const currentPdfWidth = Math.round(pdfBaseWidth * zoomLevel);
+  const currentPdfHeight = Math.round(currentPdfWidth * 1.414);
+
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(2.5, +(prev + 0.25).toFixed(2)));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, +(prev - 0.25).toFixed(2)));
+  const handleResetZoom = () => setZoomLevel(1);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -109,7 +122,7 @@ function ArchivePaperViewer() {
             bestEntry = entry;
           }
         });
-        if (bestEntry && bestEntry.intersectionRatio > 0.1) {
+        if (bestEntry && bestEntry.intersectionRatio > 0.05) {
           const pg = parseInt(bestEntry.target.dataset.page, 10);
           if (!isNaN(pg)) {
             setCurrentPage(pg);
@@ -118,7 +131,7 @@ function ArchivePaperViewer() {
       },
       {
         root: scrollContainerRef.current,
-        threshold: [0.1, 0.25, 0.5, 0.75, 1.0],
+        threshold: [0.05, 0.2, 0.5, 0.8],
       }
     );
 
@@ -178,6 +191,8 @@ function ArchivePaperViewer() {
     };
 
     const handleBlur = () => {
+      // NEVER blur on mobile/touch devices - causes white screen and crashes
+      if (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0) return;
       document.body.style.filter = 'blur(15px)';
       document.body.style.transition = 'filter 0.1s';
     };
@@ -186,14 +201,26 @@ function ArchivePaperViewer() {
       document.body.style.filter = 'none';
     };
 
+    const clearBlur = () => {
+      if (document.body.style.filter !== 'none') {
+        document.body.style.filter = 'none';
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('pointerdown', clearBlur);
+    window.addEventListener('touchstart', clearBlur, { passive: true });
+    window.addEventListener('click', clearBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pointerdown', clearBlur);
+      window.removeEventListener('touchstart', clearBlur);
+      window.removeEventListener('click', clearBlur);
       document.body.style.filter = 'none';
     };
   }, []);
@@ -210,8 +237,6 @@ function ArchivePaperViewer() {
           unsubGroup = onSnapshot(qGroup, (groupSnap) => {
             let groupData = null;
             if (!groupSnap.empty) {
-              // Find the CORRECT group for this submission
-              // Match by groupId if available, otherwise match by title
               const matchedDoc = groupSnap.docs.find(d => {
                 const g = d.data();
                 if (subData.groupId && d.id === subData.groupId) return true;
@@ -230,7 +255,7 @@ function ArchivePaperViewer() {
               program: subData.program || groupData?.program,
               abstract: subData.abstract || groupData?.abstract
             });
-            setTimeout(() => setLoading(false), 800);
+            setTimeout(() => setLoading(false), 500);
           });
         } else {
           setPaper({
@@ -240,17 +265,17 @@ function ArchivePaperViewer() {
             program: subData.program,
             abstract: subData.abstract
           });
-          setTimeout(() => setLoading(false), 800);
+          setTimeout(() => setLoading(false), 500);
         }
       } else {
         console.error("Paper not found");
         setError("Paper not found");
-        setTimeout(() => setLoading(false), 800);
+        setTimeout(() => setLoading(false), 500);
       }
     }, (err) => {
       console.error('Error fetching paper:', err);
       setError(err.message);
-      setTimeout(() => setLoading(false), 800);
+      setTimeout(() => setLoading(false), 500);
     });
 
     return () => {
@@ -274,7 +299,7 @@ function ArchivePaperViewer() {
         const related = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(doc => doc.id !== paper.id && normalizeDepartment(doc.program || doc.department || doc.category) === currentDept)
-          .slice(0, 15); // Increased to 15 for map visualization
+          .slice(0, 15);
 
         setRelatedPapers(related);
       } catch (err) {
@@ -324,7 +349,6 @@ function ArchivePaperViewer() {
   // Increment view count when paper viewer opens (session-deduplicated)
   useEffect(() => {
     if (id && !hasIncremented.current) {
-      // Deduplicate views per browser session to prevent inflating on refresh
       const viewedKey = `archivio_viewed_${id}`;
       if (sessionStorage.getItem(viewedKey)) {
         hasIncremented.current = true;
@@ -338,7 +362,6 @@ function ArchivePaperViewer() {
       updateDoc(docRef, { views: increment(1) })
         .catch(err => {
           console.warn("View increment failed, retrying once:", err.message);
-          // Retry once after a short delay (handles cold-start rule evaluation lag)
           setTimeout(() => {
             updateDoc(docRef, { views: increment(1) })
               .catch(retryErr => console.error("View increment retry failed:", retryErr.message));
@@ -347,7 +370,7 @@ function ArchivePaperViewer() {
     }
   }, [id]);
 
-  // Track paper readership in Google Analytics (Public Archive exclusively)
+  // Track paper readership in Google Analytics
   useEffect(() => {
     if (paper && !hasTrackedAnalytics.current) {
       hasTrackedAnalytics.current = true;
@@ -416,10 +439,14 @@ function ArchivePaperViewer() {
   };
 
   const handleTabClick = (tab) => {
-    setActiveTab(prev => prev === tab ? null : tab);
-    setIsFullscreen(false);
+    if (isMobile) {
+      setActiveTab(tab);
+      setIsMobileDrawerOpen(true);
+    } else {
+      setActiveTab(prev => prev === tab ? null : tab);
+      setIsFullscreen(false);
+    }
   };
-
 
   const handleToggleAudio = () => {
     if (!paper || !paper.abstract) return;
@@ -440,10 +467,9 @@ function ArchivePaperViewer() {
 
   const handleAbstractDoubleClick = async (e) => {
     const selection = window.getSelection();
-    const word = selection.toString().trim().replace(/[^a-zA-Z]/g, ''); // strip punctuation
+    const word = selection.toString().trim().replace(/[^a-zA-Z]/g, '');
 
     if (word && word.length > 1) {
-      // Get exact coordinates of the selection
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
@@ -475,7 +501,6 @@ function ArchivePaperViewer() {
     }
   };
 
-  // Close popup if clicked anywhere else
   useEffect(() => {
     const closePopup = () => setDictPopup(prev => ({ ...prev, isOpen: false }));
     if (dictPopup.isOpen) {
@@ -556,6 +581,9 @@ function ArchivePaperViewer() {
     };
     if (map[chap]) {
       scrollToPage(map[chap]);
+      if (isMobile) {
+        setIsMobileDrawerOpen(false);
+      }
     }
   };
 
@@ -624,7 +652,6 @@ function ArchivePaperViewer() {
 
     trackBookmark(paper, 'add');
 
-    // Authenticated logic
     try {
       const bookmarkRef = doc(db, 'user_bookmarks', currentUser.uid);
       await setDoc(bookmarkRef, { bookmarks: arrayUnion(paper.id) }, { merge: true });
@@ -654,8 +681,7 @@ function ArchivePaperViewer() {
 
         {/* Main Workspace Skeleton */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar Skeleton */}
-          <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10">
+          <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 hidden md:flex">
             <div className="w-10 h-10 rounded animate-shimmer"></div>
             <div className="w-10 h-10 rounded animate-shimmer"></div>
             <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
@@ -663,7 +689,6 @@ function ArchivePaperViewer() {
             <div className="w-10 h-10 rounded animate-shimmer"></div>
           </div>
 
-          {/* Table of Contents Panel Skeleton */}
           <div className="w-64 lg:w-72 bg-[#fdfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 p-4 flex flex-col hidden md:flex z-10">
             <div className="h-5 w-24 rounded mb-6 animate-shimmer"></div>
             <div className="space-y-4">
@@ -671,20 +696,14 @@ function ArchivePaperViewer() {
             </div>
           </div>
 
-          {/* Document Content Skeleton */}
           <div className="flex-1 p-2 md:p-8 flex justify-center bg-[#e5e5e5] dark:bg-gray-900 overflow-hidden">
-            <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-8 md:p-12 lg:p-20 flex flex-col h-full rounded-sm">
-              <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
-              <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
+            <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-6 md:p-12 lg:p-20 flex flex-col h-full rounded-sm">
+              <div className="h-8 md:h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
+              <div className="h-4 w-1/2 rounded mb-8 mx-auto animate-shimmer"></div>
               <div className="space-y-4 mb-8">
                 <div className="h-4 w-full rounded animate-shimmer"></div>
                 <div className="h-4 w-full rounded animate-shimmer"></div>
                 <div className="h-4 w-5/6 rounded animate-shimmer"></div>
-              </div>
-              <div className="space-y-4 mb-8">
-                <div className="h-4 w-full rounded animate-shimmer"></div>
-                <div className="h-4 w-full rounded animate-shimmer"></div>
-                <div className="h-4 w-4/6 rounded animate-shimmer"></div>
               </div>
             </div>
           </div>
@@ -697,7 +716,7 @@ function ArchivePaperViewer() {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#e5e5e5] dark:bg-gray-900 transition-colors">
         <h1 className="text-2xl font-bold text-stone-800 dark:text-gray-100 mb-4">Document Not Found</h1>
-        <Link to="/browse" className="px-6 py-2 bg-[#7a2039] text-white rounded">Back to Browse</Link>
+        <Link to="/browse" className="px-6 py-2 bg-[#7a2039] text-white rounded font-medium">Back to Browse</Link>
       </div>
     );
   }
@@ -706,6 +725,325 @@ function ArchivePaperViewer() {
   const authorName = paper.authorDisplay;
   const adviser = paper.adviserName || 'Unknown Adviser';
   const year = new Date(paper.publishedAt || Date.now()).getFullYear();
+
+  // Reusable Tab Content Renderer
+  const renderTabContent = (isDrawer = false) => {
+    if (!activeTab) return null;
+
+    if (activeTab === 'abstract') {
+      return (
+        <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+          <div className="flex justify-between items-center mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Abstract</h2>
+            {paper.abstract && (
+              <button
+                onClick={handleToggleAudio}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition cursor-pointer shadow-sm ${isSpeaking ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'}`}
+              >
+                {isSpeaking ? 'Stop ⏹️' : 'Play 🎧'}
+              </button>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative">
+            <p
+              onDoubleClick={handleAbstractDoubleClick}
+              className="text-xs sm:text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6 selection:bg-[#7a2039]/20 selection:text-[#7a2039]"
+              title="Double-click any word for its definition"
+            >
+              {paper.abstract || 'No abstract available for this research paper.'}
+            </p>
+
+            {dictPopup.isOpen && (
+              <div
+                className="absolute z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-[#7a2039]/20 dark:border-[#f3e5ab]/20 shadow-xl rounded-lg p-3 w-48 -translate-x-1/2 -translate-y-full"
+                style={{ left: Math.min(Math.max(100, dictPopup.x), 200), top: dictPopup.y - 120 }}
+              >
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="font-bold text-[#7a2039] dark:text-[#f3e5ab] text-xs capitalize">{dictPopup.word}</h4>
+                  <button onClick={() => setDictPopup(prev => ({ ...prev, isOpen: false }))} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200 cursor-pointer">✕</button>
+                </div>
+                <div className="text-[10px] text-stone-600 dark:text-gray-300 leading-snug max-h-24 overflow-y-auto custom-scrollbar">
+                  {dictPopup.loading ? (
+                    <span className="animate-pulse">Loading definition...</span>
+                  ) : (
+                    dictPopup.definition
+                  )}
+                </div>
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white/95 dark:bg-gray-800/95 border-b border-r border-[#7a2039]/20 dark:border-[#f3e5ab]/20 transform rotate-45"></div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-stone-200 dark:border-gray-700 shrink-0">
+            <div className="bg-[#FAF8F5] dark:bg-gray-800/90 border border-[#7a2039]/20 dark:border-gray-700 rounded-xl p-3 text-xs shadow-sm">
+              <div className="flex items-center gap-1.5 text-[#7a2039] dark:text-[#f3e5ab] font-bold mb-1">
+                <svg className="w-3.5 h-3.5 text-[#c9a227] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="tracking-tight">Officially Verified Record</span>
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed">
+                Authenticated by Faculty & permanently cataloged in SWU PHINMA Repository.
+              </p>
+              <Link
+                to={`/verify/${paper.id}`}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline cursor-pointer group"
+              >
+                <span>View Verification Ledger</span>
+                <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'toc') {
+      return (
+        <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800">
+          <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200 mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">Table of Contents</h2>
+          <div className="flex flex-col gap-2 flex-1">
+            {['Chapter 1: Introduction', 'Chapter 2: Review of Literature', 'Chapter 3: Methodology', 'Chapter 4: Results & Discussion', 'Chapter 5: Conclusion'].map((chap, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleChapterClick(chap)}
+                className="text-left px-3.5 py-2.5 text-xs font-medium bg-[#7a2039] hover:bg-[#5a1528] text-white rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between"
+              >
+                <span>{chap}</span>
+                <span className="text-[10px] opacity-75">›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'pages') {
+      return (
+        <div className="flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-200 dark:border-gray-700">
+          <div className="p-4 border-b border-stone-200 dark:border-gray-700">
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Pages</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 items-center custom-scrollbar">
+            {numPages ? (
+              Array.from({ length: numPages }).map((_, idx) => {
+                const pageNum = idx + 1;
+                const isNearCurrent = Math.abs(pageNum - currentPage) <= 4;
+                return (
+                  <div key={idx} className="flex flex-col items-center gap-1.5 mb-2">
+                    <button
+                      onClick={() => {
+                        scrollToPage(pageNum);
+                        if (isDrawer) setIsMobileDrawerOpen(false);
+                      }}
+                      className={`w-24 sm:w-28 bg-white cursor-pointer transition-all overflow-hidden rounded ${currentPage === pageNum ? 'ring-2 ring-[#7a2039] shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
+                    >
+                      {isNearCurrent ? (
+                        <Page
+                          pageNumber={pageNum}
+                          width={isMobile ? 96 : 112}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                        />
+                      ) : (
+                        <div className="h-32 bg-stone-100 dark:bg-gray-700 flex items-center justify-center text-stone-400 text-xs">
+                          P. {pageNum}
+                        </div>
+                      )}
+                    </button>
+                    <span className={`text-[11px] font-bold ${currentPage === pageNum ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}>
+                      Page {pageNum}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-stone-400 text-xs p-4 text-center">Loading pages...</div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'cite') {
+      return (
+        <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
+          <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200 mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
+          <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-1">
+            {/* APA Format */}
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${authorName} (${year}). ${title}. SWU PHINMA.`);
+                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                  }}
+                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
+                {authorName} ({year}). <i>{title}</i>. SWU PHINMA.
+              </p>
+            </div>
+
+            {/* MLA Format */}
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${authorName}. "${title}." SWU PHINMA, ${year}.`);
+                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                  }}
+                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
+                {authorName}. "{title}." <i>SWU PHINMA</i>, {year}.
+              </p>
+            </div>
+
+            {/* IEEE Format */}
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${authorName}, "${title}," SWU PHINMA, ${year}.`);
+                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
+                  }}
+                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
+                {authorName}, "{title}," SWU PHINMA, {year}.
+              </p>
+            </div>
+
+            {/* Export Section */}
+            <div className="mt-2 border-t border-stone-200 dark:border-gray-700 pt-3">
+              <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-2 uppercase tracking-wider">Export Citation</h3>
+              <div className="flex flex-col gap-2">
+                <button onClick={generateRIS} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
+                  <span>Download .RIS (Mendeley, EndNote)</span>
+                  <span className="text-[10px]">⬇</span>
+                </button>
+                <button onClick={generateBibTeX} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
+                  <span>Download .BibTeX (LaTeX)</span>
+                  <span className="text-[10px]">⬇</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'share') {
+      return (
+        <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors overflow-y-auto custom-scrollbar">
+          <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200 mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">Share Research</h2>
+          <div className="flex flex-col items-center gap-4 mt-2">
+            <div className="flex justify-center gap-2 w-full">
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex flex-col items-center justify-center p-2.5 bg-[#1877F2] text-white rounded-lg shadow-sm hover:opacity-90 transition cursor-pointer"
+              >
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                <span className="text-[10px] font-bold">Facebook</span>
+              </a>
+              <a
+                href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('Read this research paper: ' + title)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex flex-col items-center justify-center p-2.5 bg-black text-white rounded-lg shadow-sm hover:bg-gray-800 transition cursor-pointer"
+              >
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                <span className="text-[10px] font-bold">X (Twitter)</span>
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Read this research paper: ' + title)}&body=${encodeURIComponent('I thought you might find this research interesting: ' + window.location.href)}`}
+                className="flex-1 flex flex-col items-center justify-center p-2.5 bg-stone-500 text-white rounded-lg shadow-sm hover:bg-stone-600 transition cursor-pointer"
+              >
+                <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                <span className="text-[10px] font-bold">Email</span>
+              </a>
+            </div>
+
+            <div className="bg-white p-3 rounded-xl shadow-md border border-stone-200 mt-1">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(window.location.href)}`}
+                alt="QR Code"
+                className="w-28 h-28 object-contain"
+              />
+            </div>
+            <div className="text-center w-full">
+              <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Scan to read on mobile devices</p>
+              <button
+                onClick={copyLink}
+                className="w-full bg-[#7a2039] text-white px-4 py-2.5 rounded-lg hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Copy Direct Link
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'related') {
+      return (
+        <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
+          <div className="flex justify-between items-center mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Related Researches</h2>
+            {relatedPapers.length > 0 && (
+              <button
+                onClick={() => setIsMapView(true)}
+                className="text-[10px] bg-[#7a2039] text-white px-2 py-1 rounded hover:bg-[#5a1528] transition font-medium flex items-center gap-1 shadow-sm cursor-pointer"
+                title="View Interactive Map"
+              >
+                <span>🕸️</span> Map View
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-1">
+            {relatedPapers.length > 0 ? (
+              relatedPapers.slice(0, 5).map(rp => (
+                <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded-lg p-3 shadow-sm hover:shadow-md transition relative group">
+                  <span className="text-[10px] bg-stone-100 dark:bg-gray-600 px-2 py-0.5 rounded text-stone-600 dark:text-gray-300 font-medium mb-1.5 inline-block truncate max-w-full">
+                    {normalizeDepartment(rp.program || rp.department || rp.category) || 'Research'}
+                  </span>
+                  <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-1 line-clamp-2" title={rp.researchTitle || rp.title}>
+                    {rp.researchTitle || rp.title || 'Untitled Research'}
+                  </h3>
+                  <p className="text-[10px] text-stone-500 dark:text-gray-400 mb-2 truncate">{rp.studentName || rp.groupName || 'Unknown Author'}</p>
+                  <a href={`/viewer/${rp.id}`} className="text-[10px] bg-[#7a2039] text-white px-3 py-1.5 rounded hover:bg-[#5a1528] transition inline-block text-center w-full shadow-sm font-medium">
+                    Read Paper
+                  </a>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-stone-500 dark:text-gray-400 text-xs mt-8">
+                No related researches found for this department.
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <div className="h-screen flex flex-col bg-[#e5e5e5] dark:bg-gray-900 font-sans overflow-hidden transition-colors">
@@ -719,9 +1057,26 @@ function ArchivePaperViewer() {
 
       {/* VIEW-ONLY BANNER - Hidden in Zen Mode */}
       {!isZenMode && (
-        <div className="bg-[#242b35] border-b border-[#1f252e] px-4 py-2 flex items-center justify-between gap-3 text-xs z-10 shadow-sm transition-colors">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 rounded transition cursor-pointer shrink-0" title="Back to Browse">←</Link>
+        <div className="bg-[#242b35] border-b border-[#1f252e] px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-3 text-xs z-10 shadow-sm transition-colors">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link to="/browse" className="text-white font-bold text-lg hover:bg-white/10 px-2 py-0.5 rounded transition cursor-pointer shrink-0" title="Back to Browse">←</Link>
+
+            {/* MOBILE TOOLS BUTTON (Opens slide-over drawer) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileDrawerOpen(true);
+                if (!activeTab) setActiveTab('toc');
+              }}
+              className="md:hidden flex items-center gap-1.5 bg-[#1a2028] hover:bg-[#141920] text-stone-200 border border-stone-700/80 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm cursor-pointer shrink-0 transition"
+              title="Open Paper Outline & Tools"
+            >
+              <svg className="w-3.5 h-3.5 text-[#c9a227]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              <span>Outline & Tools</span>
+            </button>
+
             <div className="hidden sm:flex items-center gap-2 text-xs text-gray-300 truncate">
               <span className="w-2.5 h-2.5 bg-[#ff8c00] rounded-full shrink-0"></span>
               <span className="font-bold text-white">View-only access</span>
@@ -732,17 +1087,17 @@ function ArchivePaperViewer() {
           {/* VERIFIED INSTITUTIONAL RECORD BADGE */}
           <Link
             to={`/verify/${paper.id}`}
-            className="flex items-center gap-2 bg-[#1a2028] hover:bg-[#141920] text-stone-200 hover:text-white border border-stone-700/80 hover:border-[#c9a227]/80 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm group shrink-0 cursor-pointer"
-            title="Officially validated and archived by Southwestern University PHINMA. Click to view verification ledger."
+            className="flex items-center gap-1.5 sm:gap-2 bg-[#1a2028] hover:bg-[#141920] text-stone-200 hover:text-white border border-stone-700/80 hover:border-[#c9a227]/80 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all shadow-sm group shrink-0 cursor-pointer"
+            title="Officially validated and archived by Southwestern University PHINMA."
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <svg className="w-3.5 h-3.5 text-[#c9a227] group-hover:text-[#e5c07b] transition-colors shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span className="font-semibold text-stone-200 group-hover:text-white tracking-tight">Verified Record</span>
+              <span className="font-semibold text-stone-200 group-hover:text-white tracking-tight">Verified</span>
             </div>
-            <span className="text-[10px] text-stone-400 group-hover:text-[#f3e5ab] pl-2 border-l border-stone-700 flex items-center gap-0.5 transition-colors font-semibold">
-              Verify
+            <span className="text-[10px] text-stone-400 group-hover:text-[#f3e5ab] pl-1.5 sm:pl-2 border-l border-stone-700 hidden xs:flex items-center gap-0.5 transition-colors font-semibold">
+              Ledger
               <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -754,12 +1109,12 @@ function ArchivePaperViewer() {
       {/* MAIN CONTENT WORKSPACE */}
       <div className="flex flex-1 overflow-hidden relative">
 
-        {/* THIN LEFT NAVIGATION (ICONS) - Hide on mobile if fullscreen */}
-        <div className={`w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors ${isFullscreen ? 'hidden md:flex' : 'flex'}`}>
+        {/* THIN LEFT NAVIGATION (ICONS) - Hidden on mobile screens to give PDF 100% width */}
+        <div className={`w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors ${isFullscreen ? 'hidden' : 'hidden md:flex'}`}>
           <button onClick={() => handleTabClick('abstract')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'abstract' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Abstract">
             📝
           </button>
-          <button onClick={() => handleTabClick('toc')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'toc' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Table of Content">
+          <button onClick={() => handleTabClick('toc')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'toc' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Table of Contents">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
           <button onClick={() => handleTabClick('pages')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'pages' && !isFullscreen ? 'bg-[#f5ebed] text-[#7a2039]' : 'text-stone-500 hover:bg-stone-100'}`} title="Pages">
@@ -820,387 +1175,121 @@ function ArchivePaperViewer() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-              {isZenMode && <>
-                <line x1="2" y1="2" x2="6" y2="6" strokeWidth="1.5" opacity="0.5" />
-                <line x1="18" y1="2" x2="22" y2="6" strokeWidth="1.5" opacity="0.5" />
-                <line x1="2" y1="22" x2="6" y2="18" strokeWidth="1.5" opacity="0.5" />
-                <line x1="18" y1="22" x2="22" y2="18" strokeWidth="1.5" opacity="0.5" />
-              </>}
             </svg>
           </button>
         </div>
 
-        {/* EXPANDABLE SIDEBAR PANEL */}
-        {!isFullscreen && activeTab && (
-          <div className="w-[calc(100%-3.5rem)] sm:w-64 absolute sm:relative left-14 sm:left-0 h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto z-20 sm:z-10 shadow-xl sm:shadow-none transition-colors">
-            {/* Mobile Close Button */}
-            <div className="sm:hidden flex justify-end p-2 pb-0">
-              <button
-                onClick={() => setActiveTab(null)}
-                className="text-stone-500 hover:text-[#7a2039] p-1"
-                title="Close Sidebar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        {/* EXPANDABLE SIDEBAR PANEL - Desktop */}
+        {!isFullscreen && activeTab && !isMobile && (
+          <div className="w-64 lg:w-72 relative h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto z-10 shadow-none transition-colors">
+            {renderTabContent(false)}
+          </div>
+        )}
 
-            {activeTab === 'abstract' && (
-              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
-                <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
-                  <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Abstract</h2>
-                  {paper.abstract && (
-                    <button
-                      onClick={handleToggleAudio}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition cursor-pointer shadow-sm ${isSpeaking ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'}`}
-                    >
-                      {isSpeaking ? 'Stop ⏹️' : 'Play 🎧'}
-                    </button>
-                  )}
+        {/* MOBILE TOOLS DRAWER (Slide-over on mobile) */}
+        {isMobile && isMobileDrawerOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileDrawerOpen(false)}
+            />
+
+            {/* Drawer Sheet */}
+            <div className="relative w-[85%] max-w-xs bg-[#fcfbf7] dark:bg-gray-800 h-full shadow-2xl flex flex-col z-10 border-r border-stone-300 dark:border-gray-700">
+              {/* Drawer Header */}
+              <div className="p-4 bg-[#7a2039] text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-serif font-bold text-sm">Research Tools & Outline</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative">
-                  <p
-                    onDoubleClick={handleAbstractDoubleClick}
-                    className="text-sm text-stone-600 dark:text-gray-300 leading-relaxed text-justify indent-6 selection:bg-[#7a2039]/20 selection:text-[#7a2039]"
-                    title="Double-click any word for its definition"
+                <button
+                  type="button"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="text-white hover:text-[#d6ad60] p-1 cursor-pointer font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Quick Actions (Bookmark, Like, Fullscreen, Zen) */}
+              <div className="p-3 grid grid-cols-4 gap-2 border-b border-stone-200 dark:border-gray-700 bg-stone-100 dark:bg-gray-900 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleBookmarkToggle}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                >
+                  <span className="text-base">{isBookmarked ? '🔖' : '📑'}</span>
+                  <span className="text-[10px] mt-1">{isBookmarked ? 'Saved' : 'Save'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLike}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600 font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                >
+                  <span className="text-base">{paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'}</span>
+                  <span className="text-[10px] mt-1">{paper.likes?.length || 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleFullscreen();
+                    setIsMobileDrawerOpen(false);
+                  }}
+                  className="flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs text-stone-600 dark:text-gray-300 cursor-pointer"
+                >
+                  <span className="text-base">⛶</span>
+                  <span className="text-[10px] mt-1">Full</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsZenMode(!isZenMode);
+                    if (!isZenMode) setIsFullscreen(true);
+                    setIsMobileDrawerOpen(false);
+                  }}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${isZenMode ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                >
+                  <span className="text-base">🧘</span>
+                  <span className="text-[10px] mt-1">Zen</span>
+                </button>
+              </div>
+
+              {/* Navigation Tabs List */}
+              <div className="flex border-b border-stone-200 dark:border-gray-700 overflow-x-auto text-xs bg-white dark:bg-gray-800 shrink-0 custom-scrollbar">
+                {[
+                  { id: 'toc', label: 'TOC', icon: '📋' },
+                  { id: 'abstract', label: 'Abstract', icon: '📝' },
+                  { id: 'pages', label: 'Pages', icon: '📄' },
+                  { id: 'cite', label: 'Cite', icon: '❞' },
+                  { id: 'share', label: 'Share', icon: '🔗' },
+                  { id: 'related', label: 'Related', icon: '🕸️' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 py-2.5 px-2 text-center whitespace-nowrap font-medium transition cursor-pointer border-b-2 text-[11px] ${
+                      (activeTab === tab.id || (!activeTab && tab.id === 'toc'))
+                        ? 'border-[#7a2039] text-[#7a2039] dark:text-[#f3e5ab] dark:border-[#f3e5ab] font-bold'
+                        : 'border-transparent text-stone-500 dark:text-gray-400 hover:text-stone-700'
+                    }`}
                   >
-                    {paper.abstract || 'No abstract available for this research paper.'}
-                  </p>
-
-                  {/* Dictionary Popup */}
-                  {dictPopup.isOpen && (
-                    <div
-                      className="absolute z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-[#7a2039]/20 dark:border-[#f3e5ab]/20 shadow-xl rounded-lg p-3 w-48 -translate-x-1/2 -translate-y-full"
-                      style={{ left: Math.min(Math.max(100, dictPopup.x), 200), top: dictPopup.y - 120 }} // Keep inside sidebar bounds roughly
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-bold text-[#7a2039] dark:text-[#f3e5ab] text-xs capitalize">{dictPopup.word}</h4>
-                        <button onClick={() => setDictPopup(prev => ({ ...prev, isOpen: false }))} className="text-stone-400 hover:text-stone-600 dark:hover:text-gray-200">✕</button>
-                      </div>
-                      <div className="text-[10px] text-stone-600 dark:text-gray-300 leading-snug max-h-24 overflow-y-auto custom-scrollbar">
-                        {dictPopup.loading ? (
-                          <span className="animate-pulse">Loading definition...</span>
-                        ) : (
-                          dictPopup.definition
-                        )}
-                      </div>
-                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white/90 dark:bg-gray-800/90 border-b border-r border-[#7a2039]/20 dark:border-[#f3e5ab]/20 transform rotate-45"></div>
-                    </div>
-                  )}
-                </div>
-
-                {/* INSTITUTIONAL VALIDATION CARD */}
-                <div className="mt-4 pt-3 border-t border-stone-200 dark:border-gray-700 shrink-0">
-                  <div className="bg-[#FAF8F5] dark:bg-gray-800/90 border border-[#7a2039]/20 dark:border-gray-700 rounded-xl p-3.5 text-xs shadow-sm">
-                    <div className="flex items-center gap-1.5 text-[#7a2039] dark:text-[#f3e5ab] font-bold mb-1">
-                      <svg className="w-3.5 h-3.5 text-[#c9a227] shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <span className="tracking-tight">Officially Verified Record</span>
-                    </div>
-                    <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed">
-                      Authenticated by Faculty & permanently cataloged in SWU PHINMA Institutional Repository.
-                    </p>
-                    <Link
-                      to={`/verify/${paper.id}`}
-                      className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline cursor-pointer group"
-                    >
-                      <span>View Verification Ledger</span>
-                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
+                    <span className="mr-1">{tab.icon}</span>{tab.label}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {activeTab === 'toc' && (
-              <div className="p-4 flex flex-col h-full">
-                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Table of Content</h2>
-                <div className="flex flex-col gap-2 flex-1">
-                  {['Chapter 1: Introduction', 'Chapter 2: Review of Literature', 'Chapter 3: Methodology', 'Chapter 4: Results & Discussion', 'Chapter 5: Conclusion'].map((chap, idx) => (
-                    <button key={idx} onClick={() => handleChapterClick(chap)} className="text-left px-4 py-3 text-xs font-medium bg-[#7a2039] text-white rounded shadow-sm hover:bg-[#5a1528] transition cursor-pointer flex items-center gap-2">
-                      <span className="text-[10px]">›</span> {chap}
-                    </button>
-                  ))}
-                </div>
+              {/* Tab Content inside Mobile Drawer */}
+              <div className="flex-1 overflow-y-auto">
+                {renderTabContent(true)}
               </div>
-            )}
-
-            {activeTab === 'pages' && (
-              <div className="flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-200 dark:border-gray-700">
-                <div className="p-4 border-b border-stone-200 dark:border-gray-700">
-                  <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Pages</h2>
-                </div>
-                <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 items-center custom-scrollbar">
-                  {numPages ? (
-                    <Document file={paper.documents['Final Manuscript'].url}>
-                      {Array.from({ length: numPages }).map((_, idx) => (
-                        <div key={idx} className="flex flex-col items-center gap-2 mb-4">
-                          <button
-                            onClick={() => scrollToPage(idx + 1)}
-                            className={`w-28 bg-white cursor-pointer transition-all overflow-hidden ${currentPage === idx + 1 ? 'ring-2 ring-[#7a2039] border-none shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
-                          >
-                            <Page
-                              pageNumber={idx + 1}
-                              width={112}
-                              renderTextLayer={false}
-                              renderAnnotationLayer={false}
-                            />
-                          </button>
-                          <span className={`text-xs font-bold ${currentPage === idx + 1 ? 'text-[#7a2039]' : 'text-stone-500'}`}>
-                            Page {idx + 1}
-                          </span>
-                        </div>
-                      ))}
-                    </Document>
-                  ) : (
-                    <div className="text-stone-400 text-xs p-4 text-center">Open a document to see pages...</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'cite' && (
-              <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
-                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
-                <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar">
-
-                  {/* APA Format */}
-                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${authorName} (${year}). ${title}. SWU PHINMA.`);
-                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                        }}
-                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                      {authorName} ({year}). <i>{title}</i>. SWU PHINMA.
-                    </p>
-                  </div>
-
-                  {/* MLA Format */}
-                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${authorName}. "${title}." SWU PHINMA, ${year}.`);
-                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                        }}
-                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                      {authorName}. "{title}." <i>SWU PHINMA</i>, {year}.
-                    </p>
-                  </div>
-
-                  {/* IEEE Format */}
-                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded p-4 shadow-sm hover:shadow-md transition">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${authorName}, "${title}," SWU PHINMA, ${year}.`);
-                          Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                        }}
-                        className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition flex items-center gap-1 cursor-pointer"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                      {authorName}, "{title}," SWU PHINMA, {year}.
-                    </p>
-                  </div>
-
-                  {/* Export Section */}
-                  <div className="mt-4 border-t border-stone-200 dark:border-gray-700 pt-4">
-                    <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-3 uppercase tracking-wider">Export Citation</h3>
-                    <div className="flex flex-col gap-2">
-                      <button onClick={generateRIS} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-4 py-2 rounded text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
-                        <span>Download .RIS (Mendeley, EndNote)</span>
-                        <span className="text-[10px]">⬇</span>
-                      </button>
-                      <button onClick={generateBibTeX} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-4 py-2 rounded text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
-                        <span>Download .BibTeX (LaTeX)</span>
-                        <span className="text-[10px]">⬇</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'share' && (
-              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors overflow-y-auto custom-scrollbar">
-                <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200 mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">Share Research</h2>
-
-                <div className="flex flex-col items-center gap-6 mt-4">
-                  {/* Social Buttons */}
-                  <div className="flex justify-center gap-3 w-full">
-                    <a
-                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex-1 flex flex-col items-center justify-center p-3 bg-[#1877F2] text-white rounded-lg shadow-sm hover:opacity-90 transition cursor-pointer"
-                    >
-                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
-                      <span className="text-[10px] font-bold">Facebook</span>
-                    </a>
-                    <a
-                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('Read this research paper: ' + title)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex-1 flex flex-col items-center justify-center p-3 bg-black text-white rounded-lg shadow-sm hover:bg-gray-800 transition cursor-pointer"
-                    >
-                      <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-                      <span className="text-[10px] font-bold">X (Twitter)</span>
-                    </a>
-                    <a
-                      href={`mailto:?subject=${encodeURIComponent('Read this research paper: ' + title)}&body=${encodeURIComponent('I thought you might find this research interesting: ' + window.location.href)}`}
-                      className="flex-1 flex flex-col items-center justify-center p-3 bg-stone-500 text-white rounded-lg shadow-sm hover:bg-stone-600 transition cursor-pointer"
-                    >
-                      <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                      <span className="text-[10px] font-bold">Email</span>
-                    </a>
-                  </div>
-
-                  {/* QR Code */}
-                  <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200 mt-2">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`}
-                      alt="QR Code"
-                      className="w-32 h-32 object-contain"
-                    />
-                  </div>
-                  <div className="text-center w-full">
-                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-3">Scan to read on mobile devices</p>
-                    <button
-                      onClick={copyLink}
-                      className="w-full bg-[#7a2039] text-white px-6 py-3 rounded-lg hover:bg-[#5a1528] transition shadow-sm text-xs font-bold uppercase tracking-wider cursor-pointer"
-                    >
-                      Copy Direct Link
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'related' && (
-              <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800 transition-colors">
-                <div className="flex justify-between items-center mb-6 border-b border-stone-200 dark:border-gray-700 pb-2">
-                  <h2 className="font-serif font-bold text-lg text-stone-800 dark:text-gray-200">Related Researches</h2>
-                  {relatedPapers.length > 0 && (
-                    <button
-                      onClick={() => setIsMapView(true)}
-                      className="text-[10px] bg-[#7a2039] text-white px-2 py-1 rounded hover:bg-[#5a1528] transition font-medium flex items-center gap-1 shadow-sm"
-                      title="View Interactive Map"
-                    >
-                      <span>🕸️</span> Map View
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
-                  {relatedPapers.length > 0 ? (
-                    relatedPapers.slice(0, 5).map(rp => ( // Limit list view to 5 to keep sidebar clean
-                      <div key={rp.id} className="bg-white dark:bg-gray-700 border border-stone-200 dark:border-gray-600 rounded p-4 shadow-sm hover:shadow-md transition relative group">
-                        <span className="text-[10px] bg-stone-100 dark:bg-gray-600 px-2 py-1 rounded text-stone-600 dark:text-gray-300 font-medium mb-2 inline-block truncate max-w-full">
-                          {normalizeDepartment(rp.program || rp.department || rp.category) || 'Research'}
-                        </span>
-                        <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-1 line-clamp-2" title={rp.researchTitle || rp.title}>
-                          {rp.researchTitle || rp.title || 'Untitled Research'}
-                        </h3>
-                        <p className="text-[10px] text-stone-500 dark:text-gray-400 mb-3 truncate">{rp.studentName || rp.groupName || 'Unknown Author'}</p>
-                        <a href={`/viewer/${rp.id}`} className="text-[10px] bg-[#7a2039] text-white px-3 py-2 rounded hover:bg-[#5a1528] transition inline-block text-center w-full shadow-sm font-medium">
-                          Read Paper
-                        </a>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-stone-500 dark:text-gray-400 text-xs mt-10">
-                      No related researches found for this department.
-                    </div>
-                  )}
-                </div>
-
-                {/* FULL SCREEN NETWORK MAP MODAL */}
-                {isMapView && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 w-[95vw] h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative border border-stone-200 dark:border-gray-700">
-
-                      {/* Modal Header */}
-                      <div className="flex justify-between items-center p-4 border-b border-stone-200 dark:border-gray-800 bg-[#fcfbf7] dark:bg-gray-900">
-                        <div>
-                          <h2 className="text-xl font-bold text-[#7a2039] dark:text-[#f3e5ab] flex items-center gap-2">
-                            <span>🕸️</span> Interactive Research Network
-                          </h2>
-                          <p className="text-xs text-stone-500 dark:text-gray-400">
-                            Explore connections between papers in <strong>{normalizeDepartment(paper.program || paper.department || paper.category)}</strong>. Drag nodes to interact.
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setIsMapView(false)}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 dark:bg-gray-800 text-stone-600 dark:text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      {/* Map Container */}
-                      <div className="flex-1 w-full bg-[#111] relative">
-                        <ForceGraph2D
-                          graphData={graphData}
-                          nodeLabel="name"
-                          nodeAutoColorBy="group"
-                          nodeRelSize={6}
-                          linkColor={() => 'rgba(255,255,255,0.2)'}
-                          linkWidth={1.5}
-                          linkDirectionalParticles={2}
-                          linkDirectionalParticleSpeed={d => d.val * 0.001}
-                          onNodeClick={node => window.location.href = `/viewer/${node.id}`}
-                          width={window.innerWidth * 0.95}
-                          height={window.innerHeight * 0.95 - 75} // Subtract header height
-                        />
-
-                        {/* Legend */}
-                        <div className="absolute bottom-6 left-6 bg-black/60 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white font-sans shadow-lg">
-                          <h4 className="text-xs font-bold mb-2 uppercase tracking-widest text-stone-300">Legend</h4>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 rounded-full bg-[#7a2039]"></div>
-                            <span className="text-xs">Current Research</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 rounded-full bg-[#d6ad60]"></div>
-                            <span className="text-xs">Related Research</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-0.5 bg-white/40"></div>
-                            <span className="text-[10px] text-stone-400">Shared Keywords Connection</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            </div>
           </div>
         )}
 
         {/* CENTER DOCUMENT VIEWER */}
         <div
-          className="flex-1 overflow-hidden flex flex-col relative bg-[#e5e5e5]"
+          className="flex-1 overflow-hidden flex flex-col relative bg-[#e5e5e5] dark:bg-gray-900"
           onContextMenu={(e) => e.preventDefault()}
           onCopy={(e) => e.preventDefault()}
           onCut={(e) => e.preventDefault()}
@@ -1210,8 +1299,9 @@ function ArchivePaperViewer() {
             {/* MOBILE EXIT FULLSCREEN FLOATING BUTTON */}
             {isFullscreen && (
               <button
+                type="button"
                 onClick={toggleFullscreen}
-                className="md:hidden absolute top-4 right-4 z-50 bg-[#7a2039] text-white p-2 rounded-full shadow-lg opacity-80 hover:opacity-100 flex items-center justify-center"
+                className="md:hidden absolute top-4 right-4 z-50 bg-[#7a2039] text-white p-2.5 rounded-full shadow-lg opacity-90 hover:opacity-100 flex items-center justify-center cursor-pointer"
                 title="Exit Fullscreen"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1220,52 +1310,105 @@ function ArchivePaperViewer() {
               </button>
             )}
 
-            {/* ZOOM CONTROLS */}
-            <div className="absolute bottom-24 right-4 z-40 flex flex-col gap-2">
-              <button onClick={handleZoomIn} className="bg-white/90 text-stone-700 shadow-md p-2 rounded-full hover:bg-stone-100 border border-stone-200 transition" title="Zoom In">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            {/* ZOOM CONTROLS - Positioned cleanly with touch optimization */}
+            <div className="absolute bottom-28 right-3 sm:right-6 z-40 flex flex-col items-center gap-2 pointer-events-auto">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleZoomIn();
+                }}
+                className="w-11 h-11 bg-white/95 dark:bg-gray-800/95 text-stone-700 dark:text-stone-200 shadow-lg rounded-full hover:bg-white dark:hover:bg-gray-700 border border-stone-200 dark:border-gray-600 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Zoom In"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
               </button>
-              <button onClick={handleZoomOut} className="bg-white/90 text-stone-700 shadow-md p-2 rounded-full hover:bg-stone-100 border border-stone-200 transition" title="Zoom Out">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4"></path></svg>
+
+              {zoomLevel !== 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleResetZoom();
+                  }}
+                  className="px-2 py-0.5 bg-white/95 dark:bg-gray-800/95 text-[10px] font-bold text-[#7a2039] dark:text-[#f3e5ab] shadow-md rounded-full border border-stone-200 dark:border-gray-600 transition active:scale-95 cursor-pointer whitespace-nowrap"
+                  title="Reset Zoom to 100%"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleZoomOut();
+                }}
+                className="w-11 h-11 bg-white/95 dark:bg-gray-800/95 text-stone-700 dark:text-stone-200 shadow-lg rounded-full hover:bg-white dark:hover:bg-gray-700 border border-stone-200 dark:border-gray-600 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Zoom Out"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                </svg>
               </button>
             </div>
 
-            {/* EMBEDDED MANUSCRIPT VIEWER */}
+            {/* EMBEDDED MANUSCRIPT VIEWER - Full width on mobile & smooth horizontal pan when zoomed */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
               <div
                 ref={scrollContainerRef}
                 onScroll={handleScrollActivity}
-                className="w-full h-full relative overflow-y-auto overflow-x-hidden flex flex-col items-center custom-scrollbar py-8 pb-32"
+                className="w-full h-full relative overflow-y-auto overflow-x-auto flex flex-col items-center custom-scrollbar py-4 md:py-8 pb-36 px-1.5 sm:px-4"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-x pan-y',
+                }}
               >
                 <Document
                   file={paper.documents['Final Manuscript'].url}
                   onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={(err) => console.error("Document render error:", err)}
                   loading={
-                    <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-8 md:p-12 lg:p-20 flex flex-col h-[800px] rounded-sm mt-8">
-                      <div className="h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
-                      <div className="h-4 w-1/2 rounded mb-12 mx-auto animate-shimmer"></div>
-                      <div className="space-y-4 mb-8">
+                    <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-6 md:p-12 lg:p-20 flex flex-col h-[600px] sm:h-[800px] rounded-sm mt-4">
+                      <div className="h-8 md:h-10 w-3/4 rounded mb-6 mx-auto animate-shimmer"></div>
+                      <div className="h-4 w-1/2 rounded mb-8 mx-auto animate-shimmer"></div>
+                      <div className="space-y-4 mb-6">
                         <div className="h-4 w-full rounded animate-shimmer"></div>
                         <div className="h-4 w-full rounded animate-shimmer"></div>
                         <div className="h-4 w-5/6 rounded animate-shimmer"></div>
                       </div>
-                      <div className="space-y-4 mb-8">
-                        <div className="h-4 w-full rounded animate-shimmer"></div>
-                        <div className="h-4 w-full rounded animate-shimmer"></div>
-                        <div className="h-4 w-4/6 rounded animate-shimmer"></div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="h-4 w-full rounded animate-shimmer"></div>
-                        <div className="h-4 w-full rounded animate-shimmer"></div>
-                        <div className="h-4 w-3/4 rounded animate-shimmer"></div>
-                      </div>
                     </div>
                   }
-                  className="flex flex-col items-center gap-6 relative"
+                  error={
+                    <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md my-8 text-center max-w-md">
+                      <span className="text-4xl mb-3">⚠️</span>
+                      <h3 className="font-bold text-stone-800 dark:text-gray-100 text-sm sm:text-base mb-1">Failed to Render Document</h3>
+                      <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">An error occurred while rendering the PDF. Please try refreshing.</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-[#7a2039] text-white text-xs font-bold rounded shadow hover:bg-[#5a1528] transition cursor-pointer"
+                      >
+                        Reload Page
+                      </button>
+                    </div>
+                  }
+                  className="flex flex-col items-center gap-4 sm:gap-6 relative"
                 >
                   {numPages ? (
                     Array.from({ length: numPages }, (_, index) => {
                       const pageNum = index + 1;
+                      // Virtualization window: render only current page +/- 2 pages to keep memory under 30MB
+                      const isVisible = Math.abs(pageNum - currentPage) <= 2;
+                      const pageHeight = currentPdfHeight;
+
                       return (
                         <div
                           key={pageNum}
@@ -1274,82 +1417,108 @@ function ArchivePaperViewer() {
                           ref={(el) => {
                             if (el) pageRefsMap.current[pageNum] = el;
                           }}
-                          className="relative shadow-2xl bg-white rounded-sm overflow-hidden"
+                          className="relative shadow-xl bg-white dark:bg-gray-800 rounded-sm overflow-hidden transition-[width] duration-100"
                           style={{
-                            contentVisibility: 'auto',
-                            containIntrinsicSize: `${pdfWidth}px 1100px`,
+                            width: `${currentPdfWidth}px`,
+                            minHeight: `${pageHeight}px`,
                           }}
                         >
-                          <Page
-                            pageNumber={pageNum}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            width={pdfWidth}
-                            className="relative pointer-events-none min-h-[800px]"
-                            loading={
-                              <div
-                                className="bg-white dark:bg-gray-800 flex items-center justify-center text-stone-400 text-sm"
-                                style={{ width: pdfWidth, height: 1000 }}
-                              >
-                                Loading page {pageNum}...
-                              </div>
-                            }
-                          />
+                          {isVisible ? (
+                            <>
+                              <Page
+                                pageNumber={pageNum}
+                                renderTextLayer={false}
+                                renderAnnotationLayer={false}
+                                width={currentPdfWidth}
+                                className="relative pointer-events-none"
+                                loading={
+                                  <div
+                                    className="bg-white dark:bg-gray-800 flex items-center justify-center text-stone-400 text-xs"
+                                    style={{ width: `${currentPdfWidth}px`, height: `${pageHeight}px` }}
+                                  >
+                                    <span className="animate-pulse">Loading page {pageNum}...</span>
+                                  </div>
+                                }
+                                error={
+                                  <div
+                                    className="bg-white dark:bg-gray-800 flex items-center justify-center text-stone-400 text-xs p-4"
+                                    style={{ width: `${currentPdfWidth}px`, height: `${pageHeight}px` }}
+                                  >
+                                    Page {pageNum} preview unavailable
+                                  </div>
+                                }
+                              />
 
-                          {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}
-                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-20 select-none">
-                            <div className="w-full h-full relative flex items-center justify-center opacity-10">
-                              <h2 className="text-8xl font-bold transform -rotate-45 text-stone-900 absolute">SWU PHINMA</h2>
-                              <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute top-1/4">CONFIDENTIAL</h2>
-                              <h2 className="text-5xl font-bold transform -rotate-45 text-stone-900 absolute bottom-1/4">DO NOT COPY</h2>
+                              {/* WATERMARK OVERLAY DIRECTLY ON DOCUMENT */}
+                              <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-20 select-none">
+                                <div className="w-full h-full relative flex items-center justify-center opacity-10">
+                                  <h2 className="text-6xl sm:text-8xl font-bold transform -rotate-45 text-stone-900 absolute">SWU PHINMA</h2>
+                                  <h2 className="text-3xl sm:text-5xl font-bold transform -rotate-45 text-stone-900 absolute top-1/4">CONFIDENTIAL</h2>
+                                  <h2 className="text-3xl sm:text-5xl font-bold transform -rotate-45 text-stone-900 absolute bottom-1/4">DO NOT COPY</h2>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div
+                              className="bg-stone-50 dark:bg-gray-800/60 flex flex-col items-center justify-center text-stone-400 text-xs border border-stone-200 dark:border-gray-700/50"
+                              style={{ width: `${currentPdfWidth}px`, height: `${pageHeight}px` }}
+                            >
+                              <div className="flex flex-col items-center gap-1.5 opacity-60">
+                                <svg className="w-8 h-8 text-stone-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-[11px] font-medium">Page {pageNum} of {numPages}</span>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })
                   ) : (
-                    <div className="relative shadow-2xl bg-white rounded-sm overflow-hidden" style={{ width: pdfWidth, minHeight: 800 }}>
+                    <div className="relative shadow-xl bg-white rounded-sm overflow-hidden" style={{ width: currentPdfWidth, minHeight: currentPdfHeight }}>
                       <Page
                         pageNumber={1}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
-                        width={pdfWidth}
-                        className="relative pointer-events-none min-h-[800px]"
+                        width={currentPdfWidth}
+                        className="relative pointer-events-none"
                       />
                     </div>
                   )}
                 </Document>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-stone-500 dark:text-gray-400 z-20">
-                <span className="text-4xl mb-4">📄</span>
-                <p>No valid manuscript uploaded for this submission.</p>
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-stone-500 dark:text-gray-400 z-20">
+                <span className="text-4xl mb-3">📄</span>
+                <p className="text-sm">No valid manuscript uploaded for this submission.</p>
               </div>
             )}
 
-            {/* PAGINATION CONTROLS - DEAD CENTER ON THE DOCUMENT WORKSPACE */}
+            {/* PAGINATION CONTROLS - COMPACT & CLEAN ON MOBILE */}
             {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' && (
               <div
-                className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 bg-[#242b35]/90 backdrop-blur px-5 py-2.5 rounded-full z-50 border border-[#1f252e] transition-all duration-300 pointer-events-auto ${isScrolling
-                  ? 'opacity-25 hover:opacity-100 shadow-sm'
+                className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between gap-2 sm:gap-3 bg-[#242b35]/95 backdrop-blur px-3 sm:px-5 py-2 sm:py-2.5 rounded-full z-30 border border-[#1f252e] transition-all duration-300 pointer-events-auto shadow-xl ${isScrolling
+                  ? 'opacity-40 hover:opacity-100 shadow-sm'
                   : 'opacity-100 shadow-xl'
                   }`}
-                style={{ minWidth: '280px' }}
+                style={{ minWidth: isMobile ? '230px' : '280px', maxWidth: 'calc(100% - 32px)' }}
               >
                 <button
+                  type="button"
                   onClick={() => scrollToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
-                  className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
+                  className="w-14 sm:w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs sm:text-sm px-1 cursor-pointer transition-colors"
                 >
                   ← Prev
                 </button>
-                <span className="text-sm font-bold text-gray-300 flex-1 text-center select-none whitespace-nowrap">
+                <span className="text-xs sm:text-sm font-bold text-gray-300 flex-1 text-center select-none whitespace-nowrap">
                   Page {currentPage} of {numPages || '--'}
                 </span>
                 <button
+                  type="button"
                   onClick={() => scrollToPage(currentPage + 1)}
                   disabled={currentPage >= (numPages || 1)}
-                  className="w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm px-2 cursor-pointer transition-colors"
+                  className="w-14 sm:w-16 text-center text-white hover:text-[#d6ad60] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs sm:text-sm px-1 cursor-pointer transition-colors"
                 >
                   Next →
                 </button>
@@ -1358,28 +1527,28 @@ function ArchivePaperViewer() {
 
             {/* WATERMARK */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03] overflow-hidden">
-              <h2 className="text-9xl font-bold transform -rotate-45 whitespace-nowrap text-stone-900">SWU PHINMA ARCHIVE</h2>
+              <h2 className="text-7xl sm:text-9xl font-bold transform -rotate-45 whitespace-nowrap text-stone-900">SWU PHINMA ARCHIVE</h2>
             </div>
             <div className="absolute top-1/4 left-0 pointer-events-none w-full text-center opacity-[0.02] -rotate-45">
-              <p className="text-4xl font-serif">CONFIDENTIAL • DO NOT COPY</p>
+              <p className="text-3xl sm:text-4xl font-serif">CONFIDENTIAL • DO NOT COPY</p>
             </div>
             <div className="absolute bottom-1/4 left-0 pointer-events-none w-full text-center opacity-[0.02] -rotate-45">
-              <p className="text-4xl font-serif">CONFIDENTIAL • DO NOT COPY</p>
+              <p className="text-3xl sm:text-4xl font-serif">CONFIDENTIAL • DO NOT COPY</p>
             </div>
           </div>
         </div>
 
-        {/* RIGHT AI PANEL */}
+        {/* RIGHT AI PANEL - Full screen overlay on mobile, sidebar on desktop */}
         {isAiOpen && !isFullscreen && (
-          <div className="w-80 bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col flex-shrink-0 z-10 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] transition-colors">
+          <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col z-50 sm:relative sm:z-10 shadow-2xl transition-all">
             <div className="bg-[#7a2039] text-white p-4 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2">
                 <img src={logo} alt="Archivio AI" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shadow-sm" />
                 <span className="font-bold text-sm">Archivio AI Assistant</span>
               </div>
-              <button onClick={() => setIsAiOpen(false)} className="text-white hover:text-[#d6ad60] font-bold cursor-pointer">×</button>
+              <button onClick={() => setIsAiOpen(false)} className="text-white hover:text-[#d6ad60] font-bold cursor-pointer text-lg p-1">✕</button>
             </div>
-            <div className="p-4 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700 shrink-0 transition-colors">
+            <div className="p-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700 shrink-0 transition-colors">
               <p className="text-xs text-stone-600 dark:text-gray-400 font-medium">Ask questions about this specific research paper.</p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#fcfbf7] dark:bg-gray-900 transition-colors">
@@ -1390,7 +1559,6 @@ function ArchivePaperViewer() {
                   </div>
                   <div className="flex flex-col gap-1 max-w-[85%]">
                     <div className={`text-xs p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
-                      {/* Render bold text simply for now */}
                       {msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}
                     </div>
                     {msg.role !== 'user' && (
@@ -1436,7 +1604,7 @@ function ArchivePaperViewer() {
                 </div>
               )}
             </div>
-            <form onSubmit={handleChatSubmit} className="p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
+            <form onSubmit={handleChatSubmit} className="p-3 sm:p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1444,12 +1612,12 @@ function ArchivePaperViewer() {
                   onChange={(e) => setChatInput(e.target.value)}
                   disabled={isTyping}
                   placeholder="Ask about methodology..."
-                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors"
+                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={isTyping || !chatInput.trim()}
-                  className="bg-[#7a2039] text-white px-3 rounded hover:bg-[#5a1528] transition cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#7a2039] text-white px-3.5 rounded-lg hover:bg-[#5a1528] transition cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ↑
                 </button>
@@ -1458,11 +1626,67 @@ function ArchivePaperViewer() {
           </div>
         )}
 
-        {/* AI TOGGLE BUTTON (Mogawas kon isAiOpen = false) */}
+        {/* AI TOGGLE BUTTON */}
         {!isAiOpen && !isFullscreen && (
-          <button onClick={() => setIsAiOpen(true)} className="absolute right-4 bottom-4 bg-[#7a2039] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl hover:bg-[#5a1528] transition cursor-pointer z-20 border-2 border-white">
+          <button
+            onClick={() => setIsAiOpen(true)}
+            className="absolute right-3 sm:right-4 bottom-4 bg-[#7a2039] text-white w-11 h-11 sm:w-12 sm:h-12 rounded-full shadow-lg flex items-center justify-center text-lg sm:text-xl hover:bg-[#5a1528] transition active:scale-95 cursor-pointer z-20 border-2 border-white"
+            title="Open Archivio AI Assistant"
+          >
             ✨
           </button>
+        )}
+
+        {/* FULL SCREEN NETWORK MAP MODAL */}
+        {isMapView && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-900 w-[95vw] h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative border border-stone-200 dark:border-gray-700">
+              <div className="flex justify-between items-center p-3 sm:p-4 border-b border-stone-200 dark:border-gray-800 bg-[#fcfbf7] dark:bg-gray-900">
+                <div>
+                  <h2 className="text-base sm:text-xl font-bold text-[#7a2039] dark:text-[#f3e5ab] flex items-center gap-2">
+                    <span>🕸️</span> Interactive Research Network
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-stone-500 dark:text-gray-400">
+                    Explore connections in <strong>{normalizeDepartment(paper.program || paper.department || paper.category)}</strong>.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsMapView(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 dark:bg-gray-800 text-stone-600 dark:text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 w-full bg-[#111] relative">
+                <ForceGraph2D
+                  graphData={graphData}
+                  nodeLabel="name"
+                  nodeAutoColorBy="group"
+                  nodeRelSize={6}
+                  linkColor={() => 'rgba(255,255,255,0.2)'}
+                  linkWidth={1.5}
+                  linkDirectionalParticles={2}
+                  linkDirectionalParticleSpeed={d => d.val * 0.001}
+                  onNodeClick={node => window.location.href = `/viewer/${node.id}`}
+                  width={window.innerWidth * 0.95}
+                  height={window.innerHeight * 0.95 - 75}
+                />
+
+                <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-md p-3 rounded-lg border border-white/10 text-white font-sans shadow-lg text-xs">
+                  <h4 className="text-[10px] font-bold mb-1.5 uppercase tracking-widest text-stone-300">Legend</h4>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#7a2039]"></div>
+                    <span className="text-[11px]">Current Research</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#d6ad60]"></div>
+                    <span className="text-[11px]">Related Research</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
