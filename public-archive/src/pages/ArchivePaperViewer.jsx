@@ -321,12 +321,29 @@ function ArchivePaperViewer() {
   const hasIncremented = useRef(false);
   const hasTrackedAnalytics = useRef(false);
 
-  // Increment view count when paper viewer opens
+  // Increment view count when paper viewer opens (session-deduplicated)
   useEffect(() => {
     if (id && !hasIncremented.current) {
+      // Deduplicate views per browser session to prevent inflating on refresh
+      const viewedKey = `archivio_viewed_${id}`;
+      if (sessionStorage.getItem(viewedKey)) {
+        hasIncremented.current = true;
+        return;
+      }
+
       hasIncremented.current = true;
+      sessionStorage.setItem(viewedKey, '1');
+
       const docRef = doc(db, 'submissions', id);
-      updateDoc(docRef, { views: increment(1) }).catch(err => console.error("Failed to increment views:", err));
+      updateDoc(docRef, { views: increment(1) })
+        .catch(err => {
+          console.warn("View increment failed, retrying once:", err.message);
+          // Retry once after a short delay (handles cold-start rule evaluation lag)
+          setTimeout(() => {
+            updateDoc(docRef, { views: increment(1) })
+              .catch(retryErr => console.error("View increment retry failed:", retryErr.message));
+          }, 1500);
+        });
     }
   }, [id]);
 

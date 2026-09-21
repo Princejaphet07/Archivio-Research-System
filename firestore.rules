@@ -177,10 +177,11 @@ service cloud.firestore {
       );
       allow update: if isSystemAdmin() || isDean() || isAdviser()
                      || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
-                     // Public view count increment (must be numeric and cannot decrease)
+                     // Public view count increment (any user, even unauthenticated)
+                     // Handles both: new views field (resource.data.views doesn't exist) and existing views field
                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
                          && request.resource.data.views is number
-                         && request.resource.data.views >= resource.data.views)
+                         && (!(resource.data.keys().hasAll(['views'])) || request.resource.data.views > resource.data.views))
                      // Authenticated user like toggling (must only affect likes list)
                      || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
                          && request.resource.data.likes is list);
