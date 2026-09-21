@@ -264,44 +264,13 @@ function SendInvitations() {
         }
       }
 
-      // Show comprehensive success modal with immediate copy link
+      // Show clean success alert
       await Swal.fire({
-        title: 'Invitation Dispatched!',
-        html: `
-          <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
-            <p style="margin-bottom: 12px; color: #4a5568;">
-              An invitation email has been sent to <strong>${studentEmail}</strong>.
-            </p>
-            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; margin-bottom: 6px;">Direct Student Sign Up Link:</label>
-              <input type="text" id="swalStudLink" readonly value="${invitationLink}" style="width: 100%; font-size: 12px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; background-color: #ffffff; color: #2d3748; box-sizing: border-box;" />
-            </div>
-            <button id="copySwalStudBtn" type="button" style="width: 100%; background: #541b2f; color: #fff; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              📋 Copy Student Sign Up Link
-            </button>
-            <p style="font-size: 11px; color: #a0aec0; margin-top: 10px; margin-bottom: 0;">
-              💡 The student can use this link directly in their browser anytime to create their account.
-            </p>
-          </div>
-        `,
+        title: 'Invitation Sent!',
+        text: `An invitation email has been successfully sent to ${studentEmail}.`,
         icon: 'success',
         confirmButtonColor: '#801e38',
-        confirmButtonText: 'Done',
-        didOpen: () => {
-          const btn = document.getElementById('copySwalStudBtn');
-          const input = document.getElementById('swalStudLink');
-          if (btn && input) {
-            btn.addEventListener('click', () => {
-              navigator.clipboard.writeText(input.value);
-              btn.innerText = '✅ Copied to Clipboard!';
-              btn.style.background = '#2e7d32';
-              setTimeout(() => {
-                btn.innerText = '📋 Copy Student Sign Up Link';
-                btn.style.background = '#541b2f';
-              }, 2500);
-            });
-          }
-        }
+        confirmButtonText: 'OK'
       });
       setStudentEmail('');
 
