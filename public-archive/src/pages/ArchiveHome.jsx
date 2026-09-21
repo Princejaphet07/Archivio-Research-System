@@ -11,6 +11,12 @@ import { normalizeDepartment } from '../utils/normalizeDepartment';
 import { trackDepartmentFilter, trackLike } from '../utils/analytics';
 export { normalizeDepartment };
 
+const preloadViewer = () => {
+  try {
+    import('./ArchivePaperViewer');
+  } catch (_) {}
+};
+
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -344,7 +350,12 @@ function ArchiveHome() {
             ))
           ) : (
             publishedPapers.slice(0, 3).map((paper) => (
-              <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden">
+              <div
+                key={paper.id}
+                onMouseEnter={preloadViewer}
+                onTouchStart={preloadViewer}
+                className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden"
+              >
                 {/* Subtle Glow Effect on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
@@ -388,6 +399,9 @@ function ArchiveHome() {
                     </span>
                   </div>
                   <button
+                    type="button"
+                    onMouseEnter={preloadViewer}
+                    onTouchStart={preloadViewer}
                     onClick={(e) => handleViewPaper(e, paper.id)}
                     className="px-5 py-2 bg-[#7a2039] text-white text-xs font-medium rounded-lg hover:bg-[#5a1528] transition-colors cursor-pointer inline-block shadow-sm"
                   >

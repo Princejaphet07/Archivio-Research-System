@@ -66,6 +66,63 @@ function ArchivePaperViewer() {
   const [pdfBaseWidth, setPdfBaseWidth] = useState(800);
   const [zoomLevel, setZoomLevel] = useState(1);
 
+  // PDF source state with Blob URL to eliminate Cross-Origin Range Request redirects
+  const [pdfSource, setPdfSource] = useState(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(true);
+
+  // PDF.js options to disable range requests & streaming (which cause Firebase Storage redirect errors)
+  const pdfOptions = useMemo(() => ({
+    disableRange: true,
+    disableStream: true,
+    disableAutoFetch: true,
+  }), []);
+
+  useEffect(() => {
+    const rawUrl = paper?.documents?.['Final Manuscript']?.url;
+    if (!rawUrl || rawUrl === '#') {
+      setPdfSource(null);
+      setIsPdfLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    let localBlobUrl = null;
+    setIsPdfLoading(true);
+
+    const fetchPdf = async () => {
+      try {
+        const response = await fetch(rawUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        if (!isCancelled) {
+          localBlobUrl = URL.createObjectURL(blob);
+          setPdfSource(localBlobUrl);
+          setIsPdfLoading(false);
+        }
+      } catch (fetchErr) {
+        console.warn("Could not pre-fetch PDF as blob, falling back to direct URL with disableRange:", fetchErr);
+        if (!isCancelled) {
+          setPdfSource({
+            url: rawUrl,
+            disableRange: true,
+            disableStream: true,
+            disableAutoFetch: true,
+          });
+          setIsPdfLoading(false);
+        }
+      }
+    };
+
+    fetchPdf();
+
+    return () => {
+      isCancelled = true;
+      if (localBlobUrl) {
+        URL.revokeObjectURL(localBlobUrl);
+      }
+    };
+  }, [paper?.documents?.['Final Manuscript']?.url]);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -827,38 +884,40 @@ function ArchivePaperViewer() {
             <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Pages</h2>
           </div>
           <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 items-center custom-scrollbar">
-            {numPages ? (
-              Array.from({ length: numPages }).map((_, idx) => {
-                const pageNum = idx + 1;
-                const isNearCurrent = Math.abs(pageNum - currentPage) <= 4;
-                return (
-                  <div key={idx} className="flex flex-col items-center gap-1.5 mb-2">
-                    <button
-                      onClick={() => {
-                        scrollToPage(pageNum);
-                        if (isDrawer) setIsMobileDrawerOpen(false);
-                      }}
-                      className={`w-24 sm:w-28 bg-white cursor-pointer transition-all overflow-hidden rounded ${currentPage === pageNum ? 'ring-2 ring-[#7a2039] shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
-                    >
-                      {isNearCurrent ? (
-                        <Page
-                          pageNumber={pageNum}
-                          width={isMobile ? 96 : 112}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      ) : (
-                        <div className="h-32 bg-stone-100 dark:bg-gray-700 flex items-center justify-center text-stone-400 text-xs">
-                          P. {pageNum}
-                        </div>
-                      )}
-                    </button>
-                    <span className={`text-[11px] font-bold ${currentPage === pageNum ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}>
-                      Page {pageNum}
-                    </span>
-                  </div>
-                );
-              })
+            {numPages && pdfSource ? (
+              <Document file={pdfSource} options={pdfOptions}>
+                {Array.from({ length: numPages }).map((_, idx) => {
+                  const pageNum = idx + 1;
+                  const isNearCurrent = Math.abs(pageNum - currentPage) <= 4;
+                  return (
+                    <div key={idx} className="flex flex-col items-center gap-1.5 mb-2">
+                      <button
+                        onClick={() => {
+                          scrollToPage(pageNum);
+                          if (isDrawer) setIsMobileDrawerOpen(false);
+                        }}
+                        className={`w-24 sm:w-28 bg-white cursor-pointer transition-all overflow-hidden rounded ${currentPage === pageNum ? 'ring-2 ring-[#7a2039] shadow-md' : 'border border-stone-300 hover:border-stone-400 shadow-sm'}`}
+                      >
+                        {isNearCurrent ? (
+                          <Page
+                            pageNumber={pageNum}
+                            width={isMobile ? 96 : 112}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                          />
+                        ) : (
+                          <div className="h-32 bg-stone-100 dark:bg-gray-700 flex items-center justify-center text-stone-400 text-xs">
+                            P. {pageNum}
+                          </div>
+                        )}
+                      </button>
+                      <span className={`text-[11px] font-bold ${currentPage === pageNum ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}>
+                        Page {pageNum}
+                      </span>
+                    </div>
+                  );
+                })}
+              </Document>
             ) : (
               <div className="text-stone-400 text-xs p-4 text-center">Loading pages...</div>
             )}
@@ -1362,7 +1421,19 @@ function ArchivePaperViewer() {
             </div>
 
             {/* EMBEDDED MANUSCRIPT VIEWER - Full width on mobile & smooth horizontal pan when zoomed */}
-            {paper.documents?.['Final Manuscript']?.url && paper.documents['Final Manuscript'].url !== '#' ? (
+            {isPdfLoading ? (
+              <div className="w-full h-full relative overflow-y-auto flex flex-col items-center py-4 md:py-8 pb-36 px-1.5 sm:px-4">
+                <div className="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl border border-stone-200 dark:border-gray-700 p-6 md:p-12 lg:p-20 flex flex-col h-[600px] sm:h-[800px] rounded-sm mt-4 animate-pulse">
+                  <div className="h-8 md:h-10 w-3/4 rounded mb-6 mx-auto bg-stone-200 dark:bg-gray-700"></div>
+                  <div className="h-4 w-1/2 rounded mb-8 mx-auto bg-stone-200 dark:bg-gray-700"></div>
+                  <div className="space-y-4 mb-6">
+                    <div className="h-4 w-full rounded bg-stone-200 dark:bg-gray-700"></div>
+                    <div className="h-4 w-full rounded bg-stone-200 dark:bg-gray-700"></div>
+                    <div className="h-4 w-5/6 rounded bg-stone-200 dark:bg-gray-700"></div>
+                  </div>
+                </div>
+              </div>
+            ) : pdfSource ? (
               <div
                 ref={scrollContainerRef}
                 onScroll={handleScrollActivity}
@@ -1373,7 +1444,8 @@ function ArchivePaperViewer() {
                 }}
               >
                 <Document
-                  file={paper.documents['Final Manuscript'].url}
+                  file={pdfSource}
+                  options={pdfOptions}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={(err) => console.error("Document render error:", err)}
                   loading={
@@ -1393,6 +1465,7 @@ function ArchivePaperViewer() {
                       <h3 className="font-bold text-stone-800 dark:text-gray-100 text-sm sm:text-base mb-1">Failed to Render Document</h3>
                       <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">An error occurred while rendering the PDF. Please try refreshing.</p>
                       <button
+                        type="button"
                         onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-[#7a2039] text-white text-xs font-bold rounded shadow hover:bg-[#5a1528] transition cursor-pointer"
                       >

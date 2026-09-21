@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { db } from '../firebase/config';
-import { doc, onSnapshot, getDoc, updateDoc, setDoc, arrayRemove } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, updateDoc, setDoc, arrayRemove, query, collection, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { normalizeDepartment } from '../utils/normalizeDepartment';
@@ -41,7 +41,6 @@ function ArchiveBookmarks() {
           let categoryDisplay = pData.category || pData.program;
 
           if (pData.studentUid) {
-            const { query, collection, where, getDocs } = await import('firebase/firestore');
             const qGroup = query(collection(db, 'groups'), where('leaderUid', '==', pData.studentUid));
             const gSnap = await getDocs(qGroup);
             if (!gSnap.empty) {

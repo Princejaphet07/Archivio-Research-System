@@ -16,6 +16,12 @@ import {
 } from '../utils/analytics';
 import { useNetworkStatus } from '../components/NetworkStatusPill';
 
+const preloadViewer = () => {
+  try {
+    import('./ArchivePaperViewer');
+  } catch (_) {}
+};
+
 const HighlightedText = ({ text, highlight }) => {
   if (!highlight.trim() || !text) return <>{text}</>;
   const regex = new RegExp(`(${highlight})`, 'gi');
@@ -703,7 +709,12 @@ function ArchiveBrowse() {
               </div>
             ) : (
               paginatedPapers.map((paper) => (
-                <div key={paper.id} className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 rounded-xl p-6 sm:p-8 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_20px_40px_rgba(122,32,57,0.15)] dark:hover:shadow-[0_20px_40px_rgba(243,229,171,0.1)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.01] border-l-4 border-l-[#7a2039] dark:border-l-[#f3e5ab] group overflow-hidden">
+                <div
+                  key={paper.id}
+                  onMouseEnter={preloadViewer}
+                  onTouchStart={preloadViewer}
+                  className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 rounded-xl p-6 sm:p-8 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_20px_40px_rgba(122,32,57,0.15)] dark:hover:shadow-[0_20px_40px_rgba(243,229,171,0.1)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.01] border-l-4 border-l-[#7a2039] dark:border-l-[#f3e5ab] group overflow-hidden"
+                >
                   <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
@@ -870,6 +881,8 @@ function ArchiveBrowse() {
               </button>
               <button
                 type="button"
+                onMouseEnter={preloadViewer}
+                onTouchStart={preloadViewer}
                 onClick={(e) => {
                   setPreviewPaper(null);
                   handleViewPaper(e, previewPaper.id);
