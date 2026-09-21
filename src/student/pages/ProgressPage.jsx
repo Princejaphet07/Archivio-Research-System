@@ -140,10 +140,18 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const researchTitle  = studentData?.researchTitle || submission?.title || 'Your Research';
   const groupName      = studentData?.groupName || 'Your Group';
 
-  const uploadedDocs   = submission?.uploadedDocs || [];
-  const requiredCount  = requirements.length || 6;
-  const uploadedCount  = uploadedDocs.length;
-  const missingDocs    = requirements.filter(r => !uploadedDocs.includes(r.title)).map(r => r.title);
+  const docMap         = submission?.documents || {};
+  const activeReqs     = requirements.filter(r => r.storageEnabled !== false && r.storageStatus !== 'suspended');
+  const requiredCount  = activeReqs.length || requirements.length || 7;
+  const submittedItems = activeReqs.filter(r => {
+    const meta = docMap[r.id] || docMap[r.title];
+    return !!(meta && (meta.url || meta.name));
+  });
+  const uploadedCount  = submittedItems.length;
+  const missingDocs    = activeReqs.filter(r => {
+    const meta = docMap[r.id] || docMap[r.title];
+    return !(meta && (meta.url || meta.name));
+  }).map(r => r.title);
 
   const hasManuscript     = !!submission?.manuscriptUrl;
   const allDocsSubmitted  = uploadedCount >= requiredCount && uploadedCount > 0;

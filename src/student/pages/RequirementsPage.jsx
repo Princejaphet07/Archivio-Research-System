@@ -41,18 +41,18 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     const setupListeners = async () => {
       setLoadingData(true);
       try {
-        const uid = studentUid || auth.currentUser?.uid;
-        if (!uid) { setLoadingData(false); return; }
+        const targetUid = (role === 'member' && leaderUid) ? leaderUid : (studentUid || auth.currentUser?.uid);
+        if (!targetUid) { setLoadingData(false); return; }
 
         let resolvedAdviserUid = null;
-        const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', uid)));
+        const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', targetUid)));
         if (!groupSnap.empty) {
           resolvedAdviserUid = groupSnap.docs[0].data().adviserUid;
         } else {
           const allGroupsSnap = await getDocs(collection(db, 'groups'));
           for (const doc of allGroupsSnap.docs) {
             const data = doc.data();
-            if (data.members?.some(m => m.email === auth.currentUser?.email)) {
+            if (data.members?.some(m => m.email === auth.currentUser?.email || m === auth.currentUser?.email)) {
               resolvedAdviserUid = data.adviserUid;
               break;
             }
@@ -64,7 +64,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           const allReqs = reqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const activeReqs = allReqs.filter(r =>
             (r.scope === 'global' && r.status === 'approved') ||
-            (r.scope === 'adviser' && r.adviserUid === adviserUid && r.status === 'approved')
+            (r.scope === 'adviser' && r.adviserUid === resolvedAdviserUid && r.status === 'approved')
           );
           activeReqs.sort((a, b) => {
             if (a.scope === 'global' && b.scope === 'global') return (a.priority || 0) - (b.priority || 0);
@@ -75,20 +75,57 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           setRequirements(activeReqs);
         }, (err) => console.error('Error listening to requirements:', err));
 
-        const subQuery = query(collection(db, 'submissions'), where('studentUid', '==', uid));
+        const subQuery = query(collection(db, 'submissions'), where('studentUid', '==', targetUid));
         unsubSub = onSnapshot(subQuery, (subSnap) => {
           if (!subSnap.empty) {
             const subs = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const getTime = (val) => {
+              if (!val) return 0;
+              if (typeof val.toMillis === 'function') return val.toMillis();
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              if (val.seconds) return val.seconds * 1000;
+              const t = new Date(val).getTime();
+              return isNaN(t) ? 0 : t;
+            };
+
             subs.sort((a, b) => {
-              const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+              const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
               return timeB - timeA;
             });
+
             const subDocId = subs[0].id;
             const subData = subs[0];
+            const metaMap = subData.documents || {};
+
+            // Strictly filter uploaded docs to only those with valid file metadata (prevents phantom counts)
+            const cleanUploadedDocs = (subData.uploadedDocs || []).filter(id => {
+              const m = metaMap[id];
+              return !!(m && (m.url || m.name));
+            });
+
+            // Ensure any requirement present in documents meta is also in cleanUploadedDocs
+            Object.keys(metaMap).forEach(id => {
+              const m = metaMap[id];
+              if (m && (m.url || m.name) && !cleanUploadedDocs.includes(id)) {
+                cleanUploadedDocs.push(id);
+              }
+            });
+
+            // Self-heal: If Firestore has ghost/orphaned IDs in uploadedDocs, clean it up
+            if (subDocId && (
+              !subData.uploadedDocs ||
+              subData.uploadedDocs.length !== cleanUploadedDocs.length ||
+              subData.uploadedDocs.some(id => !cleanUploadedDocs.includes(id))
+            )) {
+              updateDoc(doc(db, 'submissions', subDocId), {
+                uploadedDocs: cleanUploadedDocs
+              }).catch(() => {});
+            }
+
             setSubmissionDocId(subDocId);
-            setUploadedDocs(subData.uploadedDocs || []);
-            setDocumentsMeta(subData.documents || {});
+            setUploadedDocs(cleanUploadedDocs);
+            setDocumentsMeta(metaMap);
             setDocumentRevisions(subData.documentRevisions || {});
             setDocumentAnnotations(subData.documentAnnotations || {});
             setDocumentResubmissions(subData.documentResubmissions || {});
@@ -120,7 +157,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       if (unsubReq) unsubReq();
       if (unsubSub) unsubSub();
     };
-  }, [studentUid]);
+  }, [studentUid, role, leaderUid]);
 
   // Helper to determine if a requirement should be strictly PDF
   const isPdfOnly = (item) => {
@@ -411,11 +448,17 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     }
   };
 
-  // ── Derived values ────────────────────────────────────────────────────────
+  // ── Derived values (100% accurate and aligned with displayed cards) ───────────────────────
   const activeRequirements = requirements.filter(r => r.storageEnabled !== false && r.storageStatus !== 'suspended');
   const totalCount = activeRequirements.length;
-  const validUploadedDocs = uploadedDocs.filter(id => activeRequirements.some(r => r.id === id));
-  const uploadedCount = validUploadedDocs.length;
+
+  // A requirement is strictly considered submitted if its uploaded document metadata exists with valid url/name
+  const submittedItems = activeRequirements.filter(item => {
+    const meta = documentsMeta[item.id] || documentsMeta[item.title];
+    return !!(meta && (meta.url || meta.name));
+  });
+
+  const uploadedCount = submittedItems.length;
   const missingCount = Math.max(0, totalCount - uploadedCount);
   const progressPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
 
@@ -498,17 +541,32 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                   {loadingData ? (
                     <div className="h-3 w-20 bg-stone-200 dark:bg-stone-800 animate-pulse rounded" />
                   ) : (
-                    <p className="text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">{progressPercent}% complete</p>
+                    <p className="text-[12px] font-bold text-[#7B1F35] dark:text-[#D05353]">
+                      {progressPercent}% complete
+                    </p>
                   )}
                 </div>
 
-                <div className="w-full sm:w-48 flex justify-start sm:justify-end">
-                  {missingCount === 0 && !loadingData ? (
-                    <StatusBadge status={displayStatus} />
+                <div className="w-full sm:w-auto shrink-0 flex items-center justify-end">
+                  {loadingData ? (
+                    <div className="h-8 w-24 bg-stone-200 dark:bg-stone-800 animate-pulse rounded-full" />
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full border bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {missingCount} missing
+                    <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wide ${
+                      missingCount === 0
+                        ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800'
+                        : 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50'
+                    }`}>
+                      {missingCount === 0 ? (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                          All Complete
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          {missingCount} missing
+                        </>
+                      )}
                     </span>
                   )}
                 </div>
@@ -519,8 +577,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
               {requirements.map((item) => {
-                const isUploaded = uploadedDocs.includes(item.id);
-                const meta = documentsMeta[item.id];
+                const meta = documentsMeta[item.id] || documentsMeta[item.title];
+                const isUploaded = !!(meta && (meta.url || meta.name));
                 const isUploadingThis = uploadingItem === item.id;
 
                 if (isUploaded && meta) {
