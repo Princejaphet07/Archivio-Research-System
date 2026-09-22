@@ -1611,12 +1611,12 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // ============================================
 const GEMINI_MODELS = [
   'gemini-3.5-flash',          // Primary: 2s response time, 100% active and healthy
-  'gemini-3.6-flash',          // High performance secondary fallback
-  'gemini-flash-latest'        // Stable fallback
+  'gemini-3.6-flash'           // High performance secondary fallback
 ];
 
-async function generateAIContentWithFallback(genAI, options, generatePayload) {
+async function generateAIContentWithFallback(genAI, options, generatePayload, developerPrompt, userMessage, chatHistory) {
   let lastError;
+  // Tier 1: Try Gemini Models
   for (const modelName of GEMINI_MODELS) {
     try {
       const modelOptions = typeof options === 'object' && options !== null
@@ -1624,23 +1624,65 @@ async function generateAIContentWithFallback(genAI, options, generatePayload) {
         : { model: modelName };
       const model = genAI.getGenerativeModel(modelOptions);
 
-      // Race against a 15-second timeout per model to prevent Cloud Run 502/504 timeouts
       const responsePromise = (async () => {
         const resultData = await model.generateContent(generatePayload);
-        return await resultData.response;
+        const res = await resultData.response;
+        return res.text();
       })();
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Model ${modelName} timed out after 15s`)), 15000)
+        setTimeout(() => reject(new Error(`Model ${modelName} timed out after 30s`)), 30000)
       );
 
-      const response = await Promise.race([responsePromise, timeoutPromise]);
-      return response;
+      const text = await Promise.race([responsePromise, timeoutPromise]);
+      if (text) {
+        return { text: () => text, toString: () => text };
+      }
     } catch (err) {
-      console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next model...`);
+      console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next provider...`);
       lastError = err;
     }
   }
+
+  // Tier 2: Instant Zero-Failure Groq Fallback (Sub-second response)
+  if (process.env.GROQ_API_KEY) {
+    const groqModels = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b'];
+    for (const gModel of groqModels) {
+      try {
+        console.log(`⚡ Cascading to Groq fallback model: ${gModel}`);
+        const Groq = require('groq-sdk');
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        
+        const messages = [];
+        if (developerPrompt) messages.push({ role: 'system', content: developerPrompt });
+        if (Array.isArray(chatHistory)) {
+          for (const msg of chatHistory) {
+            messages.push({
+              role: msg.role === 'user' ? 'user' : 'assistant',
+              content: msg.content || ''
+            });
+          }
+        }
+        if (userMessage) messages.push({ role: 'user', content: userMessage });
+
+        const groqRes = await groq.chat.completions.create({
+          model: gModel,
+          messages,
+          temperature: 0.7,
+          max_tokens: 3500
+        });
+
+        const groqText = groqRes.choices[0]?.message?.content;
+        if (groqText) {
+          console.log(`✅ AI Response served instantly by Groq [${gModel}]`);
+          return { text: () => groqText, toString: () => groqText };
+        }
+      } catch (groqErr) {
+        console.warn(`⚠️ Groq model [${gModel}] failed:`, groqErr.message);
+      }
+    }
+  }
+
   throw lastError;
 }
 
@@ -1789,7 +1831,10 @@ app.post('/api/ai/chat', async (req, res) => {
     const responseData = await generateAIContentWithFallback(
       genAI,
       { systemInstruction: developerPrompt },
-      { contents }
+      { contents },
+      developerPrompt,
+      userMessage,
+      chatHistory
     );
     
     let cleanResponse = responseData.text() || "";
