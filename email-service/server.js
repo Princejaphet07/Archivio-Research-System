@@ -1607,16 +1607,19 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 
 // ============================================
 // GEMINI MULTI-MODEL FALLBACK & HIGH-QUOTA CASCADE
-// Prioritizes ultra-fast, active models (gemini-3.5-flash) and cascades automatically.
+// Prevents rate-limiting by prioritizing high-throughput, low-cost flash models,
+// and cascading automatically if one model is throttled or exhausted.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-3.5-flash',          // Primary: 2s response time, 100% active and healthy
-  'gemini-3.6-flash'           // High performance secondary fallback
+  'gemini-3.5-flash-lite',    // Fastest, most cost-effective
+  'gemini-3.1-flash-lite',    // Legacy but stable
+  'gemini-3.5-flash',          // Balanced speed and capability
+  'gemini-3.6-flash',          // Previous gen with good performance
+  'gemini-2.5-flash'           // Fallback to 2.5 series
 ];
 
-async function generateAIContentWithFallback(genAI, options, generatePayload, developerPrompt, userMessage, chatHistory) {
+async function generateAIContentWithFallback(genAI, options, generatePayload) {
   let lastError;
-  // Tier 1: Try Gemini Models
   for (const modelName of GEMINI_MODELS) {
     try {
       const modelOptions = typeof options === 'object' && options !== null
@@ -1624,65 +1627,15 @@ async function generateAIContentWithFallback(genAI, options, generatePayload, de
         : { model: modelName };
       const model = genAI.getGenerativeModel(modelOptions);
 
-      const responsePromise = (async () => {
-        const resultData = await model.generateContent(generatePayload);
-        const res = await resultData.response;
-        return res.text();
-      })();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Model ${modelName} timed out after 30s`)), 30000)
-      );
-
-      const text = await Promise.race([responsePromise, timeoutPromise]);
-      if (text) {
-        return { text: () => text, toString: () => text };
-      }
+      const resultData = await model.generateContent(generatePayload);
+      const response = await resultData.response;
+      return response;
     } catch (err) {
-      console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next provider...`);
+      console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next model...`);
       lastError = err;
+      // Immediately cascade to next model on 429 (rate limit), 503 (overload), 404, or any error
     }
   }
-
-  // Tier 2: Instant Zero-Failure Groq Fallback (Sub-second response)
-  if (process.env.GROQ_API_KEY) {
-    const groqModels = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b'];
-    for (const gModel of groqModels) {
-      try {
-        console.log(`⚡ Cascading to Groq fallback model: ${gModel}`);
-        const Groq = require('groq-sdk');
-        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-        
-        const messages = [];
-        if (developerPrompt) messages.push({ role: 'system', content: developerPrompt });
-        if (Array.isArray(chatHistory)) {
-          for (const msg of chatHistory) {
-            messages.push({
-              role: msg.role === 'user' ? 'user' : 'assistant',
-              content: msg.content || ''
-            });
-          }
-        }
-        if (userMessage) messages.push({ role: 'user', content: userMessage });
-
-        const groqRes = await groq.chat.completions.create({
-          model: gModel,
-          messages,
-          temperature: 0.7,
-          max_tokens: 3500
-        });
-
-        const groqText = groqRes.choices[0]?.message?.content;
-        if (groqText) {
-          console.log(`✅ AI Response served instantly by Groq [${gModel}]`);
-          return { text: () => groqText, toString: () => groqText };
-        }
-      } catch (groqErr) {
-        console.warn(`⚠️ Groq model [${gModel}] failed:`, groqErr.message);
-      }
-    }
-  }
-
   throw lastError;
 }
 
@@ -1696,7 +1649,7 @@ app.post('/api/ai/chat', async (req, res) => {
     console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
 
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(200).json({ success: false, text: "⚠️ AI service is temporarily unavailable (Missing API key). Please contact system administrator." });
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -1737,7 +1690,7 @@ app.post('/api/ai/chat', async (req, res) => {
     } else {
       developerPrompt = `
       === SYSTEM INSTRUCTIONS ===
-      You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System at Southwestern University PHINMA.
+      You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System.
       
       YOUR IDENTITY & CREATORS:
       - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by **Prince Japhet Vender** (Lead Programmer & Full-Stack Developer), alongside **Jerika Zamoras** (UI/UX Designer), **Hylla Mae Tejada** (Project Manager), and **Andrea Cañete Perote** (Assistant Programmer).
@@ -1749,19 +1702,23 @@ app.post('/api/ai/chat', async (req, res) => {
 
       CRITICAL LANGUAGE ENFORCEMENT:
       - DEFAULT LANGUAGE IS ENGLISH. Always respond in articulate, professional academic English by default.
-      - DO NOT answer in Cebuano/Bisaya unless the user EXPLICITLY asks or speaks in Cebuano/Bisaya (e.g. "I-summarize ni sa bisaya", "Unsa ang findings ani?", "Ngano...").
+      - DO NOT answer in Cebuano/Bisaya unless the user EXPLICITLY asks or speaks in Cebuano/Bisaya.
       - If the user asks in English, you MUST strictly reply in English.
       - If the user writes in Tagalog/Filipino, reply in Tagalog.
-      - If and ONLY IF the user explicitly speaks or requests Cebuano/Bisaya, reply in natural, authentic Cebuano/Bisaya while preserving complete academic depth.
+      - If and ONLY IF the user explicitly speaks or requests Cebuano/Bisaya, reply in natural, authentic Cebuano/Bisaya.
+
+      RESPONSE QUALITY & DEPTH:
+      - Provide THOROUGH, DETAILED, AND ACADEMICALLY COMPREHENSIVE answers.
+      - Structure your responses with clear markdown headings (###), bullet points, and numbered lists.
 
       CRITICAL OUTPUT RULES:
       - NEVER include <think> tags or show your thinking process
       - NEVER output internal reasoning or planning steps
-      - Output ONLY the final, clean, beautifully formatted markdown response to the user
+      - Output ONLY the final, clean response to the user
 
       YOUR PRIMARY ROLE:
-      - You are a specialized research paper analyst and academic thesis advisor for this specific paper.
-      - Ground your answers directly in the provided manuscript and metadata. Do NOT make up information.
+      - You are a specialized research paper analyst. 
+      - Do NOT make up information.
       - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
 
       === THE PAPER YOU ARE ANALYZING ===
@@ -1771,54 +1728,19 @@ app.post('/api/ai/chat', async (req, res) => {
       Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
       Abstract: ${paper?.abstract || 'No abstract available'}
       === END OF PAPER METADATA ===
-
-      === COMPREHENSIVE ACADEMIC ANALYSIS & SUMMARIZATION PROTOCOL ===
-      Provide THOROUGH, IN-DEPTH, AND ACADEMICALLY RIGOROUS answers. Never give shallow 1-2 sentence generalizations. Structure your answers with clear markdown headings (###), bold text, and organized bullet points.
-
-      1. IF ASKED TO SUMMARIZE THE RESEARCH PAPER (OR GENERAL OVERVIEW):
-      Synthesize the study into an extensive, multi-chapter academic summary with the following distinct sections:
-      - ### 📋 Executive Summary & Context: High-level overview of what the research is about, its motivation, and its academic/practical importance.
-      - ### 🎯 Problem Statement & Objectives: Detail the exact gaps/problems addressed in Chapter 1, followed by the General Objective and Specific Objectives (or research questions).
-      - ### 💡 Theoretical & Conceptual Framework: The underlying models, systems concepts, or theories guiding the project.
-      - ### 🔬 Research Methodology: The research design (e.g., Developmental, Descriptive, Experimental, Agile/Scrum), participants/sample size, sampling method, instruments (e.g., ISO 25010, System Usability Scale/SUS), and evaluation procedures.
-      - ### 📊 Key Results & Empirical Findings: The concrete findings, statistical figures, metric evaluations, performance ratings, and usability scores from Chapter 4.
-      - ### 📌 Conclusions & Real-World Impact: The fundamental conclusions reached by the researchers, whether objectives were met, and practical significance.
-      - ### 🚀 Recommendations & Future Directions: Key recommendations for users, institutions, and future researchers from Chapter 5.
-
-      2. IF ASKED SPECIFIC QUESTIONS:
-      - **Methodology Questions:** Provide full details on research design, development phases, target population, sample size, instruments, and testing frameworks.
-      - **Results/Findings Questions:** Highlight specific quantitative metrics, survey scores, performance benchmarks, and qualitative findings from the manuscript.
-      - **Objectives/Problem Questions:** Cite the precise problem statements and bulleted objectives.
-      - **Conclusion/Recommendation Questions:** Quote and explain the actual conclusions and actionable recommendations.
-      - **Tone:** Objective, formal, insightful, and academically empowering.
       `;
     }
     
     let pdfText = "";
     if (pdfUrl) {
       try {
-        const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 8000);
-        const pdfResponse = await fetch(pdfUrl, { signal: controller.signal });
-        clearTimeout(fetchTimeout);
-
-        if (pdfResponse.ok) {
-          const arrayBuffer = await pdfResponse.arrayBuffer();
-          // Parse with max: 35 pages to prevent memory exhaustion and long parse times
-          const pdfData = await pdfParse(Buffer.from(arrayBuffer), { max: 35 });
-          const cleanText = (pdfData.text || '').replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n');
-          
-          if (cleanText.length <= 50000) {
-            pdfText = cleanText;
-          } else {
-            const frontPart = cleanText.substring(0, 32000);
-            const backPart = cleanText.substring(cleanText.length - 18000);
-            pdfText = `${frontPart}\n\n[... MANUSCRIPT CONTINUES ACROSS CHAPTERS ...]\n\n${backPart}`;
-          }
-          developerPrompt += `\n\n=== EXTENSIVE EXCERPT FROM RESEARCH MANUSCRIPT ===\n${pdfText}\n=== END OF MANUSCRIPT EXCERPT ===\nUse this manuscript content to answer user questions with maximum factual accuracy and detail.`;
-        }
+        const pdfResponse = await fetch(pdfUrl);
+        const arrayBuffer = await pdfResponse.arrayBuffer();
+        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
+        pdfText = pdfData.text.substring(0, 15000); // Truncate for limits
+        developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
       } catch (e) {
-        console.warn("Backend PDF fetch/parse notice (proceeding with metadata):", e.message);
+        console.error("Backend PDF fetch/parse error:", e);
       }
     }
 
@@ -1831,10 +1753,7 @@ app.post('/api/ai/chat', async (req, res) => {
     const responseData = await generateAIContentWithFallback(
       genAI,
       { systemInstruction: developerPrompt },
-      { contents },
-      developerPrompt,
-      userMessage,
-      chatHistory
+      { contents }
     );
     
     let cleanResponse = responseData.text() || "";
@@ -1843,14 +1762,11 @@ app.post('/api/ai/chat', async (req, res) => {
     res.json({ success: true, text: cleanResponse });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    let errorMessage = error.message || "An error occurred while generating response.";
+    let errorMessage = error.message;
     if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
       errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
-    } else if (errorMessage.includes('503') || errorMessage.includes('demand')) {
-      errorMessage = "The AI service is experiencing high traffic. Please retry in a few seconds.";
     }
-    // Return graceful JSON so frontend never sees 502/500 HTML
-    res.status(200).json({ success: false, text: `⚠️ **Notice:** ${errorMessage} Please tap retry.` });
+    res.status(500).json({ error: errorMessage });
   }
 });
 
