@@ -84,7 +84,12 @@ export async function streamAIChat({
       }
     } catch (aiErr) {
       console.warn("Client AI Logic notice (switching to Backend SSE Stream):", aiErr.message);
-      if (aiErr.message?.includes('api-not-enabled')) {
+      if (
+        aiErr.message?.includes('api-not-enabled') ||
+        aiErr.message?.includes('prepayment') ||
+        aiErr.message?.includes('429') ||
+        aiErr.message?.includes('quota')
+      ) {
         isAiLogicDisabled = true;
       }
     }
