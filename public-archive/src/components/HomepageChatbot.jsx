@@ -206,9 +206,14 @@ export default function HomepageChatbot() {
           setConversations(list);
           
           if (list.length > 0) {
-            // Load the most recent conversation by default
+            // Load the most recent conversation by default, filtering legacy error messages
+            const rawHistory = list[0].history || defaultGreeting;
+            const cleaned = rawHistory.filter(m => 
+              !m.content?.includes("restart the email-service backend") &&
+              !m.content?.includes("Backend server returned an invalid response")
+            );
             setCurrentChatId(list[0].id);
-            setChatHistory(list[0].history || defaultGreeting);
+            setChatHistory(cleaned.length > 0 ? cleaned : defaultGreeting);
           } else {
             // No history, start fresh
             setCurrentChatId(null);
@@ -244,7 +249,11 @@ export default function HomepageChatbot() {
 
   const loadChat = (chatId, history) => {
     setCurrentChatId(chatId);
-    setChatHistory(history);
+    const cleaned = (history || defaultGreeting).filter(m => 
+      !m.content?.includes("restart the email-service backend") &&
+      !m.content?.includes("Backend server returned an invalid response")
+    );
+    setChatHistory(cleaned.length > 0 ? cleaned : defaultGreeting);
     setShowSidebar(false);
   };
 
@@ -584,7 +593,20 @@ export default function HomepageChatbot() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              {currentUser && (
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  title="Start New Chat"
+                  className="px-2.5 py-1 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  New
+                </button>
+              )}
               <button 
                 onClick={() => {
                   if (isVoiceEnabled) window.speechSynthesis.cancel();

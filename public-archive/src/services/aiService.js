@@ -5,16 +5,9 @@
 // 3. Fallback: Backend Standard Chat (/api/ai/chat)
 
 import app from '../firebase/config';
+import { getBackendUrl } from '../utils/backendUrl';
 
 let isAiLogicDisabled = false;
-
-function getBackendUrl() {
-  if (import.meta.env?.VITE_BACKEND_URL) return import.meta.env.VITE_BACKEND_URL;
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
-  }
-  return '';
-}
 
 /**
  * Streams AI chat response using dual-engine approach
