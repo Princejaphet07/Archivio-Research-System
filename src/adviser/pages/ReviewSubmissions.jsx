@@ -218,6 +218,13 @@ function ReviewSubmissions() {
   };
 
   const handleGenerateAISummary = async (submission) => {
+    // Smart Cache: if AI summary is already generated and saved in Firestore, show it instantly!
+    if (submission?.aiSummary) {
+      setSelectedSubmission({ ...submission });
+      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Loaded Cached Summary', showConfirmButton: false, timer: 1500 });
+      return;
+    }
+
     let pdfUrl = '';
     if (submission.documents) {
        for (const key of Object.keys(submission.documents)) {

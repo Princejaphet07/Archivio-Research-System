@@ -7,8 +7,8 @@ import logo from '../assets/logo.png';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
-import { useNetworkStatus } from './NetworkStatusPill';
 import { getBackendUrl } from '../utils/backendUrl';
+import { streamAIChat } from '../services/aiService';
 
 const GUEST_MAX_QUERIES = 3;
 
@@ -480,42 +480,45 @@ export default function HomepageChatbot() {
           * Provide concrete university-level examples and best practices.
         ${systemData}
       `;
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/ai/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          paperContext,
-          chatHistory: chatHistory.slice(1), // Exclude initial greeting
-          userMessage,
-          image: null,
-          pdfUrl: null
-        })
+
+      // Add placeholder model bubble for typewriter stream
+      setChatHistory(prev => [...prev, { role: 'model', content: '' }]);
+
+      const finalText = await streamAIChat({
+        paperContext,
+        chatHistory: chatHistory.slice(1).filter(m => m.content),
+        userMessage,
+        onChunk: (accumulated) => {
+          setChatHistory(prev => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (next[lastIdx]?.role === 'model') {
+              next[lastIdx] = { ...next[lastIdx], content: accumulated };
+            }
+            return next;
+          });
+        }
       });
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonErr) {
-        throw new Error("Backend server returned an invalid response. Did you forget to restart the email-service backend?");
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to get AI response");
-      }
-
-      const newHistoryModel = [...newHistoryUser, { role: 'model', content: data.text }];
-      setIsTypewriterActive(true);
+      const newHistoryModel = [...newHistoryUser, { role: 'model', content: finalText }];
       await updateAndSaveHistory(newHistoryModel, savedChatId);
       if (isVoiceEnabled) {
-        speakText(data.text);
+        speakText(finalText);
       }
     } catch (err) {
-      console.error("AI Error:", err);
-      setIsTypewriterActive(false);
-      const newHistoryError = [...newHistoryUser, { role: 'model', content: `**Error:** ${err.message}` }];
+      console.error("AI Streaming Error:", err);
+      const errMsg = `⚠️ **Notice:** ${err.message || 'Connection issue encountered'}. Please retry.`;
+      setChatHistory(prev => {
+        const next = [...prev];
+        const lastIdx = next.length - 1;
+        if (next[lastIdx]?.role === 'model') {
+          next[lastIdx] = { ...next[lastIdx], content: errMsg };
+        } else {
+          next.push({ role: 'model', content: errMsg });
+        }
+        return next;
+      });
+      const newHistoryError = [...newHistoryUser, { role: 'model', content: errMsg }];
       await updateAndSaveHistory(newHistoryError, savedChatId);
     } finally {
       setIsTyping(false);
@@ -652,16 +655,21 @@ export default function HomepageChatbot() {
                   </div>
                   <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`text-sm p-3 shadow-sm leading-relaxed relative group ${msg.role === 'user' ? 'bg-[#7a2039]/90 text-white rounded-tl-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm' : 'bg-white/80 dark:bg-black/40 border border-white/40 dark:border-white/10 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl backdrop-blur-sm'}`}>
-                      {msg.role === 'model' && idx === chatHistory.length - 1 ? (
-                        <TypewriterWord content={msg.content} onFinish={() => setIsTypewriterActive(false)} />
-                      ) : (
-                        msg.role === 'model' ? (
+                      {msg.role === 'model' ? (
+                        msg.content ? (
                           <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-stone-800 prose-pre:text-stone-100 break-words text-stone-800 dark:text-gray-200">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                           </div>
                         ) : (
-                          msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
+                          <div className="flex gap-1.5 items-center py-1">
+                            <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce"></span>
+                            <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                            <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                            <span className="text-xs text-stone-400 dark:text-gray-500 ml-1">Thinking...</span>
+                          </div>
                         )
+                      ) : (
+                        msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)
                       )}
                       
                       {msg.role === 'model' && (

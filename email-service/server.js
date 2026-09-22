@@ -1639,6 +1639,164 @@ async function generateAIContentWithFallback(genAI, options, generatePayload) {
   throw lastError;
 }
 
+async function generateAIStreamWithFallback(genAI, options, generatePayload) {
+  let lastError;
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const modelOptions = typeof options === 'object' && options !== null
+        ? { ...options, model: modelName }
+        : { model: modelName };
+      const model = genAI.getGenerativeModel(modelOptions);
+
+      const resultStream = await model.generateContentStream(generatePayload);
+      return resultStream;
+    } catch (err) {
+      console.warn(`⚠️ Gemini model [${modelName}] streaming failed (${err.status || err.message}), cascading to next model...`);
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+// ============================================
+// ARCHIVIO AI ASSISTANT CHAT (SSE STREAMING)
+// ============================================
+app.post('/api/ai/chat/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering on proxies
+
+  try {
+    const { paper, chatHistory, userMessage, pdfUrl, paperContext } = req.body;
+
+    if (!process.env.GEMINI_API_KEY) {
+      res.write(`data: ${JSON.stringify({ error: "Missing GEMINI_API_KEY in backend environment variables." })}\n\n`);
+      return res.end();
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    
+    let developerPrompt = '';
+    if (paperContext) {
+      developerPrompt = `
+      === SYSTEM INSTRUCTIONS ===
+      YOUR IDENTITY & CREATORS:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by **Prince Japhet Vender** (Lead Programmer & Full-Stack Developer), alongside **Jerika Zamoras** (UI/UX Designer), **Hylla Mae Tejada** (Project Manager), and **Andrea Cañete Perote** (Assistant Programmer).
+      
+      STRICT SCOPE & NO-CODE POLICY:
+      - You are strictly an Academic Research Assistant for Southwestern University PHINMA ARCHIVIO.
+      - You are STRICTLY FORBIDDEN from generating, writing, debugging, or solving programming code (such as Python, Java, JavaScript, C++, C#, PHP, SQL, HTML, CSS, etc.).
+      - If a user asks for programming code, scripts, or coding tasks, you MUST POLITELY REFUSE and state that your capabilities are strictly confined to academic research methodology, thesis writing, conceptual frameworks, and SWU PHINMA archive inquiries.
+
+      CRITICAL LANGUAGE ENFORCEMENT:
+      - DEFAULT LANGUAGE IS ENGLISH. Always respond in articulate, professional academic English by default.
+      - DO NOT answer in Cebuano/Bisaya unless the user EXPLICITLY asks or speaks in Cebuano/Bisaya (e.g., "Tubaga sa Bisaya", "Unsaon pag...", "Ngano...").
+      - If the user asks in English, you MUST strictly reply in English.
+      - If the user writes in Tagalog/Filipino, reply in Tagalog.
+      - If and ONLY IF the user explicitly speaks or requests Cebuano/Bisaya, reply in natural, authentic Cebuano/Bisaya.
+
+      RESPONSE QUALITY & DEPTH:
+      - Provide THOROUGH, DETAILED, AND ACADEMICALLY COMPREHENSIVE answers.
+      - Structure your responses with clear markdown headings (###), bullet points, and numbered lists to provide maximum educational value.
+      - When asked about ARCHIVIO (the Public Archive), provide full details on its features, browsing, verification ledger, chapter navigation, abstract audio reader, citation tools, and user account privileges.
+      
+      CRITICAL OUTPUT RULES:
+      - NEVER include <think> tags or show your thinking process
+      - NEVER output internal reasoning or planning steps
+      - Output ONLY the final, clean response to the user
+      
+      ${paperContext}
+      `;
+    } else {
+      developerPrompt = `
+      === SYSTEM INSTRUCTIONS ===
+      You are the **Archivio AI Research Assistant**, an expert academic AI built into the ARCHIVIO Research Archive Management System at Southwestern University PHINMA.
+      
+      YOUR IDENTITY & CREATORS:
+      - If the user asks who made you, who created this system, or who built Archivio, you MUST answer that you were built by the SWU PHINMA BSIT Capstone team led by **Prince Japhet Vender** (Lead Programmer & Full-Stack Developer), alongside **Jerika Zamoras** (UI/UX Designer), **Hylla Mae Tejada** (Project Manager), and **Andrea Cañete Perote** (Assistant Programmer).
+
+      STRICT SCOPE & NO-CODE POLICY:
+      - You are strictly an Academic Research Assistant for Southwestern University PHINMA ARCHIVIO.
+      - You are STRICTLY FORBIDDEN from generating, writing, debugging, or solving programming code.
+      - If a user asks for programming code, scripts, or coding tasks, you MUST POLITELY REFUSE.
+
+      CRITICAL LANGUAGE ENFORCEMENT:
+      - DEFAULT LANGUAGE IS ENGLISH. Always respond in articulate, professional academic English by default.
+      - DO NOT answer in Cebuano/Bisaya unless the user EXPLICITLY asks or speaks in Cebuano/Bisaya.
+      - If the user asks in English, you MUST strictly reply in English.
+      - If the user writes in Tagalog/Filipino, reply in Tagalog.
+      - If and ONLY IF the user explicitly speaks or requests Cebuano/Bisaya, reply in natural, authentic Cebuano/Bisaya.
+
+      RESPONSE QUALITY & DEPTH:
+      - Provide THOROUGH, DETAILED, AND ACADEMICALLY COMPREHENSIVE answers.
+      - Structure your responses with clear markdown headings (###), bullet points, and numbered lists.
+
+      CRITICAL OUTPUT RULES:
+      - NEVER include <think> tags or show your thinking process
+      - NEVER output internal reasoning or planning steps
+      - Output ONLY the final, clean response to the user
+
+      YOUR PRIMARY ROLE:
+      - You are a specialized research paper analyst and academic thesis advisor for this specific paper.
+      - Ground your answers directly in the provided manuscript and metadata. Do NOT make up information.
+      - NEVER confuse this paper with another paper. You are ONLY analyzing the paper titled: "${paper?.researchTitle || 'Untitled'}".
+
+      === THE PAPER YOU ARE ANALYZING ===
+      Title: "${paper?.researchTitle || 'Untitled'}"
+      Authors: ${paper?.authorDisplay || 'Unknown'}
+      Year: ${new Date(paper?.publishedAt || Date.now()).getFullYear()}
+      Keywords: ${paper?.keywords?.join(', ') || 'None provided'}
+      Abstract: ${paper?.abstract || 'No abstract available'}
+      === END OF PAPER METADATA ===
+      `;
+    }
+
+    let pdfText = "";
+    if (pdfUrl) {
+      try {
+        const pdfResponse = await fetch(pdfUrl);
+        const arrayBuffer = await pdfResponse.arrayBuffer();
+        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
+        pdfText = pdfData.text.substring(0, 15000);
+        developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
+      } catch (e) {
+        console.warn("Stream PDF fetch notice:", e.message);
+      }
+    }
+
+    const contents = (Array.isArray(chatHistory) ? chatHistory : []).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+    contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+    const streamResult = await generateAIStreamWithFallback(
+      genAI,
+      { systemInstruction: developerPrompt },
+      { contents }
+    );
+
+    for await (const chunk of streamResult.stream) {
+      const chunkText = chunk.text();
+      if (chunkText) {
+        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (error) {
+    console.error('AI Stream Error:', error);
+    let errorMsg = error.message || 'Stream generation failed';
+    if (errorMsg.includes('429') || errorMsg.includes('rate_limit')) {
+      errorMsg = 'AI rate limit reached. Please retry in a few seconds.';
+    }
+    res.write(`data: ${JSON.stringify({ error: errorMsg })}\n\n`);
+    res.end();
+  }
+});
+
 // ============================================
 // ARCHIVIO AI ASSISTANT CHAT
 // ============================================

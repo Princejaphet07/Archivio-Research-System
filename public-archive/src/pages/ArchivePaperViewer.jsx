@@ -21,6 +21,7 @@ import {
   trackAiChat
 } from '../utils/analytics';
 import { getBackendUrl } from '../utils/backendUrl';
+import { streamAIChat } from '../services/aiService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -720,51 +721,75 @@ function ArchivePaperViewer() {
     if (!userMessage || isTyping) return;
 
     if (!customMsg) setChatInput('');
-    setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);
     trackAiChat(paper, userMessage.length);
 
+    // Smart Cache check for summarization
+    const isSummarizeRequest = userMessage.toLowerCase().includes('summarize');
+    if (isSummarizeRequest && paper?.aiSummary) {
+      const cachedSummary = typeof paper.aiSummary === 'string'
+        ? paper.aiSummary
+        : (paper.aiSummary.summary || paper.aiSummary.executiveSummary || '');
+      if (cachedSummary && cachedSummary.length > 50) {
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: userMessage },
+          { role: 'model', content: cachedSummary }
+        ]);
+        setIsTyping(false);
+        return;
+      }
+    }
+
+    // Add user message and empty model bubble for live typewriter streaming
+    setChatHistory(prev => [
+      ...prev,
+      { role: 'user', content: userMessage },
+      { role: 'model', content: '' }
+    ]);
+
     try {
-      const backendUrl = getBackendUrl();
       const pdfUrlToUse = paper?.documents?.['Final Manuscript']?.url || paper?.pdfUrl || paper?.fileUrl;
-      const response = await fetch(`${backendUrl}/api/ai/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      const finalAccumulated = await streamAIChat({
+        paper: {
+          researchTitle: paper?.researchTitle || paper?.title || 'Untitled',
+          authorDisplay: paper?.authorDisplay || 'Unknown',
+          abstract: paper?.abstract || '',
+          keywords: paper?.keywords || [],
+          publishedAt: paper?.publishedAt || null
         },
-        body: JSON.stringify({
-          paper: {
-            researchTitle: paper.researchTitle || paper.title || 'Untitled',
-            authorDisplay: paper.authorDisplay || 'Unknown',
-            abstract: paper.abstract || '',
-            keywords: paper.keywords || [],
-            publishedAt: paper.publishedAt || null
-          },
-          chatHistory: chatHistory.slice(1),
-          userMessage,
-          pdfUrl: pdfUrlToUse && pdfUrlToUse !== '#' ? pdfUrlToUse : undefined
-        })
+        chatHistory: chatHistory.slice(1).filter(m => m.content),
+        userMessage,
+        pdfUrl: pdfUrlToUse && pdfUrlToUse !== '#' ? pdfUrlToUse : undefined,
+        onChunk: (accumulated) => {
+          setChatHistory(prev => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (next[lastIdx]?.role === 'model') {
+              next[lastIdx] = { ...next[lastIdx], content: accumulated };
+            }
+            return next;
+          });
+        }
       });
 
-      const responseText = await response.text();
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        // Fallback if server returned non-JSON like 502 HTML
-        data = { success: false, text: "⚠️ The AI server took longer than expected to respond. Please tap retry." };
-      }
-
-      if (data.text) {
-        setChatHistory(prev => [...prev, { role: 'model', content: data.text }]);
-      } else if (data.error) {
-        setChatHistory(prev => [...prev, { role: 'model', content: `⚠️ **Notice:** ${data.error}` }]);
-      } else {
-        setChatHistory(prev => [...prev, { role: 'model', content: "⚠️ Could not generate an answer. Please tap retry." }]);
+      // Save summary in local paper state if this was a summary generation
+      if (isSummarizeRequest && finalAccumulated && paper) {
+        setPaper(prev => prev ? { ...prev, aiSummary: finalAccumulated } : prev);
       }
     } catch (err) {
-      console.error("AI Error:", err);
-      setChatHistory(prev => [...prev, { role: 'model', content: `⚠️ **Notice:** Connection issue encountered (${err.message || 'Network error'}). Please tap retry.` }]);
+      console.error("AI Streaming Error:", err);
+      setChatHistory(prev => {
+        const next = [...prev];
+        const lastIdx = next.length - 1;
+        const errMsg = `⚠️ **Notice:** ${err.message || 'Connection issue encountered'}. Please tap retry.`;
+        if (next[lastIdx]?.role === 'model') {
+          next[lastIdx] = { ...next[lastIdx], content: errMsg };
+        } else {
+          next.push({ role: 'model', content: errMsg });
+        }
+        return next;
+      });
     } finally {
       setIsTyping(false);
     }
@@ -1949,11 +1974,18 @@ function ArchivePaperViewer() {
                     }`}>
                       {msg.role === 'user' ? (
                         msg.content
-                      ) : (
+                      ) : msg.content ? (
                         <div className="prose prose-xs sm:prose-sm dark:prose-invert max-w-none text-stone-800 dark:text-gray-200 prose-headings:font-bold prose-headings:text-[#7a2039] dark:prose-headings:text-[#f3e5ab] prose-headings:my-2 prose-p:my-1.5 prose-p:leading-relaxed prose-ul:my-1.5 prose-ul:pl-4 prose-ol:pl-4 prose-li:my-0.5 prose-strong:text-[#7a2039] dark:prose-strong:text-[#f3e5ab] break-words">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.content}
                           </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1.5 items-center py-1">
+                          <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce"></span>
+                          <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                          <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                          <span className="text-[11px] text-stone-400 dark:text-gray-500 ml-1.5">Generating answer...</span>
                         </div>
                       )}
 
@@ -2031,19 +2063,6 @@ function ArchivePaperViewer() {
                   </div>
                 </div>
               ))}
-              {isTyping && (
-                <div className="flex gap-2.5 sm:gap-3">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
-                    <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-0.5" />
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-500 dark:text-gray-400 text-xs p-3 rounded-2xl rounded-tl-sm shadow-xs flex gap-1.5 items-center">
-                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                    <span className="text-[11px] text-stone-400 dark:text-gray-500 ml-1.5">Analyzing manuscript...</span>
-                  </div>
-                </div>
-              )}
               <div ref={chatEndRef} />
             </div>
 
