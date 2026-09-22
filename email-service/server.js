@@ -1607,15 +1607,12 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 
 // ============================================
 // GEMINI MULTI-MODEL FALLBACK & HIGH-QUOTA CASCADE
-// Prevents rate-limiting by prioritizing high-throughput, low-cost flash models,
-// and cascading automatically if one model is throttled or exhausted.
+// Prioritizes ultra-fast, active models (gemini-3.5-flash) and cascades automatically.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-3.5-flash-lite',    // Fastest, most cost-effective
-  'gemini-3.1-flash-lite',    // Legacy but stable
-  'gemini-3.5-flash',          // Balanced speed and capability
-  'gemini-3.6-flash',          // Previous gen with good performance
-  'gemini-2.5-flash'           // Fallback to 2.5 series
+  'gemini-3.5-flash',          // Primary: 2s response time, 100% active and healthy
+  'gemini-3.6-flash',          // High performance secondary fallback
+  'gemini-flash-latest'        // Stable fallback
 ];
 
 async function generateAIContentWithFallback(genAI, options, generatePayload) {
@@ -1627,13 +1624,21 @@ async function generateAIContentWithFallback(genAI, options, generatePayload) {
         : { model: modelName };
       const model = genAI.getGenerativeModel(modelOptions);
 
-      const resultData = await model.generateContent(generatePayload);
-      const response = await resultData.response;
+      // Race against a 15-second timeout per model to prevent Cloud Run 502/504 timeouts
+      const responsePromise = (async () => {
+        const resultData = await model.generateContent(generatePayload);
+        return await resultData.response;
+      })();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Model ${modelName} timed out after 15s`)), 15000)
+      );
+
+      const response = await Promise.race([responsePromise, timeoutPromise]);
       return response;
     } catch (err) {
       console.warn(`⚠️ Gemini model [${modelName}] throttled or failed (${err.status || err.message}), cascading to next model...`);
       lastError = err;
-      // Immediately cascade to next model on 429 (rate limit), 503 (overload), 404, or any error
     }
   }
   throw lastError;
@@ -1649,7 +1654,7 @@ app.post('/api/ai/chat', async (req, res) => {
     console.log(`🤖 AI Chat Request for: "${paper?.researchTitle}" | PDF: ${pdfUrl ? 'YES' : 'NO'}`);
 
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in backend environment variables." });
+      return res.status(200).json({ success: false, text: "⚠️ AI service is temporarily unavailable (Missing API key). Please contact system administrator." });
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -1750,23 +1755,28 @@ app.post('/api/ai/chat', async (req, res) => {
     let pdfText = "";
     if (pdfUrl) {
       try {
-        const pdfResponse = await fetch(pdfUrl);
-        const arrayBuffer = await pdfResponse.arrayBuffer();
-        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
-        // Clean and compress excessive whitespace
-        const cleanText = (pdfData.text || '').replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n');
-        
-        // Extract up to 80,000 characters: if larger, capture both front chapters (Ch 1-3) and back chapters (Ch 4-5)
-        if (cleanText.length <= 80000) {
-          pdfText = cleanText;
-        } else {
-          const frontPart = cleanText.substring(0, 50000);
-          const backPart = cleanText.substring(cleanText.length - 30000);
-          pdfText = `${frontPart}\n\n[... MANUSCRIPT CONTINUES ACROSS CHAPTERS ...]\n\n${backPart}`;
+        const controller = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 8000);
+        const pdfResponse = await fetch(pdfUrl, { signal: controller.signal });
+        clearTimeout(fetchTimeout);
+
+        if (pdfResponse.ok) {
+          const arrayBuffer = await pdfResponse.arrayBuffer();
+          // Parse with max: 35 pages to prevent memory exhaustion and long parse times
+          const pdfData = await pdfParse(Buffer.from(arrayBuffer), { max: 35 });
+          const cleanText = (pdfData.text || '').replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n');
+          
+          if (cleanText.length <= 50000) {
+            pdfText = cleanText;
+          } else {
+            const frontPart = cleanText.substring(0, 32000);
+            const backPart = cleanText.substring(cleanText.length - 18000);
+            pdfText = `${frontPart}\n\n[... MANUSCRIPT CONTINUES ACROSS CHAPTERS ...]\n\n${backPart}`;
+          }
+          developerPrompt += `\n\n=== EXTENSIVE EXCERPT FROM RESEARCH MANUSCRIPT ===\n${pdfText}\n=== END OF MANUSCRIPT EXCERPT ===\nUse this manuscript content to answer user questions with maximum factual accuracy and detail.`;
         }
-        developerPrompt += `\n\n=== EXTENSIVE EXCERPT FROM RESEARCH MANUSCRIPT ===\n${pdfText}\n=== END OF MANUSCRIPT EXCERPT ===\nUse this manuscript content to answer user questions with maximum factual accuracy and detail.`;
       } catch (e) {
-        console.error("Backend PDF fetch/parse error:", e);
+        console.warn("Backend PDF fetch/parse notice (proceeding with metadata):", e.message);
       }
     }
 
@@ -1788,11 +1798,14 @@ app.post('/api/ai/chat', async (req, res) => {
     res.json({ success: true, text: cleanResponse });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    let errorMessage = error.message;
+    let errorMessage = error.message || "An error occurred while generating response.";
     if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
       errorMessage = "The AI has reached its rate limit. Please try again in a minute.";
+    } else if (errorMessage.includes('503') || errorMessage.includes('demand')) {
+      errorMessage = "The AI service is experiencing high traffic. Please retry in a few seconds.";
     }
-    res.status(500).json({ error: errorMessage });
+    // Return graceful JSON so frontend never sees 502/500 HTML
+    res.status(200).json({ success: false, text: `⚠️ **Notice:** ${errorMessage} Please tap retry.` });
   }
 });
 

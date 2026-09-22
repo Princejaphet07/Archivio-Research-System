@@ -746,21 +746,25 @@ function ArchivePaperViewer() {
         })
       });
 
+      const responseText = await response.text();
       let data;
       try {
-        data = await response.json();
-      } catch (jsonErr) {
-        throw new Error("Backend server returned an invalid response. Please verify backend service status.", { cause: jsonErr });
+        data = JSON.parse(responseText);
+      } catch {
+        // Fallback if server returned non-JSON like 502 HTML
+        data = { success: false, text: "⚠️ The AI server took longer than expected to respond. Please tap retry." };
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to get AI response");
+      if (data.text) {
+        setChatHistory(prev => [...prev, { role: 'model', content: data.text }]);
+      } else if (data.error) {
+        setChatHistory(prev => [...prev, { role: 'model', content: `⚠️ **Notice:** ${data.error}` }]);
+      } else {
+        setChatHistory(prev => [...prev, { role: 'model', content: "⚠️ Could not generate an answer. Please tap retry." }]);
       }
-
-      setChatHistory(prev => [...prev, { role: 'model', content: data.text }]);
     } catch (err) {
       console.error("AI Error:", err);
-      setChatHistory(prev => [...prev, { role: 'model', content: `⚠️ **Error:** ${err.message}` }]);
+      setChatHistory(prev => [...prev, { role: 'model', content: `⚠️ **Notice:** Connection issue encountered (${err.message || 'Network error'}). Please tap retry.` }]);
     } finally {
       setIsTyping(false);
     }
@@ -1891,28 +1895,57 @@ function ArchivePaperViewer() {
 
         {/* RIGHT AI PANEL - Full screen overlay on mobile, sidebar on desktop */}
         {isAiOpen && !isFullscreen && (
-          <div className="fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[420px] bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col z-50 sm:relative sm:z-10 shadow-2xl transition-all">
-            <div className="bg-[#7a2039] text-white p-4 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="Archivio AI" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shadow-sm" />
-                <span className="font-bold text-sm">Archivio AI Assistant</span>
+          <div className="fixed inset-0 z-50 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-96 lg:w-[420px] bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col h-[100dvh] sm:h-full shadow-2xl transition-all overflow-hidden">
+            {/* AI HEADER */}
+            <div className="bg-[#7a2039] text-white px-3.5 sm:px-4 py-3 sm:py-3.5 flex justify-between items-center shrink-0 shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setIsAiOpen(false)}
+                  className="sm:hidden text-white/80 hover:text-white p-1 -ml-1 text-lg cursor-pointer transition active:scale-95"
+                  aria-label="Back to document"
+                  title="Back to Document"
+                >
+                  ←
+                </button>
+                <img src={logo} alt="Archivio AI" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shadow-sm shrink-0" />
+                <div className="min-w-0">
+                  <span className="font-bold text-sm block leading-tight truncate">Archivio AI Assistant</span>
+                  <span className="text-[10px] text-white/80 block leading-tight truncate max-w-[200px] sm:max-w-[260px]">
+                    {paper?.researchTitle || 'Research Manuscript'}
+                  </span>
+                </div>
               </div>
-              <button onClick={() => setIsAiOpen(false)} className="text-white hover:text-[#d6ad60] font-bold cursor-pointer text-lg p-1">✕</button>
+              <button 
+                type="button"
+                onClick={() => setIsAiOpen(false)} 
+                className="text-white/80 hover:text-white hover:bg-white/10 w-8 h-8 rounded-full flex items-center justify-center font-bold cursor-pointer text-base transition shrink-0"
+                title="Close AI Assistant"
+              >
+                ✕
+              </button>
             </div>
-            <div className="p-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700 shrink-0 transition-colors">
-              <p className="text-xs text-stone-600 dark:text-gray-400 font-medium">In-depth AI analysis & comprehensive summarization for this paper.</p>
+
+            {/* BADGE SUBTITLE */}
+            <div className="px-3.5 py-2 bg-stone-50 dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700/80 shrink-0 flex items-center justify-between text-xs text-stone-600 dark:text-gray-400">
+              <span className="truncate">⚡ Comprehensive Research Analysis</span>
+              <span className="text-[10px] bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ml-2">
+                Ch 1–5
+              </span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#fcfbf7] dark:bg-gray-900 transition-colors">
+
+            {/* CHAT MESSAGES CONTAINER */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3.5 bg-[#fcfbf7] dark:bg-gray-900 transition-colors custom-scrollbar">
               {chatHistory.map((msg, idx) => (
-                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${msg.role === 'user' ? 'bg-stone-500 dark:bg-gray-700 text-white text-xs' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
-                    {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
+                <div key={idx} className={`flex gap-2.5 sm:gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-xs mt-0.5 ${msg.role === 'user' ? 'bg-[#7a2039] text-white text-xs font-bold' : 'bg-white border border-stone-200 dark:border-gray-700'}`}>
+                    {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-0.5" />}
                   </div>
-                  <div className="flex flex-col gap-1 max-w-[85%]">
-                    <div className={`text-xs p-3 shadow-sm leading-relaxed ${
+                  <div className="flex flex-col gap-1 max-w-[88%] sm:max-w-[85%]">
+                    <div className={`text-xs sm:text-[13px] p-3 sm:p-3.5 shadow-xs leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl whitespace-pre-wrap'
-                        : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'
+                        ? 'bg-[#7a2039] text-white rounded-2xl rounded-tr-sm whitespace-pre-wrap font-medium'
+                        : 'bg-white dark:bg-gray-800 border border-stone-200/90 dark:border-gray-700/90 text-stone-800 dark:text-gray-200 rounded-2xl rounded-tl-sm'
                     }`}>
                       {msg.role === 'user' ? (
                         msg.content
@@ -1923,9 +1956,26 @@ function ArchivePaperViewer() {
                           </ReactMarkdown>
                         </div>
                       )}
+
+                      {/* INLINE RETRY BUTTON IF ERROR */}
+                      {msg.role !== 'user' && msg.content.includes('⚠️') && (
+                        <button
+                          type="button"
+                          disabled={isTyping}
+                          onClick={() => {
+                            const lastUserMsg = [...chatHistory].reverse().find(m => m.role === 'user');
+                            if (lastUserMsg) {
+                              handleChatSubmit(null, lastUserMsg.content);
+                            }
+                          }}
+                          className="mt-2.5 text-[11px] font-semibold bg-[#7a2039] hover:bg-[#5a1528] active:scale-95 text-white px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <span>🔄</span> Tap to Retry
+                        </button>
+                      )}
                     </div>
-                    {msg.role !== 'user' && (
-                      <div className="flex items-center gap-3 ml-1 mt-0.5">
+                    {msg.role !== 'user' && !msg.content.includes('⚠️') && (
+                      <div className="flex items-center gap-2 ml-1 mt-0.5">
                         <button
                           type="button"
                           onClick={() => {
@@ -1933,7 +1983,7 @@ function ArchivePaperViewer() {
                             setCopiedMsgIndex(idx);
                             setTimeout(() => setCopiedMsgIndex(null), 2000);
                           }}
-                          className="flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-stone-100 dark:bg-gray-800/80 text-stone-500 dark:text-gray-400 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] hover:bg-stone-200 dark:hover:bg-gray-700 transition cursor-pointer active:scale-95"
                           title="Copy response"
                         >
                           {copiedMsgIndex === idx ? (
@@ -1942,7 +1992,7 @@ function ArchivePaperViewer() {
                             </span>
                           ) : (
                             <>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                               </svg>
@@ -1966,10 +2016,10 @@ function ArchivePaperViewer() {
                             if (voice) utterance.voice = voice;
                             window.speechSynthesis.speak(utterance);
                           }}
-                          className="flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-stone-100 dark:bg-gray-800/80 text-stone-500 dark:text-gray-400 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] hover:bg-stone-200 dark:hover:bg-gray-700 transition cursor-pointer active:scale-95"
                           title="Listen to this response"
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                             <path d="M15.54 8.46a5 5 0 010 7.07" />
                             <path d="M19.07 4.93a10 10 0 010 14.14" />
@@ -1982,49 +2032,52 @@ function ArchivePaperViewer() {
                 </div>
               ))}
               {isTyping && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                    <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />
+                <div className="flex gap-2.5 sm:gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
+                    <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-0.5" />
                   </div>
-                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-500 dark:text-gray-400 text-xs p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-sm flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                    <span className="w-1.5 h-1.5 bg-stone-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                  <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-500 dark:text-gray-400 text-xs p-3 rounded-2xl rounded-tl-sm shadow-xs flex gap-1.5 items-center">
+                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                    <span className="w-1.5 h-1.5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                    <span className="text-[11px] text-stone-400 dark:text-gray-500 ml-1.5">Analyzing manuscript...</span>
                   </div>
                 </div>
               )}
               <div ref={chatEndRef} />
             </div>
 
-            {/* QUICK SUGGESTION CHIPS */}
-            <div className="px-3 py-2 bg-stone-50 dark:bg-gray-900 border-t border-stone-200 dark:border-gray-700/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            {/* QUICK SUGGESTION CHIPS - TOUCH-FRIENDLY & SCROLLABLE ON ANY PHONE */}
+            <div className="px-3 py-2 bg-stone-50/95 dark:bg-gray-900/95 border-t border-stone-200 dark:border-gray-700/80 flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar shrink-0">
               {AI_SUGGESTIONS.map((item, i) => (
                 <button
                   key={i}
                   type="button"
                   disabled={isTyping}
                   onClick={() => handleChatSubmit(null, item.prompt)}
-                  className="shrink-0 text-[11px] font-semibold bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 hover:border-[#7a2039] dark:hover:border-[#f3e5ab] text-stone-700 dark:text-gray-300 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] px-2.5 py-1 rounded-full shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="shrink-0 text-xs font-semibold bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 hover:border-[#7a2039] dark:hover:border-[#f3e5ab] text-stone-700 dark:text-gray-200 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] px-3 py-1.5 rounded-full shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap"
                 >
                   {item.label}
                 </button>
               ))}
             </div>
 
-            <form onSubmit={handleChatSubmit} className="p-3 sm:p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
-              <div className="flex gap-2">
+            {/* INPUT BAR - OPTIMIZED FOR PHONES WITH SAFE AREA */}
+            <form onSubmit={handleChatSubmit} className="p-2.5 sm:p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   disabled={isTyping}
                   placeholder="Ask about methodology, findings, summary..."
-                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors"
+                  className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-stone-50 dark:bg-gray-700/60 text-stone-900 dark:text-gray-100 rounded-xl px-3.5 py-2.5 text-sm sm:text-xs outline-none focus:border-[#7a2039] focus:bg-white dark:focus:bg-gray-700 disabled:opacity-50 transition-all placeholder:text-stone-400 dark:placeholder:text-gray-400"
                 />
                 <button
                   type="submit"
                   disabled={isTyping || !chatInput.trim()}
-                  className="bg-[#7a2039] text-white px-3.5 rounded-lg hover:bg-[#5a1528] transition cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#7a2039] text-white w-10 h-10 sm:w-9 sm:h-9 rounded-xl hover:bg-[#5a1528] active:scale-95 transition cursor-pointer text-base flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  aria-label="Send message"
                 >
                   ↑
                 </button>
