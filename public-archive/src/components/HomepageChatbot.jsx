@@ -9,6 +9,7 @@ import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import { getBackendUrl } from '../utils/backendUrl';
 import { streamAIChat } from '../services/aiService';
+import { useNetworkStatus } from './NetworkStatusPill';
 
 const GUEST_MAX_QUERIES = 3;
 
