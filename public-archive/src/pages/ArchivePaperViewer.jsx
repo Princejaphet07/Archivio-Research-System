@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -447,6 +449,37 @@ function ArchivePaperViewer() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [copiedMsgIndex, setCopiedMsgIndex] = useState(null);
+  const chatEndRef = useRef(null);
+
+  const AI_SUGGESTIONS = [
+    {
+      label: '📋 Summarize Paper',
+      prompt: 'Please provide a comprehensive and detailed academic summary of this research paper covering its background rationale, research objectives, conceptual framework, methodology, key findings, and final conclusions.'
+    },
+    {
+      label: '🔬 Methodology',
+      prompt: 'What research design, methodology, participants, data collection instruments, and evaluation methods were utilized in this study?'
+    },
+    {
+      label: '📊 Key Results',
+      prompt: 'What are the key statistical findings, evaluation results, and major outcomes presented in Chapter 4 of this research paper?'
+    },
+    {
+      label: '🎯 Objectives',
+      prompt: 'What is the core problem statement, general objective, and specific objectives of this research study?'
+    },
+    {
+      label: '📌 Conclusions',
+      prompt: 'What are the main conclusions and future recommendations formulated by the researchers in this manuscript?'
+    }
+  ];
+
+  useEffect(() => {
+    if (isAiOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatHistory, isTyping, isAiOpen]);
 
   // Bookmark State
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -681,18 +714,19 @@ function ArchivePaperViewer() {
     }
   }, [paper, chatHistory.length]);
 
-  const handleChatSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!chatInput.trim() || isTyping) return;
+  const handleChatSubmit = async (e, customMsg = null) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const userMessage = (customMsg || chatInput).trim();
+    if (!userMessage || isTyping) return;
 
-    const userMessage = chatInput.trim();
-    setChatInput('');
+    if (!customMsg) setChatInput('');
     setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);
     trackAiChat(paper, userMessage.length);
 
     try {
       const backendUrl = getBackendUrl();
+      const pdfUrlToUse = paper?.documents?.['Final Manuscript']?.url || paper?.pdfUrl || paper?.fileUrl;
       const response = await fetch(`${backendUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {
@@ -708,7 +742,7 @@ function ArchivePaperViewer() {
           },
           chatHistory: chatHistory.slice(1),
           userMessage,
-          pdfUrl: paper?.documents?.['Final Manuscript']?.url
+          pdfUrl: pdfUrlToUse && pdfUrlToUse !== '#' ? pdfUrlToUse : undefined
         })
       });
 
@@ -716,7 +750,7 @@ function ArchivePaperViewer() {
       try {
         data = await response.json();
       } catch (jsonErr) {
-        throw new Error("Backend server returned an invalid response. Did you forget to restart the email-service backend?", { cause: jsonErr });
+        throw new Error("Backend server returned an invalid response. Please verify backend service status.", { cause: jsonErr });
       }
 
       if (!response.ok) {
@@ -1857,7 +1891,7 @@ function ArchivePaperViewer() {
 
         {/* RIGHT AI PANEL - Full screen overlay on mobile, sidebar on desktop */}
         {isAiOpen && !isFullscreen && (
-          <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col z-50 sm:relative sm:z-10 shadow-2xl transition-all">
+          <div className="fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[420px] bg-white dark:bg-gray-800 border-l border-stone-300 dark:border-gray-700 flex flex-col z-50 sm:relative sm:z-10 shadow-2xl transition-all">
             <div className="bg-[#7a2039] text-white p-4 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2">
                 <img src={logo} alt="Archivio AI" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shadow-sm" />
@@ -1866,7 +1900,7 @@ function ArchivePaperViewer() {
               <button onClick={() => setIsAiOpen(false)} className="text-white hover:text-[#d6ad60] font-bold cursor-pointer text-lg p-1">✕</button>
             </div>
             <div className="p-3 bg-[#fcfbf7] dark:bg-gray-900 border-b border-stone-200 dark:border-gray-700 shrink-0 transition-colors">
-              <p className="text-xs text-stone-600 dark:text-gray-400 font-medium">Ask questions about this specific research paper.</p>
+              <p className="text-xs text-stone-600 dark:text-gray-400 font-medium">In-depth AI analysis & comprehensive summarization for this paper.</p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#fcfbf7] dark:bg-gray-900 transition-colors">
               {chatHistory.map((msg, idx) => (
@@ -1875,35 +1909,74 @@ function ArchivePaperViewer() {
                     {msg.role === 'user' ? 'U' : <img src={logo} alt="Archivio AI" className="w-full h-full object-contain p-1" />}
                   </div>
                   <div className="flex flex-col gap-1 max-w-[85%]">
-                    <div className={`text-xs p-3 shadow-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl' : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'}`}>
-                      {msg.content.split('**').map((text, i) => i % 2 === 1 ? <strong key={i}>{text}</strong> : text)}
+                    <div className={`text-xs p-3 shadow-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-[#7a2039] text-white rounded-tl-xl rounded-bl-xl rounded-br-xl whitespace-pre-wrap'
+                        : 'bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-800 dark:text-gray-200 rounded-tr-xl rounded-bl-xl rounded-br-xl'
+                    }`}>
+                      {msg.role === 'user' ? (
+                        msg.content
+                      ) : (
+                        <div className="prose prose-xs sm:prose-sm dark:prose-invert max-w-none text-stone-800 dark:text-gray-200 prose-headings:font-bold prose-headings:text-[#7a2039] dark:prose-headings:text-[#f3e5ab] prose-headings:my-2 prose-p:my-1.5 prose-p:leading-relaxed prose-ul:my-1.5 prose-ul:pl-4 prose-ol:pl-4 prose-li:my-0.5 prose-strong:text-[#7a2039] dark:prose-strong:text-[#f3e5ab] break-words">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                     {msg.role !== 'user' && (
-                      <button
-                        onClick={() => {
-                          if (window.speechSynthesis.speaking) {
-                            window.speechSynthesis.cancel();
-                            return;
-                          }
-                          const cleanText = msg.content.replace(/[*#_`]/g, '');
-                          const utterance = new SpeechSynthesisUtterance(cleanText);
-                          utterance.rate = 0.95;
-                          utterance.pitch = 1.0;
-                          const voices = window.speechSynthesis.getVoices();
-                          const voice = voices.find(v => v.lang.includes('en') && v.name.includes('Female')) || voices.find(v => v.lang.includes('en')) || voices[0];
-                          if (voice) utterance.voice = voice;
-                          window.speechSynthesis.speak(utterance);
-                        }}
-                        className="self-start flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer ml-1"
-                        title="Listen to this response"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                          <path d="M15.54 8.46a5 5 0 010 7.07" />
-                          <path d="M19.07 4.93a10 10 0 010 14.14" />
-                        </svg>
-                        Listen
-                      </button>
+                      <div className="flex items-center gap-3 ml-1 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(msg.content);
+                            setCopiedMsgIndex(idx);
+                            setTimeout(() => setCopiedMsgIndex(null), 2000);
+                          }}
+                          className="flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer"
+                          title="Copy response"
+                        >
+                          {copiedMsgIndex === idx ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                              ✓ Copied
+                            </span>
+                          ) : (
+                            <>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                              Copy
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.speechSynthesis.speaking) {
+                              window.speechSynthesis.cancel();
+                              return;
+                            }
+                            const cleanText = msg.content.replace(/[*#_`]/g, '');
+                            const utterance = new SpeechSynthesisUtterance(cleanText);
+                            utterance.rate = 0.95;
+                            utterance.pitch = 1.0;
+                            const voices = window.speechSynthesis.getVoices();
+                            const voice = voices.find(v => v.lang.includes('en') && v.name.includes('Female')) || voices.find(v => v.lang.includes('en')) || voices[0];
+                            if (voice) utterance.voice = voice;
+                            window.speechSynthesis.speak(utterance);
+                          }}
+                          className="flex items-center gap-1 text-[10px] text-stone-400 dark:text-gray-500 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer"
+                          title="Listen to this response"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 010 7.07" />
+                            <path d="M19.07 4.93a10 10 0 010 14.14" />
+                          </svg>
+                          Listen
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1920,7 +1993,24 @@ function ArchivePaperViewer() {
                   </div>
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
+
+            {/* QUICK SUGGESTION CHIPS */}
+            <div className="px-3 py-2 bg-stone-50 dark:bg-gray-900 border-t border-stone-200 dark:border-gray-700/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              {AI_SUGGESTIONS.map((item, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={isTyping}
+                  onClick={() => handleChatSubmit(null, item.prompt)}
+                  className="shrink-0 text-[11px] font-semibold bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 hover:border-[#7a2039] dark:hover:border-[#f3e5ab] text-stone-700 dark:text-gray-300 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] px-2.5 py-1 rounded-full shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
             <form onSubmit={handleChatSubmit} className="p-3 sm:p-4 border-t border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 transition-colors">
               <div className="flex gap-2">
                 <input
@@ -1928,7 +2018,7 @@ function ArchivePaperViewer() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   disabled={isTyping}
-                  placeholder="Ask about methodology..."
+                  placeholder="Ask about methodology, findings, summary..."
                   className="flex-1 min-w-0 border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-stone-800 dark:text-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#7a2039] disabled:opacity-50 transition-colors"
                 />
                 <button
