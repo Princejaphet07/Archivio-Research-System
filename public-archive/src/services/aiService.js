@@ -7,7 +7,10 @@
 import app from '../firebase/config';
 import { getBackendUrl } from '../utils/backendUrl';
 
-let isAiLogicDisabled = false;
+// Note: Client-side firebase/ai requires App Check attestation tokens (otherwise returns 401).
+// We default isAiLogicDisabled to true to route immediately to our high-throughput Backend SSE Stream,
+// eliminating 3-5s client roundtrip delays and ensuring instant responses.
+let isAiLogicDisabled = true;
 
 /**
  * Streams AI chat response using dual-engine approach

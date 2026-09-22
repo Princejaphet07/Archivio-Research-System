@@ -1607,15 +1607,13 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 
 // ============================================
 // GEMINI MULTI-MODEL FALLBACK & HIGH-QUOTA CASCADE
-// Prevents rate-limiting by prioritizing high-throughput, low-cost flash models,
-// and cascading automatically if one model is throttled or exhausted.
+// Prioritizes the active, high-throughput gemini-3.6-flash model first,
+// with automatic fallback to secondary models if needed.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-3.5-flash-lite',    // Fastest, most cost-effective
-  'gemini-3.1-flash-lite',    // Legacy but stable
-  'gemini-3.5-flash',          // Balanced speed and capability
-  'gemini-3.6-flash',          // Previous gen with good performance
-  'gemini-2.5-flash'           // Fallback to 2.5 series
+  'gemini-3.6-flash',          // High-throughput, fully supported, ultra-fast
+  'gemini-3.5-flash',          // Fallback
+  'gemini-2.5-flash'           // Secondary fallback
 ];
 
 async function generateAIContentWithFallback(genAI, options, generatePayload) {
@@ -1753,15 +1751,22 @@ app.post('/api/ai/chat/stream', async (req, res) => {
     }
 
     let pdfText = "";
-    if (pdfUrl) {
+    if (pdfUrl && typeof pdfUrl === 'string' && pdfUrl.startsWith('http')) {
       try {
-        const pdfResponse = await fetch(pdfUrl);
-        const arrayBuffer = await pdfResponse.arrayBuffer();
-        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
-        pdfText = pdfData.text.substring(0, 15000);
-        developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const pdfResponse = await fetch(pdfUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (pdfResponse.ok) {
+          const arrayBuffer = await pdfResponse.arrayBuffer();
+          const pdfData = await pdfParse(Buffer.from(arrayBuffer), { max: 5 });
+          pdfText = (pdfData.text || '').substring(0, 10000);
+          if (pdfText.trim()) {
+            developerPrompt += `\n\n=== EXCERPT FROM MANUSCRIPT ===\n${pdfText}\n=== END OF EXCERPT ===\nUse this excerpt to answer questions if applicable.`;
+          }
+        }
       } catch (e) {
-        console.warn("Stream PDF fetch notice:", e.message);
+        console.warn("Stream PDF fetch notice (proceeding with paper metadata):", e.message);
       }
     }
 
