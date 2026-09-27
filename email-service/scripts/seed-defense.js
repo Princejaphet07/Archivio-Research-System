@@ -191,7 +191,8 @@ async function seedDatabase(options = { resetData: false }) {
       'advisers',
       'deans',
       'departments',
-      'programs'
+      'programs',
+      'categories'
     ];
     for (const colName of resetCols) {
       const snap = await db.collection(colName).get();
@@ -243,20 +244,22 @@ async function seedDatabase(options = { resetData: false }) {
     }
   }
 
-  // 2. Seed Categories
-  console.log('\n🏷️  Checking Research Categories...');
-  const catCol = db.collection('categories');
-  const catSnap = await catCol.get();
-  if (catSnap.empty) {
-    for (const cat of DEFAULT_CATEGORIES) {
-      await catCol.add({
-        ...cat,
-        createdAt: new Date().toISOString()
-      });
-      console.log(`   + Created category: "${cat.name}"`);
+  // 2. Seed Categories (Only if not a factory wipeout)
+  if (!options.resetData) {
+    console.log('\n🏷️  Checking Research Categories...');
+    const catCol = db.collection('categories');
+    const catSnap = await catCol.get();
+    if (catSnap.empty) {
+      for (const cat of DEFAULT_CATEGORIES) {
+        await catCol.add({
+          ...cat,
+          createdAt: new Date().toISOString()
+        });
+        console.log(`   + Created category: "${cat.name}"`);
+      }
+    } else {
+      console.log(`   ✓ Verified ${catSnap.size} existing categories.`);
     }
-  } else {
-    console.log(`   ✓ Verified ${catSnap.size} existing categories.`);
   }
 
   // 3. Seed Departments & Programs (Only if not a factory wipeout)

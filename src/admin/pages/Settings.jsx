@@ -669,6 +669,7 @@ export default function Settings() {
         'deans',
         'departments',
         'programs',
+        'categories',
         'invitations',
         'studentInvitations',
         'notifications',
