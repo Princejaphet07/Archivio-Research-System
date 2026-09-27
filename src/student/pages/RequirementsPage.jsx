@@ -171,7 +171,20 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   // Helper to determine if a requirement should be strictly PDF
   const isPdfOnly = (item) => {
     const title = (item.title || '').toLowerCase();
-    return title.includes('manuscript') || title.includes('approval');
+    return title.includes('manuscript') || title.includes('approval') || title.includes('signature');
+  };
+
+  // Helper to determine if a requirement is a Video
+  const isVideoReq = (item) => {
+    const title = (item.title || '').toLowerCase();
+    const id = (item.id || '').toLowerCase();
+    return title.includes('video') || title.includes('pitch') || id.includes('video');
+  };
+
+  // Helper to determine if requirement is a URL/Link only (e.g. Upload URL / GitHub)
+  const isUrlReq = (item) => {
+    if (isVideoReq(item)) return false; // Video Pitch is ALWAYS a file upload
+    return item.type === 'url';
   };
 
   const handleUploadFile = async (item, file) => {
@@ -181,6 +194,18 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     if (isPdfOnly(item) && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       Swal.fire({ icon: 'error', title: 'Invalid File', text: 'This specific requirement must be a PDF file.' });
       return;
+    }
+
+    // Enforce Video format conditionally
+    if (isVideoReq(item)) {
+      const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/ogg'];
+      const validExts = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.wmv', '.m4v'];
+      const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
+      const isVideo = file.type.startsWith('video/') || validVideoTypes.includes(file.type) || validExts.includes(fileExt);
+      if (!isVideo) {
+        Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a valid video file (MP4, WebM, MOV).' });
+        return;
+      }
     }
 
     setUploadingItem(item.id);
@@ -611,7 +636,11 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                         <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700 rounded-xl p-4 mb-4">
                           <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-stone-400 dark:text-stone-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            {isVideoReq(item) ? (
+                              <span className="text-sm shrink-0 mt-0.5">🎥</span>
+                            ) : (
+                              <svg className="w-4 h-4 text-stone-400 dark:text-stone-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            )}
                             <div className="min-w-0 flex-1">
                               {meta.url && meta.url !== '#' ? (
                                 <button
@@ -660,7 +689,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                                       <button
                                         className="min-h-[36px] py-1.5 px-3 rounded-lg bg-stone-100 dark:bg-stone-800 text-[#7B1F35] dark:text-[#D05353] hover:underline font-bold text-xs touch-manipulation"
                                         onClick={() => {
-                                          if (item.type === 'url') handleUploadUrl(item);
+                                          if (isUrlReq(item)) handleUploadUrl(item);
                                           else fileInputRefs.current[item.id]?.click();
                                         }}
                                       >
@@ -682,7 +711,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                         {/* Hidden File Input for Replace */}
                         <input
                           type="file"
-                          accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
+                          accept={isVideoReq(item) ? "video/mp4,video/webm,video/quicktime,video/*,.mp4,.mov,.webm,.avi,.mkv" : isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
                           ref={el => fileInputRefs.current[item.id] = el}
                           className="hidden"
                           onChange={(e) => handleUploadFile(item, e.target.files[0])}
@@ -740,7 +769,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             Swal.fire('Locked', 'This research is already published. No further changes can be made.', 'info');
                             return;
                           }
-                          if (item.type === 'url') handleUploadUrl(item);
+                          if (isUrlReq(item)) handleUploadUrl(item);
                           else fileInputRefs.current[item.id]?.click();
                         }}
                       >
@@ -764,17 +793,19 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                         ) : (
                           <>
                             <div className="w-9 h-9 bg-red-100 dark:bg-red-900/40 rounded-xl text-red-500 flex items-center justify-center mb-2">
-                              {item.type === 'url' ? (
+                              {isUrlReq(item) ? (
                                 <span className="font-bold text-sm">URL</span>
+                              ) : isVideoReq(item) ? (
+                                <span className="text-xl">🎥</span>
                               ) : (
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                               )}
                             </div>
                             <p className="text-red-500 dark:text-red-400 font-bold text-[13px]">
-                              {item.type === 'url' ? 'Click to enter URL' : 'Drop file here or browse'}
+                              {isUrlReq(item) ? 'Click to enter URL' : isVideoReq(item) ? 'Drop video here or browse' : 'Drop file here or browse'}
                             </p>
                             <p className="text-red-400/70 dark:text-red-500/60 text-[11px] mt-1">
-                              {item.type === 'url' ? 'GitHub or Publisher Link' : (isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB')}
+                              {isUrlReq(item) ? 'GitHub or Publisher Link' : isVideoReq(item) ? 'MP4, WebM, MOV · max 100MB' : isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB'}
                             </p>
                           </>
                         )}
@@ -784,7 +815,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       {!isSuspended && (
                         <input
                           type="file"
-                          accept={isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
+                          accept={isVideoReq(item) ? "video/mp4,video/webm,video/quicktime,video/*,.mp4,.mov,.webm,.avi,.mkv" : isPdfOnly(item) ? ".pdf" : ".pdf,.zip,video/*,.docx,image/*"}
                           ref={el => fileInputRefs.current[item.id] = el}
                           className="hidden"
                           onChange={(e) => handleUploadFile(item, e.target.files[0])}

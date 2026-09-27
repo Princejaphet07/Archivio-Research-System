@@ -44,6 +44,7 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
   const lowerUrl = resolvedUrl?.toLowerCase() || '';
   const isDocx = lowerUrl.includes('.docx') || lowerUrl.includes('.doc');
   const isPdf = lowerUrl.includes('.pdf');
+  const isVideo = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi') || lowerUrl.includes('.mkv') || (documentTitle || '').toLowerCase().includes('video');
 
   // Build the viewer URL
   const getViewerUrl = () => {
@@ -158,6 +159,17 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
                   Open PDF
                 </a>
               </div>
+            </div>
+          ) : isVideo ? (
+            <div className="w-full h-full flex items-center justify-center bg-black p-4">
+              <video 
+                controls 
+                autoPlay 
+                src={resolvedUrl} 
+                className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
+              >
+                Your browser does not support HTML5 video preview.
+              </video>
             </div>
           ) : isPdf ? (
             <AnnotatablePDFViewer 
