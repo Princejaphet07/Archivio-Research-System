@@ -9,16 +9,7 @@ import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 
-const DEFAULT_CATEGORIES_LIST = [
-  'Artificial Intelligence & Machine Learning',
-  'Web & Mobile Application Systems',
-  'Data Science & Predictive Analytics',
-  'Internet of Things (IoT) & Smart Devices',
-  'Cybersecurity & Network Infrastructure',
-  'Health Informatics & Medical Computing',
-  'Educational Technology (EdTech)'
-];
-
+const DEFAULT_CATEGORIES_LIST = [];
 const DEFAULT_PROGRAMS_LIST = [];
 
 export default function StudentSignup({ onSwitchPage }) {
@@ -54,33 +45,37 @@ export default function StudentSignup({ onSwitchPage }) {
   });
   const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
-  const [categoriesList, setCategoriesList] = useState(DEFAULT_CATEGORIES_LIST); // NEW
+  const [categoriesList, setCategoriesList] = useState([]); // Dynamic from Adviser
   const [programsList, setProgramsList] = useState([]);
 
+  // Fetch Categories dynamically from the Adviser's created research categories
   useEffect(() => {
-    console.log("Checking invitation data for categories:", invitationData);
-    // Fetch categories only when we know the adviser's email
-    if (!invitationData?.sentBy) {
-      console.log("No sentBy found in invitationData");
-      return;
-    }
-    
-    console.log("Fetching categories for adviser:", invitationData.sentBy);
-    const q = query(
-      collection(db, 'categories'),
-      where('createdBy', '==', invitationData.sentBy)
-    );
-    
-    const unsubCats = onSnapshot(q, (snap) => {
-      console.log("Fetched categories count:", snap.docs.length);
-      const fetched = snap.docs.map(d => d.data().name).filter(Boolean);
-      setCategoriesList(fetched.length > 0 ? fetched : DEFAULT_CATEGORIES_LIST);
+    const adviserEmail = (invitationData?.sentBy || '').toLowerCase().trim();
+    const adviserUid = invitationData?.adviserId || '';
+
+    const unsubCats = onSnapshot(collection(db, 'categories'), (snap) => {
+      const allCats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      let relevantCats = [];
+      if (adviserEmail || adviserUid) {
+        relevantCats = allCats.filter(c => {
+          const catCreatedBy = (c.createdBy || '').toLowerCase().trim();
+          return catCreatedBy === adviserEmail || (adviserUid && c.adviserUid === adviserUid);
+        });
+      } else {
+        relevantCats = [];
+      }
+
+      const catNames = relevantCats.map(c => c.name?.trim()).filter(Boolean);
+      const uniqueNames = [...new Set(catNames)];
+      setCategoriesList(uniqueNames);
     }, (error) => {
       console.error("Error fetching categories:", error);
-      setCategoriesList(DEFAULT_CATEGORIES_LIST);
+      setCategoriesList([]);
     });
+
     return () => unsubCats();
-  }, [invitationData?.sentBy]);
+  }, [invitationData?.sentBy, invitationData?.adviserId]);
 
   // Fetch Programs dynamically from Firestore (created by Admin in System Settings > Departments & Programs)
   useEffect(() => {
@@ -94,13 +89,35 @@ export default function StudentSignup({ onSwitchPage }) {
     return () => unsubProgs();
   }, []);
 
-  // Autofill schoolEmail if present in URL
+  // Autofill schoolEmail if present in URL and pre-fetch invitation data
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
     if (emailParam) {
-      setPersonalInfo(prev => ({ ...prev, schoolEmail: emailParam }));
+      const cleanEmail = emailParam.toLowerCase().trim();
+      setPersonalInfo(prev => ({ ...prev, schoolEmail: cleanEmail }));
       setIsPrefilled(true);
+
+      const fetchEarlyInvitation = async () => {
+        try {
+          const invitationsRef = collection(db, 'studentInvitations');
+          const q = query(invitationsRef, where('studentEmail', '==', cleanEmail), where('status', '==', 'pending'));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const sortedDocs = snapshot.docs.sort((a, b) => {
+              const dateA = new Date(a.data().createdAt || 0);
+              const dateB = new Date(b.data().createdAt || 0);
+              return dateB - dateA;
+            });
+            const invData = sortedDocs[0].data();
+            invData.id = sortedDocs[0].id;
+            setInvitationData(invData);
+          }
+        } catch (e) {
+          console.warn('Early invitation pre-fetch notice:', e);
+        }
+      };
+      fetchEarlyInvitation();
     }
   }, []);
 
@@ -257,8 +274,11 @@ export default function StudentSignup({ onSwitchPage }) {
   const validateStep2 = () => {
     const errors = {};
     if (!groupInfo.groupName.trim()) errors.groupName = 'Group name is required';
-    if (!groupInfo.researchTitle.trim()) errors.researchTitle = 'Research title is required';
-    if (!groupInfo.category) errors.category = 'Category is required';
+    if (!groupInfo.category) {
+      errors.category = categoriesList.length === 0
+        ? 'No categories available. Your research adviser has not added any categories yet.'
+        : 'Category is required';
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -823,7 +843,9 @@ export default function StudentSignup({ onSwitchPage }) {
                     formErrors.category ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
-                  <option value="">Select Category</option>
+                  <option value="">
+                    {categoriesList.length === 0 ? 'No categories available (Adviser must add research categories)' : 'Select Category'}
+                  </option>
                   {categoriesList.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}

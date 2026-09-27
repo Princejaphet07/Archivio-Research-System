@@ -38,17 +38,23 @@ function ResearchCategories() {
   useEffect(() => {
     if (!auth.currentUser?.email) return;
 
-    const q = query(
-      collection(db, 'categories'),
-      where('createdBy', '==', auth.currentUser.email)
-    );
-    
-    const unsub = onSnapshot(q, (snap) => {
-      const fetched = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    const userEmail = auth.currentUser.email.toLowerCase().trim();
+    const userUid = auth.currentUser.uid;
+
+    const unsub = onSnapshot(collection(db, 'categories'), (snap) => {
+      const fetched = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(c => {
+          const catCreatedBy = (c.createdBy || '').toLowerCase().trim();
+          return catCreatedBy === userEmail || (userUid && c.adviserUid === userUid);
+        });
       setCategories(fetched);
+      setLoading(false);
+    }, (err) => {
+      console.error('Error fetching categories:', err);
       setLoading(false);
     });
     return () => unsub();
@@ -107,13 +113,16 @@ function ResearchCategories() {
         });
         Swal.fire({ icon: 'success', title: 'Updated!', text: 'Category updated successfully.', timer: 1500, showConfirmButton: false });
       } else {
-        // Create new
+        const userEmail = (auth.currentUser?.email || 'Admin').toLowerCase().trim();
+        const userUid = auth.currentUser?.uid || '';
+
         await addDoc(collection(db, 'categories'), {
-          name: categoryName,
+          name: categoryName.trim(),
           icon: categoryIcon,
           bgColor: selectedColor,
-          description: categoryDescription,
-          createdBy: auth.currentUser?.email || 'Admin',
+          description: categoryDescription.trim(),
+          createdBy: userEmail,
+          adviserUid: userUid,
           createdAt: serverTimestamp()
         });
         
