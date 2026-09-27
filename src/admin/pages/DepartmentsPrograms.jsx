@@ -25,8 +25,7 @@ export default function DepartmentsProgramsTab() {
   const [activeModal, setActiveModal] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [departmentForm, setDepartmentForm] = useState({ name: '', status: 'Active' });
-  const [programForm, setProgramForm] = useState({ codes: [], school: '' });
-  const [showCodeDropdown, setShowCodeDropdown] = useState(false);
+  const [programForm, setProgramForm] = useState({ school: '', code: '', name: '' });
   const [deans, setDeans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -91,14 +90,16 @@ export default function DepartmentsProgramsTab() {
     setError('');
     setSuccess('');
 
-    if (!departmentForm.name) {
-      setError('Please select a school/college');
+    if (!departmentForm.name || !departmentForm.name.trim()) {
+      setError('Please enter a school or college name');
       return;
     }
 
+    const trimmedName = departmentForm.name.trim();
+
     try {
       // Check if department already exists
-      const existing = departments.find(d => d.name === departmentForm.name);
+      const existing = departments.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
       if (existing) {
         setError('This department already exists');
         return;
@@ -106,8 +107,8 @@ export default function DepartmentsProgramsTab() {
 
       // Save to Firestore
       await addDoc(collection(db, 'departments'), {
-        name: departmentForm.name,
-        status: departmentForm.status,
+        name: trimmedName,
+        status: departmentForm.status || 'Active',
         createdAt: new Date().toISOString()
       });
 
@@ -124,35 +125,65 @@ export default function DepartmentsProgramsTab() {
     setError('');
     setSuccess('');
 
-    if (!programForm.school || programForm.codes.length === 0) {
-      setError('Please select college and program codes');
+    const schoolName = (programForm.school || '').trim();
+    const progCode = (programForm.code || '').trim().toUpperCase();
+    const progName = (programForm.name || '').trim();
+
+    if (!schoolName) {
+      setError('Please select or enter a college/school');
+      return;
+    }
+
+    if (!progCode) {
+      setError('Please enter a program code (e.g. BSIT)');
       return;
     }
 
     try {
-      // Save each selected program code to Firestore
-      for (const code of programForm.codes) {
-        const programData = programCodeOptions.find(p => p.code === code);
-
+      // Support comma-separated codes if admin entered multiple, e.g. "BSIT, BSCS"
+      const codes = progCode.split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+      
+      let addedCount = 0;
+      for (const code of codes) {
         // Check if program already exists in this college
-        const existing = programs.find(p => p.code === code && p.school === programForm.school);
+        const existing = programs.find(p => p.code === code && (p.school || '').toLowerCase() === schoolName.toLowerCase());
         if (!existing) {
+          const finalName = (codes.length === 1 && progName)
+            ? progName
+            : (programCodeOptions.find(p => p.code === code)?.name || (progName || code));
+
           await addDoc(collection(db, 'programs'), {
             code: code,
-            name: programData.name,
-            school: programForm.school,
+            name: finalName,
+            school: schoolName,
+            department: schoolName,
             createdAt: new Date().toISOString()
           });
+          addedCount++;
         }
       }
 
-      setSuccess('✅ Programs added successfully!');
-      setProgramForm({ codes: [], school: '' });
-      setShowCodeDropdown(false);
+      // Ensure the department exists in departments collection so cards display it
+      const deptExists = departments.some(d => d.name.toLowerCase() === schoolName.toLowerCase());
+      if (!deptExists) {
+        await addDoc(collection(db, 'departments'), {
+          name: schoolName,
+          status: 'Active',
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      if (addedCount === 0) {
+        setError('The program code already exists under this college');
+        return;
+      }
+
+      setSuccess('✅ Program added successfully!');
+      setProgramForm({ school: '', code: '', name: '' });
       setActiveModal(null);
     } catch (error) {
       console.error('Error adding programs:', error);
-      setError('Failed to add programs');
+      setError('Failed to add program');
     }
   };
 
@@ -402,7 +433,20 @@ export default function DepartmentsProgramsTab() {
             <div className="p-6 space-y-6">
               {/* Programs Section */}
               <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">Programs ({selectedDepartment.programsCount})</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">Programs ({selectedDepartment.programsCount})</h3>
+                  <button
+                    onClick={() => {
+                      setProgramForm({ school: selectedDepartment.name, code: '', name: '' });
+                      setError('');
+                      setSuccess('');
+                      setActiveModal('program');
+                    }}
+                    className="text-xs font-bold text-[#801e38] hover:text-[#601328] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    + Add Program
+                  </button>
+                </div>
                 {selectedDepartment.tags && selectedDepartment.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {selectedDepartment.tags.map((tag, idx) => (
@@ -517,24 +561,17 @@ export default function DepartmentsProgramsTab() {
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   School / College Name <span className="text-red-500">*</span>
                 </label>
-                <select
+                <input
+                  type="text"
+                  placeholder="e.g. College of Information Technology"
                   value={departmentForm.name}
                   onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
-                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
-                >
-                  <option value="">Select School / College...</option>
-                  <option value="College of Information Technology">College of Information Technology</option>
-                  <option value="College of Engineering">College of Engineering</option>
-                  <option value="College of Dentistry">College of Dentistry</option>
-                  <option value="Business School (B-School)">Business School (B-School)</option>
-                  <option value="School of Health & Allied Health Sciences">School of Health & Allied Health Sciences</option>
-                  <option value="College of Pre-Medicine">College of Pre-Medicine</option>
-                  <option value="School of Design + Communication">School of Design + Communication</option>
-                  <option value="College of Veterinary Medicine">College of Veterinary Medicine</option>
-                  <option value="College of Rehabilitative Sciences">College of Rehabilitative Sciences</option>
-                  <option value="College of Nursing">College of Nursing</option>
-                  <option value="College of Education">College of Education</option>
-                </select>
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 placeholder-stone-400"
+                  autoFocus
+                />
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  Type the name of the school or college manually.
+                </p>
               </div>
 
               {/* Initial Status */}
@@ -637,47 +674,45 @@ export default function DepartmentsProgramsTab() {
                 </select>
               </div>
 
-              {/* Program Code Dropdown with Checkboxes */}
+              {/* Program Code Manual Input */}
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
                   Program Code <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowCodeDropdown(!showCodeDropdown)}
-                    className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm text-left text-stone-900 dark:text-stone-50 flex items-center justify-between focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38]"
-                  >
-                    <span>{programForm.codes.length > 0 ? `${programForm.codes.length} selected` : 'Select program codes...'}</span>
-                    <svg className={`w-4 h-4 transition-transform ${showCodeDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                  </button>
+                <input
+                  type="text"
+                  placeholder="e.g. BSIT"
+                  value={programForm.code}
+                  onChange={(e) => setProgramForm({ ...programForm, code: e.target.value })}
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 placeholder-stone-400 uppercase font-mono font-semibold"
+                />
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  Type the program code manually (e.g. BSIT, BSCS, BSN).
+                </p>
+              </div>
 
-                  {/* Dropdown Menu */}
-                  {showCodeDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                      {programCodeOptions.map((program) => (
-                        <div key={program.code} className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] border-b border-stone-100 dark:border-stone-800/50 last:border-b-0 cursor-pointer" onClick={() => toggleProgramCode(program.code)}>
-                          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${programForm.codes.includes(program.code) ? 'bg-[#801e38] border-[#801e38]' : 'bg-white dark:bg-[#1e1e1e] border-2 border-stone-300'}`}>
-                            {programForm.codes.includes(program.code) && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-stone-900 dark:text-stone-50">{program.code}</p>
-                            <p className="text-xs text-stone-500 dark:text-stone-400">{program.name}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Select one or more program codes to add.</p>
+              {/* Program Name Manual Input */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">
+                  Program Name / Description <span className="text-stone-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bachelor of Science in Information Technology"
+                  value={programForm.name}
+                  onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50 placeholder-stone-400"
+                />
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  Full name of the degree program.
+                </p>
               </div>
 
               {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                <span className="text-blue-600 text-sm font-bold">ℹ️</span>
-                <p className="text-xs text-blue-800">
-                  Selected programs will be immediately visible in Departments & Programs CMS.
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">ℹ️</span>
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  New programs will be immediately visible under the assigned department and across the system.
                 </p>
               </div>
             </div>
@@ -686,16 +721,16 @@ export default function DepartmentsProgramsTab() {
             <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
               <button
                 onClick={() => setActiveModal(null)}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:bg-stone-800 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddProgram}
-                disabled={programForm.codes.length === 0 || !programForm.school}
+                disabled={!programForm.code?.trim() || !programForm.school?.trim()}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <span>✓</span> Add Programs
+                <span>✓</span> Save Program
               </button>
             </div>
           </div>
