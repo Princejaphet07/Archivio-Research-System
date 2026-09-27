@@ -10,6 +10,7 @@ import logo from '../assets/logo.png';
 import loginBg from '../assets/parchment.png';
 import tornEdge from '../assets/torn-edge.png';
 import maroonBg from '../assets/maroon-bg.png';
+import { getBackendUrl } from '../utils/backendUrl';
 
 function UnifiedLogin() {
   const navigate = useNavigate();
@@ -252,6 +253,31 @@ function UnifiedLogin() {
           } catch (e) {
             console.warn('Non-fatal: could not update super_admin doc:', e.message);
           }
+        }
+      }
+
+      // Self-healing Auto-Bootstrap: If database was wiped or uninitialized, bootstrap it!
+      if (!role) {
+        try {
+          const backendUrl = getBackendUrl();
+          const bootRes = await fetch(`${backendUrl}/api/system/bootstrap`, { method: 'POST' });
+          if (bootRes.ok) {
+            const [retrySa, retryUser, retryStudent, retryDean, retryAdv] = await Promise.all([
+              safeFetch(() => getDoc(doc(db, 'super_admins', user.uid))),
+              safeFetch(() => getDoc(doc(db, 'users', user.uid))),
+              safeFetch(() => getDoc(doc(db, 'students', user.uid))),
+              safeFetch(() => getDoc(doc(db, 'deans', user.uid))),
+              safeFetch(() => getDoc(doc(db, 'advisers', user.uid)))
+            ]);
+
+            if (retrySa && retrySa.exists()) role = 'super-admin';
+            else if (retryUser && retryUser.exists()) role = retryUser.data().role;
+            else if (retryStudent && retryStudent.exists()) role = 'student';
+            else if (retryDean && retryDean.exists()) role = retryDean.data().role || 'dean';
+            else if (retryAdv && retryAdv.exists()) role = retryAdv.data().role || 'adviser';
+          }
+        } catch (bootErr) {
+          console.warn('Auto-bootstrap notice:', bootErr);
         }
       }
 

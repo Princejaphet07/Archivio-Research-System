@@ -13,7 +13,16 @@ import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
 import { getBackendUrl } from '../../utils/backendUrl';
 
-// Dynamic requirements fetched from DB instead of hardcoded array
+// Dynamic requirements fetched from DB with resilient defense fallback
+const DEFAULT_REQUIREMENTS = [
+  { id: 'Final Manuscript', title: 'Final Manuscript', desc: 'Complete approved research paper (PDF)', icon: '📄', type: 'file', scope: 'global', status: 'approved', priority: 1 },
+  { id: 'Approval Sheet', title: 'Approval Sheet', desc: 'Signed by adviser, dean, and defense panel', icon: '📑', type: 'file', scope: 'global', status: 'approved', priority: 2 },
+  { id: 'Dataset Files', title: 'Dataset Files', desc: 'Raw datasets used in study (ZIP/CSV)', icon: '💾', type: 'file', scope: 'global', status: 'approved', priority: 3 },
+  { id: 'Video Pitch', title: 'Video Pitch', desc: 'Brief 3-5 min video presentation of findings', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4 },
+  { id: 'User Manual', title: 'User Manual', desc: 'Comprehensive manual for the developed system', icon: '📖', type: 'file', scope: 'global', status: 'approved', priority: 5 },
+  { id: 'Upload URL', title: 'Upload URL', desc: 'Source code or publication repository URL', icon: '🔗', type: 'url', scope: 'global', status: 'approved', priority: 6 },
+  { id: 'Signature Page', title: 'Signature Page', desc: 'Original signed endorsement page from academic committee', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7 }
+];
 
 export default function RequirementsPage({ onLogout, studentName, initials, studentUid, groupName, activeTab, setActiveTab, profilePhotoUrl, role, leaderUid }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,7 +81,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             if (b.scope === 'global') return 1;
             return 0;
           });
-          setRequirements(activeReqs);
+          setRequirements(activeReqs.length > 0 ? activeReqs : DEFAULT_REQUIREMENTS);
         }, (err) => console.error('Error listening to requirements:', err));
 
         const subQuery = query(collection(db, 'submissions'), where('studentUid', '==', targetUid));

@@ -2539,6 +2539,31 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
+// SYSTEM DEFENSE BOOTSTRAP & RESILIENCE APIS
+// ==========================================
+const { seedDatabase } = require('./scripts/seed-defense');
+
+app.post('/api/system/bootstrap', async (req, res) => {
+  try {
+    await seedDatabase({ resetData: false });
+    res.json({ success: true, message: 'System foundation initialized successfully' });
+  } catch (error) {
+    console.error('Bootstrap API error:', error);
+    res.status(500).json({ error: 'Failed to bootstrap system', details: error.message });
+  }
+});
+
+app.post('/api/system/defense-reset', async (req, res) => {
+  try {
+    await seedDatabase({ resetData: true });
+    res.json({ success: true, message: 'System successfully reset to pristine defense state' });
+  } catch (error) {
+    console.error('Defense reset API error:', error);
+    res.status(500).json({ error: 'Failed to reset defense state', details: error.message });
+  }
+});
+
+// ==========================================
 // DYNAMIC PDF WATERMARKING (ENTERPRISE)
 // ==========================================
 app.post('/api/watermark-pdf', async (req, res) => {

@@ -9,6 +9,24 @@ import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 
+const DEFAULT_CATEGORIES_LIST = [
+  'Artificial Intelligence & Machine Learning',
+  'Web & Mobile Application Systems',
+  'Data Science & Predictive Analytics',
+  'Internet of Things (IoT) & Smart Devices',
+  'Cybersecurity & Network Infrastructure',
+  'Health Informatics & Medical Computing',
+  'Educational Technology (EdTech)'
+];
+
+const DEFAULT_PROGRAMS_LIST = [
+  { name: 'Bachelor of Science in Information Technology', code: 'BSIT', department: 'College of Information Technology' },
+  { name: 'Bachelor of Science in Computer Science', code: 'BSCS', department: 'College of Information Technology' },
+  { name: 'Bachelor of Science in Nursing', code: 'BSN', department: 'School of Health Sciences' },
+  { name: 'Bachelor of Science in Pharmacy', code: 'BSP', department: 'School of Health Sciences' },
+  { name: 'Bachelor of Science in Medical Technology', code: 'BSMT', department: 'School of Health Sciences' }
+];
+
 export default function StudentSignup({ onSwitchPage }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -42,8 +60,8 @@ export default function StudentSignup({ onSwitchPage }) {
   });
   const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
-  const [categoriesList, setCategoriesList] = useState([]); // NEW
-  const [programsList, setProgramsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState(DEFAULT_CATEGORIES_LIST); // NEW
+  const [programsList, setProgramsList] = useState(DEFAULT_PROGRAMS_LIST);
 
   useEffect(() => {
     console.log("Checking invitation data for categories:", invitationData);
@@ -61,10 +79,11 @@ export default function StudentSignup({ onSwitchPage }) {
     
     const unsubCats = onSnapshot(q, (snap) => {
       console.log("Fetched categories count:", snap.docs.length);
-      snap.docs.forEach(d => console.log("Category:", d.data()));
-      setCategoriesList(snap.docs.map(d => d.data().name));
+      const fetched = snap.docs.map(d => d.data().name).filter(Boolean);
+      setCategoriesList(fetched.length > 0 ? fetched : DEFAULT_CATEGORIES_LIST);
     }, (error) => {
       console.error("Error fetching categories:", error);
+      setCategoriesList(DEFAULT_CATEGORIES_LIST);
     });
     return () => unsubCats();
   }, [invitationData?.sentBy]);
@@ -72,7 +91,11 @@ export default function StudentSignup({ onSwitchPage }) {
   // Fetch Programs from settings
   useEffect(() => {
     const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
-      setProgramsList(snap.docs.map(d => d.data()));
+      const fetched = snap.docs.map(d => d.data());
+      setProgramsList(fetched.length > 0 ? fetched : DEFAULT_PROGRAMS_LIST);
+    }, (error) => {
+      console.error("Error fetching programs:", error);
+      setProgramsList(DEFAULT_PROGRAMS_LIST);
     });
     return () => unsubProgs();
   }, []);

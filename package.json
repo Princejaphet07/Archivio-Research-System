@@ -9,7 +9,9 @@
     "build:all": "vite build && npm --prefix public-archive run build",
     "build:public": "npm --prefix public-archive run build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed": "node email-service/scripts/seed-defense.js",
+    "defense:reset": "node email-service/scripts/seed-defense.js --reset"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",

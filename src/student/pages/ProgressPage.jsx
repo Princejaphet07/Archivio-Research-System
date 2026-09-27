@@ -13,6 +13,16 @@ import { getBackendUrl } from '../../utils/backendUrl';
 
 const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
 
+const DEFAULT_REQUIREMENTS = [
+  { id: 'Final Manuscript', title: 'Final Manuscript', desc: 'Complete approved research paper (PDF)', icon: '📄', type: 'file', scope: 'global', status: 'approved', priority: 1 },
+  { id: 'Approval Sheet', title: 'Approval Sheet', desc: 'Signed by adviser, dean, and defense panel', icon: '📑', type: 'file', scope: 'global', status: 'approved', priority: 2 },
+  { id: 'Dataset Files', title: 'Dataset Files', desc: 'Raw datasets used in study (ZIP/CSV)', icon: '💾', type: 'file', scope: 'global', status: 'approved', priority: 3 },
+  { id: 'Video Pitch', title: 'Video Pitch', desc: 'Brief 3-5 min video presentation of findings', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4 },
+  { id: 'User Manual', title: 'User Manual', desc: 'Comprehensive manual for the developed system', icon: '📖', type: 'file', scope: 'global', status: 'approved', priority: 5 },
+  { id: 'Upload URL', title: 'Upload URL', desc: 'Source code or publication repository URL', icon: '🔗', type: 'url', scope: 'global', status: 'approved', priority: 6 },
+  { id: 'Signature Page', title: 'Signature Page', desc: 'Original signed endorsement page from academic committee', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7 }
+];
+
 export default function ProgressPage({ onLogout, activeTab, setActiveTab, studentName, initials, profilePhotoUrl, role }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -110,7 +120,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     const unsubReq = onSnapshot(reqQ, (snap) => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const active = all.filter(r => r.scope === 'global' && r.status === 'approved' && r.storageEnabled !== false && r.storageStatus !== 'suspended');
-      setRequirements(active);
+      setRequirements(active.length > 0 ? active : DEFAULT_REQUIREMENTS);
     });
 
     return () => { unsubSub(); unsubReq(); };
