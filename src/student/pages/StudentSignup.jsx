@@ -19,13 +19,7 @@ const DEFAULT_CATEGORIES_LIST = [
   'Educational Technology (EdTech)'
 ];
 
-const DEFAULT_PROGRAMS_LIST = [
-  { name: 'Bachelor of Science in Information Technology', code: 'BSIT', department: 'College of Information Technology' },
-  { name: 'Bachelor of Science in Computer Science', code: 'BSCS', department: 'College of Information Technology' },
-  { name: 'Bachelor of Science in Nursing', code: 'BSN', department: 'School of Health Sciences' },
-  { name: 'Bachelor of Science in Pharmacy', code: 'BSP', department: 'School of Health Sciences' },
-  { name: 'Bachelor of Science in Medical Technology', code: 'BSMT', department: 'School of Health Sciences' }
-];
+const DEFAULT_PROGRAMS_LIST = [];
 
 export default function StudentSignup({ onSwitchPage }) {
   const [step, setStep] = useState(1);
@@ -61,7 +55,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
   const [categoriesList, setCategoriesList] = useState(DEFAULT_CATEGORIES_LIST); // NEW
-  const [programsList, setProgramsList] = useState(DEFAULT_PROGRAMS_LIST);
+  const [programsList, setProgramsList] = useState([]);
 
   useEffect(() => {
     console.log("Checking invitation data for categories:", invitationData);
@@ -88,14 +82,14 @@ export default function StudentSignup({ onSwitchPage }) {
     return () => unsubCats();
   }, [invitationData?.sentBy]);
 
-  // Fetch Programs from settings
+  // Fetch Programs dynamically from Firestore (created by Admin in System Settings > Departments & Programs)
   useEffect(() => {
     const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
-      const fetched = snap.docs.map(d => d.data());
-      setProgramsList(fetched.length > 0 ? fetched : DEFAULT_PROGRAMS_LIST);
+      const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setProgramsList(fetched);
     }, (error) => {
       console.error("Error fetching programs:", error);
-      setProgramsList(DEFAULT_PROGRAMS_LIST);
+      setProgramsList([]);
     });
     return () => unsubProgs();
   }, []);
@@ -343,6 +337,11 @@ export default function StudentSignup({ onSwitchPage }) {
       const deleteGroupPromises = oldGroupSnap.docs.map(d => deleteDoc(doc(db, 'groups', d.id)));
       await Promise.all(deleteGroupPromises);
 
+      // Resolve selected course/program and its department (created by Admin)
+      const selectedProg = programsList.find(p => p.name === personalInfo.course || p.code === personalInfo.course);
+      const resolvedDept = selectedProg?.school || selectedProg?.department || invitationData?.department || 'Not specified';
+      const resolvedProgCode = selectedProg?.code || '';
+
       if (invitationData.invitedByLeader) {
         // --- MEMBER SIGNUP ---
         
@@ -355,6 +354,8 @@ export default function StudentSignup({ onSwitchPage }) {
           leaderData = leaderSnap.docs[0].data();
         }
 
+        const memberDept = resolvedDept !== 'Not specified' ? resolvedDept : (leaderData.department || 'Not specified');
+
         await setDoc(doc(db, 'students', uid), {
           uid,
           firstName: personalInfo.firstName.trim(),
@@ -364,13 +365,14 @@ export default function StudentSignup({ onSwitchPage }) {
           studentNumber: personalInfo.studentNumber.trim(),
           email,
           course: personalInfo.course,
+          programCode: resolvedProgCode || leaderData.programCode || '',
           yearLevel: personalInfo.yearLevel,
           groupName: leaderData.groupName || 'Unknown Group',
           researchTitle: leaderData.researchTitle || 'Unknown Title',
           groupMembers: leaderData.groupMembers || [], // Sync from leader
           invitedBy: invitationData.sentBy || leaderData.invitedBy,
           invitedByName: invitationData.sentByName || leaderData.invitedByName,
-          department: invitationData.department || leaderData.department,
+          department: memberDept,
           leaderUid: leaderData.uid || null,
           role: 'member',
           status: 'active',
@@ -384,7 +386,7 @@ export default function StudentSignup({ onSwitchPage }) {
           email,
           displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
           role: 'student',
-          department: invitationData.department || leaderData.department || '',
+          department: memberDept,
           status: 'active',
           createdAt: new Date().toISOString()
         });
@@ -402,13 +404,14 @@ export default function StudentSignup({ onSwitchPage }) {
           studentNumber: personalInfo.studentNumber.trim(),
           email,
           course: personalInfo.course,
+          programCode: resolvedProgCode,
           yearLevel: personalInfo.yearLevel,
           groupName: groupInfo.groupName.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
           groupMembers: groupInfo.members,
           invitedBy: invitationData.sentBy,
           invitedByName: invitationData.sentByName,
-          department: invitationData.department,
+          department: resolvedDept,
           role: 'student',
           status: 'active',
           groupStatus: 'pending',
@@ -421,7 +424,7 @@ export default function StudentSignup({ onSwitchPage }) {
           email,
           displayName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
           role: 'student',
-          department: invitationData.department || '',
+          department: resolvedDept,
           status: 'active',
           createdAt: new Date().toISOString()
         });
@@ -434,7 +437,8 @@ export default function StudentSignup({ onSwitchPage }) {
           leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
           leaderEmail: email,
           program: personalInfo.course,
-          department: invitationData.department || 'Not specified',
+          programCode: resolvedProgCode,
+          department: resolvedDept,
           members: groupInfo.members,
           adviserUid: invitationData.sentBy,
           adviserName: invitationData.sentByName,
@@ -691,9 +695,13 @@ export default function StudentSignup({ onSwitchPage }) {
                     formErrors.course ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
-                  <option value="">Select your course</option>
+                  <option value="">
+                    {programsList.length === 0 ? 'No courses available (Contact Admin)' : 'Select your course'}
+                  </option>
                   {programsList.map(prog => (
-                    <option key={prog.id || prog.code} value={prog.name}>{prog.name}</option>
+                    <option key={prog.id || prog.code} value={prog.name}>
+                      {prog.code ? `${prog.code} - ` : ''}{prog.name}{prog.school ? ` (${prog.school})` : prog.department ? ` (${prog.department})` : ''}
+                    </option>
                   ))}
                 </select>
                 {formErrors.course && (
