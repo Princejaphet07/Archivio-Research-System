@@ -189,7 +189,9 @@ async function seedDatabase(options = { resetData: false }) {
       'user_bookmarks',
       'students',
       'advisers',
-      'deans'
+      'deans',
+      'departments',
+      'programs'
     ];
     for (const colName of resetCols) {
       const snap = await db.collection(colName).get();
@@ -257,27 +259,29 @@ async function seedDatabase(options = { resetData: false }) {
     console.log(`   ✓ Verified ${catSnap.size} existing categories.`);
   }
 
-  // 3. Seed Departments & Programs
-  console.log('\n🏫 Checking Departments & Programs...');
-  const deptCol = db.collection('departments');
-  for (const dept of DEFAULT_DEPARTMENTS) {
-    const dRef = deptCol.doc(dept.id);
-    const existing = await dRef.get();
-    if (!existing.exists) {
-      await dRef.set(dept);
-      console.log(`   + Created department: "${dept.name}"`);
+  // 3. Seed Departments & Programs (Only if not a factory wipeout)
+  if (!options.resetData) {
+    console.log('\n🏫 Checking Departments & Programs...');
+    const deptCol = db.collection('departments');
+    for (const dept of DEFAULT_DEPARTMENTS) {
+      const dRef = deptCol.doc(dept.id);
+      const existing = await dRef.get();
+      if (!existing.exists) {
+        await dRef.set(dept);
+        console.log(`   + Created department: "${dept.name}"`);
+      }
     }
-  }
 
-  const progCol = db.collection('programs');
-  const progSnap = await progCol.get();
-  if (progSnap.empty) {
-    for (const prog of DEFAULT_PROGRAMS) {
-      await progCol.add(prog);
-      console.log(`   + Created program: "${prog.name} (${prog.code})"`);
+    const progCol = db.collection('programs');
+    const progSnap = await progCol.get();
+    if (progSnap.empty) {
+      for (const prog of DEFAULT_PROGRAMS) {
+        await progCol.add(prog);
+        console.log(`   + Created program: "${prog.name} (${prog.code})"`);
+      }
+    } else {
+      console.log(`   ✓ Verified ${progSnap.size} existing academic programs.`);
     }
-  } else {
-    console.log(`   ✓ Verified ${progSnap.size} existing academic programs.`);
   }
 
   // 4. Seed System Settings
