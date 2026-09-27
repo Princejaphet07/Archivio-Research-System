@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, where, deleteDoc, setDoc, onSnapshot, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, query, orderBy, doc, updateDoc, where, deleteDoc, setDoc, onSnapshot, limit } from 'firebase/firestore';
 import { db, auth, firebaseConfig } from '../firebase/config';
 import { deleteUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import { useAcademicYear } from '../context/AcademicYearContext';
-import { Trash2, Eye, Edit2, Ban, Plus, X } from 'lucide-react';
+import { Trash2, Eye, Edit2, Ban, Plus, X, Mail } from 'lucide-react';
 import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
@@ -810,37 +810,58 @@ export default function UserManagement() {
             createdAt: new Date().toISOString()
           });
 
-          // Send invitation email to SA portal
+          // Dispatch Super Admin Invitation Email (Primary: Direct Backend API, Fallback: Firestore 'mail' collection)
           try {
-            await addDoc(collection(db, 'mail'), {
-              to: formData.email.toLowerCase().trim(),
-              message: {
-                subject: "Invitation to Join ARCHIVIO as Super Admin",
-                html: `
-                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                    <div style="background-color: #541b2f; padding: 20px; text-align: center;">
-                      <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                      <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
-                    </div>
-                    <div style="padding: 30px; background-color: #ffffff;">
-                      <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName.trim()},</h2>
-                      <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a Super Admin.</p>
-                      
-                      <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
-                        <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Temporary Credentials:</strong></p>
-                        <p style="margin: 0; color: #2d3748;">Email: ${formData.email.toLowerCase().trim()}</p>
-                        <p style="margin: 5px 0 0 0; color: #2d3748;">Password: <strong>${temporaryPassword}</strong></p>
-                        <p style="margin: 10px 0 0 0; color: #e53e3e; font-size: 12px;"><em>Please log in and change your password immediately.</em></p>
+            const backendUrl = getBackendUrl();
+            let sentDirectly = false;
+
+            try {
+              await authFetch(`${backendUrl}/api/send-super-admin-invitation-email`, {
+                to: formData.email.toLowerCase().trim(),
+                name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+                invitationLink: saPortalLink,
+                temporaryPassword: temporaryPassword,
+                moduleAccess: formData.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true }
+              });
+              sentDirectly = true;
+              console.log('✅ Direct backend super admin invitation sent successfully');
+            } catch (apiErr) {
+              console.warn('Direct backend super admin email dispatch failed, falling back to Firestore mail queue:', apiErr);
+            }
+
+            // Only enqueue to Firestore 'mail' collection if direct dispatch failed (prevents duplicate emails)
+            if (!sentDirectly) {
+              await addDoc(collection(db, 'mail'), {
+                to: formData.email.toLowerCase().trim(),
+                message: {
+                  subject: "Invitation to Join ARCHIVIO as Super Admin",
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                       </div>
-                      
-                      <div style="text-align: center; margin: 30px 0;">
-                        <a href="${saPortalLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Admin Portal</a>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${formData.firstName.trim()},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">You have been invited to join the ARCHIVIO Research Management System as a Super Admin.</p>
+                        
+                        <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Temporary Credentials:</strong></p>
+                          <p style="margin: 0; color: #2d3748;">Email: ${formData.email.toLowerCase().trim()}</p>
+                          <p style="margin: 5px 0 0 0; color: #2d3748;">Password: <strong>${temporaryPassword}</strong></p>
+                          <p style="margin: 10px 0 0 0; color: #e53e3e; font-size: 12px;"><em>Please log in and change your password immediately.</em></p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                          <a href="${saPortalLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Admin Portal</a>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                `
-              }
-            });
+                  `
+                }
+              });
+              console.log('📨 Fallback super admin invitation enqueued to Firestore mail collection');
+            }
           } catch (emailError) {
             console.warn('Email service error (super admin still created):', emailError);
           }
@@ -854,11 +875,23 @@ export default function UserManagement() {
             details: `${formData.firstName.trim()} ${formData.lastName.trim()} (${formData.email.toLowerCase().trim()}) — ${formData.department}`,
           });
 
-          Swal.fire({
-            title: 'Success!',
-            text: `Super Admin invitation sent to ${formData.email}!`,
+          await Swal.fire({
+            title: 'Super Admin Account Created & Invitation Dispatched!',
+            html: `
+              <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
+                <p style="margin-bottom: 12px;">An official invitation has been dispatched to <strong>${formData.email}</strong>.</p>
+                <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
+                  <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Account Credentials</p>
+                  <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${formData.email.toLowerCase().trim()}</p>
+                  <p style="margin: 0 0 6px 0; color: #718096; font-size: 12px;">Temporary Password:</p>
+                  <code style="background-color: #ffffff; color: #541b2f; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block; letter-spacing: 1px;">${temporaryPassword}</code>
+                </div>
+                <p style="margin: 0; color: #718096; font-size: 12px;"><em>The Super Admin can log in immediately using these credentials at the SA portal, or via the link sent to their email.</em></p>
+              </div>
+            `,
             icon: 'success',
-            confirmButtonColor: '#801e38'
+            confirmButtonColor: '#801e38',
+            confirmButtonText: 'Great, Copy & Done'
           });
           
           setFormData({ firstName: '', lastName: '', email: '', department: '', programs: '', role: 'dean+adviser', moduleAccess: { dashboard: false, reports: false, allUsers: false, activityLogs: false } });
@@ -1218,35 +1251,129 @@ export default function UserManagement() {
     }
   };
 
-  const resendInvitation = async (deanId, deanEmail, deanName) => {
+  const resendInvitation = async (userId, userEmail, userName, userRole, userCol) => {
     try {
-      const deanRef = doc(db, 'deans', deanId);
+      const cleanEmail = (userEmail || '').toLowerCase().trim();
+      let targetCollection = userCol;
+      let userData = null;
+      let targetDocRef = null;
 
-      // Get the invitation link from the dean document
-      const deanSnap = await getDocs(query(collection(db, 'deans'), where('email', '==', deanEmail)));
-      const deanData = deanSnap.docs[0]?.data();
-      const deanPortalUrl = window.location.origin;
-      const invitationLink = deanData?.invitationLink || `${deanPortalUrl}/`;
-
-      const temporaryPassword = deanData?.temporaryPassword || '';
-
-      await updateDoc(deanRef, {
-        invitationDate: new Date().toISOString(),
-        invitationSent: true
-      });
-
-      // Dispatch Dean Invitation Reminder (Primary: Direct Backend API, Fallback: Firestore 'mail' collection)
-      try {
-        const backendUrl = getBackendUrl();
-        let sentDirectly = false;
-
+      // 1. If userCol was passed and userId is available, try getting the doc
+      if (targetCollection && userId) {
         try {
-          await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
-            to: deanEmail,
-            deanName: deanName,
+          const docSnap = await getDoc(doc(db, targetCollection, userId));
+          if (docSnap.exists()) {
+            userData = docSnap.data();
+            targetDocRef = docSnap.ref;
+          }
+        } catch (_) {}
+      }
+
+      // 2. If not found yet, check super_admins or deans by email
+      if (!userData) {
+        if (userRole === 'super-admin' || targetCollection === 'super_admins') {
+          const saSnap = await getDocs(query(collection(db, 'super_admins'), where('email', '==', cleanEmail)));
+          if (!saSnap.empty) {
+            userData = saSnap.docs[0].data();
+            targetDocRef = saSnap.docs[0].ref;
+            targetCollection = 'super_admins';
+          }
+        } else {
+          const deanSnap = await getDocs(query(collection(db, 'deans'), where('email', '==', cleanEmail)));
+          if (!deanSnap.empty) {
+            userData = deanSnap.docs[0].data();
+            targetDocRef = deanSnap.docs[0].ref;
+            targetCollection = 'deans';
+          } else {
+            // Also check super_admins as fallback
+            const saSnap = await getDocs(query(collection(db, 'super_admins'), where('email', '==', cleanEmail)));
+            if (!saSnap.empty) {
+              userData = saSnap.docs[0].data();
+              targetDocRef = saSnap.docs[0].ref;
+              targetCollection = 'super_admins';
+            }
+          }
+        }
+      }
+
+      const role = userRole || userData?.role || (targetCollection === 'super_admins' ? 'super-admin' : 'dean');
+      const isSuperAdmin = role === 'super-admin' || targetCollection === 'super_admins';
+      const roleTitle = isSuperAdmin 
+        ? "Super Admin" 
+        : (role === 'dean+adviser' ? "Dean & Research Adviser" : "Dean");
+      
+      const origin = window.location.origin;
+      const invitationLink = userData?.invitationLink || (isSuperAdmin ? `${origin}/sa-portal` : `${origin}/`);
+      const temporaryPassword = userData?.temporaryPassword || '';
+      const recipientName = userName || userData?.displayName || (isSuperAdmin ? 'Super Admin' : 'Dean');
+
+      if (targetDocRef) {
+        await updateDoc(targetDocRef, {
+          invitationDate: new Date().toISOString(),
+          invitationSent: true
+        });
+      }
+
+      const backendUrl = getBackendUrl();
+      let sentDirectly = false;
+
+      if (isSuperAdmin) {
+        try {
+          await authFetch(`${backendUrl}/api/send-super-admin-invitation-email`, {
+            to: cleanEmail,
+            name: recipientName,
             invitationLink: invitationLink,
             temporaryPassword: temporaryPassword || 'Your established password',
-            role: deanData?.role || 'dean'
+            moduleAccess: userData?.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true }
+          });
+          sentDirectly = true;
+          console.log('✅ Direct backend super admin reminder sent successfully');
+        } catch (err) {
+          console.warn('Direct backend super admin reminder failed, falling back to mail queue:', err);
+        }
+
+        if (!sentDirectly) {
+          await addDoc(collection(db, 'mail'), {
+            to: cleanEmail,
+            message: {
+              subject: "Reminder: Invitation to Join ARCHIVIO as Super Admin",
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                    <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                  </div>
+                  <div style="padding: 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0;">Hi ${recipientName},</h2>
+                    <p style="color: #4a5568; line-height: 1.6;">This is a reminder that you have been invited to join the ARCHIVIO Research Management System as a <strong>Super Admin</strong>.</p>
+                    
+                    ${temporaryPassword ? `
+                    <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                      <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Your Credentials:</strong></p>
+                      <p style="margin: 0; color: #2d3748;">Email: ${cleanEmail}</p>
+                      <p style="margin: 5px 0 0 0; color: #2d3748;">Password: <strong>${temporaryPassword}</strong></p>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${invitationLink}" style="background-color: #541b2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Access Admin Portal</a>
+                    </div>
+                  </div>
+                </div>
+              `
+            }
+          });
+          console.log('📨 Fallback super admin reminder enqueued to Firestore mail collection');
+        }
+      } else {
+        // Dean Reminder
+        try {
+          await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
+            to: cleanEmail,
+            deanName: recipientName,
+            invitationLink: invitationLink,
+            temporaryPassword: temporaryPassword || 'Your established password',
+            role: role
           });
           sentDirectly = true;
           console.log('✅ Direct backend dean reminder sent successfully');
@@ -1254,12 +1381,11 @@ export default function UserManagement() {
           console.warn('Direct backend resend dispatch failed, falling back to mail queue:', err);
         }
 
-        // Only enqueue to Firestore 'mail' collection if direct dispatch failed (prevents duplicate emails)
         if (!sentDirectly) {
           await addDoc(collection(db, 'mail'), {
-            to: deanEmail,
+            to: cleanEmail,
             message: {
-              subject: "Reminder: Invitation to Join ARCHIVIO as a Dean",
+              subject: `Reminder: Invitation to Join ARCHIVIO as a ${roleTitle}`,
               html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
                   <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
@@ -1269,19 +1395,19 @@ export default function UserManagement() {
                   </div>
                   
                   <div style="padding: 40px 30px; background-color: #ffffff;">
-                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${deanName},</h2>
-                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Dean</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${recipientName},</h2>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
 
                     ${temporaryPassword ? `
                     <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 18px; margin: 25px 0;">
                       <p style="margin: 0 0 8px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Your Temporary Credentials</p>
-                      <p style="margin: 0 0 6px 0; color: #2d3748; font-size: 14px;"><strong>Email:</strong> ${deanEmail}</p>
+                      <p style="margin: 0 0 6px 0; color: #2d3748; font-size: 14px;"><strong>Email:</strong> ${cleanEmail}</p>
                       <p style="margin: 0; color: #718096; font-size: 13px;">Temporary Password: <code style="background: #ffffff; color: #541b2f; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #d5c9bb; font-size: 15px;">${temporaryPassword}</code></p>
                     </div>
                     ` : ''}
                     
                     <div style="text-align: center; margin: 30px 0 10px 0;">
-                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Dean Portal</a>
+                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
                     </div>
                   </div>
                   
@@ -1294,24 +1420,22 @@ export default function UserManagement() {
           });
           console.log('📨 Fallback dean reminder enqueued to Firestore mail collection');
         }
-      } catch (emailError) {
-        console.warn('Email service error during resend:', emailError);
       }
 
       await Swal.fire({
         title: 'Invitation Dispatched!',
         html: `
           <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
-            <p style="margin-bottom: 12px;">Invitation reminder dispatched to <strong>${deanEmail}</strong>.</p>
+            <p style="margin-bottom: 12px;">Invitation reminder dispatched to <strong>${cleanEmail}</strong> as <strong>${roleTitle}</strong>.</p>
             ${temporaryPassword ? `
             <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
               <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Account Credentials</p>
-              <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${deanEmail}</p>
+              <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${cleanEmail}</p>
               <p style="margin: 0 0 6px 0; color: #718096; font-size: 12px;">Temporary Password:</p>
               <code style="background-color: #ffffff; color: #541b2f; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block;">${temporaryPassword}</code>
             </div>
             ` : ''}
-            <p style="margin: 0; color: #718096; font-size: 12px;"><em>The Dean can log in immediately using these credentials.</em></p>
+            <p style="margin: 0; color: #718096; font-size: 12px;"><em>The user can log in immediately using these credentials.</em></p>
           </div>
         `,
         icon: 'success',
@@ -1488,7 +1612,7 @@ export default function UserManagement() {
                           {user.status === 'pending' ? (
                             <div className="flex justify-center">
                               <button
-                                onClick={() => resendInvitation(user.id, user.email, user.displayName)}
+                                onClick={() => resendInvitation(user.id, user.email, user.displayName, user.role, user._collection)}
                                 className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
                               >
                                 Resend
@@ -1502,6 +1626,13 @@ export default function UserManagement() {
                                 title="View details"
                               >
                                 <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => resendInvitation(user.id, user.email, user.displayName, user.role, user._collection)}
+                                className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
+                                title="Resend invitation / credentials email"
+                              >
+                                <Mail className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleEditUser(user)}
@@ -2207,13 +2338,29 @@ export default function UserManagement() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-stone-200 dark:border-stone-700/80 pt-4 mt-6 flex justify-start">
+              <div className="border-t border-stone-200 dark:border-stone-700/80 pt-4 mt-6 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedViewUser(null)}
                   className="px-6 py-2 rounded-xl text-sm font-medium text-stone-800 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 transition shadow-sm cursor-pointer"
                 >
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resendInvitation(
+                      selectedViewUser.id,
+                      selectedViewUser.email,
+                      selectedViewUser.displayName,
+                      selectedViewUser.role,
+                      selectedViewUser._collection
+                    );
+                  }}
+                  className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[#801e38] hover:bg-[#601328] transition shadow-sm cursor-pointer flex items-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  Resend Invitation Email
                 </button>
               </div>
             </div>
