@@ -262,13 +262,10 @@ export default function DepartmentsProgramsTab() {
       setActiveModal(null);
       setSelectedDepartment(null);
 
-      // Refresh all data
-      await fetchAllData();
-
       Swal.fire('Deleted!', `${dept.name} and all its programs have been permanently removed.`, 'success');
     } catch (error) {
       console.error('Error deleting department:', error);
-      Swal.fire('Error', 'Failed to delete department. Please try again.', 'error');
+      Swal.fire('Error', 'Failed to delete department. ' + (error.message || 'Please try again.'), 'error');
     }
   };
 
