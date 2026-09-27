@@ -264,37 +264,46 @@ async function seedDatabase(options = { resetData: false }) {
 
   // 5. Auto-Provision & Sync Auth Users with Firestore Roles
   console.log('\n👥 Synchronizing Auth Users with Firestore Profiles...');
+  
+  // Guarantee Admin Account exists in Auth
+  try {
+    await auth.getUserByEmail('japhetvender00@gmail.com');
+  } catch (e) {
+    if (e.code === 'auth/user-not-found') {
+      await auth.createUser({
+        email: 'japhetvender00@gmail.com',
+        password: '23571113V!!!',
+        displayName: 'Prince Japhet Vender (Administrator)',
+        emailVerified: true
+      });
+      console.log('   + Auto-created admin account in Firebase Auth: japhetvender00@gmail.com');
+    }
+  }
+
   const authUsers = await auth.listUsers(100);
   
-  // Known Super Admin emails
-  const SUPER_ADMIN_EMAILS = [
-    'japhetvender00@gmail.com',
-    'venderadmin@gmail.com',
-    'admin@archivio.swu.edu.ph'
-  ];
-
   for (const user of authUsers.users) {
     const email = (user.email || '').toLowerCase().trim();
-    const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(email) || email.includes('admin');
+    const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin');
     
     // Check users collection
     const userDocRef = db.collection('users').doc(user.uid);
-    const userDoc = await userDocRef.get();
     
-    let assignedRole = isSuperAdmin ? 'super-admin' : 'student';
+    let assignedRole = isAdmin ? 'admin' : 'student';
     let displayName = user.displayName || user.email?.split('@')[0] || 'User';
 
-    if (email === 'japhetvender00@gmail.com') displayName = 'Prince Japhet Vender (Lead Developer)';
+    if (email === 'japhetvender00@gmail.com') displayName = 'Prince Japhet Vender (Administrator)';
     if (email.startsWith('prdo.vender')) displayName = 'Pronce Japhet Vender';
     if (email.startsWith('jemi.zamoras')) displayName = 'Jerika Zamoras';
 
-    if (isSuperAdmin) {
-      // 1. Set in users collection
+    if (isAdmin) {
+      // 1. Set in users collection with full monitor permissions
       await userDocRef.set({
         uid: user.uid,
         email: user.email,
         displayName,
-        role: 'super-admin',
+        role: 'admin',
+        department: 'College of Information Technology',
         status: 'active',
         createdAt: new Date().toISOString(),
         permissions: {
@@ -304,20 +313,26 @@ async function seedDatabase(options = { resetData: false }) {
           manageDepartments: true,
           viewReports: true,
           systemSettings: true
+        },
+        moduleAccess: {
+          dashboard: true,
+          reports: true,
+          allUsers: true,
+          activityLogs: true
         }
       }, { merge: true });
 
-      // 2. Set in super_admins collection
-      await db.collection('super_admins').doc(user.uid).set({
+      // 2. Also register in admins collection
+      await db.collection('admins').doc(user.uid).set({
         uid: user.uid,
         email: user.email,
         displayName,
-        role: 'super-admin',
+        role: 'admin',
         status: 'active',
         createdAt: new Date().toISOString()
       }, { merge: true });
 
-      console.log(`   👑 Provisioned SUPER ADMIN: ${user.email} (${displayName})`);
+      console.log(`   👑 Provisioned SYSTEM ADMIN: ${user.email} (${displayName})`);
     } else {
       // Non-admin user (student)
       await userDocRef.set({

@@ -29,18 +29,31 @@ function Dashboard() {
     let loadedCount = 0;
     const totalSnapshots = 8;
     const markLoaded = () => { loadedCount++; if (loadedCount >= totalSnapshots) setLoading(false); };
+    const safetyTimer = setTimeout(() => setLoading(false), 2500);
 
-    const unsubSub = onSnapshot(collection(db, 'submissions'), snap => { setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubGroup = onSnapshot(collection(db, 'groups'), snap => { setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubDeans = onSnapshot(collection(db, 'deans'), snap => { setDeans(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), snap => { setAdvisers(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubStudents = onSnapshot(collection(db, 'students'), snap => { setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubLogs = onSnapshot(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(100)), snap => {
-      setActivityLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded();
-    });
-    const unsubDepts = onSnapshot(collection(db, 'departments'), snap => { setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    const unsubProgs = onSnapshot(collection(db, 'programs'), snap => { setPrograms(snap.docs.map(d => ({ id: d.id, ...d.data() }))); markLoaded(); });
-    return () => { unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); unsubDepts(); unsubProgs(); };
+    const safeSnap = (queryRef, setter) => {
+      return onSnapshot(queryRef, snap => {
+        setter(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => {
+        console.warn('Dashboard snapshot notice:', err.message);
+        markLoaded();
+      });
+    };
+
+    const unsubSub = safeSnap(collection(db, 'submissions'), setSubmissions);
+    const unsubGroup = safeSnap(collection(db, 'groups'), setGroups);
+    const unsubDeans = safeSnap(collection(db, 'deans'), setDeans);
+    const unsubAdvisers = safeSnap(collection(db, 'advisers'), setAdvisers);
+    const unsubStudents = safeSnap(collection(db, 'students'), setStudents);
+    const unsubLogs = safeSnap(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(100)), setActivityLogs);
+    const unsubDepts = safeSnap(collection(db, 'departments'), setDepartments);
+    const unsubProgs = safeSnap(collection(db, 'programs'), setPrograms);
+
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); unsubDepts(); unsubProgs();
+    };
   }, []);
 
   const filteredSubmissions = useMemo(() => filterByAcademicYear(submissions, 'createdAt'), [submissions, selectedYear]);

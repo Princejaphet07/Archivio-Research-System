@@ -31,6 +31,7 @@ function App() {
             <Routes>
               {/* Default Route: Redirect to dashboard if logged in */}
               <Route path="/" element={<Dashboard />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
               {/* Main */}

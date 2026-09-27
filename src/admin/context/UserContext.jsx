@@ -78,7 +78,9 @@ export function UserProvider({ children }) {
         // Note: UnifiedLogin is at `/`, Admin is at `/admin/*`
         if (
           window.location.pathname.startsWith('/admin') && 
+          window.location.pathname !== '/admin' &&
           window.location.pathname !== '/admin/' &&
+          window.location.pathname !== '/admin/login' &&
           window.location.pathname !== '/admin/forgot-password'
         ) {
            window.location.href = '/';
