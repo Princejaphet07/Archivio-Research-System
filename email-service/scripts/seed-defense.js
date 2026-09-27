@@ -172,17 +172,54 @@ async function seedDatabase(options = { resetData: false }) {
   console.log('🏛️  ARCHIVIO Institutional Defense Database Bootstrap');
   console.log('======================================================\n');
 
-  // Optional: Clean out test transactions for a pristine fresh defense
+  // Clean out transactional data and non-admin users for a pristine fresh state
   if (options.resetData) {
-    console.log('🧹 Clearing test transactions (submissions, groups, notifications, logs)...');
-    const resetCols = ['submissions', 'groups', 'studentInvitations', 'notifications', 'activity_logs', 'systemLogs', 'mail', 'emails'];
+    console.log('🧹 Purging all transactional data and non-admin accounts (Factory Wipeout)...');
+    const resetCols = [
+      'submissions',
+      'groups',
+      'studentInvitations',
+      'invitations',
+      'notifications',
+      'activity_logs',
+      'systemLogs',
+      'mail',
+      'emails',
+      'published_papers',
+      'user_bookmarks',
+      'students',
+      'advisers',
+      'deans'
+    ];
     for (const colName of resetCols) {
       const snap = await db.collection(colName).get();
       if (!snap.empty) {
         const batch = db.batch();
         snap.docs.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        console.log(`   - Wiped ${snap.size} test documents from [${colName}]`);
+        console.log(`   - Wiped ${snap.size} documents from [${colName}]`);
+      }
+    }
+
+    // Purge non-admin users from users collection
+    const userSnap = await db.collection('users').get();
+    for (const d of userSnap.docs) {
+      const data = d.data();
+      const email = (data.email || '').toLowerCase().trim();
+      const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin') || data.role === 'admin' || data.role === 'super-admin';
+      if (!isAdmin) {
+        await d.ref.delete().catch(() => {});
+      }
+    }
+
+    // Purge non-admin users from Firebase Auth
+    const listAuth = await auth.listUsers(500);
+    for (const u of listAuth.users) {
+      const email = (u.email || '').toLowerCase().trim();
+      const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin');
+      if (!isAdmin) {
+        await auth.deleteUser(u.uid).catch(() => {});
+        console.log(`   - Purged auth user: ${u.email}`);
       }
     }
   }

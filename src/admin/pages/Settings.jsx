@@ -647,16 +647,22 @@ export default function Settings() {
       }
 
       const backendUrl = getBackendUrl();
+      
+      // 1. Call Backend Defense Reset API for server-side purge of Auth and collections
+      try {
+        await fetch(`${backendUrl}/api/system/defense-reset`, { method: 'POST' }).catch(() => {});
+      } catch (_) {}
+
       for (const u of authUsersToPurge) {
         try {
           await authFetch(`${backendUrl}/api/hard-delete-auth-user`, { uid: u.uid, email: u.email }).catch(() => {});
         } catch (_) {}
       }
 
+      // 2. Client-side purge of all operational and transactional collections
       const fullWipeCollections = [
         'groups',
         'submissions',
-        'requirements',
         'published_papers',
         'students',
         'advisers',
@@ -664,7 +670,11 @@ export default function Settings() {
         'invitations',
         'studentInvitations',
         'notifications',
-        'user_bookmarks'
+        'user_bookmarks',
+        'activity_logs',
+        'systemLogs',
+        'mail',
+        'emails'
       ];
 
       for (const col of fullWipeCollections) {
@@ -674,6 +684,7 @@ export default function Settings() {
         } catch (_) {}
       }
 
+      // 3. Purge non-admin users from users collection
       try {
         const userSnap = await getDocs(collection(db, 'users'));
         for (const uDoc of userSnap.docs) {
@@ -689,26 +700,69 @@ export default function Settings() {
         }
       } catch (_) {}
 
+      // 4. Ensure Institutional Requirements (Milestones) exist so tracking never fails
+      const DEFAULT_INST_REQS = [
+        { id: 'Final Manuscript', title: 'Final Manuscript', desc: 'Complete approved research paper (PDF)', icon: '📄', type: 'file', scope: 'global', status: 'approved', priority: 1, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Approval Sheet', title: 'Approval Sheet', desc: 'Signed by adviser, dean, and defense panel', icon: '📑', type: 'file', scope: 'global', status: 'approved', priority: 2, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Dataset Files', title: 'Dataset Files', desc: 'Raw data, spreadsheets, or training models', icon: '📊', type: 'file', scope: 'global', status: 'approved', priority: 3, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Video Pitch', title: 'Video Pitch', desc: '5-minute recorded video presentation or demo link', icon: '🎥', type: 'url', scope: 'global', status: 'approved', priority: 4, storageEnabled: true, storageStatus: 'active' },
+        { id: 'User Manual', title: 'User Manual', desc: 'Documentation, installation, or user operating guide', icon: '📖', type: 'file', scope: 'global', status: 'approved', priority: 5, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Upload URL', title: 'Upload URL', desc: 'Public or GitHub repository link', icon: '🔗', type: 'url', scope: 'global', status: 'approved', priority: 6, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Signature Page', title: 'Signature Page', desc: 'Institutional panel and defense signature page', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7, storageEnabled: true, storageStatus: 'active' }
+      ];
+      for (const r of DEFAULT_INST_REQS) {
+        await setDoc(doc(db, 'requirements', r.id), { ...r, createdAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
+
+      // 5. Re-verify Admin Profile is active and healthy
+      if (currentAdminUid) {
+        await setDoc(doc(db, 'users', currentAdminUid), {
+          uid: currentAdminUid,
+          email: currentAdminEmail,
+          role: 'admin',
+          status: 'active',
+          updatedAt: new Date().toISOString(),
+          permissions: {
+            manageDeans: true,
+            manageAdvisers: true,
+            manageStudents: true,
+            manageDepartments: true,
+            viewReports: true,
+            systemSettings: true
+          },
+          moduleAccess: {
+            dashboard: true,
+            reports: true,
+            allUsers: true,
+            activityLogs: true
+          }
+        }, { merge: true }).catch(() => {});
+      }
+
       await logActivity({
-        user: currentAdminEmail || 'Super Admin',
+        user: currentAdminEmail || 'Admin',
         role: 'Admin',
         action: 'Factory System Wipeout',
         status: 'Success',
-        details: `Performed system wipeout with 6-digit PIN verification. Purged ${authUsersToPurge.length} accounts. Preserved Super Admin.`
+        details: `Performed system wipeout with 6-digit PIN verification. Database reset to clean state. Preserved Admin.`
       });
 
-      Swal.fire({
+      await Swal.fire({
         icon: 'success',
         title: 'Factory Wipeout Complete',
         html: `
           <div class="text-xs text-stone-700 text-left space-y-1.5 mt-2">
-            <p>✅ <b>Database Wiped:</b> All academic records, groups, and student/adviser/dean accounts have been cleared.</p>
-            <p>🛡️ <b>Super Admin Preserved:</b> <b>${currentAdminEmail || 'Active Administrator'}</b></p>
-            <p>💾 <b>Emergency Backup:</b> Downloaded automatically before wipe.</p>
+            <p>✅ <b>Database Wiped:</b> All academic records, groups, submissions, and user accounts have been cleared.</p>
+            <p>🛡️ <b>Admin Account Preserved:</b> <b>${currentAdminEmail || 'Active Administrator'}</b></p>
+            <p>📋 <b>Milestone Requirements Intact:</b> Standard templates ready for new registrations.</p>
+            <p>💾 <b>Emergency Backup:</b> Downloaded automatically to your computer.</p>
           </div>
         `,
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Refresh System'
       });
+
+      window.location.reload();
     } catch (err) {
       console.error("Delete all data error:", err);
       Swal.fire('Wipeout Error', 'An error occurred while wiping data. Some records may require manual cleanup.', 'error');
