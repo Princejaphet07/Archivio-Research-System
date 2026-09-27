@@ -62,7 +62,10 @@ export function UserProvider({ children }) {
               email: user.email,
               displayName: userData?.displayName || user.displayName || user.email,
               role: role,
-              moduleAccess: userData?.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true }
+              moduleAccess: {
+                ...(userData?.moduleAccess || { dashboard: true, reports: true, allUsers: true, activityLogs: true }),
+                superAdminSettings: true
+              }
             });
           } else {
             // Not an admin, kick them out

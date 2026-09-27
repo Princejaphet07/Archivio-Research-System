@@ -19,6 +19,8 @@ function Sidebar() {
   // Returns true if module is accessible
   const canAccess = (module) => {
     if (!isSuperAdmin) return true; // Full admin can access all
+    // Personal account settings is always accessible to the logged-in Super Admin
+    if (!module || module === 'superAdminSettings' || module === 'account') return true;
     return !!moduleAccess[module];
   };
 
