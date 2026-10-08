@@ -3,6 +3,7 @@ import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
 import { Card, PremiumButton } from '../../components/ui/Card';
+import BookLoader from '../../components/BookLoader';
 
 export default function ResearchUpload({ onBackToResearch, studentName, initials }) {
   const [formData, setFormData] = useState({
@@ -381,5 +382,13 @@ export default function ResearchUpload({ onBackToResearch, studentName, initials
           </form>
         </Card>
       </div>
-    </div>);
+      {isSubmitting && (
+        <BookLoader
+          fullScreen
+          text="Uploading Research..."
+          subtext="Saving research document to ARCHIVIO repository..."
+        />
+      )}
+    </div>
+  );
 }

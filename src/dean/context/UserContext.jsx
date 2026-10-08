@@ -92,7 +92,7 @@ export const UserProvider = ({ children }) => {
               setDeanSettings({
                 emailTemplates: {
                   adviserInvitation: {
-                    subject: "You're Invited to Join ARCHIVIO — SWU PHINMA Research Management System",
+                    subject: "Invitation: Join ARCHIVIO as a Research Adviser",
                     body: "Dear [Adviser Name],\n\nYou have been invited to join ARCHIVIO — the Web-Based Digital Research Archive Management System of Southwestern University PHINMA.\n\nAs a Research Adviser, you will be able to:\n• Manage your assigned student research groups\n• Review and evaluate submitted manuscripts\n• Track submission requirements and completion status\n• Approve and forward papers to the Dean for publication\n\nPlease click the button below to activate your account and set up your credentials."
                   }
                 },

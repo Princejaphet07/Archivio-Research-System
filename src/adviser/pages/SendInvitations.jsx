@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAdviser } from '../context/AdviserContext';
 import Layout from '../components/Layout';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
+import { sendEmailWithFallback } from '../../utils/emailDispatcher';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
-import { verifySchoolEmailOnline, validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
-import { authFetch } from '../../utils/authFetch';
-import { getBackendUrl } from '../../utils/backendUrl';
+import { 
+  Mail, 
+  Send, 
+  RefreshCw, 
+  Trash2, 
+  Search, 
+  AlertCircle, 
+  AlertTriangle, 
+  X 
+} from 'lucide-react';
 
 function SendInvitations() {
   const { adviserData } = useAdviser();
   const [studentEmail, setStudentEmail] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -113,16 +123,25 @@ function SendInvitations() {
     }
 
     if (!adviserData?.email?.toLowerCase().endsWith('@phinmaed.com')) {
-      setError('❌ Only advisers with @phinmaed.com email can send invitations');
+      setError('Only advisers with @phinmaed.com email can send invitations');
       return;
     }
 
     setLoading(true);
 
+    // 1. Show maroon book loader INSTANTLY upon clicking Send Invitation (Zero Delay)
+    Swal.fire({
+      title: 'Sending Invitation...',
+      text: `Preparing official invitation for ${studentEmail.trim()}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     try {
-      // 1. Strictly verify official SWU PHINMA student email (.swu@phinmaed.com) & MX records
-      const verification = await verifySchoolEmailOnline(studentEmail, 'student');
+      // 1. Ultra-fast local student institutional email validation (<1ms)
+      const verification = validateStudentSchoolEmail(studentEmail);
       if (!verification.isValid) {
+        Swal.close();
         setEmailError(verification.error);
         setLoading(false);
         const el = document.getElementById('adviser-send-invite-email');
@@ -131,32 +150,33 @@ function SendInvitations() {
       }
       const emailToInvite = verification.normalizedEmail;
 
-      // 1. Check if email is already registered in users
+      // 2. Fast check if email is already registered in users (limit 1)
       const qUser = query(
         collection(db, 'users'),
-        where('email', '==', emailToInvite)
+        where('email', '==', emailToInvite),
+        limit(1)
       );
       const snapUser = await getDocs(qUser);
       if (!snapUser.empty) {
+        Swal.close();
         setError('This email is already registered to an active account.');
         setLoading(false);
         return;
       }
 
-      // 2. Check if email already has a pending invitation FROM THIS ADVISER
+      // 3. Fast check if email already has a pending invitation FROM THIS ADVISER
       const adviserId = adviserData.userId || adviserData.id;
-      const adviserEmail = adviserData.email.toLowerCase().trim();
+      const adviserEmail = (adviserData.email || '').toLowerCase().trim();
 
-      // Query all pending invitations for this student email
       const qInvite = query(
         collection(db, 'studentInvitations'),
         where('studentEmail', '==', emailToInvite),
-        where('status', '==', 'pending')
+        where('status', '==', 'pending'),
+        limit(5)
       );
       const snapInvite = await getDocs(qInvite);
 
       if (!snapInvite.empty) {
-        // Check if any of these pending invitations belong to THIS adviser
         const myPendingInvite = snapInvite.docs.find(d => {
           const data = d.data();
           const invSentBy = (data.sentBy || '').toLowerCase().trim();
@@ -164,105 +184,85 @@ function SendInvitations() {
         });
 
         if (myPendingInvite) {
+          Swal.close();
           setError('This email already has a pending invitation from you. You can resend or remove it in the table below.');
           setLoading(false);
           return;
         }
-        // If pending from another adviser, allow this adviser to also send
       }
 
-      // 3. Auto-cleanup any stale or orphaned data for this email to guarantee a 100% clean invitation
-      await wipeEmailData(emailToInvite);
-
-      // Generate invitation token (kept for Firestore tracking)
+      // Generate invitation token
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      // Clean link to the Sign Up page
       const studentPortalUrl = window.location.origin;
       const invitationLink = `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail.toLowerCase().trim())}`;
 
       // Create student invitation in Firestore
       const invitationData = {
         studentEmail: studentEmail.toLowerCase().trim(),
-        adviserId: adviserData.userId,
-        sentBy: adviserData.email,
-        sentByName: adviserData.displayName,
+        adviserId: adviserData.userId || adviserData.id || '',
+        sentBy: adviserData.email || '',
+        sentByName: adviserData.displayName || adviserData.name || 'Research Adviser',
         department: adviserData.department || 'Not specified',
         status: 'pending',
-        invitationToken: invitationToken,
-        invitationLink: invitationLink,
+        invitationToken: invitationToken || '',
+        invitationLink: invitationLink || '',
         invitationSentAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'studentInvitations'), invitationData);
+      await addDoc(collection(db, 'studentInvitations'), invitationData);
 
-      // 1. Direct Backend Dispatch (try first)
-      const backendUrl = getBackendUrl();
-      let sentDirectly = false;
-      try {
-        await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
+      // 4. Fast Multi-tier Email Dispatch (<2.5s)
+      const emailHTML = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+          <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+            <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+            <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+            <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+          </div>
+          
+          <div style="padding: 40px 30px; background-color: #ffffff;">
+            <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, Student!</h2>
+            <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
+            
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
+              <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">How to Access Your Account:</strong>
+              <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Click the <strong>"Create Your Account"</strong> button below</li>
+                <li>Register using your <strong>@phinmaed.com</strong> email address</li>
+                <li>After signing up, you can join your research group</li>
+              </ol>
+            </div>
+            
+            <div style="text-align: center; margin: 40px 0 10px 0;">
+              <a href="${invitationLink}" target="_blank" style="background-color: #7a1f3d !important; background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(122, 31, 61, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
+            </div>
+            
+            <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+              Best regards,<br>
+              <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+              ${adviserData.department || 'SWU Phinma'}<br>
+            </p>
+          </div>
+          
+          <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+            <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+          </div>
+        </div>
+      `;
+
+      await sendEmailWithFallback({
+        to: studentEmail.toLowerCase().trim(),
+        subject: "Invitation to Join ARCHIVIO",
+        html: emailHTML,
+        backendEndpoint: '/api/send-student-invitation-email',
+        backendPayload: {
           to: studentEmail.toLowerCase().trim(),
           invitationLink: invitationLink,
           senderName: adviserData.displayName || 'Research Adviser',
           senderDepartment: adviserData.department || 'SWU Phinma'
-        });
-        sentDirectly = true;
-        console.log('✅ Direct student invitation dispatch successful');
-      } catch (err) {
-        console.warn('⚠️ Direct student invitation notice, falling back to mail queue:', err.message);
-      }
-
-      // 2. Fallback in Firestore 'mail' collection only if direct dispatch failed (prevents duplicate emails)
-      if (!sentDirectly) {
-        try {
-          await addDoc(collection(db, 'mail'), {
-            to: studentEmail,
-            message: {
-              subject: "Invitation to Join ARCHIVIO",
-              html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                  </div>
-                  
-                  <div style="padding: 40px 30px; background-color: #ffffff;">
-                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, Student!</h2>
-                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
-                    
-                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                      <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">📋 How to Access Your Account:</strong>
-                      <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                        <li>Click the <strong>"Create Your Account"</strong> button below</li>
-                        <li>Register using your <strong>@phinmaed.com</strong> email address</li>
-                        <li>After signing up, you can join your research group</li>
-                      </ol>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 40px 0 10px 0;">
-                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
-                    </div>
-                    
-                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                      Best regards,<br>
-                      <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
-                      ${adviserData.department || 'SWU Phinma'}<br>
-                    </p>
-                  </div>
-                  
-                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                  </div>
-                </div>
-              `
-            }
-          });
-          console.log('📨 Fallback student invitation enqueued to Firestore mail collection');
-        } catch (mErr) {
-          console.warn('Firestore mail queue fallback notice:', mErr);
         }
-      }
+      });
 
       // Show clean success alert
       await Swal.fire({
@@ -276,7 +276,14 @@ function SendInvitations() {
 
     } catch (error) {
       console.error('Error sending invitation:', error);
+      Swal.close();
       setError('Failed to send invitation. Please try again.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Send Invitation',
+        text: error.message || 'An unexpected error occurred while sending the invitation. Please try again.',
+        confirmButtonColor: '#801e38'
+      });
     } finally {
       setLoading(false);
     }
@@ -297,6 +304,13 @@ function SendInvitations() {
 
   const handleResendInvitation = async (invitationId, studentEmail) => {
     setLoading(true);
+    Swal.fire({
+      title: 'Resending Invitation...',
+      text: `Dispatching invitation email to ${studentEmail}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     try {
       // Update invitation sent time
       await updateDoc(doc(db, 'studentInvitations', invitationId), {
@@ -308,69 +322,51 @@ function SendInvitations() {
       const studentPortalUrl = window.location.origin;
       const link = invitation?.invitationLink || `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail)}`;
 
-      // 1. Direct Backend Resend
-      let sentDirectly = false;
-      try {
-        const backendUrl = getBackendUrl();
-        await authFetch(`${backendUrl}/api/send-student-invitation-email`, {
+      const resendHTML = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+          <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+            <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+            <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+            <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+          </div>
+          
+          <div style="padding: 40px 30px; background-color: #ffffff;">
+            <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Reminder: Action Required</h2>
+            <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
+            
+            <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Important:</strong> Please activate your account to begin managing your research projects with your adviser.</p>
+            </div>
+            
+            <div style="text-align: center; margin: 40px 0 10px 0;">
+              <a href="${link}" target="_blank" style="background-color: #7a1f3d !important; background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(122, 31, 61, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
+            </div>
+            
+            <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+              Best regards,<br>
+              <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
+              ${adviserData.department || 'SWU Phinma'}<br>
+            </p>
+          </div>
+          
+          <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+            <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+          </div>
+        </div>
+      `;
+
+      await sendEmailWithFallback({
+        to: studentEmail.toLowerCase().trim(),
+        subject: "Reminder: Invitation to Join ARCHIVIO",
+        html: resendHTML,
+        backendEndpoint: '/api/send-student-invitation-email',
+        backendPayload: {
           to: studentEmail.toLowerCase().trim(),
           invitationLink: link,
           senderName: adviserData.displayName || 'Research Adviser',
           senderDepartment: adviserData.department || 'SWU Phinma'
-        });
-        sentDirectly = true;
-        console.log('✅ Direct backend student invitation resend successful');
-      } catch (emailError) {
-        console.warn('Backend resend notice, falling back to mail queue:', emailError);
-      }
-
-      // 2. Fallback queue in Firestore 'mail' only if direct dispatch failed (prevents duplicate emails)
-      if (!sentDirectly) {
-        try {
-          await addDoc(collection(db, 'mail'), {
-            to: studentEmail,
-            message: {
-              subject: "Reminder: Invitation to Join ARCHIVIO",
-              html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                  </div>
-                  
-                  <div style="padding: 40px 30px; background-color: #ffffff;">
-                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Reminder: Action Required</h2>
-                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
-                    
-                    <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 20px 0; display: flex; align-items: flex-start; gap: 10px;">
-                      <span style="font-size: 16px;">⏰</span>
-                      <p style="margin: 0;"><strong>Important:</strong> Please activate your account to begin managing your research projects with your adviser.</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 40px 0 10px 0;">
-                      <a href="${link}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
-                    </div>
-                    
-                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                      Best regards,<br>
-                      <strong>${adviserData.displayName || 'Research Adviser'}</strong><br>
-                      ${adviserData.department || 'SWU Phinma'}<br>
-                    </p>
-                  </div>
-                  
-                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                  </div>
-                </div>
-              `
-            }
-          });
-          console.log('📨 Fallback student invitation resend enqueued to Firestore mail collection');
-        } catch (mErr) {
-          console.warn('Firestore mail resend notice:', mErr);
         }
-      }
+      });
 
       Swal.fire({
         title: 'Sent!',
@@ -379,7 +375,15 @@ function SendInvitations() {
         confirmButtonColor: '#801e38'
       });
     } catch (error) {
+      console.error('Error resending invitation:', error);
+      Swal.close();
       setError('Failed to resend invitation');
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Resend',
+        text: 'Failed to resend invitation email. Please try again.',
+        confirmButtonColor: '#801e38'
+      });
     } finally {
       setLoading(false);
     }
@@ -419,8 +423,17 @@ function SendInvitations() {
     }
   };
 
+  const filteredInvitations = invitations.filter((inv) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const email = (inv.studentEmail || '').toLowerCase();
+    const status = (inv.status === 'active' ? 'registered active' : 'pending').toLowerCase();
+    const date = inv.invitationSentAt ? new Date(inv.invitationSentAt).toLocaleDateString().toLowerCase() : '';
+    return email.includes(q) || status.includes(q) || date.includes(q);
+  });
+
   return (
-    <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={true}>
+    <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={false}>
       <div className="max-w-5xl mx-auto space-y-6">
         <SectionTitle sub="Invite students to your research group — type their email and send">
           Send Student Invitations
@@ -428,23 +441,25 @@ function SendInvitations() {
 
         {/* Error/Success Messages */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
-            <span className="text-red-500 text-lg">⚠️</span>
-            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 dark:text-red-400 font-medium">{error}</p>
           </div>
         )}
 
         {/* Adviser Email Check */}
         {adviserData?.email && !adviserData.email.toLowerCase().endsWith('@phinmaed.com') && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4 flex items-start gap-3">
-            <span className="text-yellow-600 text-lg">⚠️</span>
-            <p className="text-sm text-yellow-700 dark:text-yellow-400">Your email ({adviserData.email}) is not a @phinmaed.com email. You cannot send invitations.</p>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">Your email ({adviserData.email}) is not a @phinmaed.com email. You cannot send invitations.</p>
           </div>
         )}
 
         {/* Action Card */}
         <Card glass={true} className="p-5 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center">
-          <div className="text-3xl sm:text-4xl text-[#7a2e46] dark:text-[#f8d070] mb-2 sm:mb-3">✉️</div>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7a2e46]/10 to-[#7a2e46]/20 dark:from-[#f8d070]/10 dark:to-[#f8d070]/20 border border-[#7a2e46]/20 dark:border-[#f8d070]/30 flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] mb-3 shadow-inner">
+            <Mail className="w-7 h-7" />
+          </div>
           <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
           <p className="text-gray-500 dark:text-stone-400 text-xs sm:text-sm max-w-lg mb-5 sm:mb-6">
             Type the student's institutional email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
@@ -452,7 +467,9 @@ function SendInvitations() {
           <form onSubmit={handleSendInvitation} className="flex flex-col gap-2 w-full max-w-md">
             <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full">
               <div className="relative flex-1">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7a2e46] dark:text-[#f8d070]">📧</span>
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-stone-400 dark:text-stone-500 pointer-events-none">
+                  <Mail className="w-4 h-4" />
+                </span>
                 <input 
                   id="adviser-send-invite-email"
                   type="email" 
@@ -474,33 +491,66 @@ function SendInvitations() {
                 type="submit"
                 disabled={loading}
                 variant="primary"
-                className="w-full sm:w-auto justify-center"
+                className="w-full sm:w-auto justify-center flex items-center gap-2"
               >
-                {loading ? 'Sending...' : 'Send Link'}
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Link</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </>
+                )}
               </PremiumButton>
             </div>
             {emailError && (
-              <p className="text-xs text-red-500 text-left flex items-center gap-1 font-semibold pl-1">
-                <span>⚠️</span> {emailError}
+              <p className="text-xs text-red-500 text-left flex items-center gap-1.5 font-semibold pl-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{emailError}</span>
               </p>
             )}
           </form>
-          <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-2">💡 Requires authentic SWU PHINMA student email ending in <strong>.swu@phinmaed.com</strong>.</p>
         </Card>
 
         {/* History: Mobile Cards for Phones */}
         <div className="md:hidden space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-base">Sent Invitations</h3>
-            <span className="text-xs text-gray-500 dark:text-stone-400">{invitations.length} total</span>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 dark:text-stone-100 text-base">Sent Invitations</h3>
+              <span className="text-xs text-gray-500 dark:text-stone-400">{filteredInvitations.length} total</span>
+            </div>
+
+            {/* Mobile Search Bar inside list header */}
+            <div className="relative w-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search sent invitations..."
+                className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {invitations.length === 0 ? (
+          {filteredInvitations.length === 0 ? (
             <Card glass={true} className="p-6 text-center text-gray-400 dark:text-stone-500 text-sm">
-              No invitations sent yet. Send your first one above!
+              {searchQuery ? `No invitations match "${searchQuery}"` : 'No invitations sent yet. Send your first one above!'}
             </Card>
           ) : (
-            invitations.map((invitation) => (
+            filteredInvitations.map((invitation) => (
               <Card key={invitation.id} glass={true} className="p-4 space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -511,44 +561,36 @@ function SendInvitations() {
                       Sent: {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                     invitation.status === 'active' 
-                      ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
-                      : 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+                      ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
+                      : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
                   }`}>
-                    • {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                    {invitation.status === 'active' ? 'Registered' : 'Pending'}
                   </span>
                 </div>
 
                 {invitation.status === 'pending' && (
-                  <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-gray-100 dark:border-stone-800">
-                    <PremiumButton 
-                      onClick={() => handleCopyInvitationLink(invitation.invitationLink || `${window.location.origin}/student/signup?email=${encodeURIComponent(invitation.studentEmail)}`)}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-center text-[11px] px-1"
-                      title="Copy signup link"
-                    >
-                      📋 Copy
-                    </PremiumButton>
-                    <PremiumButton 
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-stone-800">
+                    <button 
+                      type="button"
                       onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                       disabled={loading}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-center text-[11px] px-1"
+                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-semibold transition cursor-pointer"
                     >
-                      🔄 Resend
-                    </PremiumButton>
-                    <PremiumButton 
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Resend</span>
+                    </button>
+                    <button 
+                      type="button"
                       onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
                       disabled={loading}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-center text-[11px] px-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/60 rounded-lg text-xs font-semibold transition cursor-pointer"
                     >
-                      ❌ Remove
-                    </PremiumButton>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
                   </div>
                 )}
               </Card>
@@ -557,15 +599,50 @@ function SendInvitations() {
         </div>
 
         {/* History Table (Desktop Only) */}
-        <Card glass={true} className="hidden md:block">
-          <div className="p-5 border-b border-gray-200 dark:border-stone-800">
-            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Sent Invitations</h3>
-            <p className="text-xs text-gray-500 dark:text-stone-400">Track invitations you've sent to students</p>
+        <Card glass={true} className="hidden md:block overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Sent Invitations</h3>
+              <p className="text-xs text-gray-500 dark:text-stone-400">Track invitations you've sent to students</p>
+            </div>
+
+            {/* In-Table Search Bar */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search sent invitations..."
+                className="w-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
           
-          {invitations.length === 0 ? (
+          {filteredInvitations.length === 0 ? (
             <div className="p-8 text-center text-gray-400 dark:text-stone-500">
-              <p className="text-sm">No invitations sent yet. Send your first one above!</p>
+              <p className="text-sm font-medium">
+                {searchQuery ? `No invitations match "${searchQuery}"` : 'No invitations sent yet. Send your first one above!'}
+              </p>
+              {searchQuery && (
+                <button 
+                  type="button" 
+                  onClick={() => setSearchQuery('')}
+                  className="mt-2 text-xs text-[#7a2e46] dark:text-[#f8d070] font-semibold underline cursor-pointer"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -579,48 +656,45 @@ function SendInvitations() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
-                  {invitations.map((invitation) => (
-                    <tr key={invitation.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50">
+                  {filteredInvitations.map((invitation) => (
+                    <tr key={invitation.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50 transition-colors">
                       <td className="py-4 px-6 text-gray-700 dark:text-stone-300 font-medium">{invitation.studentEmail}</td>
                       <td className="py-4 px-6 text-gray-500 dark:text-stone-400">
                         {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
                           invitation.status === 'active' 
-                            ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
-                            : 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+                            ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
+                            : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
                         }`}>
-                          • {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                          {invitation.status === 'active' ? 'Registered' : 'Pending'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         {invitation.status === 'pending' && (
                           <div className="flex items-center gap-2">
-                            <PremiumButton 
-                              onClick={() => handleCopyInvitationLink(invitation.invitationLink || `${window.location.origin}/student/signup?email=${encodeURIComponent(invitation.studentEmail)}`)}
-                              variant="ghost"
-                              size="sm"
-                              title="Copy direct registration link"
-                            >
-                              📋 Copy Link
-                            </PremiumButton>
-                            <PremiumButton 
+                            <button 
+                              type="button"
                               onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
                               disabled={loading}
-                              variant="ghost"
-                              size="sm"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-semibold transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                              title="Resend invitation email"
                             >
-                              🔄 Resend
-                            </PremiumButton>
-                            <PremiumButton 
+                              <RefreshCw className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${loading ? 'animate-spin' : ''}`} />
+                              <span>Resend</span>
+                            </button>
+                            <button 
+                              type="button"
                               onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
                               disabled={loading}
-                              variant="ghost"
-                              size="sm"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/60 rounded-lg text-xs font-semibold transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                              title="Remove invitation"
                             >
-                              ❌ Remove
-                            </PremiumButton>
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
                           </div>
                         )}
                       </td>

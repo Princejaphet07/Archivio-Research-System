@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase/config';
 import { logActivity } from '../../firebase/logActivity';
 import swuLogoSeal from '../../assets/new icon.png';
 import parchmentBg from '../../assets/parchment.jpg';
+import Swal from 'sweetalert2';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) {
   const [email, setEmail] = useState(prefilledEmail || localStorage.getItem('student_remembered_email') || '');
@@ -13,6 +15,85 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
   const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('student_remembered_email'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [inviteAcceptedNotice, setInviteAcceptedNotice] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldAccept = params.get('acceptInvite') === 'true';
+    const loginEmailParam = params.get('loginEmail') || (!shouldAccept ? params.get('email') : null);
+    if (loginEmailParam) {
+      setEmail(loginEmailParam.trim().toLowerCase());
+    }
+
+    const emailToAccept = params.get('email');
+    const groupParam = params.get('group');
+    const leaderParam = params.get('leader');
+
+    if (shouldAccept && emailToAccept) {
+      const cleanEmail = emailToAccept.trim().toLowerCase();
+      
+      if (leaderParam) {
+        setEmail(leaderParam.trim().toLowerCase());
+      }
+
+      setInviteAcceptedNotice({
+        group: groupParam || 'Research Group',
+        email: cleanEmail
+      });
+
+      const acceptInvitation = async () => {
+        // 1. Call Backend Admin API (Zero security rule barriers)
+        try {
+          const backendUrl = getBackendUrl();
+          await fetch(`${backendUrl}/api/accept-student-invitation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanEmail })
+          });
+        } catch (backendErr) {
+          console.warn('Backend accept notice:', backendErr);
+        }
+
+        // 2. Direct Firestore update as immediate client fallback
+        try {
+          const invQ = query(collection(db, 'studentInvitations'), where('studentEmail', '==', cleanEmail));
+          const invSnap = await getDocs(invQ);
+          for (const invDoc of invSnap.docs) {
+            await updateDoc(doc(db, 'studentInvitations', invDoc.id), {
+              status: 'accepted',
+              accepted: true,
+              acceptedAt: new Date().toISOString()
+            });
+          }
+        } catch (fsErr) {
+          console.warn('Direct Firestore invitation update notice:', fsErr);
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Invitation Accepted!',
+          html: `
+            <div style="font-family: inherit; text-align: left; font-size: 13.5px; color: #4a5568; line-height: 1.6;">
+              <p style="margin-bottom: 10px;">
+                Welcome! You have successfully accepted the invitation for <strong>${groupParam || 'your research group'}</strong>.
+              </p>
+              <div style="background-color: #f0f7ff; border: 1px solid #b3d4f5; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                <strong style="color: #1a5fa8; display: block; margin-bottom: 4px;">ℹ️ How to Sign In:</strong>
+                <span>Please sign in using your group leader's credentials${leaderParam ? ` (<strong>${leaderParam}</strong>)` : ''} to access the unified research dashboard.</span>
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#7B1F35',
+          confirmButtonText: 'Proceed to Sign In'
+        });
+
+        // Clean query parameters from URL without reloading
+        window.history.replaceState({}, document.title, window.location.pathname);
+      };
+
+      acceptInvitation();
+    }
+  }, []);
 
   const handleSignIn = async (e) => {
     e.preventDefault();
@@ -224,6 +305,16 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
             </div>
 
             <hr className="border-gray-100 mb-5" />
+
+            {inviteAcceptedNotice && (
+              <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-start gap-2.5">
+                <span className="text-emerald-600 text-base">✅</span>
+                <div className="text-xs text-emerald-800 leading-relaxed font-sans">
+                  <strong className="block font-semibold text-emerald-900 mb-0.5">Invitation Accepted!</strong>
+                  You have joined <strong>{inviteAcceptedNotice.group}</strong>. Sign in below using your group leader's credentials.
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">

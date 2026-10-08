@@ -85,9 +85,15 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
           
           groupsData.forEach(group => {
             const sub = subsData.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
-            const status = sub.reviewStatus || 'in_progress';
-            
-            if (status === 'pending' || status === 'in_progress') {
+            const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
+            const docKeys = sub.documents && typeof sub.documents === 'object' ? Object.keys(sub.documents) : [];
+            const uploadedCount = Math.max(uploadedDocs.length, docKeys.length, (sub.manuscriptUrl || sub.fileUrl ? 1 : 0));
+
+            // Do not put notification in sidebar if student hasn't uploaded a file or requirements
+            if (uploadedCount === 0) return;
+
+            const status = sub.reviewStatus;
+            if (status === 'pending' || status === 'needs_review' || status === 'reviewed') {
               count++;
             }
           });
@@ -297,22 +303,22 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
           <div className="mb-3">
             <p className="text-[9px] text-stone-400 dark:text-stone-500 font-bold tracking-wider mb-2 px-3 mt-2">STUDENTS</p>
             <NavButton
-              pathRoute="/adviser/group-registrations"
-              label="Group Registrations"
-              badge={pendingRegCount > 0 ? pendingRegCount : null}
-              icon={
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd"/>
-                </svg>
-              }
-            />
-            <NavButton
               pathRoute="/adviser/send-invitations"
               label="Send Invitations"
               icon={
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
                   <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                </svg>
+              }
+            />
+            <NavButton
+              pathRoute="/adviser/group-registrations"
+              label="Group Registrations"
+              badge={pendingRegCount > 0 ? pendingRegCount : null}
+              icon={
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd"/>
                 </svg>
               }
             />
@@ -342,25 +348,7 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
           </div>
         </div>
 
-        {/* USER PROFILE CARD */}
-        <div className="p-3 bg-[#6b253e]/50 dark:bg-black/30 mx-4 mb-3 rounded-xl flex items-center gap-3 border border-[#6b253e] dark:border-white/5 shadow-inner shrink-0">
-          <div className="w-9 h-9 rounded-full bg-[#d0a36e] flex items-center justify-center text-[#541b2f] font-bold shadow-sm shrink-0 text-xs">
-            {adviserData?.firstName?.charAt(0) || 'A'}{adviserData?.lastName?.charAt(0) || 'D'}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-white truncate">{adviserData?.displayName || 'Research Adviser'}</p>
-            <div className="flex gap-1.5 mt-0.5">
-              {isDualRole && (
-                <span className="text-[8px] bg-[#6b2a3d] border border-[#8c3b53] text-[#f8d070] px-1.5 py-0.5 rounded font-bold tracking-wide">
-                  DEAN
-                </span>
-              )}
-              <span className="text-[8px] bg-[#1a4a38] border border-[#236b51] text-emerald-400 px-1.5 py-0.5 rounded font-bold tracking-wide">
-                ADVISER
-              </span>
-            </div>
-          </div>
-        </div>
+
 
         {/* PORTAL SWITCHER FOR DUAL ROLE */}
         {isDualRole && (

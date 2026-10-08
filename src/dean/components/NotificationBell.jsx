@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import Swal from 'sweetalert2';
@@ -22,6 +23,7 @@ const getIcon = (title, message) => {
   const lowerTitle = (title || '').toLowerCase();
   const lowerMsg = (message || '').toLowerCase();
   if (lowerTitle.includes('manuscript') || lowerMsg.includes('document') || lowerTitle.includes('publish')) return '📄';
+  if (lowerTitle.includes('requirement') || lowerTitle.includes('proposal') || lowerMsg.includes('requirement')) return '📋';
   if (lowerTitle.includes('message') || lowerTitle.includes('invite') || lowerTitle.includes('welcome')) return '✉️';
   if (lowerTitle.includes('task') || lowerTitle.includes('progress') || lowerTitle.includes('report')) return '📊';
   if (lowerTitle.includes('group') || lowerTitle.includes('user') || lowerTitle.includes('adviser')) return '👥';
@@ -30,6 +32,7 @@ const getIcon = (title, message) => {
 };
 
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [prefs, setPrefs] = useState(null);
@@ -60,14 +63,15 @@ export default function NotificationBell() {
     const email = auth.currentUser?.email;
     if (!uid && !email) return;
 
-    // Fetch notifications without orderBy to avoid needing a composite index
-    const q = query(
-      collection(db, 'notifications'), 
-      where('userId', '==', uid)
-    );
+    let notifsByUid = [];
+    let notifsByEmail = [];
 
-    const unsub = onSnapshot(q, (snap) => {
-      let notifs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const updateCombined = () => {
+      const combinedMap = new Map();
+      [...notifsByUid, ...notifsByEmail].forEach(n => {
+        combinedMap.set(n.id, n);
+      });
+      let notifs = Array.from(combinedMap.values());
       
       // Auto-delete and filter out Test Notifications
       notifs.forEach(n => {
@@ -85,11 +89,30 @@ export default function NotificationBell() {
       });
 
       setNotifications(notifs);
-    }, (err) => {
-      console.warn('Dean notifications listener notice:', err.message);
-    });
+    };
 
-    return () => unsub();
+    const unsubUid = uid ? onSnapshot(
+      query(collection(db, 'notifications'), where('userId', '==', uid)),
+      (snap) => {
+        notifsByUid = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombined();
+      },
+      (err) => console.warn('Dean notifications listener notice:', err.message)
+    ) : () => {};
+
+    const unsubEmail = (email && email !== uid) ? onSnapshot(
+      query(collection(db, 'notifications'), where('userId', '==', email)),
+      (snap) => {
+        notifsByEmail = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombined();
+      },
+      (err) => console.warn('Dean email notifications listener notice:', err.message)
+    ) : () => {};
+
+    return () => {
+      unsubUid();
+      unsubEmail();
+    };
   }, []);
 
   // Auto-open on first load if there are unread notifications
@@ -187,6 +210,51 @@ export default function NotificationBell() {
       await updateDoc(doc(db, 'notifications', id), { isRead: true });
     } catch (error) {
       console.error("Error marking as read", error);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.isRead) {
+      await markAsRead(n.id);
+    }
+    setIsOpen(false);
+
+    // 1. Direct handling for requirement proposals or completion tab
+    if (
+      n.type === 'requirement_proposal' || 
+      n.tab === 'completion' || 
+      n.requirementId ||
+      (n.title && n.title.toLowerCase().includes('requirement')) ||
+      (n.message && n.message.toLowerCase().includes('requirement'))
+    ) {
+      navigate('/dean/settings', { 
+        state: { 
+          tab: 'completion', 
+          requirementId: n.requirementId || null,
+          _ts: Date.now()
+        } 
+      });
+      return;
+    }
+
+    // 2. Direct link if provided
+    if (n.link) {
+      navigate(n.link, { state: n.state || {} });
+      return;
+    }
+
+    // 3. Fallback based on text/category
+    const lowerTitle = (n.title || '').toLowerCase();
+    const lowerMsg = (n.message || '').toLowerCase();
+
+    if (lowerTitle.includes('manuscript') || lowerTitle.includes('publish') || lowerMsg.includes('publish queue')) {
+      navigate('/dean/publish-queue');
+    } else if (lowerTitle.includes('invite') || lowerMsg.includes('invitation')) {
+      navigate('/dean/invitations');
+    } else if (lowerTitle.includes('record') || lowerMsg.includes('research record')) {
+      navigate('/dean/research-records');
+    } else if (lowerTitle.includes('setting') || lowerMsg.includes('setting')) {
+      navigate('/dean/settings');
     }
   };
 
@@ -300,8 +368,8 @@ export default function NotificationBell() {
               notifications.map(n => (
                 <div 
                   key={n.id} 
-                  onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 dark:border-stone-700/80 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-stone-800/90 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700' : 'bg-white dark:bg-stone-800 opacity-75'}`}
+                  onClick={() => handleNotificationClick(n)}
+                  className={`p-4 border-b border-stone-100 dark:border-stone-700/80 last:border-none flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-stone-800/90 hover:bg-stone-50 dark:hover:bg-stone-700' : 'bg-white dark:bg-stone-800 opacity-80 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">

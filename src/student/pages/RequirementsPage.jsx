@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth, storage } from '../../firebase/config';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, addDoc, updateDoc, doc, arrayUnion, arrayRemove, deleteField, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { logActivity } from '../../firebase/logActivity';
 import { PDFDocument } from 'pdf-lib';
@@ -9,9 +9,11 @@ import Swal from 'sweetalert2';
 import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import BookLoader from '../../components/BookLoader';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { extractPdfText, generateAbstractWithAI, extractKeywordsWithAI } from '../../utils/aiManuscriptExtractor';
 
 // Dynamic requirements fetched from DB with resilient defense fallback
 const DEFAULT_REQUIREMENTS = [
@@ -28,6 +30,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loadingData, setLoadingData] = useState(true);
+  const [studentRecord, setStudentRecord] = useState(null);
   const [submissionDocId, setSubmissionDocId] = useState(null);
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [documentsMeta, setDocumentsMeta] = useState({});
@@ -36,11 +39,51 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [documentRevisions, setDocumentRevisions] = useState({});
   const [documentAnnotations, setDocumentAnnotations] = useState({});
   const [documentResubmissions, setDocumentResubmissions] = useState({});
+  const [previousRevisions, setPreviousRevisions] = useState({});
+  const [previousAnnotations, setPreviousAnnotations] = useState({});
+  const [documentRevisionReplies, setDocumentRevisionReplies] = useState({});
   const [reviewStatus, setReviewStatus] = useState('in_progress');
   const [adviserUid, setAdviserUid] = useState(null);
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '', reqId: null });
 
   const fileInputRefs = useRef({});
+
+  // 1. Fetch current student record in real-time to reliably know role and leaderUid
+  useEffect(() => {
+    const uid = studentUid || auth.currentUser?.uid;
+    if (!uid) return;
+
+    const stdRef = doc(db, 'students', uid);
+    const unsub = onSnapshot(stdRef, (snap) => {
+      if (snap.exists()) {
+        setStudentRecord(snap.data());
+      } else {
+        getDocs(query(collection(db, 'students'), where('uid', '==', uid))).then((qSnap) => {
+          if (!qSnap.empty) {
+            setStudentRecord(qSnap.docs[0].data());
+          } else {
+            getDoc(doc(db, 'users', uid)).then((uSnap) => {
+              if (uSnap.exists()) {
+                setStudentRecord(uSnap.data());
+              }
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    }, (err) => {
+      console.warn('Student record listener notice in RequirementsPage:', err.message);
+    });
+
+    return () => unsub();
+  }, [studentUid]);
+
+  // Derived identity & target leader UID
+  const currentUid = studentUid || auth.currentUser?.uid;
+  const isMember = role === 'member' || studentRecord?.role === 'member' || studentRecord?.studentRole === 'member';
+  const effectiveLeaderUid = (isMember ? (leaderUid || studentRecord?.leaderUid) : null) || null;
+  const targetUid = (isMember && effectiveLeaderUid) ? effectiveLeaderUid : currentUid;
+  const effectiveGroupName = groupName || studentRecord?.groupName || 'Your Group';
+  const effectiveDisplayName = studentName || studentRecord?.displayName || (studentRecord?.firstName ? `${studentRecord.firstName} ${studentRecord.lastName || ''}`.trim() : null) || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Student';
 
   // ── Fetch submissions & requirements ────────────────────────────────────────
   useEffect(() => {
@@ -50,7 +93,6 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     const setupListeners = async () => {
       setLoadingData(true);
       try {
-        const targetUid = (role === 'member' && leaderUid) ? leaderUid : (studentUid || auth.currentUser?.uid);
         if (!targetUid) { setLoadingData(false); return; }
 
         let resolvedAdviserUid = null;
@@ -61,7 +103,11 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           const allGroupsSnap = await getDocs(collection(db, 'groups'));
           for (const doc of allGroupsSnap.docs) {
             const data = doc.data();
-            if (data.members?.some(m => m.email === auth.currentUser?.email || m === auth.currentUser?.email)) {
+            const currEmail = auth.currentUser?.email?.toLowerCase().trim();
+            if (data.members?.some(m => {
+              const mEmail = (typeof m === 'object' ? m.email : m)?.toLowerCase().trim();
+              return mEmail === currEmail;
+            })) {
               resolvedAdviserUid = data.adviserUid;
               break;
             }
@@ -138,6 +184,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setDocumentRevisions(subData.documentRevisions || {});
             setDocumentAnnotations(subData.documentAnnotations || {});
             setDocumentResubmissions(subData.documentResubmissions || {});
+            setPreviousRevisions(subData.previousRevisions || {});
+            setPreviousAnnotations(subData.previousAnnotations || {});
+            setDocumentRevisionReplies(subData.documentRevisionReplies || {});
             setReviewStatus(subData.reviewStatus || subData.status || 'in_progress');
           } else {
             setSubmissionDocId(null);
@@ -146,6 +195,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setDocumentRevisions({});
             setDocumentAnnotations({});
             setDocumentResubmissions({});
+            setPreviousRevisions({});
+            setPreviousAnnotations({});
+            setDocumentRevisionReplies({});
             setReviewStatus('in_progress');
           }
           setLoadingData(false);
@@ -166,12 +218,22 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       if (unsubReq) unsubReq();
       if (unsubSub) unsubSub();
     };
-  }, [studentUid, role, leaderUid]);
+  }, [targetUid]);
 
   // Helper to determine if a requirement should be strictly PDF
   const isPdfOnly = (item) => {
     const title = (item.title || '').toLowerCase();
-    return title.includes('manuscript') || title.includes('approval') || title.includes('signature');
+    const id = (item.id || '').toLowerCase();
+    return title.includes('manuscript') || title.includes('approval') || title.includes('signature') || id === 'manuscript';
+  };
+
+  // Helper to determine if a requirement is a Manuscript
+  const isManuscriptReq = (item) => {
+    if (!item) return false;
+    const title = (item.title || '').toLowerCase();
+    const id = (item.id || '').toLowerCase();
+    return id === 'final manuscript' || id === 'manuscript' || id === 'final-manuscript' ||
+           title.includes('manuscript');
   };
 
   // Helper to determine if a requirement is a Video
@@ -190,9 +252,23 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const handleUploadFile = async (item, file) => {
     if (!file) return;
 
+    const isManuscript = isManuscriptReq(item);
+    const isPdfFile = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
     // Enforce PDF format conditionally
-    if (isPdfOnly(item) && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      Swal.fire({ icon: 'error', title: 'Invalid File', text: 'This specific requirement must be a PDF file.' });
+    if (isPdfOnly(item) && !isPdfFile) {
+      Swal.fire({ icon: 'error', title: 'Invalid File', text: 'This specific requirement must be a PDF file.', confirmButtonColor: '#7B1F35' });
+      return;
+    }
+
+    // Size check for PDF files (Max 25 MB)
+    if (isPdfFile && file.size > 25 * 1024 * 1024) {
+      Swal.fire({
+        icon: 'error',
+        title: 'File Too Large',
+        text: 'PDF files must be 25 MB or less. Please compress your document before uploading.',
+        confirmButtonColor: '#7B1F35'
+      });
       return;
     }
 
@@ -203,23 +279,89 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
       const isVideo = file.type.startsWith('video/') || validVideoTypes.includes(file.type) || validExts.includes(fileExt);
       if (!isVideo) {
-        Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a valid video file (MP4, WebM, MOV).' });
+        Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a valid video file (MP4, WebM, MOV).', confirmButtonColor: '#7B1F35' });
         return;
       }
+      // Size check for video files (Max 100 MB)
+      if (file.size > 100 * 1024 * 1024) {
+        Swal.fire({
+          icon: 'error',
+          title: 'File Too Large',
+          text: 'Video files must be 100 MB or less. Please compress or optimize your video file before uploading.',
+          confirmButtonColor: '#7B1F35'
+        });
+        return;
+      }
+    }
+
+    // Interactive Revision Resubmission: Offer optional Student Response / Comment Box
+    let studentReply = '';
+    const hasExistingRevision = !!documentRevisions?.[item.id] || !!documentRevisions?.[item.title];
+    if (hasExistingRevision) {
+      const revisionDirective = documentRevisions[item.id] || documentRevisions[item.title] || 'Revisions requested by faculty.';
+      const { value: formValues, isConfirmed } = await Swal.fire({
+        title: `<span class="text-stone-900 dark:text-stone-100 font-serif">Resubmit Revised Requirement</span>`,
+        html: `
+          <div style="text-align: left; font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+            <p style="margin-bottom: 8px;">You are uploading a revised version of <strong>${item.title}</strong>.</p>
+            <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; margin: 12px 0;">
+              <strong style="color: #b45309; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Adviser Directive / Feedback:</strong>
+              <span style="color: #92400e; font-style: italic;">"${revisionDirective}"</span>
+            </div>
+            <label style="display: block; font-weight: 600; color: #374151; font-size: 12.5px; margin: 12px 0 6px 0;">
+              Reply / Note to Adviser <span style="font-weight: normal; color: #6b7280;">(Optional)</span>:
+            </label>
+            <textarea id="swal-student-reply" class="swal2-textarea" style="width: 100%; margin: 0; box-sizing: border-box; height: 85px; font-size: 13px;" placeholder="Describe what was revised or answer adviser points (e.g., Updated Chapter 3 methodology, revised Table 2)..."></textarea>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Confirm & Upload File',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#7B1F35',
+        cancelButtonColor: '#6B7280',
+        focusConfirm: false,
+        preConfirm: () => {
+          const replyInput = document.getElementById('swal-student-reply');
+          return {
+            reply: replyInput ? replyInput.value.trim() : ''
+          };
+        }
+      });
+
+      if (!isConfirmed) {
+        return; // Cancelled by student
+      }
+      studentReply = formValues?.reply || '';
     }
 
     setUploadingItem(item.id);
 
     try {
-      const uid = (role === 'member' && leaderUid) ? leaderUid : (studentUid || auth.currentUser?.uid);
-      const displayName = studentName || auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown';
+      let effectiveUid = targetUid;
+      if (isMember && (!effectiveLeaderUid || effectiveUid === currentUid)) {
+        try {
+          const uDoc = await getDoc(doc(db, 'students', currentUid));
+          if (uDoc.exists() && uDoc.data().leaderUid) {
+            effectiveUid = uDoc.data().leaderUid;
+          } else {
+            const usrDoc = await getDoc(doc(db, 'users', currentUid));
+            if (usrDoc.exists() && usrDoc.data().leaderUid) {
+              effectiveUid = usrDoc.data().leaderUid;
+            }
+          }
+        } catch (e) {
+          console.warn('Leader UID fallback check failed:', e);
+        }
+      }
+
+      const displayName = effectiveDisplayName;
       let fileUrl = '';
 
       // Upload to Firebase Storage
       try {
         const fileExtension = file.name.split('.').pop();
         const timestamp = Date.now();
-        const storagePath = `requirements/${uid}/${item.id}_${timestamp}.${fileExtension}`;
+        const storagePath = `requirements/${effectiveUid}/${item.id}_${timestamp}.${fileExtension}`;
         const storageRef = ref(storage, storagePath);
         
         await uploadBytes(storageRef, file);
@@ -233,7 +375,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           confirmButtonColor: '#7B1F35'
         });
         setUploadingItem(null);
-        return; // Stop the upload process completely
+        return;
       }
 
       const sizeStr = file.size > 1024 * 1024
@@ -241,13 +383,15 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         : (file.size / 1024).toFixed(1) + ' KB';
 
       let pageCount = null;
-      if (item.title === 'Final Manuscript' && file.type === 'application/pdf') {
+      let extractedPdfText = '';
+
+      if (isManuscript && isPdfFile) {
         try {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdfDoc = await PDFDocument.load(arrayBuffer);
-          pageCount = pdfDoc.getPageCount();
+          const extraction = await extractPdfText(file);
+          if (extraction.pageCount) pageCount = extraction.pageCount;
+          if (extraction.text) extractedPdfText = extraction.text;
         } catch (pdfErr) {
-          console.warn('Failed to extract PDF page count:', pdfErr);
+          console.warn('Failed to extract PDF details:', pdfErr);
         }
       }
 
@@ -257,21 +401,26 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         url: fileUrl,
         type: 'file',
+        uploadedBy: {
+          name: displayName,
+          email: auth.currentUser?.email || '',
+          role: isMember ? 'Member' : 'Group Leader'
+        },
         ...(pageCount && { pageCount })
       };
 
-      const savedDocId = await saveToFirestore(item.id, fileMeta, displayName);
+      const savedDocId = await saveToFirestore(item.id, fileMeta, displayName, studentReply, effectiveUid);
 
       await logActivity({
         user: displayName,
         role: 'Student',
         action: `Uploaded requirement document`,
-        details: `${item.title}: ${file.name}`,
+        details: `${item.title}: ${file.name}${studentReply ? ` (Reply: ${studentReply})` : ''}`,
         status: 'Success'
       });
 
       // Background AI Abstract Extraction (sets persistent abstractGenerating flag in Firestore)
-      if (item.title === 'Final Manuscript' && savedDocId && fileUrl && fileUrl !== '#' && fileUrl.startsWith('http')) {
+      if (isManuscript && savedDocId) {
         try {
           await updateDoc(doc(db, 'submissions', savedDocId), { abstractGenerating: true });
         } catch (e) {
@@ -281,22 +430,27 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         // Detached background execution: user can navigate to any tab while indicator stays active
         (async () => {
           try {
-            const backendUrl = getBackendUrl();
-            const res = await fetch(`${backendUrl}/api/ai/extract-abstract`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pdfUrl: fileUrl })
-            });
+            const researchTitle = studentName || groupName || '';
+            const generatedAbstract = await generateAbstractWithAI(extractedPdfText, researchTitle, { pdfUrl: fileUrl });
+            
+            if (generatedAbstract && generatedAbstract.trim().length > 30) {
+              const keywords = await extractKeywordsWithAI(generatedAbstract, researchTitle);
+              await updateDoc(doc(db, 'submissions', savedDocId), { 
+                abstract: generatedAbstract,
+                abstractGenerating: false,
+                ...(keywords && keywords.length > 0 && { keywords })
+              });
 
-            if (res.ok) {
-              const data = await res.json();
-              if (data.abstract) {
-                await updateDoc(doc(db, 'submissions', savedDocId), { 
-                  abstract: data.abstract,
-                  abstractGenerating: false
-                });
-                return;
-              }
+              Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'AI Abstract Extracted!',
+                text: 'Your manuscript abstract has been analyzed and populated.',
+                showConfirmButton: false,
+                timer: 3500
+              });
+              return;
             }
 
             await updateDoc(doc(db, 'submissions', savedDocId), { abstractGenerating: false });
@@ -311,28 +465,67 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
     } catch (error) {
       console.error('Upload error:', error);
-      Swal.fire('Error', 'Failed to upload document. Please try again.', 'error');
+      Swal.fire('Error', error.message || 'Failed to upload document. Please try again.', 'error');
     } finally {
       setUploadingItem(null);
     }
   };
 
   const handleUploadUrl = async (item) => {
-    const url = prompt(`Enter ${item.title} (e.g., https://github.com/...):`);
+    const { value: url } = await Swal.fire({
+      title: `<span class="text-stone-900 dark:text-stone-100 font-serif">Submit ${item.title}</span>`,
+      text: 'Provide the verified repository or publication link (e.g., GitHub, Zenodo, or deployed web application).',
+      input: 'url',
+      inputPlaceholder: 'https://github.com/organization/research-repo',
+      showCancelButton: true,
+      confirmButtonText: 'Save Link',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#7B1F35',
+      cancelButtonColor: '#6B7280',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'URL cannot be empty.';
+        }
+        if (!/^https?:\/\/.+/i.test(value.trim())) {
+          return 'Please enter a valid URL beginning with http:// or https://';
+        }
+      }
+    });
+
     if (!url) return;
 
     setUploadingItem(item.id);
     try {
-      const displayName = studentName || auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown';
+      let effectiveUid = targetUid;
+      if (isMember && (!effectiveLeaderUid || effectiveUid === currentUid)) {
+        try {
+          const uDoc = await getDoc(doc(db, 'students', currentUid));
+          if (uDoc.exists() && uDoc.data().leaderUid) {
+            effectiveUid = uDoc.data().leaderUid;
+          } else {
+            const usrDoc = await getDoc(doc(db, 'users', currentUid));
+            if (usrDoc.exists() && usrDoc.data().leaderUid) {
+              effectiveUid = usrDoc.data().leaderUid;
+            }
+          }
+        } catch (e) {}
+      }
+
+      const displayName = effectiveDisplayName;
       const urlMeta = {
-        name: url.length > 30 ? url.substring(0, 30) + '...' : url,
+        name: url.length > 40 ? url.substring(0, 40) + '...' : url,
         size: 'Link',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        url: url,
+        url: url.trim(),
         type: 'url',
+        uploadedBy: {
+          name: displayName,
+          email: auth.currentUser?.email || '',
+          role: isMember ? 'Member' : 'Group Leader'
+        }
       };
 
-      await saveToFirestore(item.id, urlMeta, displayName);
+      await saveToFirestore(item.id, urlMeta, displayName, '', effectiveUid);
 
       await logActivity({
         user: displayName,
@@ -341,23 +534,58 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         details: `${item.title}: ${urlMeta.name}`,
         status: 'Success'
       });
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Link saved successfully',
+        showConfirmButton: false,
+        timer: 2500
+      });
     } catch (error) {
       console.error('URL upload error:', error);
+      Swal.fire('Error', 'Failed to save link. Please try again.', 'error');
     } finally {
       setUploadingItem(null);
     }
   };
 
-  const saveToFirestore = async (itemId, meta, displayName) => {
-    const uid = studentUid || auth.currentUser?.uid;
+  const saveToFirestore = async (itemId, meta, displayName, studentReply = '', explicitLeaderUid = null) => {
+    let effectiveUid = explicitLeaderUid || targetUid;
+    if (isMember && (!effectiveLeaderUid || effectiveUid === currentUid)) {
+      try {
+        const uDoc = await getDoc(doc(db, 'students', currentUid));
+        if (uDoc.exists() && uDoc.data().leaderUid) {
+          effectiveUid = uDoc.data().leaderUid;
+        } else {
+          const usrDoc = await getDoc(doc(db, 'users', currentUid));
+          if (usrDoc.exists() && usrDoc.data().leaderUid) {
+            effectiveUid = usrDoc.data().leaderUid;
+          }
+        }
+      } catch (e) {}
+    }
     const subRef = collection(db, 'submissions');
     const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
-    const hadRevision = !!documentRevisions?.[itemId];
+    const hadRevision = !!documentRevisions?.[itemId] || !!documentResubmissions?.[itemId] || !!documentRevisions?.[itemTitle];
 
     let currentDocId = submissionDocId;
-    if (submissionDocId) {
+    if (!currentDocId) {
+      try {
+        const existingSnap = await getDocs(query(subRef, where('studentUid', '==', effectiveUid)));
+        if (!existingSnap.empty) {
+          currentDocId = existingSnap.docs[0].id;
+          setSubmissionDocId(currentDocId);
+        }
+      } catch (checkErr) {
+        console.warn('Notice checking existing submission:', checkErr);
+      }
+    }
+
+    if (currentDocId) {
       // Update existing document
-      const docRef = doc(db, 'submissions', submissionDocId);
+      const docRef = doc(db, 'submissions', currentDocId);
       const updatePayload = {
         uploadedDocs: arrayUnion(itemId),
         [`documents.${itemId}`]: meta,
@@ -365,18 +593,30 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       };
       if (meta.pageCount) updatePayload.pageCount = meta.pageCount;
 
-      // If this item had a revision request, mark it as resubmitted instead of deleting the note
+      // If this item had a revision request, mark it as resubmitted and archive previous notes/annotations
       if (hadRevision) {
         updatePayload[`documentResubmissions.${itemId}`] = true;
+        if (documentRevisions?.[itemId]) {
+          updatePayload[`previousRevisions.${itemId}`] = documentRevisions[itemId];
+        } else if (documentRevisions?.[itemTitle]) {
+          updatePayload[`previousRevisions.${itemId}`] = documentRevisions[itemTitle];
+        }
+        if (studentReply && studentReply.trim()) {
+          updatePayload[`documentRevisionReplies.${itemId}`] = studentReply.trim();
+        }
+        if (documentAnnotations?.[itemId] && Object.keys(documentAnnotations[itemId]).length > 0) {
+          updatePayload[`previousAnnotations.${itemId}`] = documentAnnotations[itemId];
+          updatePayload[`documentAnnotations.${itemId}`] = {}; // Clean slate on newly resubmitted file
+        }
       }
 
       await updateDoc(docRef, updatePayload);
     } else {
       // Create new submission document
       const newSub = {
-        studentUid: uid,
+        studentUid: effectiveUid,
         studentName: displayName,
-        groupName: groupName || 'Your Group',
+        groupName: effectiveGroupName,
         uploadedDocs: [itemId],
         requiredDocs: requirements.map(r => r.id),
         documents: { [itemId]: meta },
@@ -390,9 +630,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       currentDocId = addedDoc.id;
     }
 
-    // Student self-notification
+    // Student self-notification (notify current user who uploaded)
     await addDoc(collection(db, 'notifications'), {
-      userId: uid,
+      userId: auth.currentUser?.uid,
       title: hadRevision ? '✅ Revision Resubmitted' : 'Document Uploaded',
       message: hadRevision
         ? `You resubmitted "${itemTitle}" after revision. Your adviser will review it.`
@@ -401,12 +641,23 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       createdAt: serverTimestamp()
     });
 
+    // If uploaded by a member, also notify the group leader
+    if (effectiveUid && effectiveUid !== auth.currentUser?.uid) {
+      await addDoc(collection(db, 'notifications'), {
+        userId: effectiveUid,
+        title: '👥 Member Uploaded Document',
+        message: `${displayName} uploaded "${itemTitle}" for your research group.`,
+        isRead: false,
+        createdAt: serverTimestamp()
+      }).catch(() => {});
+    }
+
     // Notify the adviser if student resubmitted a revised document
     if (hadRevision && adviserUid) {
       await addDoc(collection(db, 'notifications'), {
         userId: adviserUid,
         title: '📄 Student Resubmitted Revision',
-        message: `${displayName} has resubmitted "${itemTitle}" after your revision request. Please review the updated file.`,
+        message: `${displayName} has resubmitted "${itemTitle}" after your revision request.${studentReply ? ` Student Note: "${studentReply}"` : ''}`,
         isRead: false,
         createdAt: serverTimestamp()
       });
@@ -415,7 +666,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     // Update local state
     if (!uploadedDocs.includes(itemId)) setUploadedDocs(prev => [...prev, itemId]);
     setDocumentsMeta(prev => ({ ...prev, [itemId]: meta }));
-    if (hadRevision) setDocumentRevisions(prev => { const n = { ...prev }; delete n[itemId]; return n; });
+    if (hadRevision) {
+      setDocumentRevisions(prev => { const n = { ...prev }; delete n[itemId]; delete n[itemTitle]; return n; });
+      if (studentReply) {
+        setDocumentRevisionReplies(prev => ({ ...prev, [itemId]: studentReply }));
+      }
+    }
     
     return currentDocId;
   };
@@ -433,8 +689,18 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     if (!result.isConfirmed) return;
 
     try {
-      const displayName = studentName || auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown';
-      const docRef = doc(db, 'submissions', submissionDocId);
+      const displayName = effectiveDisplayName;
+      let currentDocId = submissionDocId;
+      if (!currentDocId) {
+        const existingSnap = await getDocs(query(collection(db, 'submissions'), where('studentUid', '==', targetUid)));
+        if (!existingSnap.empty) {
+          currentDocId = existingSnap.docs[0].id;
+          setSubmissionDocId(currentDocId);
+        }
+      }
+      if (!currentDocId) return;
+
+      const docRef = doc(db, 'submissions', currentDocId);
       const fileUrl = documentsMeta[item.id]?.url;
 
       // Attempt to delete from Firebase Storage
@@ -837,9 +1103,53 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         documentUrl={viewerState.url}
         documentTitle={viewerState.title}
         role="student"
-        initialNote={documentRevisions[viewerState.reqId] || ''}
-        initialAnnotations={documentAnnotations[viewerState.reqId] || {}}
+        isResubmitted={Boolean(
+          documentResubmissions[viewerState.reqId] || 
+          documentResubmissions[viewerState.title] || 
+          (viewerState.title?.toLowerCase().includes('manuscript') && documentResubmissions['Final Manuscript'])
+        )}
+        previousNote={
+          previousRevisions?.[viewerState.reqId] ||
+          previousRevisions?.[viewerState.title] ||
+          documentRevisions[viewerState.reqId] || 
+          documentRevisions[viewerState.title] || 
+          (viewerState.title?.toLowerCase().includes('manuscript') ? (documentRevisions['Final Manuscript'] || documentRevisions['final-manuscript']) : '') || 
+          ''
+        }
+        previousAnnotations={
+          previousAnnotations?.[viewerState.reqId] ||
+          previousAnnotations?.[viewerState.title] ||
+          documentAnnotations[viewerState.reqId] || 
+          documentAnnotations[viewerState.title] || 
+          (viewerState.title?.toLowerCase().includes('manuscript') ? (documentAnnotations['Final Manuscript'] || documentAnnotations['final-manuscript']) : {}) || 
+          {}
+        }
+        initialNote={
+          (documentResubmissions[viewerState.reqId] || documentResubmissions[viewerState.title] || (viewerState.title?.toLowerCase().includes('manuscript') && documentResubmissions['Final Manuscript']))
+            ? ''
+            : (documentRevisions[viewerState.reqId] || documentRevisions[viewerState.title] || (viewerState.title?.toLowerCase().includes('manuscript') ? (documentRevisions['Final Manuscript'] || documentRevisions['final-manuscript']) : '') || '')
+        }
+        initialAnnotations={
+          (documentResubmissions[viewerState.reqId] || documentResubmissions[viewerState.title] || (viewerState.title?.toLowerCase().includes('manuscript') && documentResubmissions['Final Manuscript']))
+            ? {}
+            : (documentAnnotations[viewerState.reqId] || documentAnnotations[viewerState.title] || (viewerState.title?.toLowerCase().includes('manuscript') ? (documentAnnotations['Final Manuscript'] || documentAnnotations['final-manuscript']) : {}) || {})
+        }
+        studentReply={
+          documentRevisionReplies?.[viewerState.reqId] ||
+          documentRevisionReplies?.[viewerState.title] ||
+          (viewerState.title?.toLowerCase().includes('manuscript') ? (documentRevisionReplies?.['Final Manuscript'] || documentRevisionReplies?.['final-manuscript']) : '') ||
+          ''
+        }
       />
+
+      {/* Maroon Book Flipping Loader during Document Upload */}
+      {uploadingItem && (
+        <BookLoader
+          fullScreen
+          text="Uploading Document..."
+          subtext="Storing document securely in ARCHIVIO repository..."
+        />
+      )}
     </div>
   );
 }

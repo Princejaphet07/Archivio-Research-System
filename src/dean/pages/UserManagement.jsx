@@ -114,9 +114,13 @@ export default function UserManagement() {
     const group = groups.find(g => 
       g.leaderUid === student.uid ||
       g.leaderEmail === student.email ||
-      g.members?.some(m => 
-        (typeof m === 'object' ? m.email : m) === student.email
-      )
+      g.members?.some(m => {
+        const mEmail = typeof m === 'object' ? m.email : m;
+        const mName = typeof m === 'object' ? m.name : '';
+        if (mEmail && student.email && mEmail.toLowerCase() === student.email.toLowerCase()) return true;
+        if (mName && student.displayName && mName.toLowerCase().trim() === student.displayName.toLowerCase().trim()) return true;
+        return false;
+      })
     );
     return {
       ...student,

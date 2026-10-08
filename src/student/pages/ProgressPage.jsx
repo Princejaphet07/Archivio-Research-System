@@ -102,12 +102,35 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     const unsubSub = onSnapshot(subQ, (snap) => {
       if (!snap.empty) {
         const subs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Sort by createdAt desc (latest first)
+
+        const getTime = (val) => {
+          if (!val) return 0;
+          if (typeof val.toMillis === 'function') return val.toMillis();
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+          if (val.seconds) return val.seconds * 1000;
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
+        // Smart sort to pick the real, active submission:
+        // 1. Prioritize approved or published
+        // 2. Prioritize higher number of uploaded documents
+        // 3. Prioritize most recently updated or created
         subs.sort((a, b) => {
-          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const isApprovedA = a.reviewStatus === 'approved' || a.reviewStatus === 'published' || a.status === 'approved' || a.status === 'published';
+          const isApprovedB = b.reviewStatus === 'approved' || b.reviewStatus === 'published' || b.status === 'approved' || b.status === 'published';
+          if (isApprovedA && !isApprovedB) return -1;
+          if (!isApprovedA && isApprovedB) return 1;
+
+          const docsA = (a.uploadedDocs?.length || Object.keys(a.documents || {}).length || 0);
+          const docsB = (b.uploadedDocs?.length || Object.keys(b.documents || {}).length || 0);
+          if (docsA !== docsB) return docsB - docsA;
+
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
           return timeB - timeA;
         });
+
         setSubmission(subs[0]);
       } else {
         setSubmission(null);
@@ -115,11 +138,16 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       setLoading(false);
     }, () => setLoading(false));
 
-    // 3. Requirements
+    // 3. Requirements (Global + Adviser-specific)
     const reqQ = query(collection(db, 'requirements'));
     const unsubReq = onSnapshot(reqQ, (snap) => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const active = all.filter(r => r.scope === 'global' && r.status === 'approved' && r.storageEnabled !== false && r.storageStatus !== 'suspended');
+      const adviserEmailOrUid = studentData?.invitedBy;
+      const active = all.filter(r => 
+        ((r.scope === 'global' && r.status === 'approved') ||
+         (r.scope === 'adviser' && adviserEmailOrUid && (r.adviserUid === adviserEmailOrUid || r.adviserEmail === adviserEmailOrUid) && r.status === 'approved')) &&
+        r.storageEnabled !== false && r.storageStatus !== 'suspended'
+      );
       setRequirements(active.length > 0 ? active : DEFAULT_REQUIREMENTS);
     });
 
@@ -147,7 +175,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   // invitedBy stores the adviser's email (used as their UID in the advisers collection)
   const adviserEmail   = adviserData?.email || studentData?.invitedBy || '';
   const adviserInitials = adviserName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const researchTitle  = studentData?.researchTitle || submission?.title || 'Your Research';
+  const researchTitle  = studentData?.researchTitle || submission?.title || submission?.researchTitle || 'Your Research';
   const groupName      = studentData?.groupName || 'Your Group';
 
   const docMap         = submission?.documents || {};
@@ -155,30 +183,49 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const requiredCount  = activeReqs.length || requirements.length || 7;
   const submittedItems = activeReqs.filter(r => {
     const meta = docMap[r.id] || docMap[r.title];
-    return !!(meta && (meta.url || meta.name));
+    const isDocUploaded = !!(meta && (meta.url || meta.name));
+    const inUploadedList = submission?.uploadedDocs && (submission.uploadedDocs.includes(r.id) || submission.uploadedDocs.includes(r.title));
+    return isDocUploaded || inUploadedList;
   });
-  const uploadedCount  = submittedItems.length;
+  const uploadedCount  = Math.max(submittedItems.length, (submission?.uploadedDocs?.length || 0));
   const missingDocs    = activeReqs.filter(r => {
     const meta = docMap[r.id] || docMap[r.title];
-    return !(meta && (meta.url || meta.name));
+    const isDocUploaded = !!(meta && (meta.url || meta.name));
+    const inUploadedList = submission?.uploadedDocs && (submission.uploadedDocs.includes(r.id) || submission.uploadedDocs.includes(r.title));
+    return !(isDocUploaded || inUploadedList);
   }).map(r => r.title);
 
-  const hasManuscript     = !!submission?.manuscriptUrl;
-  const allDocsSubmitted  = uploadedCount >= requiredCount && uploadedCount > 0;
-  const reviewStatus      = submission?.reviewStatus || '';
-  const isApproved        = reviewStatus === 'approved' || reviewStatus === 'published';
+  const manuscriptDoc = 
+    submission?.documents?.['Final Manuscript'] || 
+    submission?.documents?.['manuscript'] || 
+    submission?.documents?.['Manuscript'];
+
+  const hasManuscript = !!(
+    submission?.manuscriptUrl ||
+    manuscriptDoc?.url ||
+    manuscriptDoc?.name ||
+    submission?.uploadedDocs?.includes('Final Manuscript') ||
+    submission?.uploadedDocs?.includes('manuscript')
+  );
+
+  const allDocsSubmitted  = (uploadedCount >= requiredCount && uploadedCount > 0) || (submission?.uploadedDocs?.length >= requiredCount && requiredCount > 0);
+  const reviewStatus      = submission?.reviewStatus || submission?.status || '';
+  const isRevision        = reviewStatus === 'revision' || reviewStatus === 'dean_revision' || (submission?.documentRevisions && Object.keys(submission.documentRevisions).length > 0 && !Object.values(submission.documentResubmissions || {}).every(Boolean));
+  const isDeanRevision    = reviewStatus === 'dean_revision' || !!submission?.deanComments;
+  const isApproved        = reviewStatus === 'approved' || reviewStatus === 'reviewed' || reviewStatus === 'published';
   const isPublished       = reviewStatus === 'published';
 
   // Step: 1=account, 2=manuscript, 3=docs, 4=adviser approved, 5=published
   let currentStep = 1;
   if (hasManuscript) currentStep = 2;
-  if (allDocsSubmitted) currentStep = 3;
+  if (allDocsSubmitted || (isApproved && hasManuscript)) currentStep = 3;
   if (isApproved) currentStep = 4;
   if (isPublished) currentStep = 5;
 
   const progressPercent = Math.min(100, Math.round((currentStep / 5) * 100));
 
   const bannerTitle =
+    isRevision ? (isDeanRevision ? "Revision Needed — Dean's Directive" : "Revision Needed — Step 3 of 5") :
     currentStep === 1 ? 'Getting Started — Step 1 of 5' :
     currentStep === 2 ? 'In Progress — Step 2 of 5' :
     currentStep === 3 ? 'Documents Complete — Step 3 of 5' :
@@ -186,6 +233,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     'Published — Step 5 of 5 ✓';
 
   const bannerSub =
+    isRevision ? 'Please review your adviser or dean feedback, update the required files in Requirements, and resubmit.' :
     currentStep === 1 ? 'Upload your manuscript to begin the process.' :
     currentStep === 2 ? `Submit your required documents. ${missingDocs.length} still missing.` :
     currentStep === 3 ? 'All documents submitted. Waiting for adviser review.' :
@@ -198,9 +246,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const strokeOffset  = circumference - (progressPercent / 100) * circumference;
 
   // ── Timeline step config ────────────────────────────────────────────────────
-  const manuscriptDate = submission?.createdAt
-    ? new Date(submission.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : null;
+  const manuscriptDate = manuscriptDoc?.date || (submission?.updatedAt
+    ? new Date(submission.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : (submission?.createdAt
+      ? new Date(submission.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null));
   const publishedDate = submission?.publishedAt
     ? new Date(submission.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
@@ -349,6 +399,11 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
       <span className="w-1.5 h-1.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] animate-pulse" /> In Progress
     </span>
   );
+  const RevisionTag = () => (
+    <span className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full text-[12px] font-bold border border-amber-200 dark:border-amber-800 shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Revisions Needed
+    </span>
+  );
 
   const DoneNode = () => (
     <div className="w-8 h-8 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] dark:border-stone-800 mt-4 z-10">
@@ -360,6 +415,13 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
   const ActiveNode = () => (
     <div className="w-8 h-8 rounded-full bg-white dark:bg-stone-900 border-2 border-[#7B1F35] dark:border-[#7B1F35] flex items-center justify-center shrink-0 ring-[6px] ring-[#F3EADB] dark:ring-stone-800 mt-4 z-10">
       <div className="w-2.5 h-2.5 rounded-full bg-[#7B1F35] dark:bg-[#7B1F35] animate-pulse" />
+    </div>
+  );
+  const RevisionNode = () => (
+    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 border-[6px] border-[#F3EADB] dark:border-stone-800 mt-4 z-10">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
     </div>
   );
   const PendingNode = ({ num }) => (
@@ -575,28 +637,38 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                     </div>
 
                     {/* Step 4: Adviser Review */}
-                    <div className={`relative flex gap-3 sm:gap-5 mb-5 z-10 ${currentStep < 3 ? 'opacity-60' : ''}`}>
-                      {currentStep >= 4 ? <DoneNode /> : currentStep === 3 ? <ActiveNode /> : <PendingNode num={4} />}
+                    <div className={`relative flex gap-3 sm:gap-5 mb-5 z-10 ${currentStep < 3 && !isRevision ? 'opacity-60' : ''}`}>
+                      {currentStep >= 4 ? <DoneNode /> : isRevision ? <RevisionNode /> : currentStep === 3 ? <ActiveNode /> : <PendingNode num={4} />}
                       <div className={`flex-1 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-sm transition-all ${
                         currentStep >= 4
                           ? 'bg-stone-50 dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700 hover:shadow-md'
-                          : currentStep === 3
-                            ? 'bg-[#f8eef1] dark:bg-[#7B1F35]/20 border border-[#ebd0da] dark:border-[#7B1F35]/40 relative overflow-hidden hover:shadow-md'
-                            : 'bg-transparent border border-stone-200 dark:border-stone-700'
+                          : isRevision
+                            ? 'bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 relative overflow-hidden hover:shadow-md'
+                            : currentStep === 3
+                              ? 'bg-[#f8eef1] dark:bg-[#7B1F35]/20 border border-[#ebd0da] dark:border-[#7B1F35]/40 relative overflow-hidden hover:shadow-md'
+                              : 'bg-transparent border border-stone-200 dark:border-stone-700'
                       }`}>
-                        {currentStep === 3 && <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />}
+                        {isRevision ? (
+                          <div className="absolute top-0 left-0 bottom-0 w-1 bg-amber-500" />
+                        ) : currentStep === 3 && (
+                          <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#7B1F35] dark:bg-[#7B1F35]" />
+                        )}
                         <div>
                           <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[14px] sm:text-[15px]">Adviser Review</h4>
                           <p className="text-[12px] text-gray-500 dark:text-stone-400 mt-0.5 sm:mt-1 mb-1 sm:mb-2">
-                            {adviserName} · {currentStep >= 4 ? 'Approved' : 'Awaiting documents'}
+                            {isRevision
+                              ? `${adviserName} · Action Needed: Revisions`
+                              : `${adviserName} · ${currentStep >= 4 ? 'Approved' : 'Awaiting documents'}`}
                           </p>
                           <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-stone-400 italic">
                             {currentStep >= 4
                               ? 'Your adviser has approved your submission!'
-                              : 'Your adviser will review once all documents are submitted.'}
+                              : isRevision
+                                ? (isDeanRevision ? "Dean requested revisions. Check directives and update files in Requirements." : "Your adviser requested revisions. Check feedback and resubmit updated files in Requirements.")
+                                : 'Your adviser will review once all documents are submitted.'}
                           </p>
                         </div>
-                        {currentStep >= 4 ? <DoneTag /> : currentStep === 3 ? <ActiveTag /> : <PendingTag />}
+                        {currentStep >= 4 ? <DoneTag /> : isRevision ? <RevisionTag /> : currentStep === 3 ? <ActiveTag /> : <PendingTag />}
                       </div>
                     </div>
 
@@ -635,8 +707,13 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
                 {/* Action Card — only show if not published */}
                 {!isPublished && !loading && (
-                  <Card hover className="bg-[#FCF9F2] dark:bg-red-950/30 p-5 sm:p-6 border-t-4 border-[#CF3645]">
-                    <p className="text-[10px] font-bold text-[#CF3645] dark:text-red-400 tracking-widest uppercase mb-1">Action Needed</p>
+                  <Card hover className="bg-[#FCF9F2] dark:bg-stone-900/50 p-5 sm:p-6 border-t-4 border-[#1E8E3E] dark:border-green-500">
+                    <p 
+                      className="text-[10px] font-bold text-[#1E8E3E] dark:text-green-400 tracking-widest uppercase mb-1"
+                      style={{ color: '#1E8E3E' }}
+                    >
+                      {currentStep >= 4 ? 'Status' : 'Action Needed'}
+                    </p>
                     {currentStep <= 2 ? (
                       <>
                         <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">
@@ -649,17 +726,24 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                               ? 'All documents submitted! Awaiting adviser review.'
                               : 'Start by uploading your research manuscript.'}
                         </p>
-                        <PremiumButton
+                        <button
+                          type="button"
                           onClick={() => setActiveTab && setActiveTab('Requirements')}
-                          className="w-full min-h-[44px] touch-manipulation bg-[#CF3645] dark:bg-red-500 hover:bg-[#B02A38] dark:hover:bg-red-600 justify-center"
+                          className="w-full min-h-[44px] py-2.5 px-6 rounded-full bg-[#1E8E3E] hover:bg-[#167633] active:bg-[#135f29] text-white font-bold text-[13px] shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer touch-manipulation"
+                          style={{ backgroundColor: '#1E8E3E', color: '#ffffff' }}
                         >
                           Upload Now
-                        </PremiumButton>
+                        </button>
+                      </>
+                    ) : currentStep === 3 ? (
+                      <>
+                        <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Awaiting Adviser Review</h3>
+                        <p className="text-[13px] text-gray-600 dark:text-stone-400">All required documents have been submitted. Your adviser will review your submission shortly.</p>
                       </>
                     ) : (
                       <>
-                        <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Awaiting Review</h3>
-                        <p className="text-[13px] text-gray-600 dark:text-stone-400">Your submission is complete. You will be notified when your adviser or dean takes action.</p>
+                        <h3 className="font-serif font-bold text-[17px] sm:text-[18px] text-[#1A1A1A] dark:text-stone-100 mb-2">Awaiting Dean Publication</h3>
+                        <p className="text-[13px] text-gray-600 dark:text-stone-400">Your adviser has reviewed and approved your research. It is now awaiting the Dean's final review and publication.</p>
                       </>
                     )}
                   </Card>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db, auth } from '../firebase/config';
-import { collection, query, onSnapshot, updateDoc, doc, addDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, deleteDoc, setDoc, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
@@ -10,10 +11,39 @@ import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 export default function Settings({ activePage, onNavigate }) {
+  const location = useLocation();
   const { user, deanData, deanSettings } = useUser();
-  const [activeTab, setActiveTab] = useState('completion');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'completion');
+  const [highlightedReqId, setHighlightedReqId] = useState(location.state?.requirementId || null);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+    if (location.state?.requirementId) {
+      setHighlightedReqId(location.state.requirementId);
+    }
+  }, [location.state]);
+
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [advisersMap, setAdvisersMap] = useState({});
+
+  // Auto-scroll when requirements finish loading and tab is completion
+  useEffect(() => {
+    if (activeTab === 'completion' && !loading) {
+      const targetId = highlightedReqId ? `proposal-${highlightedReqId}` : (location.state?.tab === 'completion' ? 'pending-adviser-proposals' : null);
+      if (targetId) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(targetId) || document.getElementById('pending-adviser-proposals');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 350);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab, highlightedReqId, loading, location.state]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newReq, setNewReq] = useState({ title: '', desc: '', type: 'file', icon: '📄' });
   const [emailTemplate, setEmailTemplate] = useState({ subject: '', body: '' });
@@ -150,19 +180,93 @@ export default function Settings({ activePage, onNavigate }) {
       }, (err) => {
         console.warn('Submissions stats listener notice:', err.message);
       });
-      
+
       return () => { unsubSubs(); unsubGroups(); };
     }, (err) => {
       console.warn('Groups stats listener notice:', err.message);
     });
 
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+      const map = {};
+      snap.docs.forEach(docSnap => {
+        const d = docSnap.data();
+        const fullName = d.displayName || d.name || (d.firstName ? `${d.firstName} ${d.lastName || ''}` : '').trim();
+        if (d.email) map[d.email.toLowerCase()] = { name: fullName, email: d.email };
+        if (d.uid) map[d.uid] = { name: fullName, email: d.email };
+        map[docSnap.id] = { name: fullName, email: d.email };
+      });
+      setAdvisersMap(prev => ({ ...prev, ...map }));
+    }, (err) => {
+      console.warn('Advisers listener notice in Settings:', err.message);
+    });
+
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const map = {};
+      snap.docs.forEach(docSnap => {
+        const d = docSnap.data();
+        const fullName = d.displayName || (d.firstName ? `${d.firstName} ${d.lastName || ''}` : '').trim();
+        if (fullName && !fullName.includes('@')) {
+          if (d.email) map[d.email.toLowerCase()] = { name: fullName, email: d.email };
+          if (d.uid) map[d.uid] = { name: fullName, email: d.email };
+          map[docSnap.id] = { name: fullName, email: d.email };
+        }
+      });
+      setAdvisersMap(prev => ({ ...map, ...prev }));
+    }, (err) => {
+      console.warn('Users listener notice in Settings:', err.message);
+    });
+
     return () => {
       unsubReq();
+      unsubAdvisers();
+      unsubUsers();
     };
   }, [deanSettings]);
 
+  const getAdviserInfo = (item) => {
+    const rawUid = item.adviserUid || '';
+    const rawName = item.adviserName || '';
+
+    // 1. If item has a valid adviserName that is NOT an email and does not equal the email
+    if (rawName && !rawName.includes('@') && rawName.toLowerCase() !== rawUid.toLowerCase()) {
+      return { name: rawName, email: rawUid };
+    }
+
+    // 2. Lookup in advisersMap by email or uid
+    const lookup = (rawUid && advisersMap[rawUid.toLowerCase()]) || 
+                   (rawUid && advisersMap[rawUid]) || 
+                   (rawName && advisersMap[rawName.toLowerCase()]);
+    if (lookup && lookup.name && !lookup.name.includes('@')) {
+      return { name: lookup.name, email: rawUid || lookup.email };
+    }
+
+    // 3. Fallback: Parse clean human name from institutional email (e.g. jemi.zamoras.swu@phinmaed.com -> Jemi Zamoras)
+    const emailToParse = rawUid.includes('@') ? rawUid : (rawName.includes('@') ? rawName : '');
+    if (emailToParse) {
+      const handle = emailToParse.split('@')[0];
+      const parts = handle.split(/[._-]/).filter(p => {
+        const lower = p.toLowerCase();
+        return lower !== 'swu' && lower !== 'phinmaed' && isNaN(p);
+      });
+      if (parts.length > 0) {
+        const parsedName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+        return { name: parsedName, email: emailToParse };
+      }
+    }
+
+    return { name: rawName || rawUid || 'Research Adviser', email: rawUid };
+  };
+
   const handleUpdateStatus = async (reqId, newStatus, asGlobal = false) => {
     try {
+      let targetReq = requirements.find(r => r.id === reqId);
+      if (!targetReq) {
+        try {
+          const snap = await getDoc(doc(db, 'requirements', reqId));
+          if (snap.exists()) targetReq = { id: snap.id, ...snap.data() };
+        } catch (e) {}
+      }
+
       const payload = {
         status: newStatus,
         updatedAt: new Date().toISOString()
@@ -174,10 +278,122 @@ export default function Settings({ activePage, onNavigate }) {
         payload.priority = maxPriority + 1;
       }
       await updateDoc(doc(db, 'requirements', reqId), payload);
+
+      // Notify the proposing Adviser
+      const rawAdviserId = targetReq?.adviserUid || targetReq?.adviserEmail || targetReq?.email;
+      if (rawAdviserId) {
+        try {
+          const recipientIds = new Set();
+          recipientIds.add(rawAdviserId);
+
+          if (rawAdviserId.includes('@')) {
+            recipientIds.add(rawAdviserId.toLowerCase());
+            const lookup = advisersMap[rawAdviserId.toLowerCase()];
+            if (lookup && lookup.uid) recipientIds.add(lookup.uid);
+
+            try {
+              const qUser = query(collection(db, 'users'), where('email', '==', rawAdviserId.toLowerCase()));
+              const snapUser = await getDocs(qUser);
+              snapUser.forEach(docSnap => {
+                recipientIds.add(docSnap.id);
+                if (docSnap.data()?.uid) recipientIds.add(docSnap.data().uid);
+              });
+            } catch (e) {}
+
+            try {
+              const qAdv = query(collection(db, 'advisers'), where('email', '==', rawAdviserId.toLowerCase()));
+              const snapAdv = await getDocs(qAdv);
+              snapAdv.forEach(docSnap => {
+                recipientIds.add(docSnap.id);
+                if (docSnap.data()?.uid) recipientIds.add(docSnap.data().uid);
+              });
+            } catch (e) {}
+          } else {
+            const lookup = advisersMap[rawAdviserId];
+            if (lookup && lookup.email) {
+              recipientIds.add(lookup.email);
+              recipientIds.add(lookup.email.toLowerCase());
+            }
+            try {
+              const uSnap = await getDoc(doc(db, 'users', rawAdviserId));
+              if (uSnap.exists()) {
+                const uEmail = uSnap.data()?.email;
+                if (uEmail) {
+                  recipientIds.add(uEmail);
+                  recipientIds.add(uEmail.toLowerCase());
+                }
+              }
+            } catch (e) {}
+          }
+
+          const isApproved = newStatus === 'approved';
+          const notifTitle = isApproved ? "✅ Requirement Approved" : "❌ Requirement Declined";
+          const reqTitle = targetReq?.title || 'Requirement';
+          const notifMessage = isApproved 
+            ? (asGlobal 
+                ? `Dean approved your proposed requirement "${reqTitle}" as a department-wide Global Requirement!` 
+                : `Dean approved your proposed requirement "${reqTitle}" for your research groups.`)
+            : `Dean declined your proposed requirement "${reqTitle}".`;
+
+          const notifPromises = Array.from(recipientIds).map(userId =>
+            addDoc(collection(db, 'notifications'), {
+              userId: userId,
+              title: notifTitle,
+              message: notifMessage,
+              type: "requirement_status",
+              requirementId: reqId,
+              status: newStatus,
+              link: "/adviser/submission-requirements",
+              isRead: false,
+              createdAt: serverTimestamp()
+            })
+          );
+          await Promise.all(notifPromises);
+
+          // Deliver email notification if email is resolved
+          const targetEmail = Array.from(recipientIds).find(id => id.includes('@'));
+          if (targetEmail) {
+            try {
+              await addDoc(collection(db, 'mail'), {
+                to: targetEmail,
+                message: {
+                  subject: `[ARCHIVIO] Proposed Requirement ${isApproved ? 'Approved' : 'Declined'}: ${reqTitle}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Dean Decision Notice</p>
+                      </div>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Requirement Status Update</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">Your proposed requirement <strong>"${reqTitle}"</strong> has been reviewed by the Dean.</p>
+                        <div style="margin: 20px 0; padding: 15px; border-radius: 6px; background-color: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${isApproved ? '#22c55e' : '#ef4444'};">
+                          <p style="margin: 0; font-weight: bold; color: ${isApproved ? '#15803d' : '#b91c1c'};">Status: ${isApproved ? (asGlobal ? 'Approved (Department-Wide Global)' : 'Approved for your groups') : 'Declined'}</p>
+                          <p style="margin: 6px 0 0 0; font-size: 14px; color: #4b5563;">${notifMessage}</p>
+                        </div>
+                        <p style="color: #718096; font-size: 13px;">You can view and manage your submission requirements anytime in your ARCHIVIO adviser portal.</p>
+                      </div>
+                    </div>
+                  `
+                }
+              });
+            } catch (mailErr) {
+              console.warn("Mail send skipped or not configured:", mailErr);
+            }
+          }
+        } catch (notifErr) {
+          console.error("Failed to notify adviser of requirement status:", notifErr);
+        }
+      }
+
       Swal.fire({ 
         icon: 'success', 
-        title: asGlobal ? 'Approved as Global Requirement!' : 'Updated', 
-        text: asGlobal ? 'This requirement is now active for ALL groups department-wide.' : `Requirement has been ${newStatus}.`, 
+        title: asGlobal 
+          ? 'Approved as Global Requirement!' 
+          : (newStatus === 'approved' ? 'Requirement Approved' : 'Requirement Declined'), 
+        text: asGlobal 
+          ? 'This requirement is now active for ALL groups department-wide.' 
+          : (newStatus === 'approved' ? 'The proposed requirement has been approved for the adviser\'s groups.' : 'The proposed requirement has been declined.'), 
         confirmButtonColor: '#7a1f3d' 
       });
     } catch (error) {
@@ -188,6 +404,14 @@ export default function Settings({ activePage, onNavigate }) {
 
   const handlePromoteToGlobal = async (reqId) => {
     try {
+      let targetReq = requirements.find(r => r.id === reqId);
+      if (!targetReq) {
+        try {
+          const snap = await getDoc(doc(db, 'requirements', reqId));
+          if (snap.exists()) targetReq = { id: snap.id, ...snap.data() };
+        } catch (e) {}
+      }
+
       const globalReqs = requirements.filter(r => r.scope === 'global');
       const maxPriority = globalReqs.reduce((max, r) => Math.max(max, r.priority || 0), 0);
       await updateDoc(doc(db, 'requirements', reqId), {
@@ -195,6 +419,81 @@ export default function Settings({ activePage, onNavigate }) {
         priority: maxPriority + 1,
         updatedAt: new Date().toISOString()
       });
+
+      // Notify proposing adviser
+      const rawAdviserId = targetReq?.adviserUid || targetReq?.adviserEmail || targetReq?.email;
+      if (rawAdviserId) {
+        try {
+          const recipientIds = new Set();
+          recipientIds.add(rawAdviserId);
+
+          if (rawAdviserId.includes('@')) {
+            recipientIds.add(rawAdviserId.toLowerCase());
+            const lookup = advisersMap[rawAdviserId.toLowerCase()];
+            if (lookup && lookup.uid) recipientIds.add(lookup.uid);
+
+            try {
+              const qUser = query(collection(db, 'users'), where('email', '==', rawAdviserId.toLowerCase()));
+              const snapUser = await getDocs(qUser);
+              snapUser.forEach(docSnap => {
+                recipientIds.add(docSnap.id);
+                if (docSnap.data()?.uid) recipientIds.add(docSnap.data().uid);
+              });
+            } catch (e) {}
+          } else {
+            const lookup = advisersMap[rawAdviserId];
+            if (lookup && lookup.email) {
+              recipientIds.add(lookup.email);
+              recipientIds.add(lookup.email.toLowerCase());
+            }
+          }
+
+          const reqTitle = targetReq?.title || 'Requirement';
+          const notifPromises = Array.from(recipientIds).map(userId =>
+            addDoc(collection(db, 'notifications'), {
+              userId: userId,
+              title: "🌐 Requirement Made Global",
+              message: `Dean promoted your requirement "${reqTitle}" to a department-wide Global Requirement for all students!`,
+              type: "requirement_status",
+              requirementId: reqId,
+              status: "global",
+              link: "/adviser/submission-requirements",
+              isRead: false,
+              createdAt: serverTimestamp()
+            })
+          );
+          await Promise.all(notifPromises);
+
+          const targetEmail = Array.from(recipientIds).find(id => id.includes('@'));
+          if (targetEmail) {
+            try {
+              await addDoc(collection(db, 'mail'), {
+                to: targetEmail,
+                message: {
+                  subject: `[ARCHIVIO] Requirement Promoted to Global: ${reqTitle}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                        <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Dean Decision Notice</p>
+                      </div>
+                      <div style="padding: 30px; background-color: #ffffff;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Global Requirement Update</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">Your requirement <strong>"${reqTitle}"</strong> was promoted to a department-wide Global Requirement for all students by the Dean!</p>
+                      </div>
+                    </div>
+                  `
+                }
+              });
+            } catch (mailErr) {
+              console.warn("Mail send skipped or not configured:", mailErr);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to notify adviser on make global:", e);
+        }
+      }
+
       Swal.fire({
         icon: 'success',
         title: 'Promoted to Global!',
@@ -650,10 +949,17 @@ export default function Settings({ activePage, onNavigate }) {
                   <hr className="border-stone-200 dark:border-stone-700" />
 
                   {/* Pending Adviser Proposals */}
-                  <div>
+                  <div id="pending-adviser-proposals">
                     <div className="mb-4 flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Pending Adviser Proposals</h3>
+                        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                          <span>Pending Adviser Proposals</span>
+                          {highlightedReqId && pendingProposals.some(p => p.id === highlightedReqId) && (
+                            <span className="bg-[#7a1f3d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                              Active Notice
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Review requirements proposed by Research Advisers for their respective groups.</p>
                       </div>
                       <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">{pendingProposals.length} Pending</span>
@@ -665,42 +971,62 @@ export default function Settings({ activePage, onNavigate }) {
                           <p className="text-stone-500 dark:text-stone-400 text-sm font-medium">No pending proposals at this time.</p>
                         </div>
                       ) : (
-                        pendingProposals.map((item) => (
-                          <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border-l-4 border-l-yellow-400 border-t border-b border-r border-stone-200 dark:border-stone-700 rounded-r-xl bg-white dark:bg-stone-800 shadow-sm gap-4">
-                            <div className="flex items-start gap-4">
-                              <span className="text-2xl mt-1">{item.icon}</span>
-                              <div>
-                                <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
-                                <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">{item.desc}</p>
-                                <p className="text-[10px] bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded inline-block font-medium">
-                                  Proposed by: {item.adviserUid}
-                                </p>
+                        pendingProposals.map((item) => {
+                          const isTargeted = highlightedReqId === item.id;
+                          return (
+                            <div 
+                              key={item.id} 
+                              id={`proposal-${item.id}`}
+                              className={`flex flex-col md:flex-row md:items-center justify-between p-4 border-t border-b border-r rounded-r-xl shadow-sm gap-4 transition-all duration-300 ${
+                                isTargeted
+                                  ? 'border-l-4 border-l-[#7a1f3d] dark:border-l-[#d4af37] ring-2 ring-[#7a1f3d]/50 dark:ring-[#d4af37]/50 bg-rose-50/80 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 shadow-md scale-[1.01]'
+                                  : 'border-l-4 border-l-yellow-400 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800'
+                              }`}
+                            >
+                              <div className="flex items-start gap-4">
+                                <span className="text-2xl mt-1 shrink-0">{item.icon}</span>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
+                                    {isTargeted && (
+                                      <span className="bg-[#7a1f3d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs">
+                                        ✨ Review Proposal
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">{item.desc}</p>
+                                  {(() => {
+                                    const adv = getAdviserInfo(item);
+                                    return (
+                                      <p className="text-[11px] bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-400 px-2.5 py-1 rounded inline-block font-medium">
+                                        Proposed by: <span className="font-semibold text-stone-800 dark:text-stone-200">{adv.name}</span>
+                                        {adv.email && adv.email.toLowerCase() !== adv.name.toLowerCase() && (
+                                          <span className="text-stone-500 dark:text-stone-400 ml-1">({adv.email})</span>
+                                        )}
+                                      </p>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <button 
+                                  onClick={() => handleUpdateStatus(item.id, 'approved', false)} 
+                                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                  title="Approve requirement proposal"
+                                >
+                                  <span>✓</span> Approve
+                                </button>
+                                <button 
+                                  onClick={() => handleUpdateStatus(item.id, 'declined')} 
+                                  className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 hover:border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                                  title="Decline requirement proposal"
+                                >
+                                  <span>✕</span> Decline
+                                </button>
                               </div>
                             </div>
-                            <div className="flex gap-2 shrink-0">
-                              <button 
-                                onClick={() => handleUpdateStatus(item.id, 'approved', true)} 
-                                className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5e182f] text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
-                                title="Approve as Global Requirement for all research groups"
-                              >
-                                🌐 Approve as Global
-                              </button>
-                              <button 
-                                onClick={() => handleUpdateStatus(item.id, 'approved', false)} 
-                                className="bg-green-600 hover:bg-green-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition"
-                                title="Approve for this adviser only"
-                              >
-                                ✓ For Adviser Only
-                              </button>
-                              <button 
-                                onClick={() => handleUpdateStatus(item.id, 'declined')} 
-                                className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 hover:border-red-200 px-3 py-2 rounded-lg text-xs font-bold transition"
-                              >
-                                ✕ Decline
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -731,7 +1057,17 @@ export default function Settings({ activePage, onNavigate }) {
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[10px] text-stone-400 truncate">For: {item.adviserUid}</p>
+                                  {(() => {
+                                    const adv = getAdviserInfo(item);
+                                    return (
+                                      <p className="text-[10px] text-stone-400 truncate">
+                                        For: <span className="font-medium text-stone-600 dark:text-stone-300">{adv.name}</span>
+                                        {adv.email && adv.email.toLowerCase() !== adv.name.toLowerCase() && (
+                                          <span className="text-stone-400 ml-1">({adv.email})</span>
+                                        )}
+                                      </p>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">

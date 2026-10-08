@@ -48,6 +48,16 @@ service cloud.firestore {
       );
     }
 
+    function isStudentOrGroupMember(targetLeaderUid) {
+      return isAuthenticated() && (
+        request.auth.uid == targetLeaderUid ||
+        (exists(/databases/$(database)/documents/students/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/students/$(request.auth.uid)).data.leaderUid == targetLeaderUid) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.leaderUid == targetLeaderUid)
+      );
+    }
+
     // -----------------------------------------------------------------
     // 2. Protect Users & Profiles
     // -----------------------------------------------------------------
@@ -74,7 +84,12 @@ service cloud.firestore {
                         request.resource.data.role == 'adviser' ||
                         (request.resource.data.role in ['dean', 'dean+adviser'] &&
                          exists(/databases/$(database)/documents/deans/$(request.auth.uid)))
-                    ));
+                    ))
+                    // Allow group leaders to create student user documents for their members
+                    || (isAuthenticated() && 
+                        request.resource.data.role == 'student' &&
+                        request.resource.data.studentRole == 'member' &&
+                        request.resource.data.leaderUid == request.auth.uid);
 
       allow delete: if isSystemAdmin() || isDean();
     }
@@ -84,16 +99,20 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     match /students/{docId} {
       allow read: if isAuthenticated();
-      // Only Admins, Deans, Advisers, or the student themselves (strictly by docId or existing resource uid)
+      // Only Admins, Deans, Advisers, the student themselves, or the group leader provisioning their group member:
       allow write: if isSystemAdmin() || isDean() || isAdviser()
                     || (isAuthenticated() && request.auth.uid == docId)
-                    || (resource != null && isAuthenticated() && request.auth.uid == resource.data.uid);
+                    || (resource != null && isAuthenticated() && request.auth.uid == resource.data.uid)
+                    || (isAuthenticated() && (
+                        (request.resource.data.role == 'member' && request.resource.data.leaderUid == request.auth.uid) ||
+                        (resource != null && resource.data.role == 'member' && resource.data.leaderUid == request.auth.uid)
+                       ));
     }
 
     match /advisers/{docId} {
       // Public read required for unauthenticated email lookup during adviser onboarding
       allow read: if true;
-      allow write: if isSystemAdmin() || isDean()
+      allow write: if isSystemAdmin() || isDean() || isAdviser()
                     || (isAuthenticated() && request.auth.uid == docId)
                     || (resource != null && isAuthenticated() && (
                         request.auth.uid == resource.data.userId ||
@@ -174,10 +193,15 @@ service cloud.firestore {
     match /submissions/{docId} {
       allow read: if true;
       allow create: if isAuthenticated() && (
-        isSystemAdmin() || isDean() || request.resource.data.studentUid == request.auth.uid
+        isSystemAdmin() || isDean() || isStudentOrGroupMember(request.resource.data.studentUid)
       );
       allow update: if isSystemAdmin() || isDean() || isAdviser()
-                     || (isAuthenticated() && resource.data.studentUid == request.auth.uid)
+                     // Students and authorized group members can update submissions, but CANNOT tamper with approval or administrative fields
+                     || (isAuthenticated() && isStudentOrGroupMember(resource.data.studentUid)
+                         && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                           'reviewStatus', 'reviewedBy', 'reviewedAt', 'documentApprovals',
+                           'deanComments', 'deanFeedback', 'publishedAt'
+                         ]))
                      // Public view count increment (any user, even unauthenticated)
                      // Handles both: new views field (resource.data.views doesn't exist) and existing views field
                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
@@ -193,12 +217,19 @@ service cloud.firestore {
     match /studentInvitations/{docId} {
       // Public read required for pre-signup email verification on student signup form
       allow read: if true;
+      // Allow invited student to accept without login (only modifying status, acceptedAt, accepted)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt', 'accepted'])
+                    && request.resource.data.status == 'accepted';
       // Allow Advisers/Deans/Admins to invite, and student leaders to invite group members, or member to accept
       allow write: if isSystemAdmin() || isDean() || isAdviser()
                     || (isAuthenticated() && (
                         request.resource.data.sentBy == request.auth.uid ||
+                        request.resource.data.invitedByLeader == request.auth.token.email ||
+                        request.resource.data.leaderUid == request.auth.uid ||
                         (resource != null && (
                           resource.data.sentBy == request.auth.uid ||
+                          resource.data.invitedByLeader == request.auth.token.email ||
+                          resource.data.leaderUid == request.auth.uid ||
                           resource.data.studentEmail == request.auth.token.email
                         ))
                     ));

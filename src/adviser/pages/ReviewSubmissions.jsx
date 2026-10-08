@@ -11,6 +11,27 @@ import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
 import CertificateModal from '../../components/CertificateModal';
+import { validateSubmissionReadiness } from '../utils/approvalGating';
+import RequirementIcon from '../components/RequirementIcon';
+import { 
+  Clock, 
+  AlertCircle, 
+  FileEdit, 
+  Award, 
+  Landmark, 
+  FolderKanban, 
+  ShieldCheck, 
+  FileText, 
+  Calendar, 
+  MessageSquare, 
+  Sparkles, 
+  User, 
+  CheckCircle2, 
+  ShieldAlert, 
+  RefreshCw, 
+  X,
+  Check
+} from 'lucide-react';
 
 function ReviewSubmissions() {
   const location = useLocation();
@@ -25,7 +46,17 @@ function ReviewSubmissions() {
     url: '',
     title: ''
   });
-  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'pending');
+
+  const getInitialTab = () => {
+    const raw = location.state?.activeTab;
+    if (raw === 'approved' || raw === 'published') return 'approved';
+    if (raw === 'dean_revision' || raw === 'revision' || raw === 'revisions') return 'revisions';
+    if (raw === 'drafting' || raw === 'in_progress') return 'drafting';
+    return 'needs_review';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [revisionFilter, setRevisionFilter] = useState('all'); // 'all' | 'dean' | 'adviser'
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState(location.state?.filterGroup || 'All Groups');
   const [filterYear, setFilterYear] = useState('All Year');
@@ -83,10 +114,26 @@ function ReviewSubmissions() {
     };
   }, []);
 
-  // Enrich submissions with group data (Map over groups instead of submissions so all approved groups appear)
+  useEffect(() => {
+    if (location.state?.filterGroup) {
+      setFilterGroup(location.state.filterGroup);
+    }
+    if (location.state?.activeTab) {
+      const raw = location.state.activeTab;
+      if (raw === 'approved' || raw === 'published') setActiveTab('approved');
+      else if (raw === 'dean_revision' || raw === 'revision' || raw === 'revisions') setActiveTab('revisions');
+      else if (raw === 'drafting' || raw === 'in_progress') setActiveTab('drafting');
+      else setActiveTab('needs_review');
+    }
+  }, [location.state]);
+
+  // Enrich submissions with group data (only include groups that have actually uploaded files or requirements)
+  // If a student group hasn't uploaded any files or requirements (uploadedCount === 0), do not add them here.
   const enrichedSubmissions = groups.map(group => {
     const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
-    const uploadedCount = sub.uploadedDocs?.length || 0;
+    const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
+    const docKeys = sub.documents && typeof sub.documents === 'object' ? Object.keys(sub.documents) : [];
+    const uploadedCount = Math.max(uploadedDocs.length, docKeys.length, (sub.manuscriptUrl || sub.fileUrl ? 1 : 0));
     const requiredCount = requirements.length;
     const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
 
@@ -106,14 +153,32 @@ function ReviewSubmissions() {
       requiredCount,
       reviewStatus: sub.reviewStatus || (completionPercent === 100 ? 'pending' : 'in_progress'),
     };
-  });
+  }).filter(sub => sub.uploadedCount > 0);
+
+  // Tab counts based on academic lifecycle
+  const needsReviewCount = enrichedSubmissions.filter(s => (s.reviewStatus === 'pending' || s.reviewStatus === 'reviewed') && s.completionPercent === 100).length;
+  const revisionsCount = enrichedSubmissions.filter(s => s.reviewStatus === 'revision' || s.reviewStatus === 'dean_revision').length;
+  const deanRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
+  const adviserRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'revision').length;
+  const draftingCount = enrichedSubmissions.filter(s => s.completionPercent < 100 || (s.reviewStatus === 'in_progress' && s.completionPercent < 100)).length;
+  const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published').length;
 
   // Filter by tab
   const filteredByTab = enrichedSubmissions.filter(sub => {
-    if (activeTab === 'dean_revision') return sub.reviewStatus === 'dean_revision';
-    if (activeTab === 'pending') return sub.reviewStatus === 'pending' || sub.reviewStatus === 'in_progress';
-    if (activeTab === 'reviewed') return sub.reviewStatus === 'reviewed' || sub.reviewStatus === 'revision';
-    if (activeTab === 'approved') return sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
+    if (activeTab === 'needs_review') {
+      return (sub.reviewStatus === 'pending' || sub.reviewStatus === 'reviewed') && sub.completionPercent === 100;
+    }
+    if (activeTab === 'revisions') {
+      if (revisionFilter === 'dean') return sub.reviewStatus === 'dean_revision';
+      if (revisionFilter === 'adviser') return sub.reviewStatus === 'revision';
+      return sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision';
+    }
+    if (activeTab === 'drafting') {
+      return sub.completionPercent < 100 || (sub.reviewStatus === 'in_progress' && sub.completionPercent < 100);
+    }
+    if (activeTab === 'approved') {
+      return sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
+    }
     return true;
   });
 
@@ -142,12 +207,6 @@ function ReviewSubmissions() {
     const year = isNaN(dateObj.getTime()) ? '' : dateObj.getFullYear().toString();
     return year === filterYear;
   });
-
-  // Tab counts
-  const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
-  const deanRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
-  const reviewedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'reviewed' || s.reviewStatus === 'revision').length;
-  const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published').length;
 
   // Available group names for filter
   const uniqueGroups = [...new Set(enrichedSubmissions.map(s => s.groupName))];
@@ -267,26 +326,94 @@ function ReviewSubmissions() {
     }
   };
 
-  // Handle Approve action
+  // Handle Approve / Endorsement action with Strict Linear Gating
   const handleApprove = async (sub) => {
+    // 1. Strict Linear Gating Check
+    const readiness = validateSubmissionReadiness(sub, requirements);
+    if (!readiness.isReady) {
+      const unapprovedListHtml = readiness.unapprovedDocs.length > 0
+        ? `<div style="text-align: left; background: #fff5f5; border: 1px solid #fed7d7; padding: 12px; border-radius: 8px; margin: 10px 0;">
+             <p style="font-weight: bold; color: #9b2c2c; margin: 0 0 6px 0; font-size: 13px;">Unverified Documents (${readiness.unapprovedDocs.length}):</p>
+             <ul style="margin: 0; padding-left: 20px; color: #742a2a; font-size: 12px; line-height: 1.5;">
+               ${readiness.unapprovedDocs.map(d => `<li>${d} <span style="color: #c53030; font-weight: 600;">(Needs check in Document Viewer)</span></li>`).join('')}
+             </ul>
+           </div>`
+        : '';
+
+      const missingListHtml = readiness.missingDocs.length > 0
+        ? `<div style="text-align: left; background: #fffaf0; border: 1px solid #feebc8; padding: 12px; border-radius: 8px; margin: 10px 0;">
+             <p style="font-weight: bold; color: #9c4221; margin: 0 0 6px 0; font-size: 13px;">Missing Requirements (${readiness.missingDocs.length}):</p>
+             <ul style="margin: 0; padding-left: 20px; color: #7b341e; font-size: 12px; line-height: 1.5;">
+               ${readiness.missingDocs.map(d => `<li>${d}</li>`).join('')}
+             </ul>
+           </div>`
+        : '';
+
+      const revisionsHtml = readiness.hasRevisionsPending
+        ? `<div style="text-align: left; background: #faf5ff; border: 1px solid #e9d8fd; padding: 12px; border-radius: 8px; margin: 10px 0;">
+             <p style="font-weight: bold; color: #553c9a; margin: 0; font-size: 12px;">Active revision requests exist on this submission that must be resolved first.</p>
+           </div>`
+        : '';
+
+      const similarityHtml = readiness.similarityWarning
+        ? `<div style="text-align: left; background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 8px; margin: 10px 0;">
+             <p style="font-weight: bold; color: #c53030; margin: 0; font-size: 12px;">${readiness.similarityWarning}</p>
+           </div>`
+        : '';
+
+      await Swal.fire({
+        title: 'Academic Verification Incomplete',
+        html: `
+          <div style="font-size: 13px; color: #4a5568; margin-bottom: 12px; text-align: left;">
+            ARCHIVIO linear gating requires all manuscript files to be individually examined and marked approved before endorsing for publication.
+          </div>
+          ${unapprovedListHtml}
+          ${missingListHtml}
+          ${revisionsHtml}
+          ${similarityHtml}
+          <div style="font-size: 12px; color: #718096; margin-top: 10px; text-align: left;">
+            Please click <strong>Open Full Review</strong> to inspect each document and mark it checked.
+          </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Open Full Review',
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#7a2e46',
+        cancelButtonColor: '#718096'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleFullReview(sub);
+        }
+      });
+      return;
+    }
+
     const isDeanRev = sub.reviewStatus === 'dean_revision';
     const res = await Swal.fire({
-      title: isDeanRev ? 'Re-Approve & Submit to Dean?' : 'Approve Submission?',
+      title: isDeanRev ? 'Endorse Revised Manuscript to Dean?' : 'Endorse for Dean Publication?',
       text: isDeanRev 
-        ? "This will re-approve the revised manuscript and return it to the Dean's Publish Queue."
-        : "This will approve the research and forward it to the Dean's Publish Queue.",
+        ? "All documents and revisions verified. This will forward the manuscript back to the Dean's Publish Queue."
+        : "All required documents have been verified. This will endorse the research and forward it to the Dean's Publish Queue.",
       input: 'textarea',
-      inputLabel: 'Optional Comments / Notes',
-      inputPlaceholder: isDeanRev ? 'E.g. Completed revisions requested by the Dean...' : 'Great job! Or any final thoughts...',
+      inputLabel: 'Adviser Endorsement Remarks / Directives (Optional)',
+      inputPlaceholder: isDeanRev ? 'E.g. Verified revisions requested by the Dean...' : 'E.g. Ready for final archival publishing...',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#059669',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: isDeanRev ? 'Yes, Re-Approve to Dean' : 'Yes, Approve'
+      confirmButtonText: isDeanRev ? 'Yes, Endorse to Dean' : 'Yes, Endorse for Publication'
     });
 
     if (res.isConfirmed) {
       const comments = res.value || '';
+
+      Swal.fire({
+        title: isDeanRev ? 'Endorsing to Dean...' : 'Endorsing for Publication...',
+        text: 'Updating submission records and notifying stakeholders...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
 
       try {
         await updateDoc(doc(db, 'submissions', sub.id), {
@@ -299,7 +426,7 @@ function ReviewSubmissions() {
         await logActivity({
           user: auth.currentUser?.email || 'Adviser',
           role: 'Research Adviser',
-          action: 'Approved submission',
+          action: 'Endorsed submission for Dean publication',
           details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
           status: 'Success'
         });
@@ -320,7 +447,7 @@ function ReviewSubmissions() {
             const batchPromises = deansSnap.docs.map(deanDoc => 
               addDoc(collection(db, 'notifications'), {
                 userId: deanDoc.id, // Usually the UID is the doc ID for users collection
-                title: "📄 Manuscript Ready for Publishing",
+                title: "Manuscript Ready for Publishing",
                 message: `Adviser ${auth.currentUser?.email} has approved "${sub.researchTitle}". It is now in your Publish Queue.`,
                 isRead: false,
                 createdAt: serverTimestamp()
@@ -371,8 +498,8 @@ function ReviewSubmissions() {
 
         Swal.fire({
           icon: 'success',
-          title: 'Approved!',
-          text: `${sub.groupName}'s submission has been approved and sent to the Dean.`,
+          title: 'Endorsed for Publication!',
+          text: `${sub.groupName}'s manuscript has been verified and forwarded to the Dean.`,
           confirmButtonColor: '#059669',
         });
       } catch (err) {
@@ -390,28 +517,36 @@ function ReviewSubmissions() {
       : '';
 
     const res = await Swal.fire({
-      title: isDeanRev ? 'Forward Revision to Students?' : 'Request Revision?',
+      title: isDeanRev ? 'Forward Dean Revision to Students?' : 'Request Manuscript Revisions?',
       text: isDeanRev 
         ? `Forward Dean's revision directive to ${sub.groupName}:` 
-        : "The student will be notified to revise their submission.",
+        : "The student research group will be notified to revise their manuscript.",
       input: 'textarea',
       inputValue: defaultInput,
-      inputLabel: 'Revision Comments & Instructions',
-      inputPlaceholder: 'Detail the required revisions here...',
+      inputLabel: 'Revision Directives & Instructions',
+      inputPlaceholder: 'Detail specific revision directives and feedback for the students...',
       inputValidator: (value) => {
         if (!value) {
-          return 'You need to write a comment for the revision request!'
+          return 'Please provide clear revision instructions for the student researchers!'
         }
       },
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ca8a04',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: isDeanRev ? 'Forward to Students' : 'Yes, Request Revision'
+      confirmButtonText: isDeanRev ? 'Forward to Students' : 'Request Manuscript Revisions'
     });
 
     if (res.isConfirmed) {
       const comments = res.value;
+
+      Swal.fire({
+        title: 'Sending Revision Request...',
+        text: 'Notifying students and logging revision instructions...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
       try {
         await updateDoc(doc(db, 'submissions', sub.id), {
           reviewStatus: 'revision',
@@ -607,7 +742,7 @@ function ReviewSubmissions() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'dean_revision':
-        return <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] px-2.5 py-1 rounded-full font-bold border border-amber-300 dark:border-amber-700">🏛️ Returned by Dean</span>;
+        return <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] px-2.5 py-1 rounded-full font-bold border border-amber-300 dark:border-amber-700 flex items-center gap-1"><Landmark className="w-3 h-3 text-amber-700 dark:text-amber-300" /> Returned by Dean</span>;
       case 'in_progress':
         return <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 text-[11px] px-2.5 py-1 rounded-full font-bold">In Progress</span>;
       case 'pending':
@@ -654,32 +789,73 @@ function ReviewSubmissions() {
         </div>
 
         {/* Tabs: Horizontally scrollable on mobile */}
-        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-2 sm:gap-6 overflow-x-auto no-scrollbar flex-nowrap pb-1">
+        <div className="border-b border-gray-200 dark:border-stone-800 flex gap-2 sm:gap-6 overflow-x-auto no-scrollbar flex-nowrap pb-1" role="tablist" aria-label="Manuscript Review Queues">
           <button
-            onClick={() => setActiveTab('pending')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'pending' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            role="tab"
+            aria-selected={activeTab === 'needs_review'}
+            onClick={() => setActiveTab('needs_review')}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'needs_review' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ⏳ Pending Review <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{pendingCount}</span>
+            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Needs Review</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'needs_review' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{needsReviewCount}</span>
           </button>
           <button
-            onClick={() => setActiveTab('dean_revision')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'dean_revision' ? 'border-b-2 border-amber-600 text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            role="tab"
+            aria-selected={activeTab === 'revisions'}
+            onClick={() => setActiveTab('revisions')}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'revisions' ? 'border-b-2 border-orange-600 text-orange-700 dark:text-orange-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🏛️ Returned by Dean <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'dean_revision' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{deanRevisionCount}</span>
+            <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+            <span>Revisions Requested</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'revisions' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{revisionsCount}</span>
           </button>
           <button
-            onClick={() => setActiveTab('reviewed')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'reviewed' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            role="tab"
+            aria-selected={activeTab === 'drafting'}
+            onClick={() => setActiveTab('drafting')}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'drafting' ? 'border-b-2 border-blue-600 text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            ✅ Reviewed <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'reviewed' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{reviewedCount}</span>
+            <FileEdit className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span>Student Drafting</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'drafting' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{draftingCount}</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'approved'}
             onClick={() => setActiveTab('approved')}
             className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
-            🏆 Approved <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
+            <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Endorsed & Published</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
           </button>
         </div>
+
+        {/* Sub-filters for Revisions */}
+        {activeTab === 'revisions' && (
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+            <span className="text-gray-500 dark:text-stone-400 font-medium">Filter by source:</span>
+            <button
+              onClick={() => setRevisionFilter('all')}
+              className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer ${revisionFilter === 'all' ? 'bg-[#7a2e46] text-white dark:bg-[#f8d070] dark:text-stone-900' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-300 hover:bg-gray-200'}`}
+            >
+              All ({revisionsCount})
+            </button>
+            <button
+              onClick={() => setRevisionFilter('dean')}
+              className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer flex items-center gap-1 ${revisionFilter === 'dean' ? 'bg-amber-600 text-white' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}`}
+            >
+              <Landmark className="w-3.5 h-3.5" /> Dean Directives ({deanRevisionCount})
+            </button>
+            <button
+              onClick={() => setRevisionFilter('adviser')}
+              className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer flex items-center gap-1 ${revisionFilter === 'adviser' ? 'bg-orange-600 text-white' : 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800'}`}
+            >
+              <AlertCircle className="w-3.5 h-3.5" /> Adviser Directives ({adviserRevisionCount})
+            </button>
+          </div>
+        )}
 
         {/* Mobile View: Cards list for phones */}
         <div className="md:hidden space-y-3 mt-4">
@@ -687,109 +863,178 @@ function ReviewSubmissions() {
             <TableSkeleton columns={2} rows={3} />
           ) : finalFiltered.length === 0 ? (
             <Card glass={true} className="p-8 text-center">
-              <span className="text-3xl block mb-2">📂</span>
-              <p className="text-gray-600 dark:text-stone-300 font-medium">
-                No matching {activeTab.replace('_', ' ')} submissions found.
+              <FolderKanban className="w-10 h-10 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
+              <p className="text-gray-700 dark:text-stone-200 font-bold text-sm">
+                {activeTab === 'needs_review' && 'No submissions currently waiting for review.'}
+                {activeTab === 'revisions' && 'No active revision requests found.'}
+                {activeTab === 'drafting' && 'No advisee groups currently in drafting stage.'}
+                {activeTab === 'approved' && 'No endorsed or published research records found.'}
+              </p>
+              <p className="text-gray-500 dark:text-stone-400 text-xs mt-1">
+                {activeTab === 'needs_review' && 'When student groups upload 100% of requirements, they will appear here.'}
+                {activeTab === 'revisions' && 'Manuscripts with revision requests will be tracked here.'}
+                {activeTab === 'drafting' && 'Student groups preparing their initial documents will be listed here.'}
+                {activeTab === 'approved' && 'Manuscripts endorsed for the Dean or published appear in this archive.'}
               </p>
             </Card>
           ) : (
-            finalFiltered.map((item, index) => (
-              <Card key={item.id} glass={true} className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
-                      #{String(index + 1).padStart(2, '0')} · {item.groupName}
+            finalFiltered.map((item, index) => {
+              const verifiedDocsCount = Object.keys(item.documentApprovals || {}).filter(k => item.documentApprovals[k] === true).length;
+              const isAllVerified = verifiedDocsCount >= item.requiredCount && item.requiredCount > 0;
+
+              return (
+                <Card key={item.id} glass={true} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
+                        #{String(index + 1).padStart(2, '0')} · {item.groupName}
+                      </span>
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 line-clamp-2 mt-0.5">
+                        {item.researchTitle}
+                      </h3>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
+                      item.completionPercent === 100 
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : item.completionPercent >= 50
+                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {item.completionPercent}% files
                     </span>
-                    <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 line-clamp-2 mt-0.5">
-                      {item.researchTitle}
-                    </h3>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
-                    item.completionPercent === 100 
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : item.completionPercent >= 50
-                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {item.completionPercent}% complete
-                  </span>
-                </div>
 
-                {activeTab === 'dean_revision' && (
-                  <div className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/60 text-xs">
-                    <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 text-[11px]">
-                      <span>🏛️ Dean's Directive:</span> {item.deanFeedback?.category || 'Revision'}
-                    </p>
-                    {item.deanComments && (
-                      <p className="text-amber-900/80 dark:text-amber-200/80 text-[11px] mt-1 line-clamp-2">
-                        "{item.deanComments}"
+                  {activeTab === 'needs_review' && (
+                    <div className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+                      isAllVerified
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                        : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+                    }`}>
+                      <span className="font-bold flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Verification Status:
+                      </span>
+                      <span className="font-bold flex items-center gap-1">
+                        {isAllVerified ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            All Documents Checked
+                          </>
+                        ) : (
+                          `${verifiedDocsCount}/${item.requiredCount} Checked`
+                        )}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeTab === 'revisions' && (
+                    <div className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/60 text-xs">
+                      <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 text-[11px]">
+                        {item.reviewStatus === 'dean_revision' ? (
+                          <Landmark className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{item.reviewStatus === 'dean_revision' ? "Dean's Directive:" : "Adviser Revision Directive:"}</span> {item.deanFeedback?.category || 'Revisions Required'}
                       </p>
-                    )}
+                      {(item.deanComments || item.adviserComments) && (
+                        <p className="text-amber-900/80 dark:text-amber-200/80 text-[11px] mt-1 line-clamp-2">
+                          "{item.deanComments || item.adviserComments}"
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'drafting' && (
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                      <FileEdit className="w-3.5 h-3.5 shrink-0" />
+                      <span className="font-bold">Upload Progress: </span>
+                      <span>{item.uploadedCount} of {item.requiredCount} files submitted by group</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
+                    </span>
+                    <span>{getStatusBadge(item.reviewStatus)}</span>
                   </div>
-                )}
 
-                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
-                  <span>📅 {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}</span>
-                  <span>{getStatusBadge(item.reviewStatus)}</span>
-                </div>
+                  {/* Mobile Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <PremiumButton 
+                      onClick={() => handleFullReview(item)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center text-xs py-2"
+                    >
+                      View Details →
+                    </PremiumButton>
 
-                {/* Mobile Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <PremiumButton 
-                    onClick={() => handleFullReview(item)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-center text-xs py-2"
-                  >
-                    View Details →
-                  </PremiumButton>
-
-                  {activeTab === 'dean_revision' && (
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      <PremiumButton 
-                        onClick={() => handleReject(item)}
-                        variant="outline"
-                        size="sm"
-                        className="justify-center text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
-                      >
-                        Forward
-                      </PremiumButton>
+                    {activeTab === 'needs_review' && (
                       <PremiumButton 
                         onClick={() => handleApprove(item)}
                         variant="primary"
                         size="sm"
-                        className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs"
+                        className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-xs py-2 flex items-center gap-1.5"
                       >
-                        Re-Approve
+                        <Check className="w-3.5 h-3.5" />
+                        Endorse for Dean
                       </PremiumButton>
-                    </div>
-                  )}
+                    )}
 
-                  {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
-                    <PremiumButton 
-                      onClick={() => handleApprove(item)}
-                      variant="primary"
-                      size="sm"
-                      className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-xs py-2"
-                    >
-                      ✓ Approve Submission
-                    </PremiumButton>
-                  )}
+                    {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        <PremiumButton 
+                          onClick={() => handleReject(item)}
+                          variant="outline"
+                          size="sm"
+                          className="justify-center text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                        >
+                          Forward
+                        </PremiumButton>
+                        <PremiumButton 
+                          onClick={() => handleApprove(item)}
+                          variant="primary"
+                          size="sm"
+                          className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs"
+                        >
+                          Re-Approve
+                        </PremiumButton>
+                      </div>
+                    )}
 
-                  {activeTab === 'approved' && (
-                    <PremiumButton 
-                      onClick={() => setCertModalItem(item)}
-                      variant="primary"
-                      size="sm"
-                      className="w-full justify-center bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold text-xs py-2 flex items-center gap-1"
-                    >
-                      <span>📜</span>
-                      <span>View Certificate</span>
-                    </PremiumButton>
-                  )}
-                </div>
-              </Card>
-            ))
+                    {activeTab === 'drafting' && (
+                      <PremiumButton 
+                        onClick={() => {
+                          setSelectedSubmission(item);
+                          setShowMsgModal(true);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-center text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 text-xs py-2 flex items-center gap-1.5"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Message Student
+                      </PremiumButton>
+                    )}
+
+                    {activeTab === 'approved' && (
+                      <PremiumButton 
+                        onClick={() => setCertModalItem(item)}
+                        variant="primary"
+                        size="sm"
+                        className="w-full justify-center bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold text-xs py-2 flex items-center gap-1.5"
+                      >
+                        <Award className="w-4 h-4" />
+                        <span>View Certificate</span>
+                      </PremiumButton>
+                    )}
+                  </div>
+                </Card>
+              );
+            })
           )}
         </div>
 
@@ -807,15 +1052,20 @@ function ReviewSubmissions() {
                       <th className="py-3.5 px-4">Approved On</th>
                       <th className="py-3.5 px-4">Status</th>
                     </>
-                  ) : activeTab === 'dean_revision' ? (
+                  ) : activeTab === 'revisions' ? (
                     <>
-                      <th className="py-3.5 px-4">Returned Date</th>
-                      <th className="py-3.5 px-4 text-center">Dean Directive</th>
+                      <th className="py-3.5 px-4">Directive Date</th>
+                      <th className="py-3.5 px-4 text-center">Revision Source</th>
+                    </>
+                  ) : activeTab === 'drafting' ? (
+                    <>
+                      <th className="py-3.5 px-4">Last Activity</th>
+                      <th className="py-3.5 px-4 text-center">Upload Progress</th>
                     </>
                   ) : (
                     <>
-                      <th className="py-3.5 px-4">Submitted</th>
-                      <th className="py-3.5 px-4 text-center">Completion</th>
+                      <th className="py-3.5 px-4">Submitted Date</th>
+                      <th className="py-3.5 px-4 text-center">Linear Gating Check</th>
                     </>
                   )}
                   <th className="py-3.5 px-4 text-center">Action</th>
@@ -826,146 +1076,176 @@ function ReviewSubmissions() {
                   <TableSkeleton columns={5} rows={5} />
                 ) : finalFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500 dark:text-stone-400">
-                      No matching {activeTab} submissions found.
+                    <td colSpan="8" className="py-12 text-center text-gray-500 dark:text-stone-400">
+                      <FolderKanban className="w-10 h-10 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
+                      <p className="font-bold text-sm text-gray-700 dark:text-stone-300">
+                        {activeTab === 'needs_review' && 'No submissions currently waiting for review.'}
+                        {activeTab === 'revisions' && 'No active revision requests found.'}
+                        {activeTab === 'drafting' && 'No advisee groups currently in drafting stage.'}
+                        {activeTab === 'approved' && 'No endorsed or published research records found.'}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-stone-500 mt-0.5">
+                        {activeTab === 'needs_review' && 'Completed student manuscripts will populate here for faculty endorsement.'}
+                        {activeTab === 'revisions' && 'Items requiring manuscript revisions will appear here.'}
+                        {activeTab === 'drafting' && 'Incomplete groups uploading files will be tracked here.'}
+                        {activeTab === 'approved' && 'Endorsed and published archival records will appear here.'}
+                      </p>
                     </td>
                   </tr>
                 ) : (
-                  finalFiltered.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-stone-800/50 transition-colors">
-                      <td className="py-4 px-4 text-center text-gray-400 dark:text-stone-500 font-normal">
-                        {String(index + 1).padStart(2, '0')}
-                      </td>
-                      <td className="py-4 px-4 font-bold text-gray-800 dark:text-stone-100 max-w-xs truncate">
-                        {item.researchTitle}
-                      </td>
-                      <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                        {item.groupName}
-                      </td>
+                  finalFiltered.map((item, index) => {
+                    const verifiedDocsCount = Object.keys(item.documentApprovals || {}).filter(k => item.documentApprovals[k] === true).length;
+                    const isAllVerified = verifiedDocsCount >= item.requiredCount && item.requiredCount > 0;
 
-                      {activeTab === 'approved' ? (
-                        <>
-                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                            {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
-                          </td>
-                          <td className="py-4 px-4">
-                            {item.reviewStatus === 'published' ? (
-                              <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center w-max gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Published
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-stone-800/50 transition-colors">
+                        <td className="py-4 px-4 text-center text-gray-400 dark:text-stone-500 font-normal">
+                          {String(index + 1).padStart(2, '0')}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-gray-800 dark:text-stone-100 max-w-xs truncate">
+                          {item.researchTitle}
+                        </td>
+                        <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
+                          {item.groupName}
+                        </td>
+
+                        {activeTab === 'approved' ? (
+                          <>
+                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
+                              {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
+                            </td>
+                            <td className="py-4 px-4">
+                              {item.reviewStatus === 'published' ? (
+                                <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center w-max gap-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Published
+                                </span>
+                              ) : (
+                                <span className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-100 flex items-center w-max gap-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Waiting for Dean Approval
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        ) : activeTab === 'revisions' ? (
+                          <>
+                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
+                              {item.returnedAt || item.reviewedAt ? new Date(item.returnedAt || item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              {item.reviewStatus === 'dean_revision' ? (
+                                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-300 dark:border-amber-700 inline-flex items-center gap-1">
+                                  <Landmark className="w-3 h-3" /> Dean Directive
+                                </span>
+                              ) : (
+                                <span className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 px-3 py-1 rounded-full text-[10px] font-bold border border-orange-300 dark:border-orange-700 inline-flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" /> Adviser Revision
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        ) : activeTab === 'drafting' ? (
+                          <>
+                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
+                              {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-200 dark:border-blue-800">
+                                {item.uploadedCount}/{item.requiredCount} files ({item.completionPercent}%)
                               </span>
-                            ) : (
-                              <span className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-100 flex items-center w-max gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Waiting for Dean Approval
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      ) : activeTab === 'dean_revision' ? (
-                        <>
-                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
-                            {item.returnedAt ? new Date(item.returnedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
-                          </td>
-                          <td className="py-4 px-4 text-center">
-                            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-300 dark:border-amber-700">
-                              {item.deanFeedback?.category || 'Revision Directive'}
-                            </span>
-                          </td>
-                        </>
-                      ) : activeTab === 'reviewed' ? (
-                        <>
-                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                            {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
-                          </td>
-                          <td className="py-4 px-4 text-center">
-                            {item.reviewStatus === 'reviewed' ? (
-                              <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-100">
-                                Ready to Approve
-                              </span>
-                            ) : Object.keys(item.documentResubmissions || {}).length > 0 ? (
-                              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100">
-                                🔄 Resubmitted
-                              </span>
-                            ) : (
-                              <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold border border-purple-100">
-                                Revision Requested
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                            {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
-                          </td>
-                          <td className="py-4 px-4 text-center">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                              item.completionPercent === 100 
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : item.completionPercent >= 50
-                                ? 'bg-orange-100 text-orange-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {item.completionPercent}%
-                            </span>
-                          </td>
-                        </>
-                      )}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2 flex-wrap">
-                          <PremiumButton 
-                            onClick={() => handleFullReview(item)}
-                            variant="ghost"
-                            size="sm"
-                          >
-                            View
-                          </PremiumButton>
-                          {activeTab === 'dean_revision' && (
-                            <>
-                              <PremiumButton 
-                                onClick={() => handleReject(item)}
-                                variant="outline"
-                                size="sm"
-                                className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
-                                title="Forward feedback to student group to revise"
-                              >
-                                Forward to Student
-                              </PremiumButton>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
+                              {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              {isAllVerified ? (
+                                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1 w-max mx-auto">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Verified & Ready
+                                </span>
+                              ) : (
+                                <span className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-200 dark:border-amber-800 flex items-center justify-center gap-1 w-max mx-auto">
+                                  <ShieldCheck className="w-3 h-3 text-amber-600" /> {verifiedDocsCount}/${item.requiredCount} Verified
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        )}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <PremiumButton 
+                              onClick={() => handleFullReview(item)}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              Review
+                            </PremiumButton>
+                            {activeTab === 'needs_review' && (
                               <PremiumButton 
                                 onClick={() => handleApprove(item)}
                                 variant="primary"
                                 size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-xs"
-                                title="Re-approve manuscript and return to Dean for publishing"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1.5"
+                                title="Endorse this verified submission for Dean publishing"
                               >
-                                Re-Approve to Dean
+                                <Check className="w-3.5 h-3.5" />
+                                Endorse for Dean
                               </PremiumButton>
-                            </>
-                          )}
-                          {(activeTab === 'pending' || activeTab === 'reviewed') && item.completionPercent === 100 && item.reviewStatus !== 'approved' && item.reviewStatus !== 'published' && (
-                            <PremiumButton 
-                              onClick={() => handleApprove(item)}
-                              variant="primary"
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700"
-                            >
-                              Approve
-                            </PremiumButton>
-                          )}
-                          {activeTab === 'approved' && (
-                            <PremiumButton 
-                              onClick={() => setCertModalItem(item)}
-                              variant="primary"
-                              size="sm"
-                              className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold flex items-center gap-1"
-                            >
-                              <span>📜</span>
-                              <span>Certificate</span>
-                            </PremiumButton>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            )}
+                            {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (
+                              <>
+                                <PremiumButton 
+                                  onClick={() => handleReject(item)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                                  title="Forward Dean feedback to student group to revise"
+                                >
+                                  Forward to Student
+                                </PremiumButton>
+                                <PremiumButton 
+                                  onClick={() => handleApprove(item)}
+                                  variant="primary"
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1.5"
+                                  title="Re-approve manuscript and return to Dean for publishing"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  Re-Approve to Dean
+                                </PremiumButton>
+                              </>
+                            )}
+                            {activeTab === 'drafting' && (
+                              <PremiumButton 
+                                onClick={() => {
+                                  setSelectedSubmission(item);
+                                  setShowMsgModal(true);
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-xs flex items-center gap-1.5"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                Message
+                              </PremiumButton>
+                            )}
+                            {activeTab === 'approved' && (
+                              <PremiumButton 
+                                onClick={() => setCertModalItem(item)}
+                                variant="primary"
+                                size="sm"
+                                className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold flex items-center gap-1.5"
+                              >
+                                <Award className="w-4 h-4" />
+                                <span>Certificate</span>
+                              </PremiumButton>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -990,9 +1270,9 @@ function ReviewSubmissions() {
             <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
               <p className="text-white/70 dark:text-stone-400 text-xs tracking-widest uppercase font-bold mb-1">Full Review</p>
               <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
@@ -1010,7 +1290,7 @@ function ReviewSubmissions() {
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wider">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-                      <span>🏛️ Dean's Revision Directive — {selectedSubmission.deanFeedback?.category || 'Feedback'}</span>
+                      <span className="flex items-center gap-1.5"><Landmark className="w-4 h-4 text-amber-700" /> Dean's Revision Directive — {selectedSubmission.deanFeedback?.category || 'Feedback'}</span>
                     </div>
                     {selectedSubmission.deanFeedback?.urgency === 'urgent' && (
                       <span className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-bold uppercase tracking-wider">
@@ -1064,7 +1344,7 @@ function ReviewSubmissions() {
               <div className="bg-gradient-to-br from-[#7a2e46]/5 to-[#f8d070]/10 dark:from-stone-900 dark:to-stone-800 rounded-xl p-5 border border-[#7a2e46]/10 dark:border-stone-700 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-gray-900 dark:text-stone-100 flex items-center gap-2 text-sm">
-                    <span className="text-lg">✨</span> Adviser AI Auto-Summarizer
+                    <Sparkles className="w-4 h-4 text-amber-500 inline mr-1" /> Adviser AI Auto-Summarizer
                   </h4>
                   {!selectedSubmission.aiSummary && (
                     <PremiumButton 
@@ -1111,43 +1391,102 @@ function ReviewSubmissions() {
               <div>
                 <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
                 <div className="flex flex-wrap gap-2">
-                  <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
-                    👤 {selectedSubmission.leaderName} (Leader)
+                  <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                    <User className="w-3 h-3" /> {selectedSubmission.leaderName} (Leader)
                   </span>
-                  {selectedSubmission.members?.map((m, i) => (
-                    <span key={i} className="bg-gray-100 dark:bg-stone-800 text-gray-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full">
-                      {m.name || m.email}
-                    </span>
-                  ))}
+                  {selectedSubmission.members?.map((m, i) => {
+                    const memberName = typeof m === 'object'
+                      ? (m.name || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || `Member ${i + 2}`)
+                      : (typeof m === 'string' && m.includes('@') ? m.split('@')[0] : (m || `Member ${i + 2}`));
+                    return (
+                      <span key={i} className="bg-gray-100 dark:bg-stone-800 text-gray-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 dark:border-stone-700 inline-flex items-center gap-1">
+                        <User className="w-3 h-3" /> {memberName}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Documents Checklist */}
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
+              {/* Documents Checklist with Linear Approval Gating Banner */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm">Submitted Documents</h4>
+                  <span className="text-xs text-gray-500 dark:text-stone-400">
+                    {selectedSubmission.uploadedCount} of {selectedSubmission.requiredCount} Files Submitted
+                  </span>
+                </div>
+
+                {/* Linear Verification Checklist Summary Banner */}
+                {(() => {
+                  const readiness = validateSubmissionReadiness(selectedSubmission, requirements);
+                  return (
+                    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                      readiness.isReady
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+                    }`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {readiness.isReady ? <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" /> : <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />}
+                          <h5 className={`font-bold text-xs uppercase tracking-wider ${readiness.isReady ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                            Linear Approval Gating: {readiness.approvedCount} of {readiness.totalRequired} Verified
+                          </h5>
+                        </div>
+                        <p className={`text-xs mt-1 ${readiness.isReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                          {readiness.isReady 
+                            ? 'All required documents inspected and approved. Ready to endorse for Dean publication.' 
+                            : 'Each required document must be opened, inspected, and approved in the viewer before publication endorsement.'}
+                        </p>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-2">
+                        {readiness.isReady ? (
+                          <span className="bg-emerald-600 text-white font-bold text-[11px] px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Ready to Endorse
+                          </span>
+                        ) : (
+                          <span className="bg-amber-600/10 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold text-[11px] px-3 py-1 rounded-full">
+                            Verification Incomplete
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-3">
                   {requirements.map((req) => {
                     const docMeta = selectedSubmission.documents?.[req.id] || selectedSubmission.documents?.[req.title];
                     const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id) || selectedSubmission.uploadedDocs?.includes(req.title) || !!docMeta;
+                    const isApproved = selectedSubmission?.documentApprovals?.[req.id] || selectedSubmission?.documentApprovals?.[req.title];
+                    const isResubmitted = selectedSubmission?.documentResubmissions?.[req.id] || selectedSubmission?.documentResubmissions?.[req.title];
+                    const hasRevision = selectedSubmission?.documentRevisions?.[req.id] || selectedSubmission?.documentRevisions?.[req.title];
 
                     return (
                       <div
                         key={req.id}
                         className={`flex items-center justify-between rounded-lg p-3 border transition ${
                           isUploaded
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                            ? isApproved 
+                              ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                              : 'bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800'
+                            : 'bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-800/60'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className="text-xl shrink-0">{req.icon || '📄'}</span>
+                          <div className="w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0 border border-stone-200/50 dark:border-stone-700/50">
+                            <RequirementIcon icon={req.icon} type={req.type} title={req.title} className="w-4 h-4" />
+                          </div>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                            <p className={`text-sm font-bold ${isUploaded ? 'text-gray-900 dark:text-stone-100' : 'text-red-700 dark:text-red-400'}`}>
                               {req.title || req.id}
                             </p>
-                            {isUploaded && docMeta && (
+                            {isUploaded && docMeta ? (
                               <p className="text-xs text-gray-500 dark:text-stone-400 truncate">
                                 {docMeta.name} · {docMeta.size} · {docMeta.date}
+                              </p>
+                            ) : !isUploaded && (
+                              <p className="text-xs text-red-500 dark:text-red-400 italic">
+                                Required file has not been submitted yet
                               </p>
                             )}
                           </div>
@@ -1156,14 +1495,23 @@ function ReviewSubmissions() {
                           {isUploaded ? (
                             <>
                               <div className="flex flex-col items-end mr-2">
-                                <span className="text-green-700 dark:text-green-500 font-bold text-xs mb-1">✓ Submitted</span>
-                                {selectedSubmission?.documentApprovals?.[req.id] || selectedSubmission?.documentApprovals?.[req.title] ? (
-                                  <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Checked</span>
-                                ) : selectedSubmission?.documentResubmissions?.[req.id] || selectedSubmission?.documentResubmissions?.[req.title] ? (
-                                  <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🔄 Resubmitted</span>
-                                ) : selectedSubmission?.documentRevisions?.[req.id] || selectedSubmission?.documentRevisions?.[req.title] ? (
-                                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Revision</span>
-                                ) : null}
+                                {isApproved ? (
+                                  <span className="text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200 dark:border-emerald-700">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified & Checked
+                                  </span>
+                                ) : isResubmitted ? (
+                                  <span className="text-[11px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-blue-200 dark:border-blue-700">
+                                    <RefreshCw className="w-3 h-3" /> Resubmitted
+                                  </span>
+                                ) : hasRevision ? (
+                                  <span className="text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-200 dark:border-amber-700">
+                                    <AlertCircle className="w-3 h-3" /> Revision Requested
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-bold bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-stone-200 dark:border-stone-700">
+                                    <Clock className="w-3 h-3" /> Needs Check
+                                  </span>
+                                )}
                               </div>
                               {docMeta?.url && docMeta.url !== '#' && (
                                 <button
@@ -1173,14 +1521,16 @@ function ReviewSubmissions() {
                                     title: `${selectedSubmission.groupName} - ${req.title || req.id}`,
                                     reqId: req.id
                                   })}
-                                  className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
+                                  className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
                                 >
-                                  View
+                                  Review Document
                                 </button>
                               )}
                             </>
                           ) : (
-                            <span className="text-red-600 dark:text-red-500 font-bold text-xs">✕ Missing</span>
+                            <span className="text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-950/40 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-800 flex items-center gap-1">
+                              <X className="w-3 h-3" /> Missing
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1207,77 +1557,40 @@ function ReviewSubmissions() {
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => setShowReviewModal(false)}
-                  className="flex-1 sm:flex-initial border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition text-center"
+                  className="flex-1 sm:flex-initial border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition text-center cursor-pointer"
                 >
                   Close
                 </button>
                 <button
                   onClick={() => setShowMsgModal(true)}
-                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <MessageSquare className="w-4 h-4" />
                   Message Student
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                {(selectedSubmission.reviewStatus === 'pending' || selectedSubmission.reviewStatus === 'in_progress') && (
-                  <>
-                    <button
-                      onClick={async () => {
-                        setShowReviewModal(false);
-                        try {
-                          await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
-                            reviewStatus: 'reviewed',
-                            reviewedAt: new Date().toISOString(),
-                            reviewedBy: auth.currentUser?.email
-                          });
-                          Swal.fire({ toast: true, position: 'bottom-end', icon: 'success', title: 'Marked as Reviewed', showConfirmButton: false, timer: 3000 });
-                        } catch (e) {
-                          console.error(e);
-                        }
-                      }}
-                      className="flex-1 sm:flex-initial bg-[#ca8a04] hover:bg-[#a16207] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center"
-                      title="Move this submission to the Reviewed tab without requesting revisions"
-                    >
-                      Mark Reviewed
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (selectedSubmission.completionPercent < 100) {
-                          Swal.fire('Incomplete', 'Student must upload all requirements before approval.', 'warning');
-                          return;
-                        }
-                        setShowReviewModal(false);
-                        handleApprove(selectedSubmission);
-                      }}
-                      className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center ${selectedSubmission.completionPercent === 100 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-300 dark:bg-stone-800 text-gray-500 dark:text-stone-500 cursor-not-allowed'}`}
-                      title={selectedSubmission.completionPercent < 100 ? 'Student must submit all documents first' : ''}
-                    >
-                      Approve
-                    </button>
-                  </>
-                )}
-                {selectedSubmission.reviewStatus === 'dean_revision' && (
+                {selectedSubmission.reviewStatus !== 'approved' && selectedSubmission.reviewStatus !== 'published' && (
                   <>
                     <button
                       onClick={() => {
                         setShowReviewModal(false);
                         handleReject(selectedSubmission);
                       }}
-                      className="flex-1 sm:flex-initial bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
+                      className="flex-1 sm:flex-initial bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center cursor-pointer shadow-sm"
+                      title="Request revisions on this manuscript"
                     >
-                      <span>Forward to Student</span>
+                      Request Revisions
                     </button>
                     <button
                       onClick={() => {
                         setShowReviewModal(false);
                         handleApprove(selectedSubmission);
                       }}
-                      className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
+                      className="flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
                     >
-                      <span>Re-Approve to Dean</span>
+                      <Check className="w-4 h-4" />
+                      <span>Endorse for Dean Publication</span>
                     </button>
                   </>
                 )}
@@ -1287,9 +1600,9 @@ function ReviewSubmissions() {
                       setShowReviewModal(false);
                       setCertModalItem(selectedSubmission);
                     }}
-                    className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                    className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    <span>📜</span>
+                    <Award className="w-4 h-4" />
                     <span>Archival Certificate</span>
                   </button>
                 )}
@@ -1298,7 +1611,7 @@ function ReviewSubmissions() {
                     setShowReviewModal(false);
                     handleDeleteSubmission(selectedSubmission);
                   }}
-                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50 text-center"
+                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50 text-center cursor-pointer"
                 >
                   Delete
                 </button>
@@ -1309,145 +1622,230 @@ function ReviewSubmissions() {
       )}
       
       {/* Document Viewer Modal */}
-      <DocumentViewerModal
-        isOpen={viewerState.isOpen}
-        onClose={() => setViewerState({ ...viewerState, isOpen: false, reqId: null })}
-        documentUrl={viewerState.url}
-        documentTitle={viewerState.title}
-        role="adviser"
-        initialNote={selectedSubmission?.documentRevisions?.[viewerState.reqId] || ''}
-        initialAnnotations={selectedSubmission?.documentAnnotations?.[viewerState.reqId] || {}}
-        onSaveAnnotations={async (annotations) => {
-          if (!selectedSubmission || !viewerState.reqId) return;
-          try {
-            const currentAnnotations = selectedSubmission.documentAnnotations || {};
-            await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
-              documentAnnotations: {
-                ...currentAnnotations,
-                [viewerState.reqId]: annotations
-              }
-            });
-            Swal.fire({ toast: true, position: 'bottom-end', icon: 'success', title: 'Annotations Saved', showConfirmButton: false, timer: 2000 });
-          } catch (e) {
-            console.error(e);
-            Swal.fire('Error', 'Failed to save annotations.', 'error');
+      {(() => {
+        const getSubmissionDocKey = (submission, reqId, title) => {
+          if (!submission) return reqId;
+          const cleanTitle = title?.split(' - ')[1]?.trim() || title?.trim();
+          const candidates = [reqId, cleanTitle, title?.trim()].filter(Boolean);
+          for (const c of candidates) {
+            if (submission.documentResubmissions && submission.documentResubmissions[c] !== undefined) return c;
+            if (submission.documentRevisions && submission.documentRevisions[c] !== undefined) return c;
+            if (submission.documentAnnotations && submission.documentAnnotations[c] !== undefined) return c;
+            if (submission.documents && submission.documents[c] !== undefined) return c;
           }
-        }}
-        onSaveNote={async (note, actionType) => {
-          if (!selectedSubmission || !viewerState.reqId) return;
-          try {
-            const currentRevisions = selectedSubmission.documentRevisions || {};
-            const newRevisions = { ...currentRevisions };
+          if (cleanTitle?.toLowerCase().includes('manuscript') || reqId?.toLowerCase().includes('manuscript')) {
+            const msKey = Object.keys(submission.documentResubmissions || {}).find(k => k.toLowerCase().includes('manuscript')) ||
+                          Object.keys(submission.documentRevisions || {}).find(k => k.toLowerCase().includes('manuscript')) ||
+                          Object.keys(submission.documents || {}).find(k => k.toLowerCase().includes('manuscript'));
+            if (msKey) return msKey;
+          }
+          return reqId || candidates[0];
+        };
 
-            if (actionType === 'revision') {
-              newRevisions[viewerState.reqId] = note;
-            } else {
-              delete newRevisions[viewerState.reqId];
-            }
+        const activeReqKey = getSubmissionDocKey(selectedSubmission, viewerState.reqId, viewerState.title);
+        const isDocumentResubmitted = Boolean(
+          activeReqKey && (
+            selectedSubmission?.documentResubmissions?.[activeReqKey] ||
+            selectedSubmission?.documentResubmissions?.[viewerState.reqId] ||
+            selectedSubmission?.documentResubmissions?.[viewerState.title] ||
+            (viewerState.title?.toLowerCase().includes('manuscript') && selectedSubmission?.documentResubmissions?.['Final Manuscript'])
+          )
+        );
 
-            const currentApprovals = selectedSubmission.documentApprovals || {};
-            const newApprovals = { ...currentApprovals };
+        let docPreviousNote = '';
+        let docPreviousAnnotations = {};
+        let currentActiveNote = '';
+        let currentActiveAnnotations = {};
 
-            if (actionType === 'approved') {
-              newApprovals[viewerState.reqId] = true;
-            } else {
-              delete newApprovals[viewerState.reqId];
-            }
-            
-            const currentResubmissions = selectedSubmission.documentResubmissions || {};
-            const newResubmissions = { ...currentResubmissions };
-            delete newResubmissions[viewerState.reqId];
-            
-            const uploadedCount = selectedSubmission.uploadedDocs?.length || 0;
-            const approvedCount = Object.keys(newApprovals).length;
-            const isAllApproved = uploadedCount > 0 && approvedCount >= uploadedCount;
+        if (isDocumentResubmitted) {
+          if (selectedSubmission?.previousRevisions?.[activeReqKey]) {
+            docPreviousNote = selectedSubmission.previousRevisions[activeReqKey];
+            currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || '';
+          } else {
+            docPreviousNote = selectedSubmission?.documentRevisions?.[activeReqKey] || selectedSubmission?.documentRevisions?.[viewerState.reqId] || '';
+            currentActiveNote = '';
+          }
 
-            let newStatus = selectedSubmission.reviewStatus;
-            let statusChangedMsg = '';
-            
-            if (actionType === 'revision') {
-              newStatus = 'revision';
-            } else if (isAllApproved && newStatus !== 'revision') {
-              newStatus = 'reviewed';
-              statusChangedMsg = ' All documents checked, submission moved to Reviewed tab.';
-            }
+          if (selectedSubmission?.previousAnnotations?.[activeReqKey]) {
+            docPreviousAnnotations = selectedSubmission.previousAnnotations[activeReqKey];
+            currentActiveAnnotations = selectedSubmission?.documentAnnotations?.[activeReqKey] || {};
+          } else {
+            docPreviousAnnotations = selectedSubmission?.documentAnnotations?.[activeReqKey] || selectedSubmission?.documentAnnotations?.[viewerState.reqId] || {};
+            currentActiveAnnotations = {};
+          }
+        } else {
+          currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || selectedSubmission?.documentRevisions?.[viewerState.reqId] || '';
+          currentActiveAnnotations = selectedSubmission?.documentAnnotations?.[activeReqKey] || selectedSubmission?.documentAnnotations?.[viewerState.reqId] || {};
+        }
 
-            await updateDoc(doc(db, 'submissions', selectedSubmission.id), {
-              documentRevisions: newRevisions,
-              documentApprovals: newApprovals,
-              documentResubmissions: newResubmissions,
-              reviewStatus: newStatus,
-              reviewedAt: new Date().toISOString(),
-              reviewedBy: auth.currentUser?.email
-            });
-            
-            // Add notification if it is a revision
-            if (actionType === 'revision' && selectedSubmission.studentUid) {
-              await addDoc(collection(db, 'notifications'), {
-                userId: selectedSubmission.studentUid,
-                title: "Revision Required",
-                message: `Your Research Adviser has requested revisions on the document: ${viewerState.title.split(' - ')[1] || 'a document'}. Please check the feedback.`,
-                isRead: false,
-                link: '/student/requirements',
-                createdAt: serverTimestamp()
-              });
-              
-              if (selectedSubmission.leaderEmail) {
-                try {
-                  const commentsMsg = `Revision notes added for document: ${viewerState.title.split(' - ')[1] || 'a document'}.\n\nNote: ${note}`;
-                  await addDoc(collection(db, 'mail'), {
-                    to: selectedSubmission.leaderEmail,
-                    message: {
-                      subject: `Revision required for your submission: ${selectedSubmission.researchTitle}`,
-                      html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                          <div style="background-color: #541b2f; padding: 20px; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                            <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
-                          </div>
-                          <div style="padding: 30px; background-color: #ffffff;">
-                            <h2 style="color: #2d3748; margin-top: 0;">Hi ${selectedSubmission.leaderName},</h2>
-                            <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${selectedSubmission.researchTitle}"</strong> has been updated to: <span style="background-color: #FEEBC8; color: #975A16; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">revision required</span></p>
-                            
-                            <div style="background-color: #f7fafc; border-left: 4px solid #D69E2E; padding: 15px; margin: 20px 0;">
-                              <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
-                              <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${commentsMsg}</p>
-                            </div>
-                            
-                            <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
-                              Best regards,<br>
-                              <strong>ARCHIVIO System</strong>
-                            </p>
-                          </div>
-                        </div>
-                      `
-                    }
-                  });
-                } catch (e) {
-                  console.error('Failed to send status email', e);
+        const docStudentReply = selectedSubmission?.documentRevisionReplies?.[activeReqKey] || 
+                                selectedSubmission?.documentRevisionReplies?.[viewerState.reqId] || 
+                                selectedSubmission?.documentRevisionReplies?.[viewerState.title] || '';
+
+        return (
+          <DocumentViewerModal
+            isOpen={viewerState.isOpen}
+            onClose={() => setViewerState({ ...viewerState, isOpen: false, reqId: null })}
+            documentUrl={viewerState.url}
+            documentTitle={viewerState.title}
+            role="adviser"
+            isResubmitted={isDocumentResubmitted}
+            previousNote={docPreviousNote}
+            previousAnnotations={docPreviousAnnotations}
+            initialNote={currentActiveNote}
+            initialAnnotations={currentActiveAnnotations}
+            studentReply={docStudentReply}
+            onSaveAnnotations={async (annotations) => {
+              if (!selectedSubmission || !viewerState.reqId) return;
+              try {
+                const reqKey = activeReqKey || viewerState.reqId;
+                const updatePayload = {
+                  [`documentAnnotations.${reqKey}`]: annotations
+                };
+                if (isDocumentResubmitted && docPreviousAnnotations && Object.keys(docPreviousAnnotations).length > 0) {
+                  updatePayload[`previousAnnotations.${reqKey}`] = docPreviousAnnotations;
                 }
+                await updateDoc(doc(db, 'submissions', selectedSubmission.id), updatePayload);
+                Swal.fire({ toast: true, position: 'bottom-end', icon: 'success', title: 'Annotations Saved', showConfirmButton: false, timer: 2000 });
+              } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'Failed to save annotations.', 'error');
               }
-            }
+            }}
+            onSaveNote={async (note, actionType) => {
+              if (!selectedSubmission || !viewerState.reqId) return;
+              try {
+                const reqKey = activeReqKey || viewerState.reqId;
+                const currentRevisions = selectedSubmission.documentRevisions || {};
+                const newRevisions = { ...currentRevisions };
 
-            // Update local state to reflect change immediately
-            selectedSubmission.documentRevisions = newRevisions;
-            selectedSubmission.documentApprovals = newApprovals;
-            selectedSubmission.reviewStatus = newStatus;
-            
-            Swal.fire({
-              toast: true,
-              position: 'bottom-end',
-              icon: 'success',
-              title: actionType === 'revision' ? 'Revision note saved & notified' : 'Document marked as checked.' + statusChangedMsg,
-              showConfirmButton: false,
-              timer: 4000
-            });
-          } catch (error) {
-            console.error("Error saving document review state:", error);
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save review action.' });
-          }
-        }}
-      />
+                const currentPrevRevisions = selectedSubmission.previousRevisions || {};
+                const newPrevRevisions = { ...currentPrevRevisions };
+                if (isDocumentResubmitted && (docPreviousNote || currentRevisions[reqKey])) {
+                  newPrevRevisions[reqKey] = docPreviousNote || currentRevisions[reqKey];
+                }
+
+                if (actionType === 'revision') {
+                  newRevisions[reqKey] = note;
+                } else {
+                  delete newRevisions[reqKey];
+                }
+
+                const currentApprovals = selectedSubmission.documentApprovals || {};
+                const newApprovals = { ...currentApprovals };
+
+                if (actionType === 'approved') {
+                  newApprovals[reqKey] = true;
+                } else {
+                  delete newApprovals[reqKey];
+                }
+                
+                const currentResubmissions = selectedSubmission.documentResubmissions || {};
+                const newResubmissions = { ...currentResubmissions };
+                delete newResubmissions[reqKey];
+                
+                const uploadedCount = selectedSubmission.uploadedDocs?.length || 0;
+                const approvedCount = Object.keys(newApprovals).length;
+                const isAllApproved = uploadedCount > 0 && approvedCount >= uploadedCount;
+
+                let newStatus = selectedSubmission.reviewStatus;
+                let statusChangedMsg = '';
+                
+                if (actionType === 'revision') {
+                  newStatus = 'revision';
+                } else if (isAllApproved && newStatus !== 'revision') {
+                  newStatus = 'reviewed';
+                  statusChangedMsg = ' All documents checked, submission moved to Reviewed tab.';
+                }
+
+                const submissionUpdate = {
+                  documentRevisions: newRevisions,
+                  previousRevisions: newPrevRevisions,
+                  documentApprovals: newApprovals,
+                  documentResubmissions: newResubmissions,
+                  reviewStatus: newStatus,
+                  reviewedAt: new Date().toISOString(),
+                  reviewedBy: auth.currentUser?.email
+                };
+
+                if (isDocumentResubmitted && docPreviousAnnotations && Object.keys(docPreviousAnnotations).length > 0) {
+                  submissionUpdate[`previousAnnotations.${reqKey}`] = docPreviousAnnotations;
+                  submissionUpdate[`documentAnnotations.${reqKey}`] = {};
+                }
+
+                await updateDoc(doc(db, 'submissions', selectedSubmission.id), submissionUpdate);
+                
+                // Add notification if it is a revision
+                if (actionType === 'revision' && selectedSubmission.studentUid) {
+                  await addDoc(collection(db, 'notifications'), {
+                    userId: selectedSubmission.studentUid,
+                    title: "Revision Required",
+                    message: `Your Research Adviser has requested revisions on the document: ${viewerState.title.split(' - ')[1] || 'a document'}. Please check the feedback.`,
+                    isRead: false,
+                    link: '/student/requirements',
+                    createdAt: serverTimestamp()
+                  });
+                  
+                  if (selectedSubmission.leaderEmail) {
+                    try {
+                      const commentsMsg = `Revision notes added for document: ${viewerState.title.split(' - ')[1] || 'a document'}.\n\nNote: ${note}`;
+                      await addDoc(collection(db, 'mail'), {
+                        to: selectedSubmission.leaderEmail,
+                        message: {
+                          subject: `Revision required for your submission: ${selectedSubmission.researchTitle}`,
+                          html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                              <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                                <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                                <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                              </div>
+                              <div style="padding: 30px; background-color: #ffffff;">
+                                <h2 style="color: #2d3748; margin-top: 0;">Hi ${selectedSubmission.leaderName},</h2>
+                                <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${selectedSubmission.researchTitle}"</strong> has been updated to: <span style="background-color: #FEEBC8; color: #975A16; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">revision required</span></p>
+                                
+                                <div style="background-color: #f7fafc; border-left: 4px solid #D69E2E; padding: 15px; margin: 20px 0;">
+                                  <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                                  <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${commentsMsg}</p>
+                                </div>
+                                
+                                <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                                  Best regards,<br>
+                                  <strong>ARCHIVIO System</strong>
+                                </p>
+                              </div>
+                            </div>
+                          `
+                        }
+                      });
+                    } catch (e) {
+                      console.error('Failed to send status email', e);
+                    }
+                  }
+                }
+
+                // Update local state to reflect change immediately
+                selectedSubmission.documentRevisions = newRevisions;
+                selectedSubmission.previousRevisions = newPrevRevisions;
+                selectedSubmission.documentApprovals = newApprovals;
+                selectedSubmission.documentResubmissions = newResubmissions;
+                selectedSubmission.reviewStatus = newStatus;
+                
+                Swal.fire({
+                  toast: true,
+                  position: 'bottom-end',
+                  icon: 'success',
+                  title: actionType === 'revision' ? 'Revision note saved & notified' : 'Document marked as checked.' + statusChangedMsg,
+                  showConfirmButton: false,
+                  timer: 4000
+                });
+              } catch (error) {
+                console.error("Error saving document review state:", error);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save review action.' });
+              }
+            }}
+          />
+        );
+      })()}
 
       {/* ── MESSAGE STUDENT MODAL ─────────────────────────────────────────────── */}
       {showMsgModal && selectedSubmission && (

@@ -67,6 +67,8 @@ function App() {
                     <Route path="reports" element={<Reports />} />
                     <Route path="user-management" element={<UserManagement />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
+                    <Route path="my-profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
                     <Route path="/" element={<Navigate to="/dean/dashboard" replace />} />
                   </Routes>
                   </Suspense>

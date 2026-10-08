@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, PieChart, Pie, Cell } from 'recharts';
 import { Building2, GraduationCap, Users, UserPlus, BookOpen, TrendingUp } from 'lucide-react';
 import { Card, CardBody, StatCard, SectionTitle } from '../../components/ui/Card';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import AdminQuickActions from '../components/dashboard/AdminQuickActions';
+import StatusBadge from '../components/common/StatusBadge';
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, doc } from 'firebase/firestore';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
+
   const [groups, setGroups] = useState([]);
   const [deans, setDeans] = useState([]);
   const [advisers, setAdvisers] = useState([]);
@@ -22,12 +27,15 @@ function Dashboard() {
   const [programs, setPrograms] = useState([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
+  const [storageQuotaGB, setStorageQuotaGB] = useState(25);
+  const [storageStats, setStorageStats] = useState(null);
+  const [dashboardSearch, setDashboardSearch] = useState('');
 
-  const { selectedYear, filterByAcademicYear } = useAcademicYear();
+  const { selectedYear, filterByAcademicYear, availableYears } = useAcademicYear();
 
   useEffect(() => {
     let loadedCount = 0;
-    const totalSnapshots = 8;
+    const totalSnapshots = 10;
     const markLoaded = () => { loadedCount++; if (loadedCount >= totalSnapshots) setLoading(false); };
     const safetyTimer = setTimeout(() => setLoading(false), 2500);
 
@@ -50,9 +58,30 @@ function Dashboard() {
     const unsubDepts = safeSnap(collection(db, 'departments'), setDepartments);
     const unsubProgs = safeSnap(collection(db, 'programs'), setPrograms);
 
+    const unsubQuota = onSnapshot(doc(db, 'settings', 'storage_quota'), snap => {
+      if (snap.exists() && snap.data()?.quotaGB) {
+        setStorageQuotaGB(Number(snap.data().quotaGB));
+      }
+      markLoaded();
+    }, err => {
+      console.warn('Dashboard quota notice:', err.message);
+      markLoaded();
+    });
+
+    const unsubStats = onSnapshot(doc(db, 'settings', 'storage_stats'), snap => {
+      if (snap.exists()) {
+        setStorageStats(snap.data());
+      }
+      markLoaded();
+    }, err => {
+      console.warn('Dashboard storage stats notice:', err.message);
+      markLoaded();
+    });
+
     return () => {
       clearTimeout(safetyTimer);
       unsubSub(); unsubGroup(); unsubDeans(); unsubAdvisers(); unsubStudents(); unsubLogs(); unsubDepts(); unsubProgs();
+      unsubQuota(); unsubStats();
     };
   }, []);
 
@@ -110,6 +139,12 @@ function Dashboard() {
 
     return Object.values(deptsMap).sort((a,b) => b.uploaded - a.uploaded);
   }, [filteredSubmissions, filteredGroups, filteredDeans, filteredAdvisers, filteredStudents, departments, programs]);
+
+  const displayedDeptStats = useMemo(() => {
+    if (!dashboardSearch?.trim()) return deptStats;
+    const term = dashboardSearch.toLowerCase().trim();
+    return deptStats.filter(d => (d.name || '').toLowerCase().includes(term));
+  }, [deptStats, dashboardSearch]);
 
   const categories = useMemo(() => {
     // Initialize dynamically with active departments
@@ -187,37 +222,62 @@ function Dashboard() {
   }, [filteredSubmissions, filteredDeans, filteredAdvisers, filteredStudents]);
 
   const yearlyChartData = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
-    const baseYear = currentMonth < 7 ? currentYear - 1 : currentYear;
-    
-    const syLabels = [];
-    for (let i = 4; i >= 0; i--) {
-      syLabels.push({
-        full: `${baseYear - i}-${baseYear - i + 1}`,
-        short: `SY ${String(baseYear - i).slice(2)}-${String(baseYear - i + 1).slice(2)}`,
-        isCurrent: i === 0
-      });
-    }
+    // Generate labels strictly from existing academic years that actually exist in real data
+    const activeYears = (availableYears && availableYears.length > 0)
+      ? [...availableYears].reverse()
+      : ['SY 2026-2027'];
+
+    const syLabels = activeYears.map(syStr => {
+      const match = syStr.match(/(\d{4})\s*[-–/]\s*(\d{4})/);
+      const startYear = match ? parseInt(match[1]) : 2026;
+      const endYear = match ? parseInt(match[2]) : 2027;
+      const full = `${startYear}-${endYear}`;
+      const short = `SY ${String(startYear).slice(2)}-${String(endYear).slice(2)}`;
+      return {
+        full,
+        syStr,
+        short,
+        isCurrent: syStr === (availableYears?.[0] || 'SY 2026-2027')
+      };
+    });
 
     const counts = {};
     const publishedCounts = {};
     const approvedCounts = {};
-    syLabels.forEach(sy => { counts[sy.full] = 0; publishedCounts[sy.full] = 0; approvedCounts[sy.full] = 0; });
-    
-    filteredSubmissions.forEach(s => {
-      const sy = s.schoolYear || syLabels[4].full;
-      if(counts[sy] !== undefined) {
-        counts[sy]++;
+    syLabels.forEach(sy => {
+      counts[sy.full] = 0;
+      publishedCounts[sy.full] = 0;
+      approvedCounts[sy.full] = 0;
+    });
+
+    submissions.forEach(s => {
+      let matchedFull = null;
+      const rawSY = s.schoolYear || s.academicYear;
+      if (rawSY && typeof rawSY === 'string') {
+        const m = rawSY.match(/(\d{4})\s*[-–/]\s*(\d{4})/);
+        if (m) matchedFull = `${m[1]}-${m[2]}`;
+      }
+      if (!matchedFull && s.createdAt) {
+        const d = s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+        if (!isNaN(d.getTime())) {
+          const y = d.getFullYear();
+          const m = d.getMonth();
+          const startYear = m >= 7 ? y : y - 1;
+          matchedFull = `${startYear}-${startYear + 1}`;
+        }
+      }
+
+      if (matchedFull && counts[matchedFull] !== undefined) {
+        counts[matchedFull]++;
         if (s.reviewStatus === 'endorsed' || s.adviserStatus === 'approved' || s.reviewStatus === 'published') {
-          approvedCounts[sy]++;
+          approvedCounts[matchedFull]++;
         }
         if (s.reviewStatus === 'published') {
-          publishedCounts[sy]++;
+          publishedCounts[matchedFull]++;
         }
       }
     });
-    
+
     return syLabels.map(sy => ({
       name: sy.short,
       uploads: counts[sy.full],
@@ -225,7 +285,147 @@ function Dashboard() {
       published: publishedCounts[sy.full],
       isCurrent: sy.isCurrent
     }));
-  }, [filteredSubmissions]);
+  }, [availableYears, submissions]);
+
+  // Helper to parse file size to MB
+  const parseSizeToMB = (sizeVal) => {
+    if (!sizeVal) return 0;
+    if (typeof sizeVal === 'number') return sizeVal / (1024 * 1024);
+    const str = String(sizeVal).toLowerCase().trim();
+    if (str.includes('gb')) return parseFloat(str) * 1024;
+    if (str.includes('mb')) return parseFloat(str);
+    if (str.includes('kb')) return parseFloat(str) / 1024;
+    if (str.includes('bytes') || /^\d+$/.test(str)) return parseFloat(str) / (1024 * 1024);
+    return 0;
+  };
+
+  // Real Storage Usage & Capacity calculations
+  const storageMetrics = useMemo(() => {
+    let subPublishedPapers = 0;
+    let subSupportingDocs = 0;
+    let subOtherAssets = 0;
+    let subTotalBytes = 0;
+
+    // Evaluate live Firestore submissions
+    (submissions || []).forEach(sub => {
+      const isPublished = sub.reviewStatus === 'published' || 
+                          sub.status === 'published' || 
+                          sub.status === 'Published' || 
+                          sub.published === true;
+      
+      const meta = sub.documents || sub.documentsMeta || {};
+      const entries = Object.entries(meta);
+
+      if (entries.length > 0) {
+        entries.forEach(([key, docItem]) => {
+          if (!docItem || docItem.archived) return;
+          const keyLower = String(key || '').toLowerCase().trim();
+          const nameLower = String(docItem.name || '').toLowerCase().trim();
+          const sizeMB = parseSizeToMB(docItem.size);
+          const bytes = sizeMB > 0 ? sizeMB * 1024 * 1024 : (1024 * 1024 * 1.5); // fallback ~1.5MB
+          subTotalBytes += bytes;
+
+          const isManuscript = keyLower.includes('manuscript') || nameLower.includes('manuscript') || key === 'finalManuscript';
+          if (isManuscript) {
+            if (isPublished) {
+              subPublishedPapers++;
+            } else {
+              subOtherAssets++;
+            }
+          } else {
+            subSupportingDocs++;
+          }
+        });
+      } else {
+        // Fallback if submission has direct fileUrl/pdfUrl or uploadedDocs
+        const hasFile = sub.fileUrl || sub.manuscriptUrl || sub.pdfUrl || (Array.isArray(sub.uploadedDocs) && sub.uploadedDocs.length > 0);
+        if (hasFile) {
+          subTotalBytes += (1024 * 1024 * 2.5); // ~2.5 MB average manuscript
+          if (isPublished) {
+            subPublishedPapers++;
+          } else {
+            subOtherAssets++;
+          }
+        }
+      }
+    });
+
+    const subTotalFiles = subPublishedPapers + subSupportingDocs + subOtherAssets;
+
+    // Use live submissions if they contain files; otherwise fallback to cloud storage telemetry
+    let totalFiles = subTotalFiles;
+    let publishedPapers = subPublishedPapers;
+    let supportingDocs = subSupportingDocs;
+    let otherAssets = subOtherAssets;
+    let totalBytes = subTotalBytes;
+
+    if (totalFiles === 0 && storageStats) {
+      totalFiles = storageStats.totalFiles || 0;
+      publishedPapers = storageStats.publishedPapers || 0;
+      supportingDocs = storageStats.supportingDocs || 0;
+      otherAssets = storageStats.otherAssets || Math.max(0, totalFiles - publishedPapers - supportingDocs);
+      totalBytes = storageStats.totalBytes || ((storageStats.totalMB || 0) * 1024 * 1024);
+    } else if (storageStats && (storageStats.totalBytes || 0) > subTotalBytes && subTotalFiles <= (storageStats.totalFiles || 0)) {
+      // If cloud bucket telemetry has wider physical footprint, merge physical file counts/storage
+      totalFiles = Math.max(subTotalFiles, storageStats.totalFiles || 0);
+      publishedPapers = Math.max(subPublishedPapers, storageStats.publishedPapers || 0);
+      supportingDocs = Math.max(subSupportingDocs, storageStats.supportingDocs || 0);
+      otherAssets = Math.max(0, totalFiles - publishedPapers - supportingDocs);
+      totalBytes = Math.max(subTotalBytes, storageStats.totalBytes || 0);
+    }
+
+    const quotaGB = storageQuotaGB || 25;
+    const quotaBytes = quotaGB * 1024 * 1024 * 1024;
+    const usedGB = totalBytes / (1024 * 1024 * 1024);
+    const usedMB = totalBytes / (1024 * 1024);
+    const rawPercent = quotaBytes > 0 ? (totalBytes / quotaBytes) * 100 : 0;
+
+    let percentDisplay = '0';
+    let freePercentDisplay = '100';
+    let barWidth = 0;
+
+    if (totalFiles > 0) {
+      if (rawPercent < 0.1) {
+        percentDisplay = '< 0.1';
+        freePercentDisplay = '> 99.9';
+        barWidth = 1;
+      } else if (rawPercent < 10) {
+        percentDisplay = rawPercent.toFixed(1);
+        freePercentDisplay = (100 - rawPercent).toFixed(1);
+        barWidth = Math.max(2, rawPercent);
+      } else {
+        const rounded = Math.min(100, Math.round(rawPercent));
+        percentDisplay = String(rounded);
+        freePercentDisplay = String(100 - rounded);
+        barWidth = rounded;
+      }
+    }
+
+    const usedDisplay = usedMB >= 1024 ? `${usedGB.toFixed(2)} GB` : `${usedMB.toFixed(1)} MB`;
+    const freeGB = Math.max(0, quotaGB - usedGB);
+    const freeDisplay = `${freeGB.toFixed(2)} GB`;
+
+    const isCritical = rawPercent >= 85;
+    const isModerate = rawPercent >= 60 && rawPercent < 85;
+
+    return {
+      totalFiles,
+      publishedPapers,
+      supportingDocs,
+      otherAssets,
+      quotaGB,
+      usedGB,
+      usedMB,
+      usedDisplay,
+      freeDisplay,
+      percentDisplay,
+      freePercentDisplay,
+      barWidth,
+      isCritical,
+      isModerate,
+      rawPercent
+    };
+  }, [submissions, storageStats, storageQuotaGB]);
 
   if (loading) {
     return (
@@ -292,6 +492,13 @@ function Dashboard() {
         {/* Dashboard Content Panel */}
         <div className="p-6 space-y-6">
           
+          {/* Admin Operational Command Bar */}
+          <AdminQuickActions 
+            systemHealth="Operational"
+            searchQuery={dashboardSearch}
+            onSearchChange={setDashboardSearch}
+          />
+
           {/* Row 1: Quick Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard icon={<Building2 />} label="Total Departments" value={quickStats[0]} sub="Active" color="maroon" />
@@ -300,6 +507,7 @@ function Dashboard() {
             <StatCard icon={<UserPlus />} label="Pending Invitations" value={quickStats[3]} sub="Needs activation" color="amber" />
             <StatCard icon={<BookOpen />} label="Published Research" value={quickStats[4]} sub="Across all departments" color="maroon" />
           </div>
+
 
           {/* Row 2: Yearly Research Upload Trend */}
           <Card className="mb-6 overflow-hidden border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
@@ -310,7 +518,7 @@ function Dashboard() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Yearly Research Upload Trend</h3>
-                <p className="text-[10px] text-stone-400 mt-0.5">Total submissions recorded per academic school year</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">Total submissions recorded per academic school year</p>
               </div>
             </div>
             <div className="w-full h-64 relative mt-4">
@@ -331,8 +539,8 @@ function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.2)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280', fontWeight: 600 }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} />
                   <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#4b5563', paddingTop: '10px' }} />
                   
@@ -352,7 +560,7 @@ function Dashboard() {
               <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Research Status per Department</h3>
-                <p className="text-[10px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department ({selectedYear})</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">Uploaded vs Approved vs Published per department ({selectedYear})</p>
               </div>
             </div>
             <div className="space-y-6 pb-6 border-b border-stone-100 dark:border-stone-800/50">
@@ -362,9 +570,9 @@ function Dashboard() {
                   <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <span className="text-[11px] font-bold text-stone-800 dark:text-stone-100 w-32 shrink-0">{dept.name}</span>
                     <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2"><div className="bg-[#e2d5de] h-4 rounded-r-md" style={{ width: `${(dept.uploaded/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#801e38]">{dept.uploaded}</span></div>
-                      <div className="flex items-center gap-2"><div className="bg-[#64b494] h-4 rounded-r-md" style={{ width: `${(dept.approved/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#64b494]">{dept.approved}</span></div>
-                      <div className="flex items-center gap-2"><div className="bg-[#9c6e3b] h-4 rounded-r-md" style={{ width: `${(dept.published/maxVal)*100}%` }}></div><span className="text-[10px] font-bold text-[#9c6e3b]">{dept.published}</span></div>
+                      <div className="flex items-center gap-2"><div className="bg-[#e2d5de] h-4 rounded-r-md" style={{ width: `${(dept.uploaded/maxVal)*100}%` }}></div><span className="text-[11px] font-bold text-[#801e38]">{dept.uploaded}</span></div>
+                      <div className="flex items-center gap-2"><div className="bg-[#64b494] h-4 rounded-r-md" style={{ width: `${(dept.approved/maxVal)*100}%` }}></div><span className="text-[11px] font-bold text-[#64b494]">{dept.approved}</span></div>
+                      <div className="flex items-center gap-2"><div className="bg-[#9c6e3b] h-4 rounded-r-md" style={{ width: `${(dept.published/maxVal)*100}%` }}></div><span className="text-[11px] font-bold text-[#9c6e3b]">{dept.published}</span></div>
                     </div>
                   </div>
                 );
@@ -372,20 +580,20 @@ function Dashboard() {
               {deptStats.filter(d => d.pending).map((dept, i) => (
                 <div key={`pend-${i}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <span className="text-[11px] font-bold text-stone-800 dark:text-stone-100 w-32 shrink-0">{dept.name}</span>
-                  <div className="flex-1 flex items-center h-16 bg-[#f5ebd9]/30 border border-dashed border-[#801e38]/30 rounded-xl px-4"><span className="text-[10px] text-[#801e38] font-bold">Pending — Invitation has sent</span></div>
+                  <div className="flex-1 flex items-center h-16 bg-[#f5ebd9]/30 border border-dashed border-[#801e38]/30 rounded-xl px-4"><span className="text-[11px] text-[#801e38] font-bold">Pending — Invitation has sent</span></div>
                 </div>
               ))}
             </div>
             
             {/* X Axis */}
             <div className="flex flex-col gap-2 mt-4">
-              <div className="flex justify-between text-[9px] font-semibold text-stone-400 pl-36 pr-4">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-400 pl-36 pr-4">
                 <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>
               </div>
-              <div className="text-center text-[9px] text-stone-400 font-semibold pl-32">Number of Papers</div>
+              <div className="text-center text-[11px] text-stone-400 font-semibold pl-32">Number of Papers</div>
             </div>
 
-            <div className="flex items-center gap-6 mt-6 justify-start text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            <div className="flex items-center gap-6 mt-6 justify-start text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#e2d5de] rounded-sm"></span><span>Uploaded</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#64b494] rounded-sm"></span><span>Approved</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#9c6e3b] rounded-sm"></span><span>Published</span></div>
@@ -397,28 +605,40 @@ function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <Card className="lg:col-span-2 overflow-x-auto border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
               <CardBody>
-                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Department Statistics</h3><p className="text-[10px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
+                <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Department Statistics</h3><p className="text-[11px] text-stone-400 mt-0.5">Research papers status per department</p></div></div>
                 <div className="overflow-x-auto min-w-[500px]">
                 <table className="w-full text-left text-xs">
-                  <thead><tr className="bg-[#801e38] text-white uppercase text-[9px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
+                  <thead><tr className="bg-[#801e38] text-white uppercase text-[11px] font-bold tracking-wider"><th className="p-3 rounded-l-lg">Department</th><th className="p-3">Advisers</th><th className="p-3">Students</th><th className="p-3">Uploaded</th><th className="p-3">Approved</th><th className="p-3 rounded-r-lg">Published</th></tr></thead>
                   <tbody className="divide-y divide-stone-100">
-                    {deptStats.map((row, i) => (
-                      <tr key={i} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
-                        <td className="p-3.5 font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">{row.name}{row.pending && <span className="bg-[#f4dee5] text-[#801e38] text-[8px] px-2 py-0.5 rounded-full font-bold">Pending</span>}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.advisers || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.students || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.uploaded || '—'}</td>
-                        <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.approved || '—'}</td>
-                        <td className={`p-3.5 font-bold ${row.pending ? 'text-stone-300' : 'text-[#801e38]'}`}>{row.published || '—'}</td>
+                    {displayedDeptStats.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="p-6 text-center text-stone-500 dark:text-stone-400">
+                          No departments matching "{dashboardSearch}". Press <span className="font-semibold text-[#801e38] dark:text-[#ff8ca3]">Search ↵</span> to search all users across the system.
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      displayedDeptStats.map((row, i) => (
+                        <tr key={i} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                          <td className="p-3.5 font-bold text-stone-800 dark:text-stone-100 flex items-center justify-between gap-2">
+                            <span className="truncate">{row.name}</span>
+                            <StatusBadge status={row.pending ? 'pending' : 'active'} size="sm" />
+                          </td>
+                          <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.advisers || '—'}</td>
+
+                          <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.students || '—'}</td>
+                          <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.uploaded || '—'}</td>
+                          <td className={`p-3.5 font-semibold ${row.pending ? 'text-stone-300' : 'text-stone-600 dark:text-stone-300'}`}>{row.approved || '—'}</td>
+                          <td className={`p-3.5 font-bold ${row.pending ? 'text-stone-300' : 'text-[#801e38]'}`}>{row.published || '—'}</td>
+                        </tr>
+                      ))
+                    )}
                     <tr className="bg-stone-50 dark:bg-[#252525] font-bold border-t-2 border-stone-200 dark:border-stone-700">
                       <td className="p-3.5 uppercase tracking-wider text-stone-900 dark:text-stone-50">Total</td>
-                      <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.advisers||0),0)}</td>
-                      <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.students||0),0)}</td>
-                      <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.uploaded||0),0)}</td>
-                      <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.approved||0),0)}</td>
-                      <td className="p-3.5 text-[#801e38]">{deptStats.reduce((a,b)=>a+(b.published||0),0)}</td>
+                      <td className="p-3.5 text-[#801e38]">{displayedDeptStats.reduce((a,b)=>a+(b.advisers||0),0)}</td>
+                      <td className="p-3.5 text-[#801e38]">{displayedDeptStats.reduce((a,b)=>a+(b.students||0),0)}</td>
+                      <td className="p-3.5 text-[#801e38]">{displayedDeptStats.reduce((a,b)=>a+(b.uploaded||0),0)}</td>
+                      <td className="p-3.5 text-[#801e38]">{displayedDeptStats.reduce((a,b)=>a+(b.approved||0),0)}</td>
+                      <td className="p-3.5 text-[#801e38]">{displayedDeptStats.reduce((a,b)=>a+(b.published||0),0)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -427,12 +647,12 @@ function Dashboard() {
             </Card>
             <Card className="border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
                 <CardBody>
-                  <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[10px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
+                  <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Recently Published Papers</h3><p className="text-[11px] text-stone-400 mt-0.5">Distribution of published works</p></div></div>
                   <div className="flex justify-center mb-4">
                   <div className="relative w-full h-[220px]">
                     {categories.length > 0 && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-5px]">
-                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest max-w-[120px] text-center truncate">
+                        <span className="text-[11px] font-bold text-stone-400 uppercase tracking-widest max-w-[120px] text-center truncate">
                           {activeIndex >= 0 ? categories[activeIndex].name : 'Total Papers'}
                         </span>
                         <span className="text-3xl font-serif font-extrabold text-[#7a1f3d] dark:text-[#f8d070] leading-none mt-1">
@@ -470,8 +690,8 @@ function Dashboard() {
                     </ResponsiveContainer>
                   </div>            </div>
               
-              <div className="space-y-2 text-[10px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[9px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 dark:text-stone-50 shrink-0">{cat.count} <span className="text-stone-400 text-[8px] font-normal">{cat.percentage}</span></span></div>))}
+              <div className="space-y-2 text-[11px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {categories.map((cat, i) => (<div key={i} className="flex items-center justify-between font-bold"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300 truncate pr-2"><span className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`}></span><span className="truncate text-[11px]">{cat.fullName || cat.name}</span></div><span className="text-stone-900 dark:text-stone-50 shrink-0">{cat.count} <span className="text-stone-400 text-[11px] font-normal">{cat.percentage}</span></span></div>))}
               </div>
               </CardBody>
             </Card>
@@ -480,9 +700,104 @@ function Dashboard() {
           {/* Row 5: Storage Usage Overview */}
           <Card className="mb-6 border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
             <CardBody>
-              <div className="flex items-center gap-2 mb-6"><div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div><div><h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Storage Usage Overview</h3></div></div>
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div className="flex items-center gap-6 w-full md:w-2/3"><h2 className="text-5xl font-serif font-bold text-[#801e38]">68%</h2><div className="flex-1"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"><span className="text-[#801e38]">68% Used</span><span className="text-emerald-600">32% Free</span></div><div className="w-full bg-stone-100 dark:bg-stone-800 h-4 rounded-full overflow-hidden border border-stone-150"><div className="bg-[#801e38] h-full rounded-full" style={{ width: '68%' }}></div></div></div></div><div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-700 pt-4 md:pt-0 md:pl-6 space-y-2"><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Total Files Uploaded</span><span className="text-stone-900 dark:text-stone-50 font-bold">536 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Published Papers</span><span className="text-stone-900 dark:text-stone-50 font-bold">108 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Supporting Documents</span><span className="text-stone-900 dark:text-stone-50 font-bold">292 files</span></div><div className="flex justify-between font-bold text-stone-600 dark:text-stone-300"><span>Other Assets</span><span className="text-stone-900 dark:text-stone-50 font-bold">136 files</span></div></div></div>
-            <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center gap-2 text-xs font-bold text-[#801e38]"><span>⚠️</span><span>Storage above 60% — consider archiving old records.</span></div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-[3px] h-4 bg-[#801e38] rounded-full"></div>
+                  <div>
+                    <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50 uppercase tracking-wider">Storage Usage Overview</h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/settings')}
+                  className="text-xs font-semibold text-[#801e38] dark:text-rose-400 hover:underline flex items-center gap-1 transition-colors"
+                >
+                  Adjust Quota ({storageMetrics.quotaGB} GB) &rarr;
+                </button>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex items-center gap-6 w-full md:w-2/3">
+                  <div className="shrink-0 min-w-[100px]">
+                    <h2 className={`text-5xl font-serif font-bold ${storageMetrics.isCritical ? 'text-red-600' : storageMetrics.isModerate ? 'text-amber-600' : 'text-[#801e38]'}`}>
+                      {storageMetrics.percentDisplay}%
+                    </h2>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+                      <span className={storageMetrics.isCritical ? 'text-red-600' : storageMetrics.isModerate ? 'text-amber-600' : 'text-[#801e38]'}>
+                        {storageMetrics.percentDisplay}% Used ({storageMetrics.usedDisplay})
+                      </span>
+                      <span className="text-emerald-600">
+                        {storageMetrics.freePercentDisplay}% Free ({storageMetrics.freeDisplay})
+                      </span>
+                    </div>
+                    <div className="w-full bg-stone-100 dark:bg-stone-800 h-4 rounded-full overflow-hidden border border-stone-200 dark:border-stone-700">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                          storageMetrics.isCritical
+                            ? 'bg-red-600'
+                            : storageMetrics.isModerate
+                            ? 'bg-amber-500'
+                            : 'bg-[#801e38]'
+                        }`}
+                        style={{ width: `${storageMetrics.barWidth}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full md:w-1/3 text-xs border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-700 pt-4 md:pt-0 md:pl-6 space-y-2">
+                  <div className="flex justify-between font-bold text-stone-600 dark:text-stone-300">
+                    <span>Total Files Uploaded</span>
+                    <span className="text-stone-900 dark:text-stone-50 font-bold">{storageMetrics.totalFiles} {storageMetrics.totalFiles === 1 ? 'file' : 'files'}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-stone-600 dark:text-stone-300">
+                    <span>Published Papers</span>
+                    <span className="text-stone-900 dark:text-stone-50 font-bold">{storageMetrics.publishedPapers} {storageMetrics.publishedPapers === 1 ? 'file' : 'files'}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-stone-600 dark:text-stone-300">
+                    <span>Supporting Documents</span>
+                    <span className="text-stone-900 dark:text-stone-50 font-bold">{storageMetrics.supportingDocs} {storageMetrics.supportingDocs === 1 ? 'file' : 'files'}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-stone-600 dark:text-stone-300">
+                    <span>Other Assets</span>
+                    <span className="text-stone-900 dark:text-stone-50 font-bold">{storageMetrics.otherAssets} {storageMetrics.otherAssets === 1 ? 'file' : 'files'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              {storageMetrics.isCritical ? (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 rounded-xl px-4 py-3 mt-5 flex items-center justify-between text-xs font-bold text-red-700 dark:text-red-400">
+                  <div className="flex items-center gap-2">
+                    <span>🚨</span>
+                    <span>Critical storage capacity ({storageMetrics.usedDisplay} of {storageMetrics.quotaGB} GB used) — immediate archival recommended.</span>
+                  </div>
+                  <button onClick={() => navigate('/admin/settings')} className="underline hover:text-red-800 shrink-0 ml-2">
+                    Archive Files
+                  </button>
+                </div>
+              ) : storageMetrics.isModerate ? (
+                <div className="bg-[#801e38]/5 border border-[#801e38]/10 rounded-xl px-4 py-3 mt-5 flex items-center justify-between text-xs font-bold text-[#801e38]">
+                  <div className="flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Storage above 60% ({storageMetrics.usedDisplay} of {storageMetrics.quotaGB} GB used) — consider archiving old records.</span>
+                  </div>
+                  <button onClick={() => navigate('/admin/settings')} className="underline hover:text-[#5e1528] shrink-0 ml-2">
+                    Archive Files
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-xl px-4 py-3 mt-5 flex items-center justify-between text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <span>✅</span>
+                    <span>Storage operating within normal limits — {storageMetrics.usedDisplay} of {storageMetrics.quotaGB} GB capacity allocated ({storageMetrics.freeDisplay} available).</span>
+                  </div>
+                  <button onClick={() => navigate('/admin/settings')} className="text-emerald-700 dark:text-emerald-400 font-bold underline hover:text-emerald-900 shrink-0 ml-2">
+                    Storage Settings
+                  </button>
+                </div>
+              )}
             </CardBody>
           </Card>
 

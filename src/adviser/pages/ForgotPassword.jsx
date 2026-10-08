@@ -7,6 +7,7 @@ import loginBg from '../../assets/parchment.png';
 import Swal from 'sweetalert2';
 import ReCaptcha from '../../components/ReCaptcha';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { AlertCircle, Check } from 'lucide-react';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -149,7 +150,7 @@ function ForgotPassword() {
 
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-              <span className="text-red-500 text-sm">⚠️</span>
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <p className="text-xs text-red-700">{error}</p>
             </div>
           )}
@@ -186,8 +187,8 @@ function ForgotPassword() {
             </form>
           ) : (
             <div className="w-full flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl shadow-inner animate-pulse">
-                ✓
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-inner animate-pulse">
+                <Check className="w-8 h-8 stroke-[2.5]" />
               </div>
               
               <div className="space-y-1">

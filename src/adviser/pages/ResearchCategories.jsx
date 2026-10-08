@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import { Card, CardBody, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { Pencil, Trash2, X } from 'lucide-react';
 
 function ResearchCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -215,14 +216,15 @@ function ResearchCategories() {
                       onClick={() => openEditModal(cat)}
                       className="border border-gray-200 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 flex items-center gap-1.5 transition active:scale-95"
                     >
-                      ✏️ Edit
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
                     </button>
                     <button 
                       onClick={() => handleDelete(cat.id, cat.name)}
-                      className="border border-gray-200 dark:border-stone-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition active:scale-95"
+                      className="border border-gray-200 dark:border-stone-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 transition active:scale-95 flex items-center justify-center"
                       title="Delete Category"
                     >
-                      🗑️
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </CardBody>
@@ -250,9 +252,9 @@ function ResearchCategories() {
                 <h2 className="text-lg sm:text-xl font-serif font-bold text-gray-900 dark:text-stone-100">{editingId ? 'Edit Category' : 'New Research Category'}</h2>
                 <button 
                   onClick={resetForm}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-stone-500 hover:text-gray-700 dark:hover:text-stone-200 hover:bg-gray-100 dark:hover:bg-stone-800 text-xl leading-none transition"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-stone-500 hover:text-gray-700 dark:hover:text-stone-200 hover:bg-gray-100 dark:hover:bg-stone-800 transition cursor-pointer"
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 

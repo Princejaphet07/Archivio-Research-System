@@ -3,29 +3,29 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import DepartmentsProgramsTab from './DepartmentsPrograms';
 import { db, auth } from '../firebase/config';
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  onSnapshot, 
-  getDocs, 
-  collection, 
-  deleteDoc, 
-  updateDoc 
+import {
+  doc,
+  setDoc,
+  getDoc,
+  onSnapshot,
+  getDocs,
+  collection,
+  deleteDoc,
+  updateDoc
 } from 'firebase/firestore';
-import { 
-  Building2, 
-  Settings2, 
-  Trash2, 
-  Lock, 
-  KeyRound, 
-  Download, 
-  RotateCcw, 
-  ShieldAlert, 
-  HardDrive, 
-  Flame, 
-  FolderArchive, 
-  Sliders, 
+import {
+  Building2,
+  Settings2,
+  Trash2,
+  Lock,
+  KeyRound,
+  Download,
+  RotateCcw,
+  ShieldAlert,
+  HardDrive,
+  Flame,
+  FolderArchive,
+  Sliders,
   Database,
   Filter,
   CheckCircle2
@@ -35,10 +35,12 @@ import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { authFetch } from '../../utils/authFetch';
+import { useAcademicYear } from '../context/AcademicYearContext';
 
 export default function Settings() {
+  const { availableYears } = useAcademicYear();
   const [activeTab, setActiveTab] = useState('system');
-  
+
   // System Settings State
   const [toggles, setToggles] = useState({
     maintenance: false,
@@ -70,7 +72,7 @@ export default function Settings() {
     try {
       const saved = localStorage.getItem('archivio_admin_archive_checked_v1');
       if (saved) return JSON.parse(saved);
-    } catch (_) {}
+    } catch (_) { }
     return {
       'Dataset Files': true,
       'Video Pitch': true,
@@ -88,7 +90,7 @@ export default function Settings() {
         setToggles(prev => ({ ...prev, ...snap.data() }));
       }
     });
-    
+
     const unsubInst = onSnapshot(doc(db, 'settings', 'institution_info'), (snap) => {
       if (snap.exists()) {
         setInstInfo(prev => ({ ...prev, ...snap.data() }));
@@ -108,7 +110,7 @@ export default function Settings() {
           setStorageFiles(prev => ({ ...prev, ...data }));
           try {
             localStorage.setItem('archivio_admin_archive_checked_v1', JSON.stringify({ ...storageFiles, ...data }));
-          } catch (_) {}
+          } catch (_) { }
         }
       }
     });
@@ -148,7 +150,7 @@ export default function Settings() {
   const handleToggle = async (key) => {
     const newValue = !toggles[key];
     setToggles(prev => ({ ...prev, [key]: newValue }));
-    
+
     try {
       await setDoc(doc(db, 'settings', 'system_preferences'), {
         [key]: newValue
@@ -387,10 +389,10 @@ export default function Settings() {
             <label class="block font-bold text-stone-700 mb-1">Target School Year / Scope:</label>
             <select id="swal-reset-sy" class="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs font-semibold outline-none focus:border-[#801e38]">
               <option value="ALL">All Academic Years (Complete Academic Cycle Wipe)</option>
-              <option value="2026-2027">SY 2026-2027</option>
-              <option value="2025-2026">SY 2025-2026</option>
-              <option value="2024-2025">SY 2024-2025</option>
-              <option value="2023-2024">SY 2023-2024</option>
+              ${(availableYears && availableYears.length > 0 ? availableYears : ['SY 2026-2027']).map(sy => {
+        const clean = sy.replace(/^SY\s*/, '');
+        return `<option value="${clean}">${sy}</option>`;
+      }).join('')}
             </select>
           </div>
           <div>
@@ -611,7 +613,7 @@ export default function Settings() {
         try {
           const snap = await getDocs(collection(db, col));
           emergencyBackup.collections[col] = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const blob = new Blob([JSON.stringify(emergencyBackup, null, 2)], { type: 'application/json' });
@@ -643,20 +645,20 @@ export default function Settings() {
               authUsersToPurge.push({ uid: uUid, email: uEmail });
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const backendUrl = getBackendUrl();
-      
+
       // 1. Call Backend Defense Reset API for server-side purge of Auth and collections
       try {
-        await fetch(`${backendUrl}/api/system/defense-reset`, { method: 'POST' }).catch(() => {});
-      } catch (_) {}
+        await fetch(`${backendUrl}/api/system/defense-reset`, { method: 'POST' }).catch(() => { });
+      } catch (_) { }
 
       for (const u of authUsersToPurge) {
         try {
-          await authFetch(`${backendUrl}/api/hard-delete-auth-user`, { uid: u.uid, email: u.email }).catch(() => {});
-        } catch (_) {}
+          await authFetch(`${backendUrl}/api/hard-delete-auth-user`, { uid: u.uid, email: u.email }).catch(() => { });
+        } catch (_) { }
       }
 
       // 2. Client-side purge of all operational and transactional collections
@@ -684,7 +686,7 @@ export default function Settings() {
         try {
           const snap = await getDocs(collection(db, col));
           await Promise.allSettled(snap.docs.map(d => deleteDoc(doc(db, col, d.id))));
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // 3. Purge non-admin users from users collection
@@ -699,9 +701,9 @@ export default function Settings() {
           if (uUid === currentAdminUid || (currentAdminEmail && uEmail === currentAdminEmail) || uRole === 'super-admin' || uRole === 'admin') {
             continue;
           }
-          await deleteDoc(doc(db, 'users', uDoc.id)).catch(() => {});
+          await deleteDoc(doc(db, 'users', uDoc.id)).catch(() => { });
         }
-      } catch (_) {}
+      } catch (_) { }
 
       // 4. Ensure Institutional Requirements (Milestones) exist so tracking never fails
       const DEFAULT_INST_REQS = [
@@ -714,7 +716,7 @@ export default function Settings() {
         { id: 'Signature Page', title: 'Signature Page', desc: 'Institutional panel and defense signature page', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7, storageEnabled: true, storageStatus: 'active' }
       ];
       for (const r of DEFAULT_INST_REQS) {
-        await setDoc(doc(db, 'requirements', r.id), { ...r, createdAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        await setDoc(doc(db, 'requirements', r.id), { ...r, createdAt: new Date().toISOString() }, { merge: true }).catch(() => { });
       }
 
       // 5. Re-verify Admin Profile is active and healthy
@@ -739,7 +741,7 @@ export default function Settings() {
             allUsers: true,
             activityLogs: true
           }
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
       }
 
       await logActivity({
@@ -775,11 +777,11 @@ export default function Settings() {
   // =========================================================================
   // DYNAMIC STORAGE CALCULATION ENGINE
   // =========================================================================
-  
+
   // Available school years derived strictly from system submissions & active academic records
   const availableSchoolYears = useMemo(() => {
     const setYears = new Set();
-    
+
     // Scan actual submissions
     submissionsList.forEach(s => {
       if (s.schoolYear) setYears.add(String(s.schoolYear).replace(/^SY\s*/i, '').trim());
@@ -830,9 +832,9 @@ export default function Settings() {
       const selDeptLower = selectedDept.toLowerCase().trim();
 
       const syMatch = selectedSY === 'ALL' || sYear === selectedSY || sYear.includes(selectedSY);
-      const deptMatch = selectedDept === 'ALL' || 
-        sDept === selDeptLower || 
-        sDept.includes(selDeptLower) || 
+      const deptMatch = selectedDept === 'ALL' ||
+        sDept === selDeptLower ||
+        sDept.includes(selDeptLower) ||
         selDeptLower.includes(sDept) ||
         (selDeptLower.includes('information technology') && (sDept.includes('information technology') || sDept.includes('bsit')));
 
@@ -1164,9 +1166,9 @@ export default function Settings() {
       html: `
         <div class="text-left text-xs text-stone-600 space-y-2 mt-2">
           <p>
-            ${isCurrentlyActive 
-              ? `⚠️ <b>Suspending storage will mark "${item.title}" as "Unavailable / Storage Suspended by Admin"</b> in both Dean and Adviser portals. Student uploads for this requirement will be paused.` 
-              : `✅ <b>Activating storage will restore "${item.title}"</b> as active in Dean, Adviser, and Student submission portals.`}
+            ${isCurrentlyActive
+          ? `⚠️ <b>Suspending storage will mark "${item.title}" as "Unavailable / Storage Suspended by Admin"</b> in both Dean and Adviser portals. Student uploads for this requirement will be paused.`
+          : `✅ <b>Activating storage will restore "${item.title}"</b> as active in Dean, Adviser, and Student submission portals.`}
           </p>
         </div>
       `,
@@ -1355,7 +1357,7 @@ export default function Settings() {
             if (sub.documents) payload.documents = updatedMeta;
             if (sub.documentsMeta) payload.documentsMeta = updatedMeta;
             await updateDoc(doc(db, 'submissions', sub.id), payload);
-          } catch (_) {}
+          } catch (_) { }
         }
       }
 
@@ -1417,19 +1419,19 @@ export default function Settings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Institution Name</label>
-              <input type="text" value={instInfo.name} onChange={e => setInstInfo({...instInfo, name: e.target.value})} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.name} onChange={e => setInstInfo({ ...instInfo, name: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Short Name</label>
-              <input type="text" value={instInfo.shortName} onChange={e => setInstInfo({...instInfo, shortName: e.target.value})} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.shortName} onChange={e => setInstInfo({ ...instInfo, shortName: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Email Domain</label>
-              <input type="text" value={instInfo.emailDomain} onChange={e => setInstInfo({...instInfo, emailDomain: e.target.value})} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.emailDomain} onChange={e => setInstInfo({ ...instInfo, emailDomain: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Location</label>
-              <input type="text" value={instInfo.location} onChange={e => setInstInfo({...instInfo, location: e.target.value})} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
+              <input type="text" value={instInfo.location} onChange={e => setInstInfo({ ...instInfo, location: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
             </div>
           </div>
           <div className="flex justify-end">
@@ -1476,7 +1478,7 @@ export default function Settings() {
             </h4>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Sensitive operations that affect system-wide data. Protected by Master 6-Digit PIN.</p>
           </div>
-          <button 
+          <button
             onClick={handleChangePin}
             className="flex items-center gap-2 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-bold transition-all border border-stone-300 dark:border-stone-700 shrink-0"
           >
@@ -1505,8 +1507,8 @@ export default function Settings() {
                   Downloads a complete structured JSON backup of all users, submissions, configurations, and logs across all collections. Safe to perform anytime.
                 </p>
               </div>
-              <button 
-                onClick={handleBackupData} 
+              <button
+                onClick={handleBackupData}
                 className="flex items-center gap-2 px-4 py-2.5 bg-[#801e38] text-white rounded-lg text-xs font-bold transition-all shadow-sm hover:bg-[#601328] shrink-0"
               >
                 <Download className="w-4 h-4" /> Download Full Backup
@@ -1520,11 +1522,11 @@ export default function Settings() {
                   <RotateCcw className="w-4 h-4 text-amber-600" /> Reset Data
                 </h5>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 max-w-md">
-                  Clears submission records, uploaded files, and research groups for a specific academic cycle.<br/>
+                  Clears submission records, uploaded files, and research groups for a specific academic cycle.<br />
                   <span className="text-emerald-600 dark:text-emerald-400 font-semibold">User accounts (Admins, Deans, Advisers, Students) and system settings will NOT be affected.</span>
                 </p>
               </div>
-              <button 
+              <button
                 onClick={handleResetData}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#1e1e1e] border-2 border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg text-xs font-bold transition-all shadow-sm shrink-0"
               >
@@ -1544,11 +1546,11 @@ export default function Settings() {
                   </span>
                 </div>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 max-w-md">
-                  Permanently removes ALL academic data, groups, submissions, and non-super-admin user accounts.<br/>
+                  Permanently removes ALL academic data, groups, submissions, and non-super-admin user accounts.<br />
                   <span className="text-stone-600 dark:text-stone-300 font-medium">Auto-downloads an emergency backup. Requires PIN verification and cannot be undone.</span>
                 </p>
               </div>
-              <button 
+              <button
                 onClick={handleDeleteAllData}
                 className="flex items-center gap-2 px-4 py-2.5 bg-[#b91c1c] hover:bg-[#991b1b] text-white rounded-lg text-xs font-bold transition-all shadow-sm shrink-0"
               >
@@ -1570,7 +1572,7 @@ export default function Settings() {
     return (
       <Card className="max-w-[1000px] border-t-4 border-t-[#801e38] shadow-sm animate-fade-in">
         <div className="p-6">
-          
+
           {/* Header & Plan Status */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
             <div>
@@ -1581,7 +1583,7 @@ export default function Settings() {
                 Archive old requirement files to optimize storage usage. Final Manuscript files are protected and permanently retained.
               </p>
             </div>
-            
+
             {/* Firebase Blaze Badge */}
             <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-stone-800 dark:to-stone-800/80 border border-amber-200 dark:border-amber-800/60 px-3.5 py-1.5 rounded-xl shadow-xs self-start sm:self-center">
               <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
@@ -1598,7 +1600,7 @@ export default function Settings() {
               <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 tracking-widest uppercase flex items-center gap-1.5">
                 <Database className="w-3.5 h-3.5 text-[#801e38]" /> Current Cloud Storage Usage
               </p>
-              <button 
+              <button
                 onClick={handleEditQuota}
                 className="text-[11px] font-semibold text-[#801e38] dark:text-rose-400 hover:underline flex items-center gap-1"
               >
@@ -1607,8 +1609,8 @@ export default function Settings() {
             </div>
 
             <div className="w-full bg-stone-200 dark:bg-stone-700 rounded-full h-3.5 mb-2 overflow-hidden shadow-inner">
-              <div 
-                className={`${barColor} h-full rounded-full transition-all duration-500 ease-out`} 
+              <div
+                className={`${barColor} h-full rounded-full transition-all duration-500 ease-out`}
                 style={{ width: `${storageMetrics.percentUsed}%` }}
               ></div>
             </div>
@@ -1639,7 +1641,7 @@ export default function Settings() {
                 <Filter className="w-3.5 h-3.5 text-[#801e38]" /> Filter Archive Scope
               </p>
               {(selectedSY !== 'ALL' || selectedDept !== 'ALL') && (
-                <button 
+                <button
                   onClick={() => { setSelectedSY('ALL'); setSelectedDept('ALL'); }}
                   className="text-[10px] font-bold text-[#801e38] hover:underline"
                 >
@@ -1651,7 +1653,7 @@ export default function Settings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">Academic Year</label>
-                <select 
+                <select
                   value={selectedSY}
                   onChange={e => setSelectedSY(e.target.value)}
                   className="w-full px-3.5 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 rounded-lg text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none cursor-pointer focus:border-[#801e38] shadow-xs"
@@ -1665,7 +1667,7 @@ export default function Settings() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">Department / College</label>
-                <select 
+                <select
                   value={selectedDept}
                   onChange={e => setSelectedDept(e.target.value)}
                   className="w-full px-3.5 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-300 dark:border-stone-700 rounded-lg text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none cursor-pointer focus:border-[#801e38] shadow-xs"
@@ -1706,13 +1708,13 @@ export default function Settings() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-center">
-                      <button 
+                      <button
                         onClick={() => handleApproveRequirement(req)}
                         className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold shadow-xs transition-all"
                       >
                         Approve for Storage
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeclineRequirement(req)}
                         className="px-3 py-1 bg-stone-100 dark:bg-stone-700 hover:bg-red-50 text-stone-600 dark:text-stone-300 hover:text-red-600 rounded text-[11px] font-semibold transition-all border border-stone-200 dark:border-stone-600"
                       >
@@ -1755,14 +1757,13 @@ export default function Settings() {
 
             <div className="space-y-2.5">
               {(storageMetrics.items || []).map((item) => (
-                <div 
+                <div
                   key={item.title}
                   onClick={() => handleStorageCheck(item.title)}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border rounded-xl cursor-pointer transition-all gap-3 ${
-                    item.storageStatus === 'suspended'
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border rounded-xl cursor-pointer transition-all gap-3 ${item.storageStatus === 'suspended'
                       ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20'
                       : 'border-stone-200 dark:border-stone-800 bg-stone-50/60 dark:bg-[#252525]/60 hover:bg-stone-100/80 dark:hover:bg-[#2a2a2a]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors shrink-0 ${storageFiles[item.title] ? 'bg-[#801e38] border-[#801e38]' : 'bg-white dark:bg-[#1e1e1e] border-2 border-stone-300'}`}>
@@ -1788,11 +1789,10 @@ export default function Settings() {
                       )}
                       <button
                         onClick={(e) => handleToggleRequirementStorage(item, e)}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all shadow-xs ${
-                          item.storageStatus === 'suspended'
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all shadow-xs ${item.storageStatus === 'suspended'
                             ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                             : 'bg-stone-200 dark:bg-stone-700 hover:bg-amber-100 hover:text-amber-800 text-stone-700 dark:text-stone-300'
-                        }`}
+                          }`}
                         title={item.storageStatus === 'suspended' ? 'Activate storage allocation' : 'Suspend storage allocation'}
                       >
                         {item.storageStatus === 'suspended' ? '✓ Re-enable' : '⏸ Pause'}
@@ -1842,13 +1842,13 @@ export default function Settings() {
               <span className="font-normal text-stone-500 dark:text-stone-400">Estimated space to free:</span>
               <span className="text-emerald-700 dark:text-emerald-400 text-sm font-extrabold font-mono">{spaceToFreeDisplay}</span>
             </div>
-            
-            <button 
+
+            <button
               onClick={handleArchiveSelectedFiles}
               disabled={isArchiving}
               className="px-6 py-2.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <FolderArchive className="w-4 h-4" /> 
+              <FolderArchive className="w-4 h-4" />
               {isArchiving ? 'Archiving Files...' : 'Archive Selected Files'}
             </button>
           </div>
@@ -1867,26 +1867,26 @@ export default function Settings() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          
+
           <SectionTitle sub="Manage institution details, system preferences, and storage settings.">
             System Settings
           </SectionTitle>
 
           {/* Tab Navigation */}
           <div className="flex gap-4 border-b border-stone-200 dark:border-stone-700 mb-6 pb-2">
-            <button 
+            <button
               onClick={() => setActiveTab('system')}
               className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'system' ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:text-stone-200'}`}
             >
               System Settings
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('storage')}
               className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'storage' ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:text-stone-200'}`}
             >
               Storage Management
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('departments')}
               className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'departments' ? 'text-[#801e38] border-b-2 border-[#801e38]' : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:text-stone-200'}`}
             >
@@ -1900,7 +1900,7 @@ export default function Settings() {
             {activeTab === 'storage' && renderStorageManagement()}
             {activeTab === 'departments' && <DepartmentsProgramsTab />}
           </div>
-          
+
         </div>
       </main>
     </div>

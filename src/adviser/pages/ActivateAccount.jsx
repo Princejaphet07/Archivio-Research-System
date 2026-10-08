@@ -4,6 +4,8 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import loginBg from '../../assets/parchment.png';
+import PrivacyPolicyModal from '../../components/PrivacyPolicyModal';
+import { AlertCircle, CheckCircle2, Check, X } from 'lucide-react';
 
 export default function ActivateAccount() {
   const [searchParams] = useSearchParams();
@@ -26,7 +28,40 @@ export default function ActivateAccount() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [modalMode, setModalMode] = useState('terms');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const bothAgreed = termsAccepted && privacyAccepted;
   const [formErrors, setFormErrors] = useState({});
+
+  const openPolicy = (mode) => {
+    setModalMode(mode);
+    setShowPrivacyModal(true);
+  };
+
+  const handleAcceptPolicy = (acceptedMode) => {
+    const which = acceptedMode || modalMode;
+    if (which === 'terms') {
+      setTermsAccepted(true);
+      if (privacyAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else if (which === 'privacy') {
+      setPrivacyAccepted(true);
+      if (termsAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else {
+      setTermsAccepted(true);
+      setPrivacyAccepted(true);
+      setFormData(prev => ({ ...prev, agreeTerms: true }));
+      if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+    }
+    setShowPrivacyModal(false);
+  };
 
   // Validate token on mount
   useEffect(() => {
@@ -38,7 +73,7 @@ export default function ActivateAccount() {
     setError('');
 
     if (!token) {
-      setError('❌ Invalid activation link. No token provided.');
+      setError('Invalid activation link. No token provided.');
       setValidating(false);
       return;
     }
@@ -53,7 +88,7 @@ export default function ActivateAccount() {
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
-        setError('❌ Invalid or expired activation link.');
+        setError('Invalid or expired activation link.');
         setValidating(false);
         return;
       }
@@ -63,7 +98,7 @@ export default function ActivateAccount() {
 
       // Check if already activated
       if (adviserDoc.status === 'active') {
-        setError('⚠️ This account has already been activated. Please login instead.');
+        setError('This account has already been activated. Please login instead.');
         setValidating(false);
         return;
       }
@@ -74,7 +109,7 @@ export default function ActivateAccount() {
       const daysDiff = (now - invitedDate) / (1000 * 60 * 60 * 24);
 
       if (daysDiff > 7) {
-        setError('❌ This invitation link has expired. Please request a new one from your dean.');
+        setError('This invitation link has expired. Please request a new one from your dean.');
         setValidating(false);
         return;
       }
@@ -88,7 +123,7 @@ export default function ActivateAccount() {
 
     } catch (error) {
       console.error('Error validating token:', error);
-      setError('❌ Error validating activation link. Please try again.');
+      setError('Error validating activation link. Please try again.');
       setValidating(false);
     }
   };
@@ -142,13 +177,13 @@ export default function ActivateAccount() {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.agreeTerms) {
-      errors.agreeTerms = 'You must agree to the terms and conditions';
+    if (!formData.agreeTerms || !bothAgreed) {
+      errors.agreeTerms = 'You must agree to both the Privacy Policy and Terms and Conditions';
     }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      setError('❌ Please resolve all highlighted fields before activating.');
+      setError('Please resolve all highlighted fields before activating.');
       const firstKey = Object.keys(errors)[0];
       const el = document.getElementById(`adviser-activate-${firstKey}`);
       if (el) {
@@ -161,7 +196,7 @@ export default function ActivateAccount() {
 
     // Validate email domain - only @phinmaed.com allowed
     if (!adviserData.email.toLowerCase().endsWith('@phinmaed.com')) {
-      setError('❌ Only institutional emails (@phinmaed.com) can create adviser accounts');
+      setError('Only institutional emails (@phinmaed.com) can create adviser accounts');
       return;
     }
 
@@ -199,7 +234,7 @@ export default function ActivateAccount() {
 
       // Also create user profile in 'advisers' collection if not already there
       // This ensures the adviser can access the system
-      setSuccess('✅ Account activated successfully! Redirecting to dashboard...');
+      setSuccess('Account activated successfully! Redirecting to dashboard...');
 
       // Redirect to dashboard after 2 seconds (Firebase Auth has already signed them in)
       setTimeout(() => {
@@ -210,11 +245,11 @@ export default function ActivateAccount() {
       console.error('Error activating account:', error);
       
       if (error.code === 'auth/email-already-in-use') {
-        setError('❌ This email is already registered. Please login or contact support.');
+        setError('This email is already registered. Please login or contact support.');
       } else if (error.code === 'auth/weak-password') {
-        setError('❌ Password is too weak. Please use a stronger password.');
+        setError('Password is too weak. Please use a stronger password.');
       } else {
-        setError(`❌ Error: ${error.message}`);
+        setError(`Error: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -256,14 +291,14 @@ export default function ActivateAccount() {
 
         {error && (
           <div className="mb-6 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-red-500 text-lg">⚠️</span>
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             <p className="text-xs text-red-800 font-medium leading-relaxed flex-1 mt-0.5">{error}</p>
           </div>
         )}
 
         {success && (
           <div className="mb-6 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-green-500 text-lg">✅</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
             <p className="text-xs text-green-800 font-medium leading-relaxed flex-1 mt-0.5">{success}</p>
           </div>
         )}
@@ -311,8 +346,8 @@ export default function ActivateAccount() {
                 </button>
               </div>
               {formErrors.password && (
-                <p className="text-[11px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
-                  <span>⚠️</span> {formErrors.password}
+                <p className="text-[11px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {formErrors.password}
                 </p>
               )}
 
@@ -321,19 +356,19 @@ export default function ActivateAccount() {
                 <div className="mt-3 bg-stone-50 border border-stone-100 rounded-lg p-3 space-y-1.5">
                   <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Password Requirements</p>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.minLength ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
-                    <span>{passwordValidation.minLength ? '✅' : '○'}</span> At least 8 characters
+                    {passwordValidation.minLength ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <span className="w-3.5 h-3.5 flex items-center justify-center text-stone-300">○</span>} At least 8 characters
                   </div>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.hasUppercase ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
-                    <span>{passwordValidation.hasUppercase ? '✅' : '○'}</span> One uppercase letter
+                    {passwordValidation.hasUppercase ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <span className="w-3.5 h-3.5 flex items-center justify-center text-stone-300">○</span>} One uppercase letter
                   </div>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.hasLowercase ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
-                    <span>{passwordValidation.hasLowercase ? '✅' : '○'}</span> One lowercase letter
+                    {passwordValidation.hasLowercase ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <span className="w-3.5 h-3.5 flex items-center justify-center text-stone-300">○</span>} One lowercase letter
                   </div>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.hasNumber ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
-                    <span>{passwordValidation.hasNumber ? '✅' : '○'}</span> One number
+                    {passwordValidation.hasNumber ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <span className="w-3.5 h-3.5 flex items-center justify-center text-stone-300">○</span>} One number
                   </div>
                   <div className={`text-[11px] flex items-center gap-2 ${passwordValidation.hasSpecialChar ? 'text-green-600 font-medium' : 'text-stone-400'}`}>
-                    <span>{passwordValidation.hasSpecialChar ? '✅' : '○'}</span> One special character (!@#$%^&*)
+                    {passwordValidation.hasSpecialChar ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <span className="w-3.5 h-3.5 flex items-center justify-center text-stone-300">○</span>} One special character (!@#$%^&*)
                   </div>
                 </div>
               )}
@@ -374,29 +409,75 @@ export default function ActivateAccount() {
               </div>
               {formErrors.confirmPassword && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1.5 pl-1 flex items-center gap-1">
-                  <span>⚠️</span> {formErrors.confirmPassword}
+                  <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.confirmPassword}
                 </p>
               )}
             </div>
 
             {/* Terms & Conditions */}
-            <div className={`flex items-start gap-3 mt-4 p-3 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}>
+            <div 
+              onClick={(e) => {
+                if (!bothAgreed) {
+                  e.preventDefault();
+                  if (!privacyAccepted) {
+                    openPolicy('privacy');
+                  } else if (!termsAccepted) {
+                    openPolicy('terms');
+                  }
+                }
+              }}
+              className={`flex items-start gap-3 mt-4 p-3 rounded-lg transition-colors ${!bothAgreed ? 'cursor-pointer hover:bg-stone-100/60' : ''} ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}
+            >
               <input 
                 id="adviser-activate-agreeTerms"
                 type="checkbox" 
                 name="agreeTerms"
-                checked={formData.agreeTerms}
-                onChange={handleInputChange}
+                checked={formData.agreeTerms && bothAgreed} 
+                onChange={(e) => {
+                  if (!bothAgreed) {
+                    e.preventDefault();
+                    if (!privacyAccepted) openPolicy('privacy');
+                    else if (!termsAccepted) openPolicy('terms');
+                    return;
+                  }
+                  handleInputChange(e);
+                }}
                 disabled={loading}
-                className="w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5" 
+                className={`w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5 accent-[#7a1f3d] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
               />
               <div>
-                <label htmlFor="adviser-activate-agreeTerms" className="text-xs text-stone-600 leading-relaxed">
-                  I agree to the <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
+                <label htmlFor="adviser-activate-agreeTerms" className={`text-xs ${!bothAgreed ? 'text-stone-500 cursor-pointer' : 'text-stone-600'} leading-relaxed select-none`}>
+                  I agree to the{' '}
+                  <span 
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openPolicy('privacy');
+                    }} 
+                    className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                  >
+                    Privacy Policy{privacyAccepted && <Check className="w-3 h-3 inline text-emerald-600" />}
+                  </span>{' '}
+                  and the{' '}
+                  <span 
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openPolicy('terms');
+                    }} 
+                    className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                  >
+                    Terms and Conditions{termsAccepted && <Check className="w-3 h-3 inline text-emerald-600" />}
+                  </span>{' '}
+                  of Archivio
                 </label>
                 {formErrors.agreeTerms && (
                   <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
-                    <span>⚠️</span> {formErrors.agreeTerms}
+                    <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.agreeTerms}
                   </p>
                 )}
               </div>
@@ -405,7 +486,7 @@ export default function ActivateAccount() {
             {/* Submit Button */}
             <button 
               type="submit"
-              disabled={loading || !passwordValidation.isValid || !formData.agreeTerms || formData.password !== formData.confirmPassword}
+              disabled={loading || !passwordValidation.isValid || !formData.agreeTerms || !bothAgreed || formData.password !== formData.confirmPassword}
               className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-[#7a1f3d]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
             >
               {loading ? (
@@ -430,7 +511,7 @@ export default function ActivateAccount() {
         ) : (
           <div className="text-center py-10">
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
-              <span className="text-2xl">❌</span>
+              <X className="w-8 h-8 text-red-500" />
             </div>
             <p className="text-stone-900 font-bold text-lg mb-2">Invalid Activation Link</p>
             <p className="text-stone-500 text-sm mb-8 px-4 leading-relaxed">
@@ -445,6 +526,14 @@ export default function ActivateAccount() {
           </div>
         )}
       </div>
+
+      {/* Official Standalone Policy Modals */}
+      <PrivacyPolicyModal 
+        isOpen={showPrivacyModal} 
+        mode={modalMode}
+        onClose={() => setShowPrivacyModal(false)} 
+        onAccept={handleAcceptPolicy}
+      />
     </div>
   );
 }

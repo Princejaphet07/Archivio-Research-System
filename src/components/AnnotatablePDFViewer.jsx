@@ -2,10 +2,199 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { Pen, Highlighter, Eraser, Type, Trash2, Save, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { 
+  Pen, 
+  Highlighter, 
+  Eraser, 
+  Type, 
+  Trash2, 
+  Save, 
+  ChevronLeft, 
+  ChevronRight, 
+  ZoomIn, 
+  ZoomOut, 
+  Undo2, 
+  Redo2,
+  CheckCircle2,
+  Clock,
+  RotateCcw
+} from 'lucide-react';
 import Swal from 'sweetalert2';
+import { saveDraft, getDraft, clearDraft, formatDraftTime } from '../utils/draftStorage';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// ── Helper to retrieve annotations for a given page number ──────────────────
+const getPageAnnotations = (annotationsMap, pageNum) => {
+  if (!annotationsMap) return [];
+  return annotationsMap[pageNum] || 
+         annotationsMap[String(pageNum)] || 
+         annotationsMap[`page_${pageNum}`] || 
+         annotationsMap[`page-${pageNum}`] || 
+         [];
+};
+
+// ── Normalize incoming annotations (unwraps JSON strings and requirement-keyed maps) ─
+const normalizeAnnotations = (raw) => {
+  if (!raw) return {};
+  let parsed = raw;
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof parsed !== 'object' || parsed === null) return {};
+
+  const keys = Object.keys(parsed);
+  // Check if directly keyed by page numbers: e.g. { '1': [...], '2': [...] }
+  const hasPageKeys = keys.some(k => !isNaN(parseInt(k, 10)) && Array.isArray(parsed[k]));
+  if (hasPageKeys) {
+    return parsed;
+  }
+
+  // Check if nested under requirement key: e.g. { 'Final Manuscript': { '1': [...] } }
+  for (const key of keys) {
+    const val = parsed[key];
+    if (val && typeof val === 'object') {
+      const subKeys = Object.keys(val);
+      if (subKeys.some(sk => !isNaN(parseInt(sk, 10)) && Array.isArray(val[sk]))) {
+        return val;
+      }
+    }
+  }
+
+  return parsed;
+};
+
+// ── Sub-component for rendering a page with annotations in read-only mode ─────
+const ReadOnlyPageWithAnnotations = ({
+  pg,
+  width,
+  pageAnnotations = [],
+  setPageRef,
+  tools
+}) => {
+  const canvasRef = useRef(null);
+  const [pageSize, setPageSize] = useState({ width: 595.28, height: 841.89 });
+
+  const drawAnnotations = useCallback((baseWidth, baseHeight) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(baseWidth * dpr);
+    canvas.height = Math.round(baseHeight * dpr);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    pageAnnotations.forEach(path => {
+      if (!path.points || path.points.length === 0 || path.type === 'text') return;
+
+      const tool = tools[path.type] || tools.pen;
+      const bW = path.baseWidth || pageSize.width || 595.28;
+      const bH = path.baseHeight || pageSize.height || 841.89;
+
+      const getPtX = (pt) => (pt.nx != null ? pt.nx * baseWidth : (pt.x / bW) * baseWidth);
+      const getPtY = (pt) => (pt.ny != null ? pt.ny * baseHeight : (pt.y / bH) * baseHeight);
+
+      ctx.beginPath();
+      ctx.moveTo(getPtX(path.points[0]), getPtY(path.points[0]));
+      for (let i = 1; i < path.points.length; i++) {
+        ctx.lineTo(getPtX(path.points[i]), getPtY(path.points[i]));
+      }
+
+      ctx.strokeStyle = path.type === 'eraser' ? 'rgba(255,255,255,1)' : (path.color || tool.color);
+      ctx.lineWidth = path.size || tool.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (path.type === 'highlighter') {
+        ctx.globalAlpha = tool.opacity ?? 0.6;
+        ctx.globalCompositeOperation = 'multiply';
+      } else if (path.type === 'eraser') {
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'destination-out';
+      } else {
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }, [pageAnnotations, tools, pageSize]);
+
+  const handlePageRenderSuccess = useCallback((pageData) => {
+    const viewport = pageData.getViewport({ scale: 1.0 });
+    setPageSize({ width: viewport.width, height: viewport.height });
+    drawAnnotations(viewport.width, viewport.height);
+  }, [drawAnnotations]);
+
+  useEffect(() => {
+    drawAnnotations(pageSize.width, pageSize.height);
+  }, [drawAnnotations, pageSize]);
+
+  return (
+    <div
+      ref={el => setPageRef(pg, el)}
+      data-page={pg}
+      className="relative shadow-md sm:shadow-xl bg-white max-w-full overflow-hidden transition-all rounded-sm mx-auto"
+      style={{ width: 'fit-content' }}
+    >
+      <Page
+        pageNumber={pg}
+        renderTextLayer={true}
+        renderAnnotationLayer={false}
+        width={width}
+        onRenderSuccess={handlePageRenderSuccess}
+      />
+
+      {/* Drawing / Highlighter Canvas Overlay */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+      />
+
+      {/* Floating Text Annotations Overlay */}
+      {pageAnnotations.map((path, idx) => {
+        if (path.type !== 'text' || !path.points?.[0]) return null;
+
+        const pt = path.points[0];
+        const leftPercent = pt.nx != null
+          ? Math.max(0, Math.min(95, pt.nx * 100))
+          : Math.max(0, Math.min(95, (pt.x / (pageSize.width || 595.28)) * 100));
+        const topPercent = pt.ny != null
+          ? Math.max(0, Math.min(95, (pt.ny * 100) - 1.5))
+          : Math.max(0, Math.min(95, ((pt.y - 12) / (pageSize.height || 841.89)) * 100));
+
+        return (
+          <div
+            key={idx}
+            className="absolute z-20 pointer-events-auto select-text"
+            style={{
+              left: `${leftPercent}%`,
+              top: `${topPercent}%`,
+            }}
+          >
+            <div className="relative bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm border-2 border-[#7a2e46] dark:border-[#f8d070] px-2.5 py-1 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <span className="font-sans font-bold text-[#7a2e46] dark:text-[#f8d070] text-[14px] sm:text-[15px] whitespace-pre-wrap leading-tight">
+                {path.text}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnnotations, readOnly = false }) => {
   const [numPages, setNumPages] = useState(null);
@@ -13,12 +202,122 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
   const [scale, setScale] = useState(1.0);
 
   // annotations = { [pageNumber]: [ { type, points, color, size } ] }
-  const [annotations, setAnnotations] = useState(initialAnnotations || {});
+  const [annotations, setAnnotations] = useState(() => normalizeAnnotations(initialAnnotations));
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+
   const [currentTool, setCurrentTool] = useState('pen');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState(null);
   const [textInput, setTextInput] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [draftInfo, setDraftInfo] = useState(null);
+
+  // Check for unsaved local draft on mount
+  useEffect(() => {
+    if (readOnly || !documentUrl) return;
+    const cached = getDraft(documentUrl, 'pdf_annotations');
+    if (cached && cached.data && Object.keys(cached.data).length > 0) {
+      const initialEmpty = !initialAnnotations || Object.keys(initialAnnotations).length === 0;
+      if (initialEmpty || cached.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000) {
+        setDraftInfo(cached);
+      }
+    }
+  }, [documentUrl, readOnly, initialAnnotations]);
+
+  const restoreDraft = useCallback(() => {
+    if (draftInfo?.data) {
+      setAnnotations(normalizeAnnotations(draftInfo.data));
+      setHasChanges(true);
+      setDraftInfo(null);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Restored Unsaved Draft',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+  }, [draftInfo]);
+
+  const discardDraft = useCallback(() => {
+    clearDraft(documentUrl, 'pdf_annotations');
+    setDraftInfo(null);
+  }, [documentUrl]);
+
+  // Defensive beforeunload guard against tab close during review
+  useEffect(() => {
+    if (readOnly || !hasChanges) return;
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved manuscript annotations. Your draft is buffered locally.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges, readOnly]);
+
+  // Helper to update annotations and track undo history + local draft buffering
+  const applyAnnotationsChange = useCallback((updaterOrNewValue) => {
+    setAnnotations(current => {
+      const next = typeof updaterOrNewValue === 'function' ? updaterOrNewValue(current) : updaterOrNewValue;
+      setUndoStack(prev => [...prev.slice(-49), current]);
+      setRedoStack([]);
+      setHasChanges(true);
+      if (documentUrl) {
+        saveDraft(documentUrl, 'pdf_annotations', next);
+      }
+      return next;
+    });
+  }, [documentUrl]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const previousState = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, -1);
+
+    setRedoStack(prev => [...prev, annotations]);
+    setUndoStack(newUndoStack);
+    setAnnotations(previousState);
+    setHasChanges(true);
+  }, [undoStack, annotations]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const nextState = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, -1);
+
+    setUndoStack(prev => [...prev, annotations]);
+    setRedoStack(newRedoStack);
+    setAnnotations(nextState);
+    setHasChanges(true);
+  }, [redoStack, annotations]);
+
+  // Keyboard shortcuts: Ctrl+Z (Undo), Ctrl+Y / Ctrl+Shift+Z (Redo)
+  useEffect(() => {
+    if (readOnly) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [readOnly, handleUndo, handleRedo]);
 
   // Scroll-mode state
   const [isScrolling, setIsScrolling] = useState(false);
@@ -83,7 +382,9 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
 
   useEffect(() => {
     if (initialAnnotations) {
-      setAnnotations(initialAnnotations);
+      setAnnotations(normalizeAnnotations(initialAnnotations));
+      setUndoStack([]);
+      setRedoStack([]);
     }
   }, [initialAnnotations]);
 
@@ -96,18 +397,23 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    const pageAnnotations = annotations[pageNumber] || [];
+    const pageAnnotations = getPageAnnotations(annotations, pageNumber);
     const allPaths = currentPath ? [...pageAnnotations, currentPath] : pageAnnotations;
 
     allPaths.forEach(path => {
       if (!path.points || path.points.length === 0 || path.type === 'text') return;
       
       const tool = tools[path.type] || tools.pen;
-      
+      const bW = path.baseWidth || canvas.width || 595.28;
+      const bH = path.baseHeight || canvas.height || 841.89;
+
+      const getPtX = (pt) => (pt.nx != null ? pt.nx * canvas.width : (pt.x > 1 && path.baseWidth ? (pt.x / bW) * canvas.width : pt.x));
+      const getPtY = (pt) => (pt.ny != null ? pt.ny * canvas.height : (pt.y > 1 && path.baseHeight ? (pt.y / bH) * canvas.height : pt.y));
+
       ctx.beginPath();
-      ctx.moveTo(path.points[0].x, path.points[0].y);
+      ctx.moveTo(getPtX(path.points[0]), getPtY(path.points[0]));
       for (let i = 1; i < path.points.length; i++) {
-        ctx.lineTo(path.points[i].x, path.points[i].y);
+        ctx.lineTo(getPtX(path.points[i]), getPtY(path.points[i]));
       }
       
       ctx.strokeStyle = path.type === 'eraser' ? 'rgba(0,0,0,1)' : tool.color;
@@ -132,7 +438,7 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     // Reset defaults
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-  }, [annotations, pageNumber, currentPath]);
+  }, [annotations, pageNumber, currentPath, tools]);
 
   useEffect(() => {
     renderCanvas();
@@ -226,13 +532,17 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
       clientY = e.clientY;
     }
 
-    // Coordinates relative to the canvas internal resolution (1:1 with CSS size right now because we set width/height to offsetWidth)
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
+    const rawX = (clientX - rect.left) * scaleX;
+    const rawY = (clientY - rect.top) * scaleY;
+
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: rawX,
+      y: rawY,
+      nx: canvas.width > 0 ? rawX / canvas.width : 0,
+      ny: canvas.height > 0 ? rawY / canvas.height : 0
     };
   };
 
@@ -244,14 +554,16 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     if (!coords) return;
 
     if (currentTool === 'text') {
-      setTextInput({ x: coords.x, y: coords.y, value: '' });
+      setTextInput({ x: coords.x, y: coords.y, nx: coords.nx, ny: coords.ny, value: '' });
       return;
     }
 
     setIsDrawing(true);
     setCurrentPath({
       type: currentTool,
-      points: [coords]
+      points: [coords],
+      baseWidth: canvasRef.current?.width || 595.28,
+      baseHeight: canvasRef.current?.height || 841.89
     });
   };
 
@@ -272,38 +584,42 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
     setIsDrawing(false);
     
     if (currentPath && currentPath.points.length > 0) {
-      setAnnotations(prev => ({
+      const canvas = canvasRef.current;
+      const pathWithBase = {
+        ...currentPath,
+        baseWidth: canvas?.width || 595.28,
+        baseHeight: canvas?.height || 841.89
+      };
+      applyAnnotationsChange(prev => ({
         ...prev,
-        [pageNumber]: [...(prev[pageNumber] || []), currentPath]
+        [pageNumber]: [...(prev[pageNumber] || []), pathWithBase]
       }));
-      setHasChanges(true);
     }
     setCurrentPath(null);
   };
 
   const clearPage = () => {
     Swal.fire({
-      title: 'Clear Page?',
-      text: "This will remove all annotations on the current page.",
+      title: 'Clear Page Annotations?',
+      text: "This will remove all drawings and text notes on this page.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, clear it!'
+      confirmButtonColor: '#7a2e46',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, clear page'
     }).then((result) => {
       if (result.isConfirmed) {
-        setAnnotations(prev => ({
+        applyAnnotationsChange(prev => ({
           ...prev,
           [pageNumber]: []
         }));
-        setHasChanges(true);
       }
     });
   };
 
   const deleteTextAnnotation = (indexToRemove) => {
     if (readOnly) return;
-    setAnnotations(prev => {
+    applyAnnotationsChange(prev => {
       const currentPageAnnotations = prev[pageNumber] || [];
       const newAnnotations = currentPageAnnotations.filter((_, i) => i !== indexToRemove);
       return {
@@ -311,13 +627,14 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
         [pageNumber]: newAnnotations
       };
     });
-    setHasChanges(true);
   };
 
   const handleSave = () => {
     if (onSaveAnnotations) {
       onSaveAnnotations(annotations);
+      clearDraft(documentUrl, 'pdf_annotations');
       setHasChanges(false);
+      setDraftInfo(null);
     }
   };
 
@@ -405,61 +722,150 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
 
         {/* Drawing Tools (non-readOnly only) */}
         {!readOnly && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            {/* Live Tri-State Sync Pill */}
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 select-none">
+              {hasChanges ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span className="text-amber-800 dark:text-amber-300 font-medium">Draft Buffered Locally</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-stone-600 dark:text-stone-300 font-medium">Cloud Synced</span>
+                </>
+              )}
+            </div>
+
+            {/* Segmented Markup Tools */}
+            <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1 border border-stone-200 dark:border-stone-700">
               <button
                 onClick={() => setCurrentTool('pen')}
-                className={`p-2 rounded transition-colors ${currentTool === 'pen' ? 'bg-white dark:bg-stone-700 text-[#7a2e46] dark:text-[#f8d070] shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
-                title="Pen (Red)"
+                className={`p-2 rounded-md transition-all flex items-center gap-1 text-xs font-bold ${
+                  currentTool === 'pen'
+                    ? 'bg-[#7a2e46] text-white shadow-sm ring-1 ring-[#7a2e46]'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700'
+                }`}
+                title="Pen Markup (Red Ink)"
+                aria-label="Pen markup tool"
               >
-                <Pen className="w-5 h-5" />
+                <Pen className="w-4 h-4" />
+                <span className="hidden xl:inline">Pen</span>
               </button>
               <button
                 onClick={() => setCurrentTool('highlighter')}
-                className={`p-2 rounded transition-colors ${currentTool === 'highlighter' ? 'bg-white dark:bg-stone-700 text-amber-500 shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
-                title="Highlighter (Yellow)"
+                className={`p-2 rounded-md transition-all flex items-center gap-1 text-xs font-bold ${
+                  currentTool === 'highlighter'
+                    ? 'bg-amber-500 text-stone-950 shadow-sm ring-1 ring-amber-500'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700'
+                }`}
+                title="Highlighter (Yellow Emphasis)"
+                aria-label="Highlighter markup tool"
               >
-                <Highlighter className="w-5 h-5" />
+                <Highlighter className="w-4 h-4" />
+                <span className="hidden xl:inline">Highlight</span>
               </button>
               <button
                 onClick={() => setCurrentTool('text')}
-                className={`p-2 rounded transition-colors ${currentTool === 'text' ? 'bg-white dark:bg-stone-700 text-[#7a2e46] dark:text-[#f8d070] shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
-                title="Text Tool"
+                className={`p-2 rounded-md transition-all flex items-center gap-1 text-xs font-bold ${
+                  currentTool === 'text'
+                    ? 'bg-[#7a2e46] text-white shadow-sm ring-1 ring-[#7a2e46]'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700'
+                }`}
+                title="Text Note Tool"
+                aria-label="Text note tool"
               >
-                <Type className="w-5 h-5" />
+                <Type className="w-4 h-4" />
+                <span className="hidden xl:inline">Note</span>
               </button>
               <button
                 onClick={() => setCurrentTool('eraser')}
-                className={`p-2 rounded transition-colors ${currentTool === 'eraser' ? 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
-                title="Eraser"
+                className={`p-2 rounded-md transition-all flex items-center gap-1 text-xs font-bold ${
+                  currentTool === 'eraser'
+                    ? 'bg-stone-800 text-white shadow-sm ring-1 ring-stone-800'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700'
+                }`}
+                title="Eraser Tool"
+                aria-label="Eraser tool"
               >
-                <Eraser className="w-5 h-5" />
+                <Eraser className="w-4 h-4" />
+                <span className="hidden xl:inline">Eraser</span>
+              </button>
+            </div>
+
+            {/* Undo / Redo */}
+            <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-lg p-1 border border-stone-200 dark:border-stone-700">
+              <button
+                onClick={handleUndo}
+                disabled={undoStack.length === 0}
+                className="p-2 rounded transition-colors text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-stone-400 disabled:cursor-not-allowed"
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={redoStack.length === 0}
+                className="p-2 rounded transition-colors text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-white dark:hover:bg-stone-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-stone-400 disabled:cursor-not-allowed"
+                title="Redo (Ctrl+Y)"
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
               </button>
             </div>
 
             <button
               onClick={clearPage}
               className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-1"
-              title="Clear current page"
+              title="Clear current page annotations"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </button>
 
             <button
               onClick={handleSave}
               disabled={!hasChanges}
-              className={`ml-2 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${
+              className={`ml-1 sm:ml-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${
                 hasChanges
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-md'
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-600 cursor-not-allowed'
               }`}
             >
               <Save className="w-4 h-4" />
-              <span className="hidden sm:inline">Save</span>
+              <span className="hidden sm:inline">Save Annotations</span>
             </button>
           </div>
         )}
       </div>
+
+      {/* ── Unsaved Draft Restoration Banner ─────────────────────────────────── */}
+      {draftInfo && !readOnly && (
+        <div className="bg-amber-50 dark:bg-amber-950/80 border-b border-amber-300 dark:border-amber-700/80 px-4 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 z-20 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>
+              Unsaved review draft detected from <strong>{formatDraftTime(draftInfo.timestamp)}</strong>.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={restoreDraft}
+              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Restore Draft
+            </button>
+            <button
+              onClick={discardDraft}
+              className="px-2 py-1 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 font-medium transition-colors cursor-pointer"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── PDF Viewport ─────────────────────────────────────────────────────── */}
       {documentUrl ? (
@@ -477,19 +883,14 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
               error={<div className="p-12 text-red-500 font-medium bg-red-50 rounded-lg">Failed to load PDF. Please try again.</div>}
             >
               {numPages && Array.from({ length: numPages }, (_, i) => i + 1).map(pg => (
-                <div
+                <ReadOnlyPageWithAnnotations
                   key={pg}
-                  ref={el => setPageRef(pg, el)}
-                  data-page={pg}
-                  className="shadow-md sm:shadow-xl bg-white max-w-full overflow-hidden transition-all rounded-sm"
-                >
-                  <Page
-                    pageNumber={pg}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={false}
-                    width={Math.round(containerWidth * scale)}
-                  />
-                </div>
+                  pg={pg}
+                  width={Math.round(containerWidth * scale)}
+                  pageAnnotations={getPageAnnotations(annotations, pg)}
+                  setPageRef={setPageRef}
+                  tools={tools}
+                />
               ))}
             </Document>
 
@@ -544,40 +945,54 @@ const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnno
                   onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
                   onBlur={() => {
                     if (textInput.value.trim()) {
-                      setAnnotations(prev => ({
+                      const canvas = canvasRef.current;
+                      applyAnnotationsChange(prev => ({
                         ...prev,
                         [pageNumber]: [...(prev[pageNumber] || []), {
                           type: 'text',
                           text: textInput.value,
-                          points: [{ x: textInput.x, y: textInput.y }]
+                          points: [{ 
+                            x: textInput.x, 
+                            y: textInput.y,
+                            nx: textInput.nx ?? (canvas?.width ? textInput.x / canvas.width : 0),
+                            ny: textInput.ny ?? (canvas?.height ? textInput.y / canvas.height : 0)
+                          }],
+                          baseWidth: canvas?.width || 595.28,
+                          baseHeight: canvas?.height || 841.89
                         }]
                       }));
-                      setHasChanges(true);
                     }
                     setTextInput(null);
                   }}
                   onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                  placeholder="Type..."
-                  className="absolute z-20 bg-white/90 border-2 border-[#7a2e46] dark:border-[#f8d070] outline-none text-[#7a2e46] dark:text-stone-900 px-2 py-1 rounded shadow-lg font-sans font-bold"
-                  style={{ left: `${textInput.x}px`, top: `${textInput.y - 12}px`, fontSize: '16px', minWidth: '200px' }}
+                  placeholder="Type note..."
+                  className="absolute z-20 bg-white/95 border-2 border-[#7a2e46] dark:border-[#f8d070] outline-none text-[#7a2e46] dark:text-stone-900 px-2 py-1 rounded shadow-lg font-sans font-bold"
+                  style={{ left: `${textInput.x}px`, top: `${textInput.y - 12}px`, fontSize: '15px', minWidth: '200px' }}
                 />
               )}
 
               {/* Rendered Text Annotations */}
-              {(annotations[pageNumber] || []).map((path, idx) => {
-                if (path.type !== 'text') return null;
+              {getPageAnnotations(annotations, pageNumber).map((path, idx) => {
+                if (path.type !== 'text' || !path.points?.[0]) return null;
+                const canvas = canvasRef.current;
+                const pt = path.points[0];
+                const bW = path.baseWidth || canvas?.width || 595.28;
+                const bH = path.baseHeight || canvas?.height || 841.89;
+                const leftPos = pt.nx != null ? pt.nx * (canvas?.width || bW) : (pt.x > 1 ? (pt.x / bW) * (canvas?.width || bW) : pt.x);
+                const topPos = pt.ny != null ? (pt.ny * (canvas?.height || bH)) - 12 : ((pt.y > 1 ? (pt.y / bH) * (canvas?.height || bH) : pt.y) - 12);
+
                 return (
                   <div
                     key={idx}
                     className="absolute z-10 group"
-                    style={{ left: `${path.points[0].x}px`, top: `${path.points[0].y - 12}px` }}
+                    style={{ left: `${leftPos}px`, top: `${topPos}px` }}
                   >
-                    <div className="relative bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm border border-[#7a2e46]/30 dark:border-[#f8d070]/30 px-2 py-1 rounded shadow-sm">
-                      <span className="font-sans font-bold text-[#7a2e46] dark:text-[#f8d070] text-[16px] whitespace-pre-wrap leading-tight">{path.text}</span>
+                    <div className="relative bg-white/90 dark:bg-stone-900/90 backdrop-blur-sm border border-[#7a2e46]/40 dark:border-[#f8d070]/40 px-2.5 py-1 rounded-md shadow-sm">
+                      <span className="font-sans font-bold text-[#7a2e46] dark:text-[#f8d070] text-[14px] sm:text-[15px] whitespace-pre-wrap leading-tight">{path.text}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteTextAnnotation(idx); }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
-                        title="Delete text"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 cursor-pointer"
+                        title="Delete text note"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>

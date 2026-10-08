@@ -7,6 +7,7 @@ import DeanActivate from './pages/DeanActivate';
 import ResetPassword from './pages/ResetPassword';
 import PublicVerifyCertificate from './pages/PublicVerifyCertificate';
 import NetworkStatusPill from './components/NetworkStatusPill';
+import InviteAcceptanceHandler from './components/InviteAcceptanceHandler';
 
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
@@ -45,6 +46,7 @@ const PortalLoader = ({ text }) => {
 function App() {
   return (
     <Router>
+      <InviteAcceptanceHandler />
       <NetworkStatusPill />
       <Suspense fallback={<PortalLoader />}>
         <Routes>

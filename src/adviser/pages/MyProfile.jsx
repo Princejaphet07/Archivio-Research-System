@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, getDoc, updateDoc, setDoc, doc } fro
 import { auth, db } from '../firebase/config';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
+import { User, Bell, Lock, LogOut, Trash2, Plus } from 'lucide-react';
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -248,7 +249,7 @@ function MyProfile() {
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
-              <span>👤</span>
+              <User className="w-4 h-4" />
               <span>Profile</span>
             </button>
             <button 
@@ -260,7 +261,7 @@ function MyProfile() {
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
-              <span>🔔</span>
+              <Bell className="w-4 h-4" />
               <span>Alerts</span>
             </button>
             <button 
@@ -272,7 +273,7 @@ function MyProfile() {
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
-              <span>🔒</span>
+              <Lock className="w-4 h-4" />
               <span>Security</span>
             </button>
             <button 
@@ -280,7 +281,7 @@ function MyProfile() {
               onClick={handleLogout}
               className="py-2.5 px-3 text-xs font-bold rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center justify-center gap-1"
             >
-              <span>🚪</span>
+              <LogOut className="w-4 h-4" />
               <span>Exit</span>
             </button>
           </div>
@@ -297,7 +298,8 @@ function MyProfile() {
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
-                👤 Profile
+                <User className="w-4 h-4" />
+                <span>Profile</span>
               </button>
               <button 
                 type="button"
@@ -308,7 +310,8 @@ function MyProfile() {
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
-                🔔 Notifications
+                <Bell className="w-4 h-4" />
+                <span>Notifications</span>
               </button>
               <button 
                 type="button"
@@ -319,14 +322,16 @@ function MyProfile() {
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
-                🔒 Password
+                <Lock className="w-4 h-4" />
+                <span>Password</span>
               </button>
               <button 
                 type="button"
                 onClick={handleLogout}
                 className="w-full text-left px-5 py-4 text-sm font-bold text-red-600 dark:text-red-400 border-t border-gray-100 dark:border-stone-800 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 border-l-4 border-l-transparent transition-colors"
               >
-                🚪 Logout
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
               </button>
             </Card>
           </div>
@@ -368,7 +373,14 @@ function MyProfile() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Department</label>
-                    <input type="text" value={userData.department} onChange={(e) => setUserData({...userData, department: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
+                    <input 
+                      type="text" 
+                      value={userData.department} 
+                      disabled 
+                      readOnly 
+                      className="w-full bg-gray-50 dark:bg-stone-800 border border-gray-200 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none text-gray-400 dark:text-stone-500 cursor-not-allowed mb-1" 
+                    />
+                    <p className="text-[10px] text-gray-400 dark:text-stone-500">Read-only · Managed by Dean / Administrator</p>
                   </div>
 
                   <div>
@@ -390,10 +402,10 @@ function MyProfile() {
                       <button 
                         type="button"
                         onClick={handleOpenMembershipModal}
-                        className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm"
+                        className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
                         title="Add Organizational Membership"
                       >
-                        +
+                        <Plus className="w-4 h-4" />
                       </button>
                     </div>
                     
@@ -427,12 +439,10 @@ function MyProfile() {
                             <button 
                               type="button"
                               onClick={() => handleDeleteMembership(item.id)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition cursor-pointer"
                               title="Remove Membership"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         ))}
@@ -452,8 +462,8 @@ function MyProfile() {
               {activeTab === 'notifications' && (
                 <>
                   {/* Info Alert */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
-                    <span className="text-blue-600 text-xl flex-shrink-0">🔔</span>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-center gap-3">
+                    <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-400 leading-relaxed">
                       You will receive in-app notifications based on your preferences below.
                     </p>
@@ -542,8 +552,8 @@ function MyProfile() {
               {activeTab === 'password' && (
                 <>
                   {/* Info Alert */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
-                    <span className="text-blue-600 text-xl flex-shrink-0">🔒</span>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-3.5 sm:p-4 flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-400 leading-relaxed">
                       Your password is <span className="font-semibold">private</span> – only you have access. The System Administrator and Dean cannot view or reset your password.
                     </p>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../../firebase/config';
+import PrivacyPolicyModal from '../../components/PrivacyPolicyModal';
 
 export default function StudentActivate() {
   const [token, setToken] = useState(null);
@@ -12,7 +13,40 @@ export default function StudentActivate() {
   const [validating, setValidating] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const bothAgreed = termsAccepted && privacyAccepted;
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [modalMode, setModalMode] = useState('terms');
   const [formErrors, setFormErrors] = useState({});
+
+  const openPolicy = (mode) => {
+    setModalMode(mode);
+    setShowPrivacyModal(true);
+  };
+
+  const handleAcceptPolicy = (acceptedMode) => {
+    const which = acceptedMode || modalMode;
+    if (which === 'terms') {
+      setTermsAccepted(true);
+      if (privacyAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else if (which === 'privacy') {
+      setPrivacyAccepted(true);
+      if (termsAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else {
+      setTermsAccepted(true);
+      setPrivacyAccepted(true);
+      setFormData(prev => ({ ...prev, agreeTerms: true }));
+      if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+    }
+    setShowPrivacyModal(false);
+  };
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -139,8 +173,8 @@ export default function StudentActivate() {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.agreeTerms) {
-      errors.agreeTerms = 'You must agree to the Terms and Conditions';
+    if (!formData.agreeTerms || !bothAgreed) {
+      errors.agreeTerms = 'You must agree to both the Privacy Policy and Terms and Conditions';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -369,19 +403,65 @@ export default function StudentActivate() {
               </div>
 
               {/* Terms & Conditions */}
-              <div className={`flex items-start gap-3 mt-6 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : ''}`}>
+              <div 
+                onClick={(e) => {
+                  if (!bothAgreed) {
+                    e.preventDefault();
+                    if (!privacyAccepted) {
+                      openPolicy('privacy');
+                    } else if (!termsAccepted) {
+                      openPolicy('terms');
+                    }
+                  }
+                }}
+                className={`flex items-start gap-3 mt-6 p-2 rounded-lg transition-colors ${!bothAgreed ? 'cursor-pointer hover:bg-stone-100/60' : ''} ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : ''}`}
+              >
                 <input 
                   id="student-activate-agreeTerms"
                   type="checkbox" 
                   name="agreeTerms"
-                  checked={formData.agreeTerms}
-                  onChange={handleInputChange}
+                  checked={formData.agreeTerms && bothAgreed} 
+                  onChange={(e) => {
+                    if (!bothAgreed) {
+                      e.preventDefault();
+                      if (!privacyAccepted) openPolicy('privacy');
+                      else if (!termsAccepted) openPolicy('terms');
+                      return;
+                    }
+                    handleInputChange(e);
+                  }}
                   disabled={loading}
-                  className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5 cursor-pointer" 
+                  className={`w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5 ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
                 />
                 <div>
-                  <label htmlFor="student-activate-agreeTerms" className="text-sm text-gray-700">
-                    I agree to the <span className="font-semibold text-blue-600">Terms and Conditions</span> and <span className="font-semibold text-blue-600">Privacy Policy</span> of ARCHIVIO
+                  <label htmlFor="student-activate-agreeTerms" className={`text-sm ${!bothAgreed ? 'text-gray-500 cursor-pointer' : 'text-gray-700'} select-none`}>
+                    I agree to the{' '}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openPolicy('privacy');
+                      }}
+                      className={`font-semibold ${privacyAccepted ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'} underline cursor-pointer`}
+                    >
+                      Privacy Policy{privacyAccepted ? ' ✓' : ''}
+                    </span>{' '}
+                    and the{' '}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openPolicy('terms');
+                      }}
+                      className={`font-semibold ${termsAccepted ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'} underline cursor-pointer`}
+                    >
+                      Terms and Conditions{termsAccepted ? ' ✓' : ''}
+                    </span>{' '}
+                    of Archivio
                   </label>
                   {formErrors.agreeTerms && (
                     <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
@@ -394,7 +474,7 @@ export default function StudentActivate() {
               {/* Submit Button */}
               <button 
                 type="submit"
-                disabled={loading || !passwordValidation.isValid || !formData.agreeTerms}
+                disabled={loading || !passwordValidation.isValid || !formData.agreeTerms || !bothAgreed}
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-base mt-8"
               >
                 {loading ? 'Activating...' : 'Activate My Account'}
@@ -415,6 +495,14 @@ export default function StudentActivate() {
           </div>
         )}
       </div>
+
+      {/* Official Standalone Policy Modals */}
+      <PrivacyPolicyModal 
+        isOpen={showPrivacyModal} 
+        mode={modalMode}
+        onClose={() => setShowPrivacyModal(false)} 
+        onAccept={handleAcceptPolicy}
+      />
     </div>
   );
 }

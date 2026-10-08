@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { Download, Search, Eye, Sparkles, FolderArchive } from 'lucide-react';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -33,6 +34,25 @@ const ACTION_STYLES = {
   View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-700',
   Publish: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
   Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
+};
+
+const formatStatus = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'in_progress':
+    case 'in progress':
+    case 'pending':
+      return 'In Progress';
+    case 'dean_revision':
+    case 'revision':
+      return 'Revision';
+    case 'reviewed':
+    case 'approved':
+      return 'Approved';
+    case 'published':
+      return 'Published';
+    default:
+      return 'In Progress';
+  }
 };
 
 export default function ResearchRecords() {
@@ -144,8 +164,11 @@ export default function ResearchRecords() {
           const advisers = [...new Set(mergedRecords.map(r => r.adviser))].filter(Boolean).sort();
           setAllAdvisers(['All Advisers', ...advisers]);
           
-          const statuses = [...new Set(mergedRecords.map(r => r.status))].filter(Boolean).sort();
-          setAllStatuses(['All Statuses', ...statuses]);
+          const ALLOWED_STATUSES = ['In Progress', 'Revision', 'Approved', 'Published'];
+          const availableStatuses = ALLOWED_STATUSES.filter(st =>
+            mergedRecords.some(r => formatStatus(r.status) === st)
+          );
+          setAllStatuses(['All Statuses', ...availableStatuses]);
 
           const categories = [...new Set(mergedRecords.map(r => r.category))].filter(Boolean).sort();
           setAllCategories(['All Categories', ...categories]);
@@ -179,29 +202,26 @@ export default function ResearchRecords() {
       r.adviser.toLowerCase().includes(search.toLowerCase());
     const matchYear = filterYear === 'All Years' || r.year === filterYear;
     const matchAdviser = filterAdviser === 'All Advisers' || r.adviser === filterAdviser;
-    const matchStatus = filterStatus === 'All Statuses' || r.status === filterStatus;
+    const matchStatus = filterStatus === 'All Statuses' || formatStatus(r.status) === filterStatus;
     const matchCategory = filterCategory === 'All Categories' || r.category === filterCategory;
     return matchSearch && matchYear && matchAdviser && matchStatus && matchCategory;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / RECORDS_PER_PAGE));
-  const paginated = filtered.slice((currentPage - 1) * RECORDS_PER_PAGE, currentPage * RECORDS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
     setCurrentPage(1);
   };
 
-  const formatStatus = (status) => {
-    switch (status) {
-      case 'in_progress': return 'In Progress';
-      case 'pending': return 'Pending';
-      case 'reviewed': return 'Reviewed';
-      case 'approved': return 'Approved';
-      case 'published': return 'Published';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
+
+
+  useEffect(() => {
+    if (filterStatus !== 'All Statuses' && !allStatuses.includes(filterStatus)) {
+      setFilterStatus('All Statuses');
     }
-  };
+  }, [allStatuses, filterStatus]);
 
   const handleView = (record) => {
     if (record.originalSub && record.originalSub.id) {
@@ -286,7 +306,8 @@ export default function ResearchRecords() {
               className="flex items-center gap-2"
               onClick={handleExportCSV}
             >
-              <span>📤</span> Export CSV
+              <Download className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+              <span>Export CSV</span>
             </PremiumButton>
           </div>
 
@@ -298,7 +319,7 @@ export default function ResearchRecords() {
               <div className="flex flex-wrap gap-2.5 items-center">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
-                  <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 dark:text-stone-400 text-xs pointer-events-none">🔍</span>
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
                   <input
                     type="text"
                     value={search}
@@ -321,7 +342,7 @@ export default function ResearchRecords() {
                       onChange={handleFilterChange(setter)}
                       className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] cursor-pointer"
                     >
-                      {options.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
+                      {options.map((o) => <option key={o} value={o}>{o}</option>)}
                     </select>
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 text-[10px] pointer-events-none">▼</span>
                   </div>
@@ -336,26 +357,26 @@ export default function ResearchRecords() {
                   <TableSkeleton rows={5} />
                 </div>
               ) : (
-              <table className="w-full text-left text-xs border-separate" style={{ borderSpacing: '0 8px' }}>
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">
-                    <th className="py-2 px-6 w-12 font-bold text-stone-400">#</th>
-                    <th className="py-2 px-6 font-bold text-stone-400">Title</th>
-                    <th className="py-2 px-6 font-bold text-stone-400">Group</th>
-                    <th className="py-2 px-6 font-bold text-stone-400">Adviser</th>
-                    <th className="py-2 px-6 text-center font-bold text-stone-400">Category</th>
-                    <th className="py-2 px-6 text-center font-bold text-stone-400">Year</th>
-                    <th className="py-2 px-6 text-center font-bold text-stone-400">Status</th>
-                    <th className="py-2 px-6 text-center font-bold text-stone-400">Actions</th>
+                  <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
+                    <th className="py-3.5 px-4 text-center w-12">No.</th>
+                    <th className="py-3.5 px-4">Research Title</th>
+                    <th className="py-3.5 px-4">Group</th>
+                    <th className="py-3.5 px-4">Adviser</th>
+                    <th className="py-3.5 px-4 text-center">Category</th>
+                    <th className="py-3.5 px-4 text-center">Year</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="px-4">
+                <tbody className="divide-y divide-stone-100 dark:divide-stone-700/60 font-medium">
                   {paginated.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-24">
                         <div className="flex flex-col items-center justify-center text-center">
                           <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-4">
-                            <span className="text-2xl opacity-50">📂</span>
+                            <FolderArchive className="w-7 h-7 text-stone-400" />
                           </div>
                           <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-1">No research records found</h3>
                           <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">Try adjusting your search filters or selecting a different academic year to find what you're looking for.</p>
@@ -363,37 +384,42 @@ export default function ResearchRecords() {
                       </td>
                     </tr>
                   ) : (
-                    paginated.map((record) => (
+                    paginated.map((record, index) => (
                       <tr
                         key={record.id}
-                        className={`group bg-white dark:bg-stone-800/40 hover:bg-stone-50 dark:hover:bg-stone-800/80 transition-all duration-300 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md rounded-xl cursor-default
-                        ${record.adviserSelf ? 'border-l-4 border-l-[#f8d070]' : 'border border-transparent'}`}
+                        className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${
+                          record.adviserSelf ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
+                        }`}
                       >
-                        {/* # */}
-                        <td className="py-4 px-6 text-stone-400 font-bold rounded-l-xl border-y border-l border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.id}</td>
+                        {/* No. */}
+                        <td className="py-4 px-4 text-center text-stone-400 font-normal">
+                          {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                        </td>
 
                         {/* Title */}
-                        <td className="py-4 px-6 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
-                          <span className="font-bold text-stone-900 dark:text-stone-100 text-[13px]">{record.title}</span>
+                        <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">
+                          {record.title}
                         </td>
 
                         {/* Group */}
-                        <td className="py-4 px-6 text-stone-500 dark:text-stone-400 font-medium border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.group}</td>
+                        <td className="py-4 px-4 text-stone-600 dark:text-stone-400 font-medium">
+                          {record.group}
+                        </td>
 
                         {/* Adviser */}
-                        <td className="py-4 px-6 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                        <td className="py-4 px-4 text-stone-700 dark:text-stone-300">
                           <div className="flex items-center gap-2">
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${record.adviserSelf ? 'bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-[#4a1024]' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'}`}>
                               {record.adviser.charAt(0).toUpperCase()}
                             </div>
-                            <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-600 dark:text-stone-300 font-medium'}>
+                            <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
                               {record.adviser}
                             </span>
                           </div>
                         </td>
 
                         {/* Category */}
-                        <td className="py-4 px-6 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                        <td className="py-4 px-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold border ${
                             record.category === 'ML' ? 'bg-purple-50/50 text-purple-700 border-purple-200/50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800/30' :
                             record.category === 'IoT' ? 'bg-teal-50/50 text-teal-700 border-teal-200/50 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800/30' :
@@ -414,10 +440,10 @@ export default function ResearchRecords() {
                         </td>
 
                         {/* Year */}
-                        <td className="py-4 px-6 text-center text-stone-500 dark:text-stone-400 font-bold border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">{record.year}</td>
+                        <td className="py-4 px-4 text-center text-stone-500 dark:text-stone-400 font-bold">{record.year}</td>
 
                         {/* Status */}
-                        <td className="py-4 px-6 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                        <td className="py-4 px-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
                             record.status === 'published' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' :
                             (record.status === 'approved' || record.status === 'reviewed') ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400' :
@@ -428,9 +454,9 @@ export default function ResearchRecords() {
                         </td>
 
                         {/* Action */}
-                        <td className="py-4 px-6 text-center rounded-r-xl border-y border-r border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
+                        <td className="py-4 px-4 text-center">
                           <button 
-                            className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all duration-300 shadow-sm flex items-center gap-2 mx-auto ${
+                            className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300 shadow-sm inline-flex items-center gap-1.5 mx-auto ${
                               record.action === 'Publish' || record.action === 'Review'
                               ? 'bg-[#7a1f3d] dark:bg-[#d4af37] text-white dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#f8d070] hover:shadow-md hover:-translate-y-0.5' 
                               : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-200 hover:border-stone-300 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-700 hover:-translate-y-0.5'
@@ -444,7 +470,12 @@ export default function ResearchRecords() {
                               }
                             }}
                           >
-                            {record.action === 'Publish' || record.action === 'Review' ? '★' : '👁'} {record.action}
+                            {record.action === 'Publish' || record.action === 'Review' ? (
+                              <Sparkles className="w-3.5 h-3.5" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5 text-stone-500 dark:text-stone-300" />
+                            )}
+                            <span>{record.action}</span>
                           </button>
                         </td>
                       </tr>
@@ -559,6 +590,26 @@ export default function ResearchRecords() {
                   </p>
                 </div>
               )}
+
+              {/* Group Members */}
+              <div>
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="bg-[#4a1024] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
+                    👤 {selectedSubmission.leaderName || 'Leader'} (Leader)
+                  </span>
+                  {selectedSubmission.members?.map((m, i) => {
+                    const name = typeof m === 'object'
+                      ? (m.name || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || `Member ${i + 2}`)
+                      : (typeof m === 'string' && m.includes('@') ? m.split('@')[0] : (m || `Member ${i + 2}`));
+                    return (
+                      <span key={i} className="bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-700">
+                        👤 {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div>
                 <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { logActivity } from '../../firebase/logActivity';
+import { AlertCircle, Mail, Lock } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import bgTexture from '../../assets/Rectangle 9 (2).png';
 import leftPanelBg from '../../assets/left-panel-bg.png';
@@ -29,7 +30,7 @@ function Login() {
 
       // Validate @phinmaed.com domain — no personal emails allowed
       if (!trimmedEmail.endsWith('@phinmaed.com')) {
-        setError('❌ Please use your institutional email (@phinmaed.com) to sign in.');
+        setError('Please use your institutional email (@phinmaed.com) to sign in.');
         setLoading(false);
         return;
       }
@@ -59,15 +60,15 @@ function Login() {
       console.error('Login error:', err);
 
       if (err.code === 'auth/user-not-found') {
-        setError('❌ Email not found. Please check your email or create an account.');
+        setError('Email not found. Please check your email or create an account.');
       } else if (err.code === 'auth/wrong-password') {
-        setError('❌ Incorrect password. Please try again.');
+        setError('Incorrect password. Please try again.');
       } else if (err.code === 'auth/invalid-email') {
-        setError('❌ Invalid email format.');
+        setError('Invalid email format.');
       } else if (err.code === 'auth/invalid-credential') {
-        setError('❌ Email or password is incorrect. Please try again.');
+        setError('Email or password is incorrect. Please try again.');
       } else {
-        setError(`❌ Login failed: ${err.message}`);
+        setError(`Login failed: ${err.message}`);
       }
 
       await logActivity({
@@ -155,7 +156,7 @@ function Login() {
             <form onSubmit={handleLogin}>
               {error && (
                 <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                  <span className="text-red-500 text-sm">⚠️</span>
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
@@ -164,7 +165,9 @@ function Login() {
               <div className="mb-4">
                 <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-sm">✉️</span>
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <Mail className="w-3.5 h-3.5" />
+                  </span>
                   <input
                     type="email"
                     value={email}
@@ -180,7 +183,9 @@ function Login() {
               <div className="mb-4">
                 <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Password</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-sm">🔒</span>
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <Lock className="w-3.5 h-3.5" />
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
@@ -231,7 +236,9 @@ function Login() {
               </div>
 
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-800">
-                <p className="font-semibold mb-1">📧 Invited via Email?</p>
+                <p className="font-semibold mb-1 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> Invited via Email?
+                </p>
                 <p className="mb-2">If you received an invitation email from your Dean, click the activation link in the email to create your account.</p>
                 <p className="text-[10px] text-blue-700">The activation link looks like: <span className="font-mono">http://localhost:5176/adviser-activate?token=...</span></p>
               </div>

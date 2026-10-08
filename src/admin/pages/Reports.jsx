@@ -60,7 +60,7 @@ const formatDepartment = (deptStr, activeDepartments = [], activePrograms = []) 
       const pNameLower = (p.name || '').toLowerCase();
       const pCodeLower = (p.code || '').toLowerCase();
       return (pCodeLower && (pCodeLower === lower || lower.includes(pCodeLower))) ||
-             (pNameLower && (pNameLower === lower || lower.includes(pNameLower) || pNameLower.includes(lower)));
+        (pNameLower && (pNameLower === lower || lower.includes(pNameLower) || pNameLower.includes(lower)));
     });
     if (foundProg?.school) return foundProg.school;
   }
@@ -195,7 +195,7 @@ export default function Reports() {
     return filteredSubs
       .filter(s => s.reviewStatus === 'published')
       .map((s, index) => {
-        const group = groups.find(g => 
+        const group = groups.find(g =>
           (g.id && (g.id === s.groupId || g.id === s.groupDocId)) ||
           (s.studentUid && g.leaderUid === s.studentUid) ||
           (s.groupName && g.groupName && g.groupName.trim().toLowerCase() === s.groupName.trim().toLowerCase()) ||
@@ -210,7 +210,7 @@ export default function Reports() {
           title: group?.researchTitle || s.researchTitle || s.title || 'Untitled',
           dept: formatDepartment(rawDept, departments, programs),
           cat: group?.category || s.category || 'General',
-          sy: s.schoolYear || '2025-2026',
+          sy: s.schoolYear || s.academicYear || (s.createdAt ? (new Date(s.createdAt).getMonth() >= 7 ? `${new Date(s.createdAt).getFullYear()}-${new Date(s.createdAt).getFullYear() + 1}` : `${new Date(s.createdAt).getFullYear() - 1}-${new Date(s.createdAt).getFullYear()}`) : (selectedYear !== 'All' ? selectedYear.replace(/^SY\s*/, '') : '2026-2027')),
           date: dDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         };
       })
@@ -222,7 +222,7 @@ export default function Reports() {
     if (activeUsersTab === 1) u = u.filter(user => user.role === 'Dean');
     else if (activeUsersTab === 2) u = u.filter(user => user.role === 'Advisor');
     else if (activeUsersTab === 3) u = u.filter(user => user.role === 'Student');
-    
+
     return u.sort((a, b) => a.name.localeCompare(b.name)).map((u, i) => ({ ...u, id: (i + 1).toString().padStart(2, '0') }));
   }, [allUsers, activeUsersTab, selectedYear, filterByAcademicYear]);
 
@@ -242,7 +242,7 @@ export default function Reports() {
     }
 
     filteredSubs.forEach(s => {
-      const group = groups.find(g => 
+      const group = groups.find(g =>
         (g.id && (g.id === s.groupId || g.id === s.groupDocId)) ||
         (s.studentUid && g.leaderUid === s.studentUid) ||
         (s.groupName && g.groupName && g.groupName.trim().toLowerCase() === s.groupName.trim().toLowerCase()) ||
@@ -253,7 +253,7 @@ export default function Reports() {
       const deptName = formatDepartment(rawDept, departments, programs);
 
       if (!deptsMap[deptName]) deptsMap[deptName] = { sub: 0, pub: 0, end: 0, pend: 0 };
-      
+
       deptsMap[deptName].sub += 1;
       if (s.reviewStatus === 'published') deptsMap[deptName].pub += 1;
       if (s.reviewStatus === 'endorsed' || s.adviserStatus === 'approved') deptsMap[deptName].end += 1;
@@ -274,7 +274,7 @@ export default function Reports() {
 
   const analyticsData = useMemo(() => {
     const publishedPapers = submissions.filter(s => s.reviewStatus === 'published');
-    
+
     // 1. Papers per Year
     const yearlyMap = {};
     publishedPapers.forEach(paper => {
@@ -286,7 +286,7 @@ export default function Reports() {
       } else if (paper.schoolYear) {
         year = paper.schoolYear.split('-')[0]; // Extract 2026 from 2026-2027
       }
-      
+
       yearlyMap[year] = (yearlyMap[year] || 0) + 1;
     });
     const yearlyData = Object.keys(yearlyMap).map(year => ({
@@ -337,9 +337,9 @@ export default function Reports() {
 
   const handleExportCSV = () => {
     if (!selected) return;
-    
+
     let csvContent = "data:text/csv;charset=utf-8,";
-    
+
     if (selected === 'published') {
       csvContent += "ID,Research Title,Department,Category,School Year,Date Published\n";
       publishedData.forEach(row => {
@@ -373,7 +373,7 @@ export default function Reports() {
   const DeptPill = ({ text }) => (
     <span className="px-3 py-1 bg-[#f3e6ea] text-[#801e38] rounded-full text-[11px] font-bold whitespace-nowrap">{text}</span>
   );
-  
+
   const RolePill = ({ role }) => {
     const colors = {
       Advisor: 'bg-amber-50 text-amber-600',
@@ -388,7 +388,7 @@ export default function Reports() {
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
+
         {/* Top Header Component */}
         <Header title="Reports" breadcrumbs={['Reports']} />
 
@@ -402,7 +402,7 @@ export default function Reports() {
           {!selected && (
             <div className="mb-8 space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
+
                 {/* Papers per Year Chart */}
                 <Card className="p-6 relative overflow-hidden group border border-stone-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
                   <div className="flex items-center gap-3 mb-6">
@@ -417,20 +417,20 @@ export default function Reports() {
                         <BarChart data={analyticsData.yearlyData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
                           <defs>
                             <linearGradient id="colorPapers" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#7B1F35" stopOpacity={0.9}/>
-                              <stop offset="95%" stopColor="#7B1F35" stopOpacity={0.4}/>
+                              <stop offset="5%" stopColor="#7B1F35" stopOpacity={0.9} />
+                              <stop offset="95%" stopColor="#7B1F35" stopOpacity={0.4} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
                           <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
                           <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 600 }} axisLine={false} tickLine={false} />
-                          <Tooltip 
+                          <Tooltip
                             cursor={{ fill: 'rgba(123, 31, 53, 0.05)' }}
-                            contentStyle={{ 
-                              backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                            contentStyle={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.85)',
                               backdropFilter: 'blur(12px)',
-                              borderRadius: '12px', 
-                              border: '1px solid rgba(0,0,0,0.05)', 
+                              borderRadius: '12px',
+                              border: '1px solid rgba(0,0,0,0.05)',
                               boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                               color: '#1f2937',
                               fontWeight: 'bold',
@@ -474,21 +474,21 @@ export default function Reports() {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity cursor-pointer" />
                             ))}
                           </Pie>
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.85)',
                               backdropFilter: 'blur(12px)',
-                              borderRadius: '12px', 
-                              border: '1px solid rgba(0,0,0,0.05)', 
+                              borderRadius: '12px',
+                              border: '1px solid rgba(0,0,0,0.05)',
                               boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                               color: '#1f2937',
                               fontWeight: 'bold',
                               fontSize: '12px'
                             }}
                           />
-                          <Legend 
-                            verticalAlign="bottom" 
-                            height={40} 
+                          <Legend
+                            verticalAlign="bottom"
+                            height={40}
                             iconType="circle"
                             iconSize={8}
                             wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#4b5563', paddingTop: '10px' }}
@@ -512,11 +512,10 @@ export default function Reports() {
               <button
                 key={r.id}
                 onClick={() => { setSelected(r.id); setCurrentPage(1); }}
-                className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
-                  selected === r.id
+                className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${selected === r.id
                     ? 'border-[#801e38] bg-white dark:bg-[#1e1e1e] shadow-md'
                     : 'border-transparent bg-white dark:bg-[#1e1e1e] shadow-sm hover:border-stone-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <span className="text-2xl">{r.icon}</span>
@@ -533,7 +532,7 @@ export default function Reports() {
           {/* DYNAMIC REPORT CONTENT */}
           {selected && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
+
               {/* Header & Actions */}
               <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 gap-4">
                 <div>
@@ -572,7 +571,7 @@ export default function Reports() {
                 )}
                 {selected === 'users' && (
                   <>
-                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-[#801e38] rounded-lg text-sm text-[#801e38] font-bold outline-none"><option>SY 2025-2026</option></select>
+                    <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-[#801e38] rounded-lg text-sm text-[#801e38] font-bold outline-none"><option>{selectedYear || 'All SY'}</option></select>
                     <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Roles</option></select>
                     <select className="px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-700 dark:text-stone-200 outline-none"><option>All Status</option></select>
                   </>
@@ -597,32 +596,32 @@ export default function Reports() {
               <div className={`grid gap-4 mb-8 ${selected === 'published' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
                 {selected === 'published' && (
                   <>
-                    <StatCard icon={<FileText className="w-5 h-5"/>} label="Total Published" value={publishedData.length} sub="All time • all departments" color="maroon" />
-                    <StatCard icon={<FileText className="w-5 h-5"/>} label="Published This SY" value={publishedData.filter(p => p.sy.includes('2025')).length} sub="SY 2025-2026 in progress" color="blue" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Research Categories" value={new Set(publishedData.map(p => p.cat)).size} sub="Across all published papers" color="amber" />
+                    <StatCard icon={<FileText className="w-5 h-5" />} label="Total Published" value={publishedData.length} sub="All time • all departments" color="maroon" />
+                    <StatCard icon={<FileText className="w-5 h-5" />} label="Published This SY" value={publishedData.filter(p => selectedYear !== 'All' ? p.sy.includes(selectedYear.replace(/^SY\s*/, '')) : true).length} sub={`${selectedYear || 'Current SY'} in progress`} color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Research Categories" value={new Set(publishedData.map(p => p.cat)).size} sub="Across all published papers" color="amber" />
                   </>
                 )}
                 {selected === 'users' && (
                   <>
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Total Users" value={usersData.length} color="maroon" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Deans" value={usersData.filter(u => u.role === 'Dean').length} color="blue" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Research Advisers" value={usersData.filter(u => u.role === 'Advisor').length} color="amber" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Students" value={usersData.filter(u => u.role === 'Student').length} color="green" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Total Users" value={usersData.length} color="maroon" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Deans" value={usersData.filter(u => u.role === 'Dean').length} color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Research Advisers" value={usersData.filter(u => u.role === 'Advisor').length} color="amber" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Students" value={usersData.filter(u => u.role === 'Student').length} color="green" />
                   </>
                 )}
                 {selected === 'dept' && (
                   <>
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Total Submissions" value={deptData.reduce((acc, curr) => acc + curr.sub, 0)} color="maroon" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Published" value={deptData.reduce((acc, curr) => acc + curr.pub, 0)} color="green" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Endorsed to Dean" value={deptData.reduce((acc, curr) => acc + curr.end, 0)} color="blue" />
-                    <StatCard icon={<Building2 className="w-5 h-5"/>} label="Pending Approval" value={deptData.reduce((acc, curr) => acc + curr.pend, 0)} color="red" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Total Submissions" value={deptData.reduce((acc, curr) => acc + curr.sub, 0)} color="maroon" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Published" value={deptData.reduce((acc, curr) => acc + curr.pub, 0)} color="green" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Endorsed to Dean" value={deptData.reduce((acc, curr) => acc + curr.end, 0)} color="blue" />
+                    <StatCard icon={<Building2 className="w-5 h-5" />} label="Pending Approval" value={deptData.reduce((acc, curr) => acc + curr.pend, 0)} color="red" />
                   </>
                 )}
               </div>
 
               {/* Data Table */}
               <Card className="mb-6 flex flex-col overflow-hidden">
-                
+
                 {/* Custom Card Headers based on report */}
                 {selected === 'published' && (
                   <div className="p-5 border-b border-stone-200 dark:border-stone-700 bg-white dark:bg-[#1e1e1e]">
@@ -688,67 +687,67 @@ export default function Reports() {
                         const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
                         const itemsPerPage = 10;
                         const paginatedData = currentData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-                        
+
                         return (
                           <>
                             {selected === 'published' && paginatedData.map((row) => (
-                        <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
-                          <td className="py-4 px-5 text-stone-400">{row.id}</td>
-                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.title}</td>
-                          <td className="py-4 px-5"><DeptPill text={row.dept} /></td>
-                          <td className="py-4 px-5">{row.cat}</td>
-                          <td className="py-4 px-5">{row.sy}</td>
-                          <td className="py-4 px-5 font-bold text-[#801e38] text-xs">{row.date}</td>
-                          <td className="py-4 px-5 text-center">
-                            <button 
-                              onClick={() => handleDeleteResearch(row.docId, row.title)} 
-                              title="Delete Permanently" 
-                              className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 inline-flex items-center justify-center bg-white dark:bg-[#1e1e1e] shadow-sm transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                              <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                                <td className="py-4 px-5 text-stone-400">{row.id}</td>
+                                <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.title}</td>
+                                <td className="py-4 px-5"><DeptPill text={row.dept} /></td>
+                                <td className="py-4 px-5">{row.cat}</td>
+                                <td className="py-4 px-5">{row.sy}</td>
+                                <td className="py-4 px-5 font-bold text-[#801e38] text-xs">{row.date}</td>
+                                <td className="py-4 px-5 text-center">
+                                  <button
+                                    onClick={() => handleDeleteResearch(row.docId, row.title)}
+                                    title="Delete Permanently"
+                                    className="w-8 h-8 rounded border border-red-200 text-red-500 hover:bg-red-50 inline-flex items-center justify-center bg-white dark:bg-[#1e1e1e] shadow-sm transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
 
-                      {selected === 'users' && paginatedData.map((row) => (
-                        <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
-                          <td className="py-4 px-5 text-stone-400">{row.id}</td>
-                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.name}</td>
-                          <td className="py-4 px-5"><RolePill role={row.role} /></td>
-                          <td className="py-4 px-5 text-xs">{row.dept}</td>
-                          <td className="py-4 px-5 text-xs text-stone-500 dark:text-stone-400">{row.prog}</td>
-                          <td className="py-4 px-5 text-xs">{row.date}</td>
-                          <td className={`py-4 px-5 font-semibold text-xs ${row.status.toLowerCase() === 'active' ? 'text-emerald-600' : 'text-stone-400'}`}>
-                            {row.status}
-                          </td>
-                        </tr>
-                      ))}
+                            {selected === 'users' && paginatedData.map((row) => (
+                              <tr key={row.id} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                                <td className="py-4 px-5 text-stone-400">{row.id}</td>
+                                <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.name}</td>
+                                <td className="py-4 px-5"><RolePill role={row.role} /></td>
+                                <td className="py-4 px-5 text-xs">{row.dept}</td>
+                                <td className="py-4 px-5 text-xs text-stone-500 dark:text-stone-400">{row.prog}</td>
+                                <td className="py-4 px-5 text-xs">{row.date}</td>
+                                <td className={`py-4 px-5 font-semibold text-xs ${row.status.toLowerCase() === 'active' ? 'text-emerald-600' : 'text-stone-400'}`}>
+                                  {row.status}
+                                </td>
+                              </tr>
+                            ))}
 
-                      {selected === 'dept' && paginatedData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
-                          <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.dept}</td>
-                          <td className="py-4 px-5">{row.sub}</td>
-                          <td className="py-4 px-5 font-bold text-emerald-600">{row.pub}</td>
-                          <td className="py-4 px-5 font-bold text-blue-600">{row.end}</td>
-                          <td className="py-4 px-5">
-                            {row.pend > 0 ? (
-                              <span className="bg-red-50 text-[#801e38] px-3 py-1 rounded-full text-[11px] font-bold">{row.pend}</span>
-                            ) : 0}
-                          </td>
-                          <td className="py-4 px-5">
-                            {row.rate !== '—' ? (
-                              <span className="border border-emerald-200 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold">{row.rate}</span>
-                            ) : '—'}
-                          </td>
-                          <td className="py-4 px-5">
-                            {row.status === 'On Track' ? (
-                              <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold">On Track</span>
-                            ) : (
-                              <span className="text-stone-400 text-xs italic">Pending Setup</span>
-                            )}
-                          </td>
-                        </tr>
+                            {selected === 'dept' && paginatedData.map((row, idx) => (
+                              <tr key={idx} className="hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] transition-colors">
+                                <td className="py-4 px-5 font-semibold text-stone-900 dark:text-stone-50">{row.dept}</td>
+                                <td className="py-4 px-5">{row.sub}</td>
+                                <td className="py-4 px-5 font-bold text-emerald-600">{row.pub}</td>
+                                <td className="py-4 px-5 font-bold text-blue-600">{row.end}</td>
+                                <td className="py-4 px-5">
+                                  {row.pend > 0 ? (
+                                    <span className="bg-red-50 text-[#801e38] px-3 py-1 rounded-full text-[11px] font-bold">{row.pend}</span>
+                                  ) : 0}
+                                </td>
+                                <td className="py-4 px-5">
+                                  {row.rate !== '—' ? (
+                                    <span className="border border-emerald-200 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold">{row.rate}</span>
+                                  ) : '—'}
+                                </td>
+                                <td className="py-4 px-5">
+                                  {row.status === 'On Track' ? (
+                                    <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold">On Track</span>
+                                  ) : (
+                                    <span className="text-stone-400 text-xs italic">Pending Setup</span>
+                                  )}
+                                </td>
+                              </tr>
                             ))}
                           </>
                         );
@@ -762,21 +761,21 @@ export default function Reports() {
                   const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
                   const itemsPerPage = 10;
                   const totalPages = Math.max(1, Math.ceil(currentData.length / itemsPerPage));
-                  
+
                   return (selected === 'published' || selected === 'users' || selected === 'dept') && (
                     <div className="flex items-center justify-between p-4 bg-white dark:bg-[#1e1e1e] border-t border-stone-100 dark:border-stone-800/50">
                       <p className="text-xs text-stone-500 dark:text-stone-400">
                         Showing {currentData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, currentData.length)} of {currentData.length} records
                       </p>
                       <div className="flex gap-1 items-center">
-                        <button 
+                        <button
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
                           className="px-3 py-1 text-sm border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] disabled:opacity-50 transition-colors"
                         >‹</button>
                         <button className="px-3 py-1 text-sm bg-[#801e38] text-white rounded font-bold">{currentPage}</button>
                         <span className="px-2 py-1 text-stone-400 text-xs">of {totalPages}</span>
-                        <button 
+                        <button
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
                           className="px-3 py-1 text-sm border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#2a2a2a] dark:bg-[#252525] disabled:opacity-50 transition-colors"
@@ -790,7 +789,7 @@ export default function Reports() {
               {/* Department Performance - Bar Chart Section */}
               {selected === 'dept' && (
                 <div className="bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-xl p-6 shadow-sm mb-6">
-                   <div className="mb-6">
+                  <div className="mb-6">
                     <h4 className="font-bold text-stone-900 dark:text-stone-50 text-lg flex items-center gap-2">
                       <span className="w-1 h-5 bg-[#801e38] rounded-full inline-block"></span>
                       Published, Endorsed & Pending — Department Breakdown
@@ -801,22 +800,22 @@ export default function Reports() {
                   <div className="relative pl-32 py-4 border-l border-b border-stone-200 dark:border-stone-700">
                     {/* Grid lines */}
                     <div className="absolute inset-0 left-32 flex justify-between pointer-events-none">
-                      {[0,10,20,30,40,50].map((v, i) => (
-                         <div key={i} className="h-full border-r border-stone-100 dark:border-stone-800/50 flex-1 relative">
-                            <span className="absolute -top-6 -right-2 text-[10px] text-stone-400">{v === 0 ? '0' : v}</span>
-                         </div>
+                      {[0, 10, 20, 30, 40, 50].map((v, i) => (
+                        <div key={i} className="h-full border-r border-stone-100 dark:border-stone-800/50 flex-1 relative">
+                          <span className="absolute -top-6 -right-2 text-[10px] text-stone-400">{v === 0 ? '0' : v}</span>
+                        </div>
                       ))}
                     </div>
 
                     {/* Chart Rows */}
                     <div className="space-y-6 relative z-10 pt-2 pb-6">
                       {deptData.length === 0 ? (
-                         <div className="text-center text-sm text-stone-400 italic">No department data available</div>
+                        <div className="text-center text-sm text-stone-400 italic">No department data available</div>
                       ) : (
                         deptData.map((deptRow, i) => {
                           const maxMetric = Math.max(...deptData.map(d => Math.max(d.pub, d.end, d.pend, 1))); // Find global max for scale
                           const getWidth = (val) => `${(val / maxMetric) * 100}%`;
-                          
+
                           return (
                             <div key={i} className="relative">
                               <span className="absolute -left-32 top-3 text-xs font-bold text-stone-700 dark:text-stone-200 w-28 text-right truncate" title={deptRow.dept}>{deptRow.dept}</span>
@@ -861,7 +860,7 @@ export default function Reports() {
               </p>
             </div>
           )}
-          
+
         </div>
       </main>
     </div>

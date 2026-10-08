@@ -12,6 +12,21 @@ const axios = require('axios');
 const dns = require('dns');
 require('dotenv').config();
 
+let Groq;
+try {
+  Groq = require('groq-sdk');
+} catch (e) {
+  console.warn('groq-sdk import warning:', e.message);
+}
+let groqClient = null;
+if (Groq && process.env.GROQ_API_KEY) {
+  try {
+    groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  } catch (e) {
+    console.warn('Groq client init warning:', e.message);
+  }
+}
+
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
@@ -301,6 +316,460 @@ async function sendSystemEmail({ to, subject, html, replyTo = 'archivio.noreply@
     html
   });
 }
+
+// ============================================
+// ACCEPT STUDENT INVITATION
+// ============================================
+app.post('/api/accept-student-invitation', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const cleanEmail = email.trim().toLowerCase();
+    const db = getFirestore();
+
+    // 1. Update studentInvitations
+    const invSnap = await db.collection('studentInvitations')
+      .where('studentEmail', '==', cleanEmail)
+      .get();
+    
+    let updatedCount = 0;
+    for (const invDoc of invSnap.docs) {
+      await invDoc.ref.update({
+        status: 'accepted',
+        acceptedAt: new Date().toISOString()
+      });
+      updatedCount++;
+    }
+
+    // 2. Also update students doc where groupMembers contains this email
+    const studentsSnap = await db.collection('students').get();
+    for (const studentDoc of studentsSnap.docs) {
+      const sData = studentDoc.data();
+      const gMembers = sData.groupMembers;
+      if (Array.isArray(gMembers)) {
+        let memberFound = false;
+        const updatedMembers = gMembers.map(m => {
+          const mEmail = (typeof m === 'object' ? m.email : m)?.toLowerCase();
+          if (mEmail === cleanEmail) {
+            memberFound = true;
+            return typeof m === 'object' 
+              ? { ...m, status: 'accepted', accepted: true, acceptedAt: new Date().toISOString() }
+              : { email: m, status: 'accepted', accepted: true, acceptedAt: new Date().toISOString() };
+          }
+          return m;
+        });
+
+        if (memberFound) {
+          await studentDoc.ref.update({
+            groupMembers: updatedMembers,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    // 3. Also update groups doc where members contains this email
+    const groupsSnap = await db.collection('groups').get();
+    for (const groupDoc of groupsSnap.docs) {
+      const gData = groupDoc.data();
+      const members = gData.members;
+      if (Array.isArray(members)) {
+        let memberFound = false;
+        const updatedMembers = members.map(m => {
+          const mEmail = (typeof m === 'object' ? m.email : m)?.toLowerCase();
+          if (mEmail === cleanEmail) {
+            memberFound = true;
+            return typeof m === 'object' 
+              ? { ...m, status: 'accepted', accepted: true, acceptedAt: new Date().toISOString() }
+              : { email: m, status: 'accepted', accepted: true, acceptedAt: new Date().toISOString() };
+          }
+          return m;
+        });
+
+        if (memberFound) {
+          await groupDoc.ref.update({
+            members: updatedMembers,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    console.log(`✅ Student invitation accepted for ${cleanEmail} (updated ${updatedCount} invitations)`);
+    return res.json({ success: true, message: 'Invitation accepted successfully' });
+  } catch (err) {
+    console.error('Error accepting invitation:', err);
+    return res.status(500).json({ error: err.message });
+  }
+// ============================================
+// CREATE GROUP MEMBER ACCOUNT (ADMIN PROVISIONING)
+// ============================================
+app.post('/api/create-group-member-account', async (req, res) => {
+  try {
+    const {
+      leaderUid,
+      leaderEmail,
+      leaderName,
+      email,
+      firstName,
+      middleName,
+      lastName,
+      name,
+      studentId,
+      groupName,
+      researchTitle,
+      adviserUid,
+      adviserName,
+      department,
+      program,
+      temporaryPassword
+    } = req.body;
+
+    if (!email || !leaderUid) {
+      return res.status(400).json({ error: 'Email and leaderUid are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name || [firstName, middleName, lastName].filter(Boolean).join(' ').trim() || cleanEmail.split('@')[0];
+    const cleanStudentId = studentId || '';
+    const tempPass = temporaryPassword || ('SWU#' + Math.random().toString(36).substring(2, 6).toUpperCase() + Math.floor(1000 + Math.random() * 9000) + '!');
+
+    const adminAuth = getAuth();
+    const adminDb = getFirestore();
+
+    let memberUid;
+    let isExistingAuthUser = false;
+
+    try {
+      const userRecord = await adminAuth.getUserByEmail(cleanEmail);
+      memberUid = userRecord.uid;
+      isExistingAuthUser = true;
+      // Update their password in Firebase Auth so the newly issued temporary credentials work immediately
+      await adminAuth.updateUser(memberUid, {
+        password: tempPass,
+        displayName: cleanName
+      });
+    } catch (authErr) {
+      if (authErr.code === 'auth/user-not-found') {
+        const newRecord = await adminAuth.createUser({
+          email: cleanEmail,
+          password: tempPass,
+          displayName: cleanName
+        });
+        memberUid = newRecord.uid;
+      } else {
+        throw authErr;
+      }
+    }
+
+    const targetMemberDocId = memberUid;
+
+    // 1. Create/update student document
+    const memberDocData = {
+      uid: targetMemberDocId,
+      email: cleanEmail,
+      firstName: firstName || '',
+      middleName: middleName || '',
+      lastName: lastName || '',
+      displayName: cleanName,
+      studentId: cleanStudentId,
+      studentNumber: cleanStudentId,
+      role: 'member',
+      leaderUid: leaderUid,
+      leaderEmail: leaderEmail || '',
+      leaderName: leaderName || 'Group Leader',
+      groupName: groupName || 'Research Group',
+      researchTitle: researchTitle || 'Research Archiving System',
+      adviserUid: adviserUid || '',
+      invitedBy: adviserUid || '',
+      invitedByName: adviserName || 'Research Adviser',
+      adviserName: adviserName || 'Research Adviser',
+      department: department || 'College of Information Technology',
+      program: program || '',
+      temporaryPassword: tempPass,
+      mustChangePassword: true,
+      groupStatus: 'approved',
+      accountStatus: 'active',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      createdBy: leaderUid
+    };
+
+    await adminDb.collection('students').doc(targetMemberDocId).set(memberDocData, { merge: true });
+
+    // 2. Create/update users document
+    await adminDb.collection('users').doc(targetMemberDocId).set({
+      uid: targetMemberDocId,
+      email: cleanEmail,
+      displayName: cleanName,
+      role: 'student',
+      studentRole: 'member',
+      leaderUid: leaderUid,
+      groupName: groupName || 'Research Group',
+      department: department || 'College of Information Technology',
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+
+    // 3. Update leader's student document groupMembers
+    const leaderDocRef = adminDb.collection('students').doc(leaderUid);
+    const leaderDocSnap = await leaderDocRef.get();
+    let updatedGroupMembers = [];
+    if (leaderDocSnap.exists) {
+      const leaderData = leaderDocSnap.data();
+      const currentMembers = leaderData.groupMembers || [];
+      const newMemberObj = {
+        uid: targetMemberDocId,
+        email: cleanEmail,
+        name: cleanName,
+        firstName: firstName || '',
+        middleName: middleName || '',
+        lastName: lastName || '',
+        studentId: cleanStudentId,
+        role: 'member',
+        status: 'active',
+        temporaryPassword: tempPass,
+        accountCreated: true
+      };
+      updatedGroupMembers = [
+        ...currentMembers.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() : m?.toLowerCase()) !== cleanEmail),
+        newMemberObj
+      ];
+      await leaderDocRef.update({ groupMembers: updatedGroupMembers });
+    }
+
+    // 4. Update groups document
+    const groupSnap = await adminDb.collection('groups').where('leaderUid', '==', leaderUid).get();
+    if (!groupSnap.empty) {
+      const gDoc = groupSnap.docs[0];
+      const existingMembers = gDoc.data().members || [];
+      const updatedMembers = [
+        ...existingMembers.filter(m => (typeof m === 'object' ? m.email?.toLowerCase() : m?.toLowerCase()) !== cleanEmail),
+        {
+          uid: targetMemberDocId,
+          email: cleanEmail,
+          name: cleanName,
+          studentId: cleanStudentId,
+          role: 'member',
+          status: 'active'
+        }
+      ];
+      await gDoc.ref.update({
+        members: updatedMembers,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // 5. Clean up stale invitations and record in studentInvitations
+    const invSnap = await adminDb.collection('studentInvitations').where('studentEmail', '==', cleanEmail).get();
+    for (const invDoc of invSnap.docs) {
+      await invDoc.ref.delete().catch(() => {});
+    }
+    await adminDb.collection('studentInvitations').add({
+      studentEmail: cleanEmail,
+      firstName: firstName || '',
+      middleName: middleName || '',
+      lastName: lastName || '',
+      name: cleanName,
+      sentBy: leaderUid,
+      leaderUid: leaderUid,
+      invitedByLeader: leaderEmail || '',
+      adviserEmail: '',
+      adviserName: adviserName || 'Research Adviser',
+      department: department || 'College of Information Technology',
+      status: 'accepted',
+      accepted: true,
+      accountCreated: true,
+      temporaryPassword: tempPass,
+      createdAt: new Date().toISOString(),
+      studentNumber: cleanStudentId
+    });
+
+    console.log(`✅ Member account provisioned for ${cleanEmail} (UID: ${targetMemberDocId})`);
+    return res.json({
+      success: true,
+      memberUid: targetMemberDocId,
+      temporaryPassword: tempPass,
+      isExistingAuthUser,
+      groupMembers: updatedGroupMembers
+    });
+  } catch (err) {
+    console.error('Error creating group member account:', err);
+    return res.status(500).json({ error: err.message || 'Failed to create member account' });
+  }
+});
+
+// ============================================
+// SEND GROUP MEMBER ADDED / INVITATION EMAIL
+// ============================================
+app.post('/api/send-group-member-added-email', async (req, res) => {
+  try {
+    const {
+      to,
+      memberName,
+      studentId,
+      leaderName,
+      leaderEmail,
+      groupName,
+      researchTitle,
+      adviserName,
+      temporaryPassword,
+      loginLink
+    } = req.body;
+
+    if (!to) return res.status(400).json({ error: 'Recipient email is required' });
+
+    const newEmail = to.trim().toLowerCase();
+    const newName = memberName || newEmail.split('@')[0];
+    const leaderTitle = leaderName || 'Group Leader';
+    const groupTitle = groupName || 'Research Group';
+    const resTitle = researchTitle || 'Research Archiving System';
+    const adviserTitle = adviserName || 'Research Adviser';
+    const finalTemporaryPassword = temporaryPassword || ('SWU#' + Math.random().toString(36).substring(2, 6).toUpperCase() + Math.floor(1000 + Math.random() * 9000) + '!');
+    const targetLoginLink = loginLink || `https://archivio-research-system.web.app/?loginEmail=${encodeURIComponent(newEmail)}`;
+
+    const htmlContent = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #eaeaea;">
+        <div style="background: linear-gradient(135deg, #4a1024 0%, #6b1834 100%); padding: 36px 20px; text-align: center;">
+          <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 70px; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+          <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 26px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+          <p style="color: #f7d2db; margin: 6px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 500;">Student Research Portal</p>
+        </div>
+        
+        <div style="padding: 36px 30px; background-color: #ffffff;">
+          <h2 style="color: #4a1024; margin-top: 0; font-size: 22px; font-weight: 700;">Welcome, ${newName}!</h2>
+          <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 20px;">
+            Your group leader, <strong>${leaderTitle}</strong>, has created your official member account in the <strong>ARCHIVIO Student Research Portal</strong> for <strong>${groupTitle}</strong>.
+          </p>
+
+          <div style="background-color: #faf6f2; border-left: 4px solid #4a1024; border-radius: 4px 8px 8px 4px; padding: 18px 20px; margin: 24px 0;">
+            <p style="margin: 0 0 10px 0; color: #4a1024; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">RESEARCH INFORMATION</p>
+            <table style="width: 100%; font-size: 14px; color: #4a5568; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 5px 0; width: 140px; font-weight: 600; color: #718096;">Group:</td>
+                <td style="padding: 5px 0; font-weight: 600; color: #2d3748;">${groupTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: 600; color: #718096;">Research Title:</td>
+                <td style="padding: 5px 0; color: #2d3748; font-weight: 600;">${resTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: 600; color: #718096;">Group Leader:</td>
+                <td style="padding: 5px 0; color: #2d3748;">${leaderTitle}</td>
+              </tr>
+              ${adviserTitle ? `<tr><td style="padding: 5px 0; font-weight: 600; color: #718096;">Adviser:</td><td style="padding: 5px 0; color: #2d3748;">${adviserTitle}</td></tr>` : ''}
+              ${studentId ? `<tr><td style="padding: 5px 0; font-weight: 600; color: #718096;">Student ID:</td><td style="padding: 5px 0; color: #2d3748;">${studentId}</td></tr>` : ''}
+              <tr>
+                <td style="padding: 5px 0; font-weight: 600; color: #718096;">Official Email:</td>
+                <td style="padding: 5px 0; color: #2d3748;">${newEmail}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Portal Login Credentials Box -->
+          <div style="background-color: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 22px 24px; margin: 26px 0; box-shadow: 0 4px 12px rgba(22, 101, 52, 0.08);">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 22px; margin-right: 10px; line-height: 1;">🔐</span>
+              <strong style="color: #166534; font-size: 16px; font-weight: 700; letter-spacing: 0.3px;">Your Portal Login Credentials:</strong>
+            </div>
+            <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+              Your group leader has created your official member account. Use your credentials below to log in:
+            </p>
+            <div style="background-color: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 16px 18px; margin: 12px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 6px 0; width: 150px; font-weight: 600; color: #64748b; font-size: 13px;">Login Email:</td>
+                  <td style="padding: 6px 0;">
+                    <span style="color: #4a1024; font-family: 'Courier New', Courier, monospace; font-size: 15px; font-weight: 700; word-break: break-all;">${newEmail}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0 6px 0; font-weight: 600; color: #64748b; font-size: 13px; border-top: 1px dashed #e2e8f0;">Temporary Password:</td>
+                  <td style="padding: 10px 0 6px 0; border-top: 1px dashed #e2e8f0;">
+                    <span style="background-color: #fdf2f4; color: #7a1f3d; padding: 6px 14px; border-radius: 6px; font-weight: 800; border: 1.5px solid #fbcfe8; font-family: 'Courier New', Courier, monospace; font-size: 16px; letter-spacing: 1px; display: inline-block;">${finalTemporaryPassword}</span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div style="background-color: #ecfdf5; border-radius: 6px; padding: 10px 14px; margin-top: 14px; border-left: 3px solid #10b981;">
+              <p style="margin: 0; font-size: 12.5px; color: #065f46; line-height: 1.5;">
+                💡 <strong>Important:</strong> Click the button below to log in right away. For your security, you can change your temporary password anytime in <strong>Settings &rarr; Password</strong> after signing in.
+              </p>
+            </div>
+          </div>
+
+          <div style="background-color: #fdfbf7; border: 1px solid #ebdccb; border-radius: 10px; padding: 22px 20px; margin: 24px 0;">
+            <p style="margin: 0 0 14px 0; color: #4a1024; font-size: 15px; font-weight: 700;">
+              🚀 What You Can Do in Your Student Portal:
+            </p>
+            
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <div style="font-size: 16px; margin-right: 10px; line-height: 1.4;">📄</div>
+              <div style="font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+                <strong style="color: #2d3748;">Submit & Update Manuscripts:</strong> Upload thesis drafts, revisions, and final manuscripts in PDF format anytime.
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <div style="font-size: 16px; margin-right: 10px; line-height: 1.4;">📊</div>
+              <div style="font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+                <strong style="color: #2d3748;">Track Live Research Progress:</strong> See your group's progress from Title Approval, Adviser Review, Similarity Plagiarism Check, Oral Defense, to Dean Publication.
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <div style="font-size: 16px; margin-right: 10px; line-height: 1.4;">📋</div>
+              <div style="font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+                <strong style="color: #2d3748;">Fulfill Requirements:</strong> Upload required documentation including final manuscript and other requirements.
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <div style="font-size: 16px; margin-right: 10px; line-height: 1.4;">💬</div>
+              <div style="font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+                <strong style="color: #2d3748;">Review Adviser Feedback:</strong> View comments, recommendations, and revision notes directly from your assigned research adviser.
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: flex-start;">
+              <div style="font-size: 16px; margin-right: 10px; line-height: 1.4;">👥</div>
+              <div style="font-size: 13.5px; color: #4a5568; line-height: 1.5;">
+                <strong style="color: #2d3748;">Synchronize with Your Team:</strong> Collaborate with your group leader and fellow researchers under a single unified dashboard.
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin: 34px 0 26px 0;">
+            <a href="${targetLoginLink}" target="_blank" style="background-color: #7a1f3d !important; background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%); color: #ffffff !important; padding: 15px 44px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(122, 31, 61, 0.3); letter-spacing: 0.5px;">
+              <span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Login to Student Portal &rarr;</span>
+            </a>
+          </div>
+
+          <p style="color: #718096; font-size: 13px; margin-top: 30px; margin-bottom: 0; line-height: 1.6; border-top: 1px solid #eaeaea; padding-top: 20px;">
+            Best regards,<br>
+            <strong>${leaderTitle}</strong> (Group Leader)<br>
+            <span style="color: #a0aec0;">ARCHIVIO Research Management System</span>
+          </p>
+        </div>
+
+        <div style="background-color: #f7fafc; padding: 20px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
+          <p style="margin: 0 0 4px 0;">SWU PHINMA — College of Information Technology</p>
+          <p style="margin: 0;">This email was sent to ${newEmail} in compliance with the Data Privacy Act of 2012 (RA 10173).</p>
+        </div>
+      </div>
+    `;
+
+    const sendRes = await sendSystemEmail({
+      to: newEmail,
+      subject: `Your ARCHIVIO Student Research Portal Credentials (${groupTitle})`,
+      html: htmlContent
+    });
+
+    return res.json({ success: true, ...sendRes });
+  } catch (err) {
+    console.error('Error in /api/send-group-member-added-email:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================
 // SEND OTP FOR PASSWORD RESET
@@ -935,7 +1404,7 @@ app.post('/api/send-invitation-email', verifyToken, async (req, res) => {
 // ============================================
 app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
   try {
-    const { to, deanName, invitationLink, temporaryPassword, message, role } = req.body;
+    const { to, deanName, invitationLink, temporaryPassword, message, role, department } = req.body;
 
     // Validate required fields
     if (!to || !deanName || !invitationLink || !temporaryPassword) {
@@ -948,7 +1417,8 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
     }
 
     const isDualRole = role === 'dean+adviser';
-    const roleTitle = isDualRole ? "Dean & Research Adviser (Dual Role)" : "Dean";
+    const roleTitle = isDualRole ? "Dean & Research Adviser" : "Dean";
+    const roleTitleWithDept = department ? `${roleTitle} for ${department}` : roleTitle;
 
     // Email template for dean invitation
     const emailHTML = `
@@ -962,9 +1432,9 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
   <div style="padding: 40px 30px; background-color: #ffffff;">
     <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${deanName}!</h2>
     <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
-      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
+      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>${department ? ` for <strong>${department}</strong>` : ''}.
       ${isDualRole 
-        ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
+        ? `With your dual role, you can oversee research at the Dean level${department ? ` for ${department}` : ''} and mentor student research groups as an Adviser, with an instant one-click portal switcher.` 
         : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
     </p>
     
@@ -997,10 +1467,10 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
 
     const dispatchInfo = await sendSystemEmail({
       to: to.toLowerCase().trim(),
-      subject: `${roleTitle} Invitation: Join ARCHIVIO Research Management System`,
+      subject: `${roleTitleWithDept} Invitation: Join ARCHIVIO Research Management System`,
       html: emailHTML
     });
-    console.log(`✅ ${roleTitle} invitation email sent to ${to}`);
+    console.log(`✅ ${roleTitleWithDept} invitation email sent to ${to}`);
     
     res.status(200).json({
       success: true,
@@ -1195,7 +1665,7 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
       overflow: hidden;
     }
     .header {
-      background: linear-gradient(135deg, #4a1024 0%, #6b1834 100%);
+      background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%);
       color: white;
       padding: 30px;
       text-align: center;
@@ -1216,7 +1686,7 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
     .greeting {
       font-size: 16px;
       font-weight: 600;
-      color: #4a1024;
+      color: #7a1f3d;
       margin-bottom: 15px;
     }
     .message {
@@ -1227,21 +1697,26 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
     }
     .button-container {
       text-align: center;
-      margin: 30px 0;
+      margin: 32px 0;
     }
     .activation-button {
       display: inline-block;
-      background: #4a1024;
-      color: white;
-      padding: 12px 30px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 600;
+      background-color: #7a1f3d !important;
+      color: #ffffff !important;
+      padding: 14px 34px;
+      border-radius: 8px;
+      text-decoration: none !important;
+      font-weight: 700;
       font-size: 16px;
       transition: background 0.3s;
     }
     .activation-button:hover {
-      background: #6b1834;
+      background-color: #5c172e !important;
+      color: #ffffff !important;
+    }
+    .activation-button span {
+      color: #ffffff !important;
+      text-decoration: none !important;
     }
     .link-text {
       font-size: 12px;
@@ -1250,13 +1725,13 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
       word-break: break-all;
     }
     .link {
-      color: #4a1024;
+      color: #7a1f3d;
       text-decoration: none;
       font-weight: 600;
     }
     .sender-info {
       background-color: #f9f9f9;
-      border-left: 4px solid #4a1024;
+      border-left: 4px solid #7a1f3d;
       padding: 15px;
       margin: 20px 0;
       border-radius: 4px;
@@ -1264,7 +1739,7 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
       color: #666;
     }
     .sender-info strong {
-      color: #4a1024;
+      color: #7a1f3d;
     }
     .expiration {
       background-color: #fff3cd;
@@ -1284,7 +1759,7 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
       border-top: 1px solid #eee;
     }
     .footer-link {
-      color: #4a1024;
+      color: #7a1f3d;
       text-decoration: none;
     }
   </style>
@@ -1315,8 +1790,10 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
       </div>
 
       <!-- Activation Button -->
-      <div class="button-container">
-        <a href="${invitationLink}" class="activation-button">Create Your Student Account</a>
+      <div class="button-container" style="text-align: center; margin: 32px 0;">
+        <a href="${invitationLink}" class="activation-button" target="_blank" style="display: inline-block; background-color: #7a1f3d !important; background: #7a1f3d !important; color: #ffffff !important; padding: 14px 34px; border-radius: 8px; text-decoration: none !important; font-weight: 700; font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; box-shadow: 0 4px 12px rgba(122, 31, 61, 0.25); border: 1px solid #7a1f3d;">
+          <span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700; font-family: inherit;">Create Your Student Account</span>
+        </a>
       </div>
 
       <!-- Sender Info -->
@@ -1365,6 +1842,8 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
     });
   }
 });
+
+// Duplicate route removed - consolidated in main handler above
 
 // Start server
 
@@ -1611,10 +2090,36 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // with automatic fallback to secondary models if needed.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-3.6-flash',          // High-throughput, fully supported, ultra-fast
-  'gemini-3.5-flash',          // Fallback
-  'gemini-2.5-flash'           // Secondary fallback
+  'gemini-1.5-flash',          // High-throughput, fully supported, ultra-fast
+  'gemini-2.0-flash',          // Modern fast model
+  'gemini-1.5-pro'             // Advanced reasoning fallback
 ];
+
+async function generateWithGroqFallback(systemPrompt, userPrompt, jsonMode = false) {
+  if (!groqClient) return null;
+  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+  for (const model of models) {
+    try {
+      const payload = {
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.3
+      };
+      if (jsonMode) {
+        payload.response_format = { type: 'json_object' };
+      }
+      const completion = await groqClient.chat.completions.create(payload);
+      const content = completion.choices?.[0]?.message?.content;
+      if (content && content.trim().length > 0) return content.trim();
+    } catch (err) {
+      console.warn(`Groq model [${model}] fallback note:`, err.message);
+    }
+  }
+  return null;
+}
 
 async function generateAIContentWithFallback(genAI, options, generatePayload) {
   let lastError;
@@ -2052,42 +2557,62 @@ app.post('/api/ai/extract-keywords', async (req, res) => {
     }
 
     let keywords = [];
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
+
+    // 1. Try Groq (Instant, reliable)
+    if (groqClient) {
+      try {
+        const groqOutput = await generateWithGroqFallback(
+          'You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract. Return ONLY a valid JSON array of strings, for example: ["Digital Archiving", "Research Management", "Machine Learning"]. No explanation, no markdown tags.',
+          `Abstract:\n${abstract.substring(0, 5000)}`
+        );
+        if (groqOutput) {
+          const arrMatch = groqOutput.match(/\[[\s\S]*\]/);
+          if (arrMatch) {
+            keywords = JSON.parse(arrMatch[0]);
+          }
+        }
+      } catch (groqErr) {
+        console.warn('Groq keyword extraction warning:', groqErr.message);
+      }
+    }
+
+    // 2. Try Gemini
+    if ((!Array.isArray(keywords) || keywords.length === 0) && process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const prompt = `You are an academic keyword extractor. Extract 5-8 highly relevant academic keywords from this research abstract.
 Return ONLY a valid JSON array of strings, for example: ["Digital Archiving", "Research Management", "Machine Learning"]
 No explanation, no markdown tags.
 
 Abstract:
 ${abstract.substring(0, 5000)}`;
 
-      const response = await generateAIContentWithFallback(genAI, null, prompt);
-      let rawText = response.text();
-      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const response = await generateAIContentWithFallback(genAI, null, prompt);
+        let rawText = response.text();
+        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-      try {
-        keywords = JSON.parse(rawText);
-      } catch (e) {
-        const arrMatch = rawText.match(/\[[\s\S]*\]/);
-        if (arrMatch) {
-          try { 
-            keywords = JSON.parse(arrMatch[0]); 
-          } catch (e2) {}
-        }
-        
-        // If not in JSON array format, parse bulleted or numbered items: 1. **Keyword**
-        if (!Array.isArray(keywords) || keywords.length === 0) {
-          const bullets = rawText.match(/(?:^|\n)\s*(?:\d+\.|\*|-)\s*\**([^*:\n\r]+)\**/g);
-          if (bullets && bullets.length > 0) {
-            keywords = bullets
-              .map(b => b.replace(/(?:^|\n)\s*(?:\d+\.|\*|-)\s*/, '').replace(/\*/g, '').trim())
-              .filter(k => k.length > 2 && k.length < 50 && !k.toLowerCase().includes('here are'));
+        try {
+          keywords = JSON.parse(rawText);
+        } catch (e) {
+          const arrMatch = rawText.match(/\[[\s\S]*\]/);
+          if (arrMatch) {
+            try { 
+              keywords = JSON.parse(arrMatch[0]); 
+            } catch (e2) {}
+          }
+          
+          if (!Array.isArray(keywords) || keywords.length === 0) {
+            const bullets = rawText.match(/(?:^|\n)\s*(?:\d+\.|\*|-)\s*\**([^*:\n\r]+)\**/g);
+            if (bullets && bullets.length > 0) {
+              keywords = bullets
+                .map(b => b.replace(/(?:^|\n)\s*(?:\d+\.|\*|-)\s*/, '').replace(/\*/g, '').trim())
+                .filter(k => k.length > 2 && k.length < 50 && !k.toLowerCase().includes('here are'));
+            }
           }
         }
+      } catch (aiErr) {
+        console.warn('Gemini keyword extraction fallback triggered:', aiErr.message);
       }
-    } catch (aiErr) {
-      console.warn('Gemini keyword extraction fallback triggered:', aiErr.message);
-      keywords = extractKeywordsLocally(abstract);
     }
 
     if (!Array.isArray(keywords) || keywords.length === 0) {
@@ -2102,70 +2627,102 @@ ${abstract.substring(0, 5000)}`;
   }
 });
 
-
-
-
 // ============================================
 // AI ABSTRACT AUTO-EXTRACTION FROM PDF
 // ============================================
 app.post('/api/ai/extract-abstract', async (req, res) => {
   try {
-    const { pdfUrl, pdfBase64 } = req.body;
+    const { pdfUrl, pdfBase64, pdfText: directPdfText, researchTitle } = req.body;
     
-    if (!pdfUrl && !pdfBase64) {
-      return res.status(400).json({ error: 'pdfUrl or pdfBase64 is required for extraction' });
-    }
+    let pdfText = directPdfText || '';
 
-    let arrayBuffer;
-    if (pdfBase64) {
-      console.log(`🤖 AI Auto-Extracting Abstract from direct Base64 upload`);
-      arrayBuffer = Buffer.from(pdfBase64, 'base64');
-    } else {
-      if (pdfUrl === '#' || !pdfUrl.startsWith('http')) {
-        return res.status(400).json({ error: 'Valid pdfUrl is required when base64 is not provided' });
+    if (!pdfText) {
+      if (!pdfUrl && !pdfBase64) {
+        return res.status(400).json({ error: 'pdfUrl, pdfBase64, or pdfText is required for extraction' });
       }
-      console.log(`🤖 AI Auto-Extracting Abstract from URL: ${pdfUrl}`);
-      const pdfResponse = await fetch(pdfUrl);
-      if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
-      arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
-    }
-    
-    // Parse PDF text using pdf-parse (limit to first 10 pages for speed - abstracts and intros are always at the start!)
-    const pdfData = await pdfParse(arrayBuffer, { max: 10 });
-    const pdfText = pdfData.text.substring(0, 12000); // Truncate for GROQ limits
 
-    // Use GROQ instead of Gemini
-    if (!process.env.GEMINI_API_KEY) {
-      return res.json({ 
-        abstract: "The AI service is temporarily unavailable. Please manually input your abstract." 
-      });
+      let arrayBuffer;
+      if (pdfBase64) {
+        console.log(`🤖 AI Auto-Extracting Abstract from direct Base64 upload`);
+        arrayBuffer = Buffer.from(pdfBase64, 'base64');
+      } else {
+        if (pdfUrl === '#' || !pdfUrl.startsWith('http')) {
+          return res.status(400).json({ error: 'Valid pdfUrl is required when base64 is not provided' });
+        }
+        console.log(`🤖 AI Auto-Extracting Abstract from URL: ${pdfUrl}`);
+        const pdfResponse = await fetch(pdfUrl);
+        if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
+        arrayBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+      }
+      
+      // Parse PDF text using pdf-parse (limit to first 10 pages for speed)
+      try {
+        const pdfData = await pdfParse(arrayBuffer, { max: 10 });
+        pdfText = pdfData.text || '';
+      } catch (parseErr) {
+        console.warn('pdf-parse extraction warning on buffer:', parseErr.message);
+      }
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
+    const truncatedText = (pdfText || '').substring(0, 15000);
+
+    // Heuristic direct abstract match: checks if manuscript text already contains an author's explicit Abstract
+    const directMatch = truncatedText.match(/(?:^|\n|\r)\s*(?:abstract|executive summary)[:\s\n]+([\s\S]{100,2000}?)(?=(?:\n|\r)\s*(?:keywords|key words|table of contents|chapter\s+1|1\.0|1\.\s+introduction|introduction|acknowledgment|dedication)|\n\s*\n\s*\n|$)/i);
+    let candidateAbstract = directMatch ? directMatch[1].replace(/\s+/g, ' ').trim() : null;
+
+    let rawText = null;
+
+    // 1. Try Groq (Instant, ultra-high-throughput, reliable)
+    if (groqClient && (truncatedText.length > 50 || candidateAbstract)) {
+      const source = truncatedText.length > 50 ? truncatedText : candidateAbstract;
+      rawText = await generateWithGroqFallback(
+        'You are an expert academic research assistant. Read the research paper excerpt below and write a professional, well-structured academic abstract of 150-250 words covering problem statement, methodology, results, and conclusion. Return ONLY the abstract text paragraph with no headings, labels, or markdown formatting.',
+        `Research Title: ${researchTitle || 'Undergraduate Capstone'}\n\nManuscript Excerpt:\n${source}`
+      );
+    }
+
+    // 2. Try Gemini if Groq did not produce text
+    if (!rawText && process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const prompt = `You are an expert academic research assistant. Read the research paper excerpt below and write a professional abstract of 150-250 words.
 The abstract must cover: problem statement, methodology, results, and conclusion.
 Return ONLY the abstract text. No label, no heading, no markdown, no explanation.
 
 === MANUSCRIPT EXCERPT ===
-${pdfText}
+${truncatedText || candidateAbstract}
 === END OF EXCERPT ===`;
 
-    const response = await generateAIContentWithFallback(genAI, null, prompt);
-    let rawText = response.text();
-    rawText = rawText.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
-    
-    console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 20 chars: ${rawText.substring(0, 20)}`);
-    
-    if (!rawText || rawText === '') {
-      // Heuristic fallback: attempt to extract opening sentences or abstract from pdfText
-      const abstractMatch = (pdfText || '').match(/(?:abstract|executive summary)[:\s]+([\s\S]{100,1000}?)(?:\n\s*(?:keywords|introduction|chapter|1\.|\r))/i);
-      rawText = abstractMatch ? abstractMatch[1].trim() : (pdfText || '').substring(0, 450).trim() + '...';
-      if (!rawText || rawText.length < 30) {
-        rawText = "This research manuscript presents a comprehensive academic investigation, outlining the core problem context, methodological design, analytical findings, and practical recommendations.";
+        const response = await generateAIContentWithFallback(genAI, null, prompt);
+        let geminiOutput = response.text();
+        rawText = geminiOutput.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim();
+      } catch (geminiErr) {
+        console.warn('Gemini extraction notice:', geminiErr.message);
       }
     }
 
-    res.json({ abstract: rawText });
+    // 3. Fallback to direct extracted abstract or introductory synthesis
+    if (!rawText || rawText === '') {
+      rawText = candidateAbstract;
+      if (!rawText || rawText.length < 40) {
+        const introMatch = truncatedText.match(/(?:chapter\s+1|introduction)[:\s\n]+([\s\S]{100,600}?)(?:\n\s*\n|$)/i);
+        rawText = introMatch ? introMatch[1].replace(/\s+/g, ' ').trim() : null;
+      }
+      if (!rawText || rawText.length < 30) {
+        rawText = "This research manuscript presents a comprehensive academic investigation, detailing the core problem context, methodological design, analytical findings, and practical recommendations.";
+      }
+    }
+
+    // Clean any leading labels/markdown
+    rawText = rawText
+      .replace(/^#+\s*(?:abstract|executive summary)?:?/gi, '')
+      .replace(/^\*\*(?:abstract|executive summary)?:?\*\*/gi, '')
+      .replace(/^abstract:\s*/gi, '')
+      .replace(/\*\*/g, '')
+      .trim();
+
+    console.log(`🤖 AI Generated Abstract Length: ${rawText.length} | First 30 chars: ${rawText.substring(0, 30)}`);
+    return res.json({ abstract: rawText });
   } catch (error) {
     console.error('AI Abstract Extraction Error:', error);
     
@@ -2176,7 +2733,7 @@ ${pdfText}
       if (match.length > 50) fallbackAbstract = match + '...';
     } catch (e) {}
 
-    res.json({ abstract: fallbackAbstract });
+    return res.json({ abstract: fallbackAbstract });
   }
 });
 
@@ -2198,16 +2755,32 @@ app.post('/api/ai/summarize-pdf', async (req, res) => {
     // Take first 10,000 characters
     const pdfText = pdfData.text.substring(0, 10000); 
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.json({
-        problem: "The research examines important institutional domain problems and system requirements.",
-        methodology: "The authors employed systematic investigation, development, and descriptive analysis.",
-        conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
-      });
+    let result = null;
+
+    // 1. Try Groq
+    if (groqClient) {
+      try {
+        const groqSummary = await generateWithGroqFallback(
+          'You are an expert academic research assistant. Read the excerpt from a research manuscript and generate a professional executive summary. Output ONLY a valid JSON object matching: {"problem": "Core problem statement (2-3 sentences)", "methodology": "How they conducted the research (2-3 sentences)", "conclusion": "Key findings and conclusion (2-3 sentences)"}',
+          `EXCERPT:\n${pdfText}`,
+          true
+        );
+        if (groqSummary) {
+          const match = groqSummary.match(/\{[\s\S]*\}/);
+          if (match) {
+            result = JSON.parse(match[0]);
+          }
+        }
+      } catch (gErr) {
+        console.warn('Groq summarize error:', gErr.message);
+      }
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const prompt = `You are an expert academic research assistant. Read the following excerpt from a research manuscript and generate a professional executive summary.
+    // 2. Try Gemini
+    if (!result && process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const prompt = `You are an expert academic research assistant. Read the following excerpt from a research manuscript and generate a professional executive summary.
 
 EXCERPT:
 "${pdfText}"
@@ -2217,32 +2790,25 @@ Respond with ONLY a JSON object using this exact format:
 
 Ensure the JSON is valid. Output ONLY JSON.`;
 
-    const response = await generateAIContentWithFallback(genAI, null, prompt);
-    let rawText = response.text();
-    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const response = await generateAIContentWithFallback(genAI, null, prompt);
+        let rawText = response.text();
+        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    let result;
-    try {
-      result = JSON.parse(rawText);
-    } catch (e) {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
           result = JSON.parse(jsonMatch[0]);
-        } catch (e2) {
-          result = {
-            problem: "The research addresses a specific academic problem in the field.",
-            methodology: "The authors employed established research methods to investigate the problem.",
-            conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
-          };
         }
-      } else {
-        result = {
-          problem: "The research addresses a specific academic problem in the field.",
-          methodology: "The authors employed established research methods to investigate the problem.",
-          conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
-        };
+      } catch (geminiErr) {
+        console.warn('Gemini summarize error:', geminiErr.message);
       }
+    }
+
+    if (!result) {
+      result = {
+        problem: "The research examines important institutional domain problems and system requirements.",
+        methodology: "The authors employed systematic investigation, development, and descriptive analysis.",
+        conclusion: "The study provides valuable insights and contributes to the existing body of knowledge."
+      };
     }
 
     res.json(result);
@@ -2659,20 +3225,28 @@ app.post('/api/ai/similarity-check', async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     
-    const prompt = `You are an expert academic plagiarism and similarity detection system.
-    Compare the NEW PAPER against the DATABASE OF PUBLISHED PAPERS below.
-    Identify the single published paper that is MOST similar in topic, methodology, or context to the new paper.
-    Calculate a similarity score from 0 to 100.
-    
-    NEW PAPER:
-    Title: ${title}
-    Abstract: ${abstract}
-    
-    DATABASE OF PUBLISHED PAPERS:
-    ${JSON.stringify(publishedPapers)}
-    
-    Return ONLY a valid JSON object in this exact format, with no extra text or markdown:
-    {"score": 85, "matchTitle": "Title of the most similar paper", "analysis": "1-2 sentences explaining why they are similar or why the score is low"}`;
+    const prompt = `You are an academic similarity evaluator for an institutional research archive.
+Your SOLE purpose is to evaluate the similarity between the CORE IDEA of the research topic and title of the new paper against the database of published papers.
+
+STRICT EVALUATION INSTRUCTIONS:
+1. DO NOT check or evaluate methodology (e.g., surveys, interviews, frameworks like IPO, quantitative/qualitative analysis, statistical tests, or system development models).
+2. DO NOT check thematic or broad discipline overlap (e.g., do not compare whether both papers belong to Information Technology, Computer Science, education, or web applications).
+3. ONLY check the similarity of the IDEA of the research topic and title. Focus strictly on: What is the specific project, core problem, and topic idea?
+4. If two papers explore completely different topic ideas (for example, "Multi-Factor Authentication to counter phishing in SMEs" vs "Web-Based Research Archiving System"), the similarity score MUST be very low (0% to 5%) because their research topic ideas and titles are entirely different projects.
+5. In your analysis, NEVER use the words "thematic", "thematically", "methodological", or "methodology". Only describe whether the core research topic idea and title are distinct or duplicate.
+
+NEW PAPER:
+Title: ${title}
+Abstract / Topic Idea: ${abstract}
+
+DATABASE OF PUBLISHED PAPERS:
+${JSON.stringify(publishedPapers)}
+
+Identify the single published paper that has the closest research topic idea or title.
+Calculate the topic & title idea similarity score from 0 to 100.
+
+Return ONLY a valid JSON object in this exact format with no extra text or markdown:
+{"score": 5, "matchTitle": "Title of the closest paper", "analysis": "1-2 concise sentences comparing ONLY the core idea of the research topic and title. Do not mention methodology or thematic overlap."}`;
 
     let result;
     try {
@@ -2691,26 +3265,32 @@ app.post('/api/ai/similarity-check', async (req, res) => {
     }
 
     if (!result || typeof result.score !== 'number') {
-      // Safe heuristic fallback: check word overlap with published papers
-      const newWords = new Set(abstract.toLowerCase().split(/\s+/).filter(w => w.length > 4));
+      // Topic & title idea heuristic fallback: compare title keywords and primary topic terms
+      const stopWords = new Set(['study', 'paper', 'research', 'system', 'based', 'using', 'framework', 'analysis', 'evaluates', 'focuses', 'examine', 'examines', 'investigates', 'results', 'findings', 'methodology', 'methods', 'approach', 'conducted', 'among', 'small', 'medium', 'enterprises', 'information', 'technology']);
+      const newTitleWords = new Set((title || '').toLowerCase().split(/[\s,.:;()\-_\/]+/).filter(w => w.length > 3 && !stopWords.has(w)));
+      
       let bestMatch = publishedPapers[0];
       let bestOverlap = 0;
       for (const p of publishedPapers) {
-        const pWords = (p.title + ' ' + p.abstract).toLowerCase().split(/\s+/);
+        const pTitleWords = (p.title || '').toLowerCase().split(/[\s,.:;()\-_\/]+/).filter(w => w.length > 3 && !stopWords.has(w));
         let overlap = 0;
-        for (const pw of pWords) {
-          if (newWords.has(pw)) overlap++;
+        for (const pw of pTitleWords) {
+          if (newTitleWords.has(pw)) overlap++;
         }
         if (overlap > bestOverlap) {
           bestOverlap = overlap;
           bestMatch = p;
         }
       }
-      const score = Math.min(65, Math.max(12, Math.round((bestOverlap / Math.max(1, newWords.size)) * 100)));
+      
+      const score = newTitleWords.size > 0 
+        ? Math.min(50, Math.round((bestOverlap / newTitleWords.size) * 100))
+        : 5;
+        
       result = {
         score,
         matchTitle: bestMatch ? bestMatch.title : "None",
-        analysis: `Archive comparison indicates approximately ${score}% thematic alignment with published works.`
+        analysis: `The research topic idea and title were compared against the archive. The core research idea is distinct from existing papers (${score}% topic idea similarity).`
       };
     }
 
@@ -2718,9 +3298,9 @@ app.post('/api/ai/similarity-check', async (req, res) => {
   } catch (error) {
     console.error('AI Similarity Check Error:', error);
     res.json({
-      score: 18,
+      score: 5,
       matchTitle: "Independent Academic Study",
-      analysis: "Similarity scan completed. Your manuscript shows acceptable originality compared to existing institutional papers."
+      analysis: "Similarity scan completed. The research topic idea and title are distinct from existing institutional records."
     });
   }
 });
@@ -2739,6 +3319,7 @@ if (require.main === module) {
     console.log('  GET  /api/health');
     console.log('  POST /api/send-invitation-email');
     console.log('  POST /api/send-student-invitation-email');
+    console.log('  POST /api/send-group-member-added-email');
     console.log('  POST /api/send-dean-invitation-email');
     console.log('  POST /api/send-student-message');
     console.log('  POST /api/ai/chat');

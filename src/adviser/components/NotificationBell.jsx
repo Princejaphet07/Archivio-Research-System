@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { CheckCircle2, XCircle, ClipboardList, FileText, Mail, BarChart3, Users, Bell, Inbox } from 'lucide-react';
 
 // 1. Helper function for relative time
 const getRelativeTime = (timestamp) => {
@@ -21,15 +23,32 @@ const getRelativeTime = (timestamp) => {
 const getIcon = (title, message) => {
   const lowerTitle = (title || '').toLowerCase();
   const lowerMsg = (message || '').toLowerCase();
-  if (lowerTitle.includes('manuscript') || lowerMsg.includes('document') || lowerTitle.includes('publish')) return '📄';
-  if (lowerTitle.includes('message') || lowerTitle.includes('invite') || lowerTitle.includes('welcome')) return '✉️';
-  if (lowerTitle.includes('task') || lowerTitle.includes('progress') || lowerTitle.includes('report')) return '📊';
-  if (lowerTitle.includes('group') || lowerTitle.includes('user') || lowerTitle.includes('adviser')) return '👥';
-  if (lowerTitle.includes('approved') || lowerTitle.includes('success')) return '✅';
-  return '🔔';
+  if (lowerTitle.includes('approved') || lowerTitle.includes('success')) {
+    return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('declined') || lowerTitle.includes('rejected')) {
+    return <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('requirement') || lowerTitle.includes('proposal') || lowerMsg.includes('requirement')) {
+    return <ClipboardList className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('manuscript') || lowerMsg.includes('document') || lowerTitle.includes('publish')) {
+    return <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('message') || lowerTitle.includes('invite') || lowerTitle.includes('welcome')) {
+    return <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('task') || lowerTitle.includes('progress') || lowerTitle.includes('report')) {
+    return <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />;
+  }
+  if (lowerTitle.includes('group') || lowerTitle.includes('user') || lowerTitle.includes('adviser')) {
+    return <Users className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />;
+  }
+  return <Bell className="w-4 h-4 text-[#7B1F35] dark:text-[#f8d070] shrink-0" />;
 };
 
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [prefs, setPrefs] = useState(null);
@@ -58,7 +77,11 @@ export default function NotificationBell() {
     const email = auth.currentUser?.email;
     if (!uid && !email) return;
 
-    const userIds = [uid, email].filter(Boolean);
+    const userIds = Array.from(new Set([
+      uid, 
+      email, 
+      email?.toLowerCase()
+    ])).filter(Boolean);
 
     // Fetch notifications without orderBy to avoid needing a composite index
     const q = query(
@@ -84,7 +107,18 @@ export default function NotificationBell() {
         return timeB - timeA;
       });
 
-      setNotifications(notifs);
+      // Deduplicate notifications (in case both email and uid matched)
+      const seen = new Set();
+      const deduped = [];
+      for (const n of notifs) {
+        const key = `${n.title}_${n.message}_${n.requirementId || n.submissionId || ''}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(n);
+        }
+      }
+
+      setNotifications(deduped);
     });
 
     return () => unsub();
@@ -185,6 +219,46 @@ export default function NotificationBell() {
       await updateDoc(doc(db, 'notifications', id), { isRead: true });
     } catch (error) {
       console.error("Error marking as read", error);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.isRead) {
+      await markAsRead(n.id);
+    }
+    setIsOpen(false);
+
+    // Requirement status or proposal
+    if (
+      n.type === 'requirement_status' || 
+      n.type === 'requirement_proposal' || 
+      (n.title && n.title.toLowerCase().includes('requirement')) ||
+      (n.message && n.message.toLowerCase().includes('requirement')) ||
+      (n.link && n.link.includes('submission-requirements'))
+    ) {
+      navigate('/adviser/submission-requirements', { 
+        state: { 
+          requirementId: n.requirementId || null,
+          _ts: Date.now() 
+        } 
+      });
+      return;
+    }
+
+    if (n.link) {
+      navigate(n.link, { state: n.state || {} });
+      return;
+    }
+
+    const lowerTitle = (n.title || '').toLowerCase();
+    const lowerMsg = (n.message || '').toLowerCase();
+
+    if (lowerTitle.includes('submission') || lowerMsg.includes('submission') || lowerTitle.includes('manuscript') || lowerTitle.includes('publish')) {
+      navigate('/adviser/review-submissions');
+    } else if (lowerTitle.includes('group') || lowerMsg.includes('group')) {
+      navigate('/adviser/my-groups');
+    } else if (lowerTitle.includes('invite') || lowerMsg.includes('invitation')) {
+      navigate('/adviser/send-invitations');
     }
   };
 
@@ -290,7 +364,7 @@ export default function NotificationBell() {
           <div className="max-h-[400px] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-8 flex flex-col items-center justify-center text-center">
-                <span className="text-4xl mb-3 opacity-50">📭</span>
+                <Inbox className="w-10 h-10 mb-2 text-stone-300 dark:text-stone-600" />
                 <p className="text-sm font-bold text-gray-500 dark:text-stone-400">All caught up!</p>
                 <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">No new notifications</p>
               </div>
@@ -298,12 +372,12 @@ export default function NotificationBell() {
               notifications.map(n => (
                 <div 
                   key={n.id} 
-                  onClick={() => !n.isRead && markAsRead(n.id)}
-                  className={`p-4 border-b border-stone-100 dark:border-stone-800 last:border-none flex flex-col gap-1.5 transition-colors ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-[#f8d070]/5 cursor-pointer hover:bg-stone-50 dark:hover:bg-[#f8d070]/10' : 'bg-white dark:bg-transparent opacity-75'}`}
+                  onClick={() => handleNotificationClick(n)}
+                  className={`p-4 border-b border-stone-100 dark:border-stone-800 last:border-none flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.isRead ? 'bg-[#fcfbf7] dark:bg-[#f8d070]/5 hover:bg-stone-50 dark:hover:bg-[#f8d070]/10' : 'bg-white dark:bg-transparent opacity-75 hover:bg-stone-50 dark:hover:bg-stone-800/30'}`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex gap-2.5 items-start">
-                      <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
+                      <span className="shrink-0 pt-0.5">{getIcon(n.title, n.message)}</span>
                       <div className="flex flex-col">
                         <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#f8d070]' : 'text-gray-700 dark:text-stone-300'}`}>
                           {n.title}

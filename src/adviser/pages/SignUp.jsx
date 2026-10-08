@@ -4,6 +4,8 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import loginBg from '../../assets/parchment.png';
+import PrivacyPolicyModal from '../../components/PrivacyPolicyModal';
+import { AlertCircle, CheckCircle2, Check } from 'lucide-react';
 
 function SignUp() {
   const navigate = useNavigate();
@@ -15,9 +17,14 @@ function SignUp() {
   const [success, setSuccess] = useState('');
   
   const [isPrefilled, setIsPrefilled] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [modalMode, setModalMode] = useState('terms');
   const [formErrors, setFormErrors] = useState({});
+
+  const openPolicy = (mode) => {
+    setModalMode(mode);
+    setShowPrivacy(true);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -54,6 +61,32 @@ function SignUp() {
     confirmPassword: '',
     agreeTerms: false
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const bothAgreed = termsAccepted && privacyAccepted;
+
+  const handleAcceptPolicy = (acceptedMode) => {
+    const which = acceptedMode || modalMode;
+    if (which === 'terms') {
+      setTermsAccepted(true);
+      if (privacyAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else if (which === 'privacy') {
+      setPrivacyAccepted(true);
+      if (termsAccepted) {
+        setFormData(prev => ({ ...prev, agreeTerms: true }));
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else {
+      setTermsAccepted(true);
+      setPrivacyAccepted(true);
+      setFormData(prev => ({ ...prev, agreeTerms: true }));
+      if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+    }
+    setShowPrivacy(false);
+  };
 
   // Password strength helpers
   const hasEightChars = formData.password.length >= 8;
@@ -101,8 +134,8 @@ function SignUp() {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.agreeTerms) {
-      errors.agreeTerms = 'You must agree to the Terms of Use and Privacy Policy';
+    if (!formData.agreeTerms || !bothAgreed) {
+      errors.agreeTerms = 'You must agree to both the Privacy Policy and Terms and Conditions';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -127,7 +160,7 @@ function SignUp() {
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
-        setError('❌ No invitation found for this email. Please make sure you are using the email that was invited by your Dean.');
+        setError('No invitation found for this email. Please make sure you are using the email that was invited by your Dean.');
         setFormErrors({ email: 'No pending invitation found for this email' });
         document.getElementById('adviser-signup-email')?.focus();
         setLoading(false);
@@ -163,7 +196,7 @@ function SignUp() {
         createdAt: new Date().toISOString()
       });
 
-      setSuccess('✅ Account created successfully! Redirecting to login...');
+      setSuccess('Account created successfully! Redirecting to login...');
       setTimeout(() => {
         navigate('/');
       }, 2000);
@@ -171,11 +204,11 @@ function SignUp() {
     } catch (err) {
       console.error('Sign up error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('❌ This email is already registered. Please go to the Login page instead.');
+        setError('This email is already registered. Please go to the Login page instead.');
       } else if (err.code === 'auth/weak-password') {
-        setError('❌ Password is too weak. Please use a stronger password.');
+        setError('Password is too weak. Please use a stronger password.');
       } else {
-        setError(`❌ Sign up failed: ${err.message}`);
+        setError(`Sign up failed: ${err.message}`);
       }
     } finally {
       setLoading(false);
@@ -204,15 +237,15 @@ function SignUp() {
 
         {error && (
           <div className="mb-6 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-red-500 text-lg">⚠️</span>
-            <p className="text-xs text-red-800 font-medium leading-relaxed flex-1 mt-0.5">{error}</p>
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-800 font-medium leading-relaxed flex-1">{error}</p>
           </div>
         )}
 
         {success && (
           <div className="mb-6 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-green-500 text-lg">✅</span>
-            <p className="text-xs text-green-800 font-medium leading-relaxed flex-1 mt-0.5">{success}</p>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-green-800 font-medium leading-relaxed flex-1">{success}</p>
           </div>
         )}
 
@@ -236,7 +269,7 @@ function SignUp() {
               />
               {formErrors.firstName && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
-                  <span>⚠️</span> {formErrors.firstName}
+                  <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.firstName}
                 </p>
               )}
             </div>
@@ -257,7 +290,7 @@ function SignUp() {
               />
               {formErrors.lastName && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
-                  <span>⚠️</span> {formErrors.lastName}
+                  <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.lastName}
                 </p>
               )}
             </div>
@@ -280,7 +313,7 @@ function SignUp() {
             />
             {formErrors.email && (
               <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
-                <span>⚠️</span> {formErrors.email}
+                <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.email}
               </p>
             )}
           </div>
@@ -318,7 +351,7 @@ function SignUp() {
             </div>
             {formErrors.password && (
               <p className="text-[10px] text-red-500 font-semibold mt-1 pl-1 flex items-center gap-1">
-                <span>⚠️</span> {formErrors.password}
+                <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.password}
               </p>
             )}
 
@@ -348,19 +381,19 @@ function SignUp() {
                 {/* Password Checklist */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1 bg-stone-50 dark:bg-stone-900/50 p-2.5 rounded-lg border border-stone-100 dark:border-stone-800">
                   <div className="flex items-center gap-1.5">
-                    {hasEightChars ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    {hasEightChars ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <span className="w-3.5 h-3.5 rounded-full border border-stone-300 dark:border-stone-600 inline-block" />}
                     <span className={`text-[11px] ${hasEightChars ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>At least 8 characters</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {hasUpper ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    {hasUpper ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <span className="w-3.5 h-3.5 rounded-full border border-stone-300 dark:border-stone-600 inline-block" />}
                     <span className={`text-[11px] ${hasUpper ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Uppercase letter</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {hasNumber ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    {hasNumber ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <span className="w-3.5 h-3.5 rounded-full border border-stone-300 dark:border-stone-600 inline-block" />}
                     <span className={`text-[11px] ${hasNumber ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Number (0-9)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {hasSpecial ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-stone-400 font-bold">○</span>}
+                    {hasSpecial ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <span className="w-3.5 h-3.5 rounded-full border border-stone-300 dark:border-stone-600 inline-block" />}
                     <span className={`text-[11px] ${hasSpecial ? 'text-stone-700 dark:text-stone-300' : 'text-stone-500 dark:text-stone-500'}`}>Special character (!@#$%)</span>
                   </div>
                 </div>
@@ -391,36 +424,85 @@ function SignUp() {
                 className="absolute inset-y-0 right-3 flex items-center text-stone-400 hover:text-stone-600 focus:outline-none"
               >
                 {showConfirmPassword ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 )}
               </button>
             </div>
             {formErrors.confirmPassword && (
               <p className="text-[10px] text-red-500 font-semibold mt-1.5 pl-1 flex items-center gap-1">
-                <span>⚠️</span> {formErrors.confirmPassword}
+                <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.confirmPassword}
               </p>
             )}
           </div>
 
-          <div className={`flex items-start gap-3 mt-2 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}>
+          <div 
+            onClick={(e) => {
+              if (!bothAgreed) {
+                e.preventDefault();
+                if (!privacyAccepted) {
+                  openPolicy('privacy');
+                } else if (!termsAccepted) {
+                  openPolicy('terms');
+                }
+              }
+            }}
+            className={`flex items-start gap-3 mt-2 p-2 rounded-lg transition-colors ${!bothAgreed ? 'cursor-pointer hover:bg-stone-100/60' : ''} ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-100'}`}
+          >
             <input 
               id="adviser-signup-agreeTerms"
               name="agreeTerms" 
-              checked={formData.agreeTerms} 
-              onChange={handleChange} 
+              checked={formData.agreeTerms && bothAgreed} 
+              onChange={(e) => {
+                if (!bothAgreed) {
+                  e.preventDefault();
+                  if (!privacyAccepted) openPolicy('privacy');
+                  else if (!termsAccepted) openPolicy('terms');
+                  return;
+                }
+                handleChange(e);
+              }} 
               type="checkbox" 
-              className="w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5" 
+              className={`w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5 accent-[#7a1f3d] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
               disabled={loading}
             />
             <div>
-              <label className="text-xs text-stone-600 leading-relaxed">
-                I agree to the <span onClick={() => setShowTerms(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Terms of Service</span> and <span onClick={() => setShowPrivacy(true)} className="font-bold text-[#7a1f3d] cursor-pointer hover:underline">Privacy Policy</span>.
+              <label 
+                htmlFor="adviser-signup-agreeTerms" 
+                className={`text-xs ${!bothAgreed ? 'text-stone-500 cursor-pointer' : 'text-stone-600'} leading-relaxed select-none`}
+              >
+                I agree to the{' '}
+                <span 
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    openPolicy('privacy'); 
+                  }} 
+                  className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                >
+                  Privacy Policy{privacyAccepted && <Check className="w-3 h-3" />}
+                </span>{' '}
+                and the{' '}
+                <span 
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    openPolicy('terms'); 
+                  }} 
+                  className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                >
+                  Terms and Conditions{termsAccepted && <Check className="w-3 h-3" />}
+                </span>{' '}
+                of Archivio
               </label>
               {formErrors.agreeTerms && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
-                  <span>⚠️</span> {formErrors.agreeTerms}
+                  <AlertCircle className="w-3 h-3 shrink-0" /> {formErrors.agreeTerms}
                 </p>
               )}
             </div>
@@ -428,7 +510,7 @@ function SignUp() {
 
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || !formData.agreeTerms || !bothAgreed}
             className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#7a1f3d]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
           >
             {loading ? (
@@ -452,45 +534,13 @@ function SignUp() {
         </form>
       </div>
 
-      {/* Terms Modal */}
-      {showTerms && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
-            <button onClick={() => setShowTerms(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
-            <h3 className="text-xl font-serif font-bold mb-4 text-[#7a2e46]">Terms of Use</h3>
-            <div className="text-sm text-gray-600 max-h-60 overflow-y-auto space-y-3">
-              <p>Welcome to ARCHIVIO. By accessing our portal, you agree to these terms.</p>
-              <p>1. <strong>Usage:</strong> The system is strictly for academic research management.</p>
-              <p>2. <strong>Accountability:</strong> You are responsible for all activities under your account.</p>
-              <p>3. <strong>Data Integrity:</strong> Do not upload falsified or malicious data.</p>
-              <p>Please use this platform responsibly to guide our future researchers.</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={() => setShowTerms(false)} className="px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold hover:bg-[#5f2135]">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Privacy Policy Modal */}
-      {showPrivacy && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
-            <button onClick={() => setShowPrivacy(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
-            <h3 className="text-xl font-serif font-bold mb-4 text-[#7a2e46]">Privacy Policy</h3>
-            <div className="text-sm text-gray-600 max-h-60 overflow-y-auto space-y-3">
-              <p>Your privacy is important to us. This policy outlines how we handle your data.</p>
-              <p>1. <strong>Data Collection:</strong> We collect only necessary academic and profile information.</p>
-              <p>2. <strong>Data Usage:</strong> Your data is used exclusively to facilitate the research management process within SWU Phinma.</p>
-              <p>3. <strong>Data Protection:</strong> We employ standard encryption and security practices to protect your records.</p>
-              <p>We do not share your information with third parties outside of academic administration requirements.</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={() => setShowPrivacy(false)} className="px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold hover:bg-[#5f2135]">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Official Standalone Policy Modals */}
+      <PrivacyPolicyModal 
+        isOpen={showPrivacy} 
+        mode={modalMode}
+        onClose={() => setShowPrivacy(false)} 
+        onAccept={handleAcceptPolicy}
+      />
     </div>
   );
 }

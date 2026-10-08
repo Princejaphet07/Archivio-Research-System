@@ -4,6 +4,7 @@ import { updatePassword, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import loginBg from '../assets/parchment.png';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 function DeanActivate() {
   const navigate = useNavigate();
@@ -13,7 +14,41 @@ function DeanActivate() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const bothAgreed = termsAccepted && privacyAccepted;
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [modalMode, setModalMode] = useState('terms');
   const [formErrors, setFormErrors] = useState({});
+
+  const openPolicy = (mode) => {
+    setModalMode(mode);
+    setShowPrivacyModal(true);
+  };
+
+  const handleAcceptPolicy = (acceptedMode) => {
+    const which = acceptedMode || modalMode;
+    if (which === 'terms') {
+      setTermsAccepted(true);
+      if (privacyAccepted) {
+        setAgreeTerms(true);
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else if (which === 'privacy') {
+      setPrivacyAccepted(true);
+      if (termsAccepted) {
+        setAgreeTerms(true);
+        if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+      }
+    } else {
+      setTermsAccepted(true);
+      setPrivacyAccepted(true);
+      setAgreeTerms(true);
+      if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
+    }
+    setShowPrivacyModal(false);
+  };
   
   const [activationData, setActivationData] = useState(null);
 
@@ -90,6 +125,10 @@ function DeanActivate() {
       errors.confirmPassword = 'Confirm password is required';
     } else if (newPassword !== confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!agreeTerms || !bothAgreed) {
+      errors.agreeTerms = 'You must agree to both the Privacy Policy and Terms and Conditions to activate your account';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -320,6 +359,74 @@ function DeanActivate() {
             </div>
           )}
 
+          {/* Privacy Policy Agreement */}
+          <div 
+            onClick={(e) => {
+              if (!bothAgreed) {
+                e.preventDefault();
+                if (!privacyAccepted) {
+                  openPolicy('privacy');
+                } else if (!termsAccepted) {
+                  openPolicy('terms');
+                }
+              }
+            }}
+            className={`flex items-start gap-3 mt-4 p-3 rounded-xl transition-colors ${!bothAgreed ? 'cursor-pointer hover:bg-stone-100/60' : ''} ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : 'bg-stone-50/50 border border-stone-200'}`}
+          >
+            <input 
+              id="dean-activate-agreeTerms"
+              type="checkbox" 
+              checked={agreeTerms && bothAgreed}
+              onChange={(e) => {
+                if (!bothAgreed) {
+                  e.preventDefault();
+                  if (!privacyAccepted) openPolicy('privacy');
+                  else if (!termsAccepted) openPolicy('terms');
+                  return;
+                }
+                setAgreeTerms(e.target.checked);
+              }}
+              disabled={loading}
+              className={`w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5 accent-[#7a1f3d] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
+            />
+            <div>
+              <label htmlFor="dean-activate-agreeTerms" className={`text-xs ${!bothAgreed ? 'text-stone-500 cursor-pointer' : 'text-stone-600'} leading-relaxed select-none`}>
+                I agree to the{' '}
+                <span 
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openPolicy('privacy');
+                  }} 
+                  className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline`}
+                >
+                  Privacy Policy{privacyAccepted ? ' ✓' : ''}
+                </span>{' '}
+                and the{' '}
+                <span 
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openPolicy('terms');
+                  }} 
+                  className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline`}
+                >
+                  Terms and Conditions{termsAccepted ? ' ✓' : ''}
+                </span>{' '}
+                of Archivio
+              </label>
+              {formErrors.agreeTerms && (
+                <p className="text-[11px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                  <span>⚠️</span> {formErrors.agreeTerms}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-4 mt-6">
             <button
               type="button"
@@ -331,7 +438,7 @@ function DeanActivate() {
             </button>
             <button
               type="submit"
-              disabled={loading || strengthCount < 4}
+              disabled={loading || strengthCount < 4 || !agreeTerms || !bothAgreed}
               className="flex-1 rounded-xl bg-[#7a1f3d] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#7a1f3d]/20 transition-all hover:-translate-y-0.5 hover:bg-[#5a162d] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl"
             >
               {loading ? 'Activating...' : 'Activate Account'}
@@ -339,6 +446,14 @@ function DeanActivate() {
           </div>
         </form>
       </div>
+
+      {/* Official Standalone Policy Modals */}
+      <PrivacyPolicyModal 
+        isOpen={showPrivacyModal} 
+        mode={modalMode}
+        onClose={() => setShowPrivacyModal(false)} 
+        onAccept={handleAcceptPolicy}
+      />
     </div>
   );
 }

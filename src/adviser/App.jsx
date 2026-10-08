@@ -11,6 +11,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdviserProvider } from './context/AdviserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
+import { Wrench } from 'lucide-react';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import LoadingScreen from './components/LoadingScreen';
@@ -50,7 +51,9 @@ function App() {
   if (isMaintenanceMode) {
     return (
       <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center p-6 text-center">
-        <span className="text-6xl mb-6">🛠️</span>
+        <div className="w-16 h-16 rounded-2xl bg-[#801e38]/10 text-[#801e38] flex items-center justify-center mb-6">
+          <Wrench className="w-8 h-8" />
+        </div>
         <h1 className="text-3xl font-serif font-bold text-[#801e38] mb-4">System Under Maintenance</h1>
         <p className="text-stone-600 max-w-md mx-auto">
           ARCHIVIO is currently undergoing scheduled maintenance and updates. 

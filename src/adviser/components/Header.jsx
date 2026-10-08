@@ -3,11 +3,14 @@ import { useAdviser } from '../context/AdviserContext';
 import { useDarkMode } from '../context/DarkModeContext';
 import NotificationBell from './NotificationBell';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase/config';
+import { auth, db } from '../firebase/config';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import RoleSwitchModal from '../../components/RoleSwitchModal';
+import { getDisplayInitials } from '../../utils/nameUtils';
+import { Calendar, ChevronDown, Check, GraduationCap } from 'lucide-react';
 
 function Header({ 
   title = "Dashboard", 
@@ -22,11 +25,84 @@ function Header({
   const navigate = useNavigate();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [syDropdownOpen, setSyDropdownOpen] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const dropdownRef = useRef(null);
+  const syDropdownRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  // Available school years (synced with Firestore / localStorage)
+  const [availableSchoolYears, setAvailableSchoolYears] = useState(() => {
+    try {
+      const saved = localStorage.getItem('adviser_school_years');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return [{ id: 'default-2026', label: '2026-2027', status: 'Active' }];
+  });
+
+  const [selectedSY, setSelectedSY] = useState(() => {
+    return localStorage.getItem('adviser_active_sy') || '2026-2027';
+  });
+
+  // Listen to dean_settings for configured school years
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'dean_settings'), (snapshot) => {
+      let foundYears = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.schoolYears && Array.isArray(data.schoolYears) && data.schoolYears.length > 0) {
+          foundYears = data.schoolYears;
+        }
+      });
+      if (foundYears.length > 0) {
+        setAvailableSchoolYears(foundYears);
+        localStorage.setItem('adviser_school_years', JSON.stringify(foundYears));
+        const activeItem = foundYears.find(s => s.status === 'Active');
+        if (activeItem && !localStorage.getItem('adviser_active_sy')) {
+          setSelectedSY(activeItem.label);
+        }
+      }
+    }, (err) => {
+      console.warn('Could not fetch dean_settings for school years:', err);
+    });
+
+    return () => unsub();
+  }, []);
+
+  const handleSelectSY = (sy) => {
+    const label = sy.label || sy;
+    setSelectedSY(label);
+    localStorage.setItem('adviser_active_sy', label);
+    setSyDropdownOpen(false);
+    
+    window.dispatchEvent(new CustomEvent('academicYearChanged', { detail: label }));
+
+    Swal.fire({
+      icon: 'success',
+      title: 'School Year Selected',
+      text: `Active filter set to ${label.includes('S.Y.') || label.includes('SY') ? label : `S.Y. ${label}`}`,
+      timer: 1500,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
+  };
+
+  const displaySY = selectedSY.includes('S.Y.') || selectedSY.includes('SY') 
+    ? selectedSY.replace(/^SY\s*/i, 'S.Y. ') 
+    : `S.Y. ${selectedSY}`;
+
   const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
+
+  // Extract clean first letter of first name and first letter of last name (e.g. "Pronce Vender" -> "PV")
+  const initials = getDisplayInitials({
+    firstName: adviserData?.firstName,
+    lastName: adviserData?.lastName,
+    displayName: adviserName || adviserData?.displayName || auth.currentUser?.displayName,
+    email: adviserData?.email || auth.currentUser?.email
+  }, 'PV');
 
   const handleSwitchToDean = () => {
     window.location.href = '/dean/dashboard';
@@ -38,9 +114,15 @@ function Header({
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      if (syDropdownRef.current && !syDropdownRef.current.contains(e.target)) {
+        setSyDropdownOpen(false);
+      }
     };
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setDropdownOpen(false);
+      if (e.key === 'Escape') {
+        setDropdownOpen(false);
+        setSyDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
@@ -165,10 +247,67 @@ function Header({
           </div>
         )}
 
-        {/* Academic Year Pill (Desktop Only) */}
-        <div className="hidden xl:flex items-center gap-1.5 bg-pink-50 dark:bg-[#7a1f3d]/20 text-[#541b2f] dark:text-[#f8d070] border border-pink-100 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg">
-          <span>📅</span>
-          <span>S.Y. 2026-2027</span>
+        {/* Academic Year Selector with Dropdown (Desktop Only) */}
+        <div className="relative hidden sm:block" ref={syDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setSyDropdownOpen(prev => !prev)}
+            className="flex items-center gap-2 bg-pink-50 hover:bg-pink-100/80 dark:bg-[#7a1f3d]/20 dark:hover:bg-[#7a1f3d]/35 text-[#541b2f] dark:text-[#f8d070] border border-pink-100 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg transition-all cursor-pointer shadow-sm focus:outline-none"
+            title="Click to view or switch School Year"
+          >
+            <Calendar className="w-3.5 h-3.5 text-[#7a1f3d] dark:text-[#f8d070]" />
+            <span>{displaySY}</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${syDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* SY Dropdown Menu */}
+          {syDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white dark:bg-[#1a1715] shadow-xl border border-stone-200 dark:border-stone-800 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="px-3 py-2 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">Available School Years</span>
+                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                  {availableSchoolYears.length} {availableSchoolYears.length === 1 ? 'Year' : 'Years'}
+                </span>
+              </div>
+
+              <div className="py-1 max-h-48 overflow-y-auto space-y-1">
+                {availableSchoolYears.map((sy) => {
+                  const syLabel = sy.label || sy;
+                  const isActive = syLabel === selectedSY || (sy.status === 'Active' && !localStorage.getItem('adviser_active_sy'));
+                  const labelFormatted = syLabel.includes('S.Y.') || syLabel.includes('SY') 
+                    ? syLabel.replace(/^SY\s*/i, 'S.Y. ') 
+                    : `S.Y. ${syLabel}`;
+
+                  return (
+                    <button
+                      key={sy.id || syLabel}
+                      type="button"
+                      onClick={() => handleSelectSY(sy)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                        isActive
+                          ? 'bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/10 dark:text-[#f8d070] font-bold'
+                          : 'text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#7a1f3d] dark:bg-[#f8d070]' : 'bg-stone-300 dark:bg-stone-600'}`}></span>
+                        <span>{labelFormatted}</span>
+                      </div>
+                      {isActive ? (
+                        <span className="text-[10px] bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-stone-900 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
+                          <Check className="w-2.5 h-2.5" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-stone-400 font-normal">
+                          {sy.status || 'Archived'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Dark Mode Toggle */}
@@ -212,8 +351,8 @@ function Header({
             {profilePhotoUrl ? (
               <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-[#f4e6eb] dark:bg-[#7a1f3d] flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] font-bold text-xs">
-                {adviserName ? adviserName.charAt(0).toUpperCase() : 'A'}
+              <div className="w-full h-full bg-[#f4e6eb] dark:bg-[#7a1f3d] flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] font-bold text-xs tracking-tight select-none">
+                {initials}
               </div>
             )}
           </button>
@@ -231,8 +370,9 @@ function Header({
                     {auth.currentUser.email}
                   </p>
                 )}
-                <span className="inline-block mt-1.5 text-[9px] font-semibold bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
-                  👨‍🏫 {isDualRole ? 'Dean + Adviser' : 'Research Adviser'}
+                <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
+                  <GraduationCap className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                  <span>{isDualRole ? 'Dean + Adviser' : 'Research Adviser'}</span>
                 </span>
               </div>
 

@@ -161,14 +161,8 @@ export default function Sidebar({ onNavigate }) {
     }
   }, [activePage, counts.researchRecordsTotal]);
 
-  // Extract initials from displayName or name
   const deanName = deanData?.displayName || (deanData?.firstName ? `${deanData.firstName} ${deanData.lastName || ''}`.trim() : deanData?.name || 'Dean');
-  const initials = deanName.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase() || 'D';
-
-  // Get role badges
-  const role = deanData?.role || 'dean';
-  const isDeanOnly = role === 'dean';
-  const isDeanAndAdviser = role === 'dean+adviser';
+  const isDeanAndAdviser = deanData?.role === 'dean+adviser';
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -338,27 +332,7 @@ export default function Sidebar({ onNavigate }) {
         </div>
       </nav>
 
-      {/* USER PROFILE */}
-      <div className="p-3 bg-black/20 m-4 rounded-xl flex items-center gap-3 border border-white/5 shadow-inner">
-        <div className="w-10 h-10 rounded-full bg-[#f8d070] flex items-center justify-center text-[#4a1024] font-bold shadow-sm shrink-0">
-          {initials}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-white truncate">{deanName}</p>
-          <div className="flex gap-1.5 mt-1">
-            {(isDeanOnly || isDeanAndAdviser) && (
-              <span className="text-[8px] bg-[#6b2a3d] border border-[#8c3b53] text-[#f8d070] px-1.5 py-0.5 rounded font-bold tracking-wide">
-                DEAN
-              </span>
-            )}
-            {isDeanAndAdviser && (
-              <span className="text-[8px] bg-[#1a4a38] border border-[#236b51] text-emerald-400 px-1.5 py-0.5 rounded font-bold tracking-wide">
-                ADVISER
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+
 
       {/* PORTAL SWITCHER FOR DUAL ROLE */}
       {isDeanAndAdviser && (

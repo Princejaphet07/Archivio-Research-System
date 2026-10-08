@@ -433,6 +433,40 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, newPassword);
 
+      // Clear temporary password and mustChangePassword flag
+      const targetDocId = docId || auth.currentUser.uid;
+      if (targetDocId) {
+        await updateDoc(doc(db, 'students', targetDocId), {
+          temporaryPassword: null,
+          mustChangePassword: false,
+          passwordLastChangedAt: new Date().toISOString()
+        }).catch((e) => console.warn('Notice clearing temporaryPassword flag:', e));
+      }
+
+      // If user is a group member, synchronize with leader's groupMembers
+      if (studentData?.leaderUid) {
+        try {
+          const leaderRef = doc(db, 'students', studentData.leaderUid);
+          const leaderSnap = await getDoc(leaderRef);
+          if (leaderSnap.exists()) {
+            const lData = leaderSnap.data();
+            const myEmail = auth.currentUser.email?.toLowerCase();
+            const updatedMembers = (lData.groupMembers || []).map(m => {
+              const mEmail = (typeof m === 'object' ? m.email : m)?.toLowerCase();
+              if (mEmail === myEmail && typeof m === 'object') {
+                return { ...m, temporaryPassword: null, mustChangePassword: false };
+              }
+              return m;
+            });
+            await updateDoc(leaderRef, { groupMembers: updatedMembers });
+          }
+        } catch (syncErr) {
+          console.warn('Notice synchronizing member password state with leader:', syncErr);
+        }
+      }
+
+      setStudentData(prev => prev ? ({ ...prev, temporaryPassword: null, mustChangePassword: false }) : null);
+
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -750,6 +784,22 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                   </div>
                   <hr className="border-stone-100 dark:border-stone-800 mb-6" />
                   
+                  {(studentData?.mustChangePassword || studentData?.temporaryPassword) && (
+                    <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 flex items-start gap-3 shadow-sm">
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 flex items-center justify-center shrink-0 mt-0.5 font-bold text-lg">
+                        🔐
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-[14px] font-bold text-amber-900 dark:text-amber-200 mb-0.5">
+                          Temporary Password Active
+                        </h4>
+                        <p className="text-[12.5px] sm:text-[13px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                          Your research group leader created your portal account with a temporary password. Please set a permanent password of your choice below to secure your access.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-1.5 mb-5 sm:mb-6">
                     <label className="text-[13px] font-bold text-gray-800 dark:text-stone-300 ml-1">Current Password</label>
                     <div className="relative">

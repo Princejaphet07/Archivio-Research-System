@@ -10,6 +10,20 @@ import ListSkeleton from '../components/skeletons/ListSkeleton';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
 import { Card, CardHeader, CardBody, StatCard, PremiumButton, SectionTitle } from '../../components/ui/Card';
+import { 
+  Sparkles, 
+  Users, 
+  Clock, 
+  AlertCircle, 
+  FileCheck, 
+  BarChart3, 
+  Zap, 
+  UserCheck, 
+  Mail, 
+  FolderKanban, 
+  SlidersHorizontal,
+  CheckCircle2
+} from 'lucide-react';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -131,8 +145,12 @@ function Dashboard() {
     return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
   });
 
-  const pendingReviewSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress');
-  const pendingReviewCount = pendingReviewSubs.length;
+  const needsReviewSubs = enrichedSubmissions.filter(s => (s.reviewStatus === 'pending' || s.reviewStatus === 'reviewed') && s.completionPercent === 100);
+  const needsReviewCount = needsReviewSubs.length;
+  const pendingReviewCount = needsReviewCount;
+  const pendingReviewSubs = needsReviewSubs;
+  const revisionsSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'revision' || s.reviewStatus === 'dean_revision');
+  const revisionsCount = revisionsSubs.length;
   const approvedSubs = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published');
   const approvedPapersCount = approvedSubs.length;
 
@@ -148,11 +166,12 @@ function Dashboard() {
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-1.5">Research Adviser Portal</p>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mb-2 leading-tight">
-              {getGreeting()}, {adviserData?.displayName || 'Research Adviser'} <span className="animate-wave origin-bottom-right inline-block">👋</span>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mb-2 leading-tight flex items-center flex-wrap gap-2">
+              <span>{getGreeting()}, {adviserData?.displayName || 'Research Adviser'}</span>
+              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-amber-300 shrink-0 inline-block animate-pulse" />
             </h1>
             <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
-              {activeGroupCount} active groups under your advisory · {pendingReviewCount} submissions pending review
+              {activeGroupCount} active groups under your advisory · {needsReviewCount} submissions ready for review
             </p>
           </div>
         </div>
@@ -169,32 +188,32 @@ function Dashboard() {
           ) : (
             <>
               <StatCard
-                icon="🎓"
+                icon={<Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
                 label="My Groups"
                 value={activeGroupCount}
                 sub="Active groups"
                 color="blue"
               />
               <StatCard
-                icon="⏳"
-                label="Pending Review"
-                value={pendingReviewCount}
-                sub="Needs attention"
+                icon={<Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />}
+                label="Needs Review"
+                value={needsReviewCount}
+                sub="Ready for review"
                 color="amber"
               />
               <StatCard
-                icon="📄"
+                icon={<AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />}
+                label="Revisions"
+                value={revisionsCount}
+                sub="Awaiting student action"
+                color="amber"
+              />
+              <StatCard
+                icon={<FileCheck className="w-6 h-6 text-green-600 dark:text-green-400" />}
                 label="Approved Papers"
                 value={approvedPapersCount}
                 sub="Completed"
                 color="green"
-              />
-              <StatCard
-                icon="📈"
-                label="Avg Completion"
-                value={`${avgCompletion}%`}
-                sub="Across groups"
-                color="maroon"
               />
             </>
           )}
@@ -247,7 +266,7 @@ function Dashboard() {
                           textColor = 'text-green-700';
                           bgColor = 'bg-green-100';
                           barColor = 'bg-[#5a1831]';
-                          badgeText = '• Complete ✓';
+                          badgeText = '• Complete';
                         } else if (sub.missingDocs.length > 0) {
                           borderColor = 'border-blue-400';
                           textColor = 'text-red-700';
@@ -272,7 +291,10 @@ function Dashboard() {
                                 </span>
                               </div>
                               <button 
-                                onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
+                                onClick={() => {
+                                  const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : pct === 100 ? 'needs_review' : 'drafting';
+                                  navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: targetTab } });
+                                }}
                                 className="sm:hidden border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0"
                               >
                                 Details
@@ -292,7 +314,10 @@ function Dashboard() {
                                   <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{sub.researchTitle} · {sub.members?.length || 1} members</p>
                                 </div>
                                 <button 
-                                  onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: isApproved ? 'approved' : 'pending' } })}
+                                  onClick={() => {
+                                    const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : pct === 100 ? 'needs_review' : 'drafting';
+                                    navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: targetTab } });
+                                  }}
                                   className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0 ml-2"
                                 >
                                   Details
@@ -303,7 +328,11 @@ function Dashboard() {
 
                               <div className="mt-2 text-[11px] text-gray-500 dark:text-stone-400 mb-1.5 flex justify-between items-center">
                                 <span className="truncate pr-2">
-                                  {isApproved ? '✓ All requirements complete' : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
+                                  {isApproved ? (
+                                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> All requirements complete
+                                    </span>
+                                  ) : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
                                 </span>
                                 <span className={`font-bold shrink-0 ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
                                   {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
@@ -368,20 +397,26 @@ function Dashboard() {
             <Card glass={true}>
               <CardHeader accent={true}>
                 <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  <span className="text-lg">⏳</span> Pending Actions
+                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Pending Actions</span>
                 </h3>
                 <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200 dark:border-yellow-700/50">
                   {pendingReviewCount} pending
                 </span>
               </CardHeader>
               <CardBody className="space-y-3">
-                {pendingReviewSubs.slice(0, 3).map((sub, idx) => (
+                {needsReviewSubs.slice(0, 3).map((sub, idx) => (
                   <div key={sub.id || idx} className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-3">
                     <div>
                       <h4 className="text-[13px] font-bold text-stone-800 dark:text-stone-200">{sub.researchTitle}</h4>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400">{sub.groupName} · {sub.submittedDate ? new Date(sub.submittedDate).toLocaleDateString() : 'Recent'}</p>
                     </div>
-                    <span className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold border border-yellow-200 dark:border-yellow-700/50 px-2 py-1 rounded">Review</span>
+                    <button
+                      onClick={() => navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: 'needs_review' } })}
+                      className="bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold border border-yellow-200 dark:border-yellow-700/50 px-2 py-1 rounded transition cursor-pointer"
+                    >
+                      Review
+                    </button>
                   </div>
                 ))}
                 
@@ -407,7 +442,8 @@ function Dashboard() {
             <Card glass={true}>
               <CardBody>
                 <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2">
-                  <span className="text-lg">📊</span> Group Progress
+                  <BarChart3 className="w-4 h-4 text-[#7a1f3d] dark:text-[#f8d070] shrink-0" />
+                  <span>Group Progress</span>
                 </h3>
                 <div className="h-48">
                   {enrichedSubmissions.length > 0 ? (
@@ -436,33 +472,42 @@ function Dashboard() {
             {/* Quick Actions */}
             <div className="bg-transparent mt-6">
               <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 mb-3 ml-1 flex items-center gap-2">
-                <span className="text-lg">⚡</span> Quick Actions
+                <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Quick Actions</span>
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <Card hover={true} onClick={() => navigate('/adviser/group-registrations')} className="group">
                   <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-green-500 text-2xl group-hover:scale-110 transition-transform">✅</span>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                      <UserCheck className="w-5 h-5" />
+                    </div>
                     <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Approve Registrations</span>
                   </CardBody>
                 </Card>
                 
                 <Card hover={true} onClick={() => navigate('/adviser/send-invitations')} className="group">
                   <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-blue-500 text-2xl group-hover:scale-110 transition-transform">📩</span>
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                      <Mail className="w-5 h-5" />
+                    </div>
                     <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Send Invite Link</span>
                   </CardBody>
                 </Card>
                 
                 <Card hover={true} onClick={() => navigate('/adviser/research-categories')} className="group">
                   <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-yellow-500 text-2xl group-hover:scale-110 transition-transform">📁</span>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                      <FolderKanban className="w-5 h-5" />
+                    </div>
                     <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">Manage Categories</span>
                   </CardBody>
                 </Card>
                 
                 <Card hover={true} onClick={() => navigate('/adviser/submission-requirements')} className="group">
                   <CardBody className="p-4 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-purple-500 text-2xl group-hover:scale-110 transition-transform">⚙️</span>
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                      <SlidersHorizontal className="w-5 h-5" />
+                    </div>
                     <span className="text-[10px] font-bold text-stone-600 dark:text-stone-400">My Requirements</span>
                   </CardBody>
                 </Card>

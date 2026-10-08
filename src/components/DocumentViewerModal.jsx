@@ -1,10 +1,112 @@
-import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Download, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, ExternalLink, Download, FileText, AlertTriangle, RefreshCw, CheckCircle2, Clock, RotateCcw, Tag } from 'lucide-react';
 import { getDownloadURL, ref } from 'firebase/storage';
 import { storage } from '../firebase/config';
 import AnnotatablePDFViewer from './AnnotatablePDFViewer';
+import Swal from 'sweetalert2';
+import { saveDraft, getDraft, clearDraft, formatDraftTime } from '../utils/draftStorage';
 
-const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role, initialNote, onSaveNote, initialAnnotations = {}, onSaveAnnotations }) => {
+// Helper to parse revision notes into structured quick page notes and general commentary
+const parseRevisionNote = (rawNote) => {
+  if (!rawNote || typeof rawNote !== 'string') {
+    return { pageNotes: [], generalNote: '' };
+  }
+
+  const lines = rawNote.split('\n');
+  const pageNotes = [];
+  const generalLines = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Pattern 1: [Page 2 - Part: General Objective]: comment or [Page 2 | General Objective]: comment or [Page 2 - General Objective]
+    const p1 = trimmed.match(/^\[Page\s*(\d+)\s*(?:-|\||\/)\s*(?:Part:\s*)?([^\]]+)\]\s*(?::|-)?\s*(.*)$/i);
+    if (p1) {
+      pageNotes.push({
+        page: p1[1].trim(),
+        part: p1[2].trim(),
+        comment: p1[3]?.trim() || ''
+      });
+      continue;
+    }
+
+    // Pattern 2: [Page 2]: General Objective or [Page 2]: General Objective - comment or [Page 2]
+    const p2 = trimmed.match(/^\[Page\s*(\d+)\]\s*(?::|-)?\s*(.*)$/i);
+    if (p2) {
+      const page = p2[1].trim();
+      const rest = p2[2]?.trim() || '';
+      if (!rest) {
+        pageNotes.push({
+          page,
+          part: 'Entire Page',
+          comment: ''
+        });
+      } else {
+        const subParts = rest.split(/\s*(?::|-)\s*/);
+        if (subParts.length >= 2) {
+          pageNotes.push({
+            page,
+            part: subParts[0].replace(/^Part:\s*/i, '').trim(),
+            comment: subParts.slice(1).join(' - ').trim()
+          });
+        } else {
+          pageNotes.push({
+            page,
+            part: rest.replace(/^Part:\s*/i, '').trim(),
+            comment: ''
+          });
+        }
+      }
+      continue;
+    }
+
+    // Pattern 3: Page 2: General Objective or Page 2 - Part: General Objective or Pg 2: General Objective
+    const p3 = trimmed.match(/^(?:Page|Pg\.?)\s*(\d+)\s*(?::|-|\()\s*(?:Part:\s*)?([^:)\n]+)(?:\))?\s*(?::|-)?\s*(.*)$/i);
+    if (p3) {
+      pageNotes.push({
+        page: p3[1].trim(),
+        part: p3[2].trim(),
+        comment: p3[3]?.trim() || ''
+      });
+      continue;
+    }
+
+    // Pattern 4: Page 2 alone: e.g. "Page 2"
+    const p4 = trimmed.match(/^(?:Page|Pg\.?)\s*(\d+)\s*$/i);
+    if (p4) {
+      pageNotes.push({
+        page: p4[1].trim(),
+        part: 'Entire Page',
+        comment: ''
+      });
+      continue;
+    }
+
+    generalLines.push(trimmed);
+  }
+
+  return {
+    pageNotes,
+    generalNote: generalLines.join('\n')
+  };
+};
+
+const DocumentViewerModal = ({ 
+  isOpen, 
+  onClose, 
+  documentUrl, 
+  documentTitle, 
+  role, 
+  initialNote, 
+  onSaveNote, 
+  initialAnnotations = {}, 
+  onSaveAnnotations,
+  isResubmitted = false,
+  previousNote = '',
+  previousAnnotations = {},
+  studentReply = ''
+}) => {
   const [iframeError, setIframeError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [note, setNote] = useState(initialNote || '');
@@ -12,6 +114,197 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
   const [quickPage, setQuickPage] = useState('');
   const [quickComment, setQuickComment] = useState('');
   const [resolvedUrl, setResolvedUrl] = useState('');
+  const [showPreviousOverlay, setShowPreviousOverlay] = useState(false);
+  const [noteDraftInfo, setNoteDraftInfo] = useState(null);
+
+  // Sync initial note and check for unsaved local draft
+  useEffect(() => {
+    setNote(initialNote || '');
+    setShowPreviousOverlay(false);
+    if (role === 'adviser' && documentUrl && isOpen) {
+      const cached = getDraft(documentUrl, 'review_note');
+      if (cached && cached.data && typeof cached.data === 'string' && cached.data.trim()) {
+        if (!initialNote || cached.data.trim() !== initialNote.trim()) {
+          setNoteDraftInfo(cached);
+        }
+      }
+    }
+  }, [documentUrl, isOpen, role, initialNote]);
+
+  const handleRestoreNoteDraft = () => {
+    if (noteDraftInfo?.data) {
+      setNote(noteDraftInfo.data);
+      setNoteDraftInfo(null);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Restored Note Draft',
+        showConfirmButton: false,
+        timer: 1500
+      });
+    }
+  };
+
+  const handleDiscardNoteDraft = () => {
+    clearDraft(documentUrl, 'review_note');
+    setNoteDraftInfo(null);
+  };
+
+  const handleNoteChange = (newVal) => {
+    setNote(newVal);
+    if (role === 'adviser' && documentUrl) {
+      saveDraft(documentUrl, 'review_note', newVal);
+    }
+  };
+
+  const hasUnsavedNote = Boolean(
+    role === 'adviser' && 
+    note.trim() && 
+    note.trim() !== (initialNote || '').trim()
+  );
+
+  const handleSafeClose = useCallback(() => {
+    if (hasUnsavedNote) {
+      Swal.fire({
+        title: 'Unsaved Revision Notes',
+        text: 'You have drafted revision notes that haven\'t been committed. Your draft is buffered in local storage.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#7a2e46',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Exit Anyway',
+        cancelButtonText: 'Keep Editing'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          onClose();
+        }
+      });
+      return;
+    }
+    onClose();
+  }, [hasUnsavedNote, onClose]);
+
+  // Keyboard navigation: Escape key defensively triggers safe close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleSafeClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleSafeClose]);
+
+  // Extract floating text notes from initialAnnotations (active annotations on document)
+  const extractedCurrentNotes = React.useMemo(() => {
+    if (!initialAnnotations || typeof initialAnnotations !== 'object') return [];
+    const notes = [];
+    Object.keys(initialAnnotations).forEach(page => {
+      const items = initialAnnotations[page];
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (item.type === 'text' && item.text && item.text.trim()) {
+            notes.push({ page, text: item.text.trim() });
+          }
+        });
+      }
+    });
+    return notes;
+  }, [initialAnnotations]);
+
+  // Extract floating text notes from previousAnnotations
+  const extractedPreviousNotes = React.useMemo(() => {
+    if (!previousAnnotations || typeof previousAnnotations !== 'object') return [];
+    const notes = [];
+    Object.keys(previousAnnotations).forEach(page => {
+      const items = previousAnnotations[page];
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (item.type === 'text' && item.text && item.text.trim()) {
+            notes.push({ page, text: item.text.trim() });
+          }
+        });
+      }
+    });
+    return notes;
+  }, [previousAnnotations]);
+
+  // Count highlights or pen marks in previousAnnotations
+  const previousHighlightsCount = React.useMemo(() => {
+    if (!previousAnnotations || typeof previousAnnotations !== 'object') return 0;
+    let count = 0;
+    Object.keys(previousAnnotations).forEach(page => {
+      const items = previousAnnotations[page];
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (item.type === 'highlighter' || item.type === 'pen') {
+            count++;
+          }
+        });
+      }
+    });
+    return count;
+  }, [previousAnnotations]);
+
+  // Active note string
+  const activeNoteText = isResubmitted ? (note || previousNote) : (note || previousNote);
+
+  // Parsed quick page notes and general revision feedback
+  const { pageNotes, generalNote } = React.useMemo(() => {
+    return parseRevisionNote(activeNoteText);
+  }, [activeNoteText]);
+
+  // Only show Quick Page Notes when explicitly specified by the adviser (e.g. [Page 2 - Part: General Objective])
+  const displayPageNotes = pageNotes || [];
+
+  // For adviser view: parse current note to display added chips
+  const adviserPageNotes = React.useMemo(() => {
+    return parseRevisionNote(note).pageNotes;
+  }, [note]);
+
+  // Scroll to specific page in PDF viewer
+  const scrollToPage = (pageNum) => {
+    if (!pageNum) return;
+    const num = parseInt(pageNum, 10);
+    if (isNaN(num)) return;
+    const pageEl = document.querySelector(`[data-page="${num}"]`);
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pageEl.classList.add('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+      setTimeout(() => {
+        pageEl.classList.remove('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+      }, 2000);
+    }
+  };
+
+  // Add quick page note to adviser's note text
+  const handleAddQuickNote = () => {
+    if (!quickPage.trim() && !quickComment.trim()) return;
+    const p = quickPage.trim();
+    const c = quickComment.trim();
+    const tag = p && c 
+      ? `[Page ${p} - Part: ${c}]` 
+      : p 
+        ? `[Page ${p}]` 
+        : `[Part: ${c}]`;
+    setNote(prev => (prev && prev.trim()) ? `${prev.trim()}\n${tag}` : tag);
+    setQuickPage('');
+    setQuickComment('');
+  };
+
+  // Remove a specific page note chip from adviser's note text
+  const handleRemovePageNote = (targetPn) => {
+    if (!note) return;
+    const lines = note.split('\n');
+    const remaining = lines.filter(l => {
+      const parsed = parseRevisionNote(l);
+      return !parsed.pageNotes.some(pn => pn.page === targetPn.page && pn.part === targetPn.part);
+    });
+    setNote(remaining.join('\n'));
+  };
 
   // Automatically resolve Firebase Storage relative paths to full download URLs
   useEffect(() => {
@@ -38,7 +331,9 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
 
   if (!isOpen) return null;
 
-  const showNotesPanel = role === 'adviser' || (role === 'student' && initialNote);
+  const hasAnnotations = (initialAnnotations && Object.keys(initialAnnotations).length > 0) || 
+                         (previousAnnotations && Object.keys(previousAnnotations).length > 0);
+  const showNotesPanel = role === 'adviser' || (role === 'student' && (initialNote || previousNote || isResubmitted || hasAnnotations));
 
   // Determine file type
   const lowerUrl = resolvedUrl?.toLowerCase() || '';
@@ -71,12 +366,20 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) handleSafeClose(); }}
+    >
       {/* Modal Container */}
-      <div className="bg-white dark:bg-stone-900 w-full max-w-6xl h-[100dvh] sm:h-[92vh] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 relative transform transition-all">
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-document-title"
+        className="bg-white dark:bg-stone-900 w-full max-w-6xl h-[100dvh] sm:h-[92vh] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 relative transform transition-all"
+      >
         
         {/* Header */}
-        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 shrink-0">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 shrink-0 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 rounded-full bg-[#7a2e46]/10 dark:bg-[#f8d070]/10 flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,9 +387,26 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
               </svg>
             </div>
             <div className="min-w-0">
-              <h3 className="font-bold text-gray-900 dark:text-stone-100 text-[14px] sm:text-[15px] truncate max-w-[140px] xs:max-w-[220px] sm:max-w-none">{documentTitle || 'Document Viewer'}</h3>
-              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Secure Preview</p>
+              <h3 id="modal-document-title" className="font-bold text-gray-900 dark:text-stone-100 text-[14px] sm:text-[15px] truncate max-w-[140px] xs:max-w-[220px] sm:max-w-none">{documentTitle || 'Document Viewer'}</h3>
+              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-stone-400">Archival Quality Preview</p>
             </div>
+
+            {/* Tri-state Notes Sync Pill for Adviser */}
+            {role === 'adviser' && (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 select-none ml-2">
+                {hasUnsavedNote ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span className="text-amber-800 dark:text-amber-300 font-medium">Draft Note Buffered</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-stone-600 dark:text-stone-300 font-medium">Notes Saved</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
@@ -114,9 +434,9 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
             <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-0.5 sm:mx-1"></div>
 
             <button 
-              onClick={onClose}
-              className="p-2 text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors touch-manipulation"
-              aria-label="Close modal"
+              onClick={handleSafeClose}
+              className="p-2 text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors touch-manipulation cursor-pointer"
+              aria-label="Close document viewer modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -172,12 +492,20 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
               </video>
             </div>
           ) : isPdf ? (
-            <AnnotatablePDFViewer 
-              documentUrl={resolvedUrl} 
-              initialAnnotations={initialAnnotations}
-              onSaveAnnotations={onSaveAnnotations}
-              readOnly={role !== 'adviser'}
-            />
+            <div className="w-full h-full relative">
+              {showPreviousOverlay && (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500 text-stone-950 font-bold px-4 py-1.5 rounded-full shadow-xl text-xs flex items-center gap-2 border border-amber-300 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                  <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping"></span>
+                  <span>Viewing Previous Highlights & Notes Overlay (Read-only)</span>
+                </div>
+              )}
+              <AnnotatablePDFViewer 
+                documentUrl={resolvedUrl} 
+                initialAnnotations={showPreviousOverlay ? previousAnnotations : initialAnnotations}
+                onSaveAnnotations={showPreviousOverlay ? undefined : onSaveAnnotations}
+                readOnly={role !== 'adviser' || showPreviousOverlay}
+              />
+            </div>
           ) : (
             <iframe 
               key={loadAttempt}
@@ -192,99 +520,435 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
 
           {/* Revision Notes Panel */}
           {showNotesPanel && (
-            <div className="w-[320px] h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 flex flex-col shrink-0">
-              <div className="p-4 border-b border-stone-200 dark:border-stone-800 flex items-center gap-2 bg-stone-50 dark:bg-stone-900/50">
-                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
+            <div className="w-[340px] sm:w-[360px] h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 flex flex-col shrink-0">
+              <div className="p-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between bg-stone-50 dark:bg-stone-900/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-bold text-sm text-stone-800 dark:text-stone-200 truncate">
+                    {isResubmitted ? 'Review Resubmission' : 'Revision Notes'}
+                  </h3>
                 </div>
-                <h3 className="font-bold text-sm text-stone-800 dark:text-stone-200">Revision Notes</h3>
+                {isResubmitted && (
+                  <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 shrink-0">
+                    🔄 Resubmitted
+                  </span>
+                )}
               </div>
               
-              <div className="flex-1 p-4 overflow-y-auto">
-                {role === 'adviser' ? (
-                  <div className="flex flex-col h-full gap-3">
-                    <p className="text-xs text-stone-500 dark:text-stone-400">
-                      Add specific feedback for this document (e.g. "Page 5 needs formatting").
+              <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                {/* ── View Previous Revision Request Card ── */}
+                {isResubmitted && (
+                  <div className="bg-amber-50/90 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-xl p-3.5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-200 dark:border-amber-800/60">
+                      <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wide">
+                        <span className="text-base">📋</span>
+                        <span>View Previous Revision Request</span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-snug">
+                      The student submitted a new revised file. Verify if they corrected the requested parts:
                     </p>
-                    
+
+                    {/* Previous Adviser Text Note */}
+                    {previousNote ? (
+                      <div className="bg-white dark:bg-stone-900 p-2.5 rounded-lg border border-amber-200/80 dark:border-amber-800/60">
+                        <div className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                          <span>💬</span> Previous Feedback Note
+                        </div>
+                        <p className="text-xs text-stone-800 dark:text-stone-200 font-medium whitespace-pre-wrap">
+                          {previousNote}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="italic text-stone-400 text-xs bg-white dark:bg-stone-900 p-2 rounded border border-amber-200/50">
+                        No previous note text was attached.
+                      </p>
+                    )}
+
+                    {/* Previous Floating Notes on Canvas */}
+                    {extractedPreviousNotes.length > 0 && (
+                      <div className="bg-white dark:bg-stone-900 p-2.5 rounded-lg border border-amber-200/80 dark:border-amber-800/60 space-y-1.5">
+                        <div className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <span>📌</span> Notes from Previous Paper
+                        </div>
+                        <ul className="space-y-1">
+                          {extractedPreviousNotes.map((pn, idx) => (
+                            <li key={idx} className="text-xs text-stone-700 dark:text-stone-200 flex items-start gap-1">
+                              <span className="font-bold text-amber-700 dark:text-amber-400 shrink-0">[Page {pn.page}]:</span>
+                              <span className="italic font-medium">"{pn.text}"</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Toggle Previous Highlights on Paper */}
+                    {(extractedPreviousNotes.length > 0 || previousHighlightsCount > 0) && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowPreviousOverlay(prev => !prev)}
+                          className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all border ${
+                            showPreviousOverlay
+                              ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-300 dark:ring-amber-800'
+                              : 'bg-white dark:bg-stone-900 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100/60 shadow-sm'
+                          }`}
+                        >
+                          <span>{showPreviousOverlay ? '🙈' : '👁️'}</span>
+                          <span>
+                            {showPreviousOverlay ? 'Hide Previous Highlights' : 'Show Previous Highlights on Paper'}
+                          </span>
+                        </button>
+                        <p className="text-[10px] text-stone-500 dark:text-stone-400 text-center mt-1">
+                          {showPreviousOverlay
+                            ? 'Displaying previous highlights & floating notes for comparison.'
+                            : 'Temporarily overlay previous highlights onto document.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Adviser Feedback / New Notes Area */}
+                {role === 'adviser' ? (
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 mb-0.5">
+                        {isResubmitted ? 'New Evaluation' : 'Revision Notes'}
+                      </h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                        {isResubmitted 
+                          ? 'If the student still needs changes, add notes below. Otherwise, mark as checked.' 
+                          : 'Add specific feedback for this document (e.g. "Page 5 needs formatting").'}
+                      </p>
+                    </div>
+
                     {/* Quick Add Page Note Widget */}
                     <div className="flex flex-col gap-2 p-3 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700">
-                      <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Quick Page Note</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Quick Page Note</p>
+                        <span className="text-[9px] text-stone-400">Specify page & part</span>
+                      </div>
                       <div className="flex gap-2">
                         <input 
                           type="text" 
                           placeholder="Pg #"
                           value={quickPage}
                           onChange={e => setQuickPage(e.target.value)}
-                          className="w-14 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400"
+                          className="w-14 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400 font-semibold"
                         />
                         <input 
                           type="text" 
-                          placeholder="What needs revision?"
+                          placeholder="What needs revision? (e.g. Part / Section)"
                           value={quickComment}
                           onChange={e => setQuickComment(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              if (!quickPage || !quickComment) return;
-                              const newNote = `[Page ${quickPage}]: ${quickComment}`;
-                              setNote(prev => prev ? `${prev}\n${newNote}` : newNote);
-                              setQuickPage('');
-                              setQuickComment('');
+                              handleAddQuickNote();
                             }
                           }}
                           className="flex-1 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400"
                         />
                         <button 
-                          onClick={() => {
-                            if (!quickPage || !quickComment) return;
-                            const newNote = `[Page ${quickPage}]: ${quickComment}`;
-                            setNote(prev => prev ? `${prev}\n${newNote}` : newNote);
-                            setQuickPage('');
-                            setQuickComment('');
-                          }}
-                          className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-lg transition-colors flex items-center justify-center shrink-0"
+                          type="button"
+                          onClick={handleAddQuickNote}
+                          className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-lg transition-colors flex items-center justify-center shrink-0 cursor-pointer"
                           title="Add Note"
                         >
                           +
                         </button>
                       </div>
+
+                      {/* Display added page notes for adviser */}
+                      {adviserPageNotes.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-stone-200 dark:border-stone-700/60 mt-0.5">
+                          {adviserPageNotes.map((pn, idx) => (
+                            <span 
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-md text-[11px] font-bold text-stone-700 dark:text-stone-300 shadow-xs"
+                            >
+                              <span className="text-[#7a2e46] dark:text-[#f8d070]">Pg {pn.page}:</span>
+                              <span className="font-semibold text-stone-800 dark:text-stone-200 max-w-[120px] truncate">{pn.part}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePageNote(pn)}
+                                className="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold cursor-pointer"
+                                title="Remove page note"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Unsaved Note Draft Banner */}
+                    {noteDraftInfo && (
+                      <div className="bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/80 rounded-lg p-2.5 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span className="truncate">Unsaved draft ({formatDraftTime(noteDraftInfo.timestamp)})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={handleRestoreNoteDraft}
+                            className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px] transition-colors cursor-pointer"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDiscardNoteDraft}
+                            className="px-1.5 py-0.5 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 text-[11px] cursor-pointer"
+                          >
+                            Discard
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Academic Directives Tags */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider flex items-center gap-1">
+                          <Tag className="w-3 h-3 text-stone-400" />
+                          Directive Shortcuts
+                        </span>
+                        <span className="text-[9px] text-stone-400">Click to insert</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {['Format & Layout', 'Methodology', 'Literature Review', 'Statistical Data', 'APA & Citations'].map(cat => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              const tag = `[${cat}]: `;
+                              const updated = note && note.trim() ? `${note.trim()}\n${tag}` : tag;
+                              setNote(updated);
+                              if (documentUrl) {
+                                saveDraft(documentUrl, 'review_note', updated);
+                              }
+                            }}
+                            className="px-2 py-0.5 text-[10px] font-semibold bg-stone-100 hover:bg-[#7a2e46]/10 hover:text-[#7a2e46] dark:bg-stone-800 dark:hover:bg-[#f8d070]/10 dark:hover:text-[#f8d070] text-stone-600 dark:text-stone-300 rounded-md border border-stone-200 dark:border-stone-700 transition-colors cursor-pointer"
+                          >
+                            +{cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {studentReply && (
+                      <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 shadow-xs">
+                        <p className="font-bold text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-1.5 mb-1">
+                          <span>💬</span> Student Resubmission Note
+                        </p>
+                        <p className="text-xs text-emerald-800 dark:text-emerald-300 italic whitespace-pre-wrap leading-relaxed">
+                          "{studentReply}"
+                        </p>
+                      </div>
+                    )}
+
                     <textarea 
                       value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Type your revision notes here..."
-                      className="flex-1 w-full p-3 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] focus:border-transparent outline-none resize-none transition-all dark:text-stone-200"
+                      onChange={(e) => handleNoteChange(e.target.value)}
+                      placeholder={isResubmitted ? "Type any additional revision directives if student still needs changes..." : "Type specific revision directives here (or use shortcuts above)..."}
+                      rows={4}
+                      className="w-full p-3 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] focus:border-transparent outline-none resize-none transition-all dark:text-stone-200 min-h-[90px]"
                     />
                   </div>
                 ) : (
-                  <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 h-full">
-                    <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{note}</p>
+                  <div className="flex flex-col gap-3">
+                    {/* Header info */}
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3 shadow-xs">
+                      <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wide">
+                        <span className="text-base">📋</span>
+                        <span>{isResubmitted ? 'Previous Revision Feedback' : 'Revision Feedback Required'}</span>
+                      </div>
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400 mt-1 leading-snug">
+                        Please review the requested changes below and update your document accordingly.
+                      </p>
+                    </div>
+
+                    {studentReply && (
+                      <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 shadow-xs">
+                        <p className="font-bold text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-1.5 mb-1">
+                          <span>💬</span> Your Resubmission Note
+                        </p>
+                        <p className="text-xs text-emerald-800 dark:text-emerald-300 italic whitespace-pre-wrap leading-relaxed">
+                          "{studentReply}"
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Quick Page Notes (What Page and What Part) */}
+                    {displayPageNotes.length > 0 && (
+                      <div className="flex flex-col gap-2.5 p-3.5 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📍</span>
+                            <span>Quick Page Note</span>
+                          </p>
+                          <span className="text-[9px] font-bold text-[#7a2e46] dark:text-[#f8d070] bg-[#7a2e46]/10 dark:bg-[#f8d070]/10 px-2 py-0.5 rounded-full">
+                            {displayPageNotes.length} Part{displayPageNotes.length !== 1 ? 's' : ''} to Revise
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {displayPageNotes.map((pn, idx) => (
+                            <div 
+                              key={idx}
+                              onClick={() => scrollToPage(pn.page)}
+                              className="p-2.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-xl hover:border-[#7a2e46] dark:hover:border-[#f8d070] shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+                              title={`Click to jump to Page ${pn.page}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {/* Page box matching Image 1 */}
+                                <div className="px-2.5 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors flex items-center justify-center gap-1">
+                                  <span className="text-[10px] text-stone-400 group-hover:text-white/80 dark:group-hover:text-stone-700 font-normal">Pg</span>
+                                  <span>{pn.page}</span>
+                                </div>
+
+                                {/* Part box matching Image 1 */}
+                                <div className="flex-1 p-1.5 px-2.5 text-xs font-bold bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 truncate group-hover:border-[#7a2e46]/40 dark:group-hover:border-[#f8d070]/40 transition-colors">
+                                  {pn.part || 'Specific Section'}
+                                </div>
+
+                                {/* Jump button */}
+                                <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0">
+                                  Jump →
+                                </span>
+                              </div>
+
+                              {pn.comment && (
+                                <p className="text-xs text-stone-600 dark:text-stone-300 mt-2 font-medium pl-1">
+                                  "{pn.comment}"
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Floating Sticky Notes on PDF Document */}
+                    {extractedCurrentNotes.length > 0 && (
+                      <div className="flex flex-col gap-2 p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>📌</span>
+                            <span>Sticky Notes on Document</span>
+                          </p>
+                          <span className="text-[9px] text-stone-400">
+                            {extractedCurrentNotes.length} pinned note{extractedCurrentNotes.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          {extractedCurrentNotes.map((noteItem, idx) => (
+                            <div 
+                              key={idx}
+                              onClick={() => scrollToPage(noteItem.page)}
+                              className="flex items-start gap-2 p-2 rounded-lg bg-white dark:bg-stone-900 border border-amber-200/80 dark:border-amber-800/50 hover:border-amber-400 transition-colors cursor-pointer group"
+                              title={`Click to jump to Page ${noteItem.page}`}
+                            >
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shrink-0 group-hover:bg-[#7a2e46] group-hover:text-white transition-colors">
+                                Pg {noteItem.page}
+                              </span>
+                              <span className="text-xs text-stone-800 dark:text-stone-200 italic font-medium flex-1">
+                                "{noteItem.text}"
+                              </span>
+                              <span className="text-[10px] text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0 font-medium">
+                                →
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* General Adviser Revision Note */}
+                    {generalNote ? (
+                      <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 shadow-xs">
+                        <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                          <span>💬</span>
+                          <span>{isResubmitted ? 'Previous Revision Note' : 'Adviser Revision Note'}</span>
+                        </p>
+                        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+                          {generalNote}
+                        </p>
+                      </div>
+                    ) : displayPageNotes.length === 0 && extractedCurrentNotes.length === 0 ? (
+                      <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
+                        <p className="text-xs text-stone-500 dark:text-stone-400 italic">
+                          No revision notes provided for this document.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
 
               {role === 'adviser' && (
-                <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 flex flex-col gap-2">
+                <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 flex flex-col gap-2.5">
                   <button 
                     onClick={async () => {
+                      let noteToSave = note.trim();
+
+                      // If adviser has unadded quickPage / quickComment in the input boxes, bundle them!
+                      if (quickPage.trim() || quickComment.trim()) {
+                        const p = quickPage.trim();
+                        const c = quickComment.trim();
+                        const pageTag = p && c 
+                          ? `[Page ${p} - Part: ${c}]` 
+                          : p 
+                            ? `[Page ${p}]` 
+                            : `[Part: ${c}]`;
+
+                        if (!noteToSave.includes(`[Page ${p}`)) {
+                          noteToSave = noteToSave ? `${pageTag}\n${noteToSave}` : pageTag;
+                        }
+                        setNote(noteToSave);
+                        setQuickPage('');
+                        setQuickComment('');
+                      }
+
+                      if (!noteToSave.trim()) {
+                        Swal.fire({
+                          icon: 'info',
+                          title: 'Revision Feedback Required',
+                          text: 'Please type revision directives or choose a shortcut category before issuing a revision request.',
+                          confirmButtonColor: '#7a2e46'
+                        });
+                        return;
+                      }
                       if (!onSaveNote) return;
                       setIsSaving(true);
-                      await onSaveNote(note, 'revision');
+                      await onSaveNote(noteToSave, 'revision');
+                      if (documentUrl) clearDraft(documentUrl, 'review_note');
+                      setNoteDraftInfo(null);
                       setIsSaving(false);
                     }}
-                    disabled={isSaving || !note.trim()}
-                    className="w-full py-2.5 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    disabled={isSaving}
+                    className="w-full py-2.5 px-4 bg-[#7a2e46] hover:bg-[#5f2135] active:bg-[#4a1224] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-950 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isSaving ? (
                       <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                        Saving...
+                        <svg className="w-4 h-4 animate-spin text-white dark:text-stone-950" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                        Submitting Directives...
                       </>
                     ) : (
-                      'Save Revision Note'
+                      <>
+                        <span>{isResubmitted ? '🔄' : '📝'}</span>
+                        <span>{isResubmitted ? 'Request Follow-up Revisions' : 'Request Manuscript Revisions'}</span>
+                      </>
                     )}
                   </button>
 
@@ -294,12 +958,24 @@ const DocumentViewerModal = ({ isOpen, onClose, documentUrl, documentTitle, role
                       setIsSaving(true);
                       setNote('');
                       await onSaveNote('', 'approved');
+                      if (documentUrl) clearDraft(documentUrl, 'review_note');
+                      setNoteDraftInfo(null);
                       setIsSaving(false);
                     }}
                     disabled={isSaving}
-                    className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Mark as Checked (No Revisions)
+                    {isSaving ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                        Verifying Document...
+                      </>
+                    ) : (
+                      <>
+                        <span>✓</span>
+                        <span>{isResubmitted ? 'Approve Document (Revisions Satisfied)' : 'Approve Document (Mark Checked)'}</span>
+                      </>
+                    )}
                   </button>
                 </div>
               )}

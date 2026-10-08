@@ -8,12 +8,16 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import { useAcademicYear } from '../context/AcademicYearContext';
-import { Trash2, Eye, Edit2, Ban, Plus, X, Mail } from 'lucide-react';
+import { Trash2, Eye, Edit2, Ban, Plus, X, Mail, MoreVertical, ShieldOff, Unlock } from 'lucide-react';
 import { Card, CardBody, PremiumButton, SectionTitle, StatusBadge } from '../../components/ui/Card';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
+import ConfirmModal from '../components/common/ConfirmModal';
+import AdminStatusBadge from '../components/common/StatusBadge';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { areDepartmentsEqual, findMatchingDepartment } from '../../utils/departmentUtils';
+import { sendEmailWithFallback } from '../../utils/emailDispatcher';
 
 export default function UserManagement() {
   const [allUsers, setAllUsers] = useState([]);
@@ -28,9 +32,43 @@ export default function UserManagement() {
   const [success, setSuccess] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
+
+  // Defensive Confirm Modal State for catastrophic actions
+  const [confirmModalConfig, setConfirmModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmWord: '',
+    confirmButtonText: 'Confirm & Delete',
+    severity: 'danger',
+    affectedItemsCount: 0,
+    onConfirm: null,
+    loading: false
+  });
+
+  // Auto-open Add Dean modal if URL query parameter has ?action=add-dean
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'add-dean' || params.get('invite') === 'dean') {
+      setIsModalOpen(true);
+    }
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = () => setOpenDropdownId(null);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+
+  useEffect(() => {
+    setOpenDropdownId(null);
+  }, [currentPage, searchQuery]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -137,7 +175,16 @@ export default function UserManagement() {
     });
 
     const unsubDepts = onSnapshot(collection(db, 'departments'), (snap) => {
-      setDepartmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const rawDepts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const uniqueDepts = [];
+      for (const d of rawDepts) {
+        if (!d.name || !d.name.trim()) continue;
+        const existing = uniqueDepts.find(u => areDepartmentsEqual(d.name, u.name));
+        if (!existing) {
+          uniqueDepts.push(d);
+        }
+      }
+      setDepartmentsList(uniqueDepts);
     }, (err) => console.error('Error fetching departments:', err));
 
     const unsubProgs = onSnapshot(collection(db, 'programs'), (snap) => {
@@ -166,21 +213,71 @@ export default function UserManagement() {
   }, []);
 
   const handleAddNewDepartment = async () => {
-    if (!newDeptName.trim()) return;
+    const trimmedDept = newDeptName.trim();
+    if (!trimmedDept) return;
+
+    // 1. Fast check against current loaded departments list (handles casing, "College of", acronyms, etc.)
+    const localMatch = findMatchingDepartment(trimmedDept, departmentsList);
+
+    if (localMatch) {
+      const existingName = localMatch.name;
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'Department Already Exists',
+        html: `The department <strong>"${existingName}"</strong> already exists.<br/><br/><span style="font-size: 13px; color: #6b7280;">Duplicate departments with variations like <em>"${trimmedDept}"</em> vs <em>"${existingName}"</em> (including prefix words like "College of" or acronyms) are not allowed.</span>`,
+        showCancelButton: true,
+        confirmButtonColor: '#801e38',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: `Select Existing "${existingName}"`,
+        cancelButtonText: 'Edit Name'
+      });
+
+      if (result.isConfirmed) {
+        setFormData(prev => ({ ...prev, department: existingName }));
+        setFormErrors(prev => ({ ...prev, department: '' }));
+        setNewDeptName('');
+        setShowAddDeptModal(false);
+      }
+      return;
+    }
+
     setAddingDept(true);
     try {
-      const existingSnap = await getDocs(query(collection(db, 'departments'), where('name', '==', newDeptName.trim())));
-      if (!existingSnap.empty) {
-        Swal.fire('Exists', 'This department already exists.', 'warning');
+      // 2. Real-time Firestore check across all departments collection docs
+      const allDeptsSnap = await getDocs(collection(db, 'departments'));
+      const allDocs = allDeptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const remoteMatch = findMatchingDepartment(trimmedDept, allDocs);
+
+      if (remoteMatch) {
+        const existingName = remoteMatch.name;
+        const result = await Swal.fire({
+          icon: 'warning',
+          title: 'Department Already Exists',
+          html: `The department <strong>"${existingName}"</strong> already exists in the system.<br/><br/><span style="font-size: 13px; color: #6b7280;">Duplicate departments with variations like <em>"${trimmedDept}"</em> vs <em>"${existingName}"</em> (including prefix words like "College of" or acronyms) are not allowed.</span>`,
+          showCancelButton: true,
+          confirmButtonColor: '#801e38',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: `Select Existing "${existingName}"`,
+          cancelButtonText: 'Edit Name'
+        });
+
+        if (result.isConfirmed) {
+          setFormData(prev => ({ ...prev, department: existingName }));
+          setFormErrors(prev => ({ ...prev, department: '' }));
+          setNewDeptName('');
+          setShowAddDeptModal(false);
+        }
         setAddingDept(false);
         return;
       }
+
       await addDoc(collection(db, 'departments'), {
-        name: newDeptName.trim(),
+        name: trimmedDept,
         status: 'Active',
         createdAt: new Date().toISOString()
       });
-      setFormData(prev => ({ ...prev, department: newDeptName.trim() }));
+      setFormData(prev => ({ ...prev, department: trimmedDept }));
+      setFormErrors(prev => ({ ...prev, department: '' }));
       setNewDeptName('');
       setShowAddDeptModal(false);
       Swal.fire({ icon: 'success', title: 'Added!', text: 'Department added successfully.', timer: 1500, showConfirmButton: false });
@@ -197,10 +294,18 @@ export default function UserManagement() {
       Swal.fire('Error', 'Please enter both Program Code and Name, and ensure a Department is selected.', 'error');
       return;
     }
+    const codeUpper = newProgCode.trim().toUpperCase();
+    const existingProg = programsList.find(
+      p => (p.code || '').trim().toUpperCase() === codeUpper
+    );
+    if (existingProg) {
+      Swal.fire('Exists', `Program code "${codeUpper}" already exists.`, 'warning');
+      return;
+    }
     setAddingProg(true);
     try {
       await addDoc(collection(db, 'programs'), {
-        code: newProgCode.trim().toUpperCase(),
+        code: codeUpper,
         name: newProgName.trim(),
         school: formData.department
       });
@@ -347,59 +452,60 @@ export default function UserManagement() {
     }
   };
 
-  const handleHardDeleteSelectedUsers = async () => {
+  const handleHardDeleteSelectedUsers = () => {
     if (selectedUsers.size === 0) {
       setError('Please select users to delete');
       return;
     }
 
-    const result = await Swal.fire({
-      title: 'Permanently Delete?',
-      text: `Are you sure you want to permanently delete ${selectedUsers.size} user(s)? This will wipe ALL their data from the system.`,
-      icon: 'error',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, wipe data!'
-    });
-    if (!result.isConfirmed) return;
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Permanently Delete Selected Users?',
+      description: `You are about to permanently delete ${selectedUsers.size} user account(s). This will wipe all associated data (manuscripts, group memberships, requirements, and credentials) from ARCHIVIO. This operation cannot be undone.`,
+      confirmWord: 'DELETE',
+      confirmButtonText: 'Permanently Wipe Users',
+      severity: 'danger',
+      affectedItemsCount: selectedUsers.size,
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, loading: true }));
+        try {
+          for (const userId of selectedUsers) {
+            const userDoc = allUsers.find(u => u.id === userId);
+            if (!userDoc) continue;
 
-    setLoading(true);
-    try {
-      for (const userId of selectedUsers) {
-        const userDoc = allUsers.find(u => u.id === userId);
-        if (!userDoc) continue;
+            // 1. Delete directly from role collection (super_admins or deans)
+            const col = userDoc._collection || (userDoc.role === 'super-admin' ? 'super_admins' : 'deans');
+            await deleteDoc(doc(db, col, userDoc.id)).catch(() => {});
 
-        // 1. Delete directly from role collection (super_admins or deans)
-        const col = userDoc._collection || (userDoc.role === 'super-admin' ? 'super_admins' : 'deans');
-        await deleteDoc(doc(db, col, userDoc.id)).catch(() => {});
+            // 2. Comprehensive wipe across all collections, references, and Auth
+            await wipeEmailData(userDoc.email, userDoc.uid || userDoc.id);
+          }
 
-        // 2. Comprehensive wipe across all collections, references, and Auth
-        await wipeEmailData(userDoc.email, userDoc.uid || userDoc.id);
+          Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            text: `${selectedUsers.size} user(s) permanently deleted successfully!`,
+            confirmButtonColor: '#7B1F35'
+          });
+
+          await logActivity({
+            user: auth.currentUser?.email || 'System Admin',
+            role: 'System Admin',
+            action: `Permanently Deleted ${selectedUsers.size} user account(s)`,
+            details: Array.from(selectedUsers).join(', '),
+            status: 'Success'
+          });
+          setSelectedUsers(new Set());
+          setConfirmModalConfig(prev => ({ ...prev, isOpen: false, loading: false }));
+        } catch (e) {
+          console.error(e);
+          setError('Failed to permanently delete user(s). Please try again.');
+          setConfirmModalConfig(prev => ({ ...prev, loading: false }));
+        }
       }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: `${selectedUsers.size} user(s) permanently deleted successfully!`,
-        confirmButtonColor: '#7B1F35'
-      });
-
-      await logActivity({
-        user: auth.currentUser?.email || 'System Admin',
-        role: 'System Admin',
-        action: `Permanently Deleted ${selectedUsers.size} user account(s)`,
-        details: Array.from(selectedUsers).join(', '),
-        status: 'Success'
-      });
-      setSelectedUsers(new Set());
-    } catch (e) {
-      console.error(e);
-      setError('Failed to permanently delete user(s). Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
+
 
   const getInitials = (user) => {
     if (!user) return 'DS';
@@ -479,6 +585,139 @@ export default function UserManagement() {
       return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     } catch {
       return 'May 14, 2025';
+    }
+  };
+
+  const isUserPending = (user) => {
+    if (!user) return false;
+    const status = (user.status || '').toLowerCase().trim();
+    const accountStatus = (user.accountStatus || '').toLowerCase().trim();
+    return status === 'pending' || status === 'pending_activation' || accountStatus === 'pending' || accountStatus === 'pending_activation';
+  };
+
+  const handleSendMessage = async (user) => {
+    if (!user || !user.email) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Email Found',
+        text: 'This user account does not have a valid email address.',
+        confirmButtonColor: '#801e38'
+      });
+      return;
+    }
+
+    const userName = user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+    const recipientEmail = (user.email || '').toLowerCase().trim();
+
+    const { value: formValues } = await Swal.fire({
+      title: `<span style="font-size: 1.15rem; font-weight: 700; color: #1c1917;">Message User</span>`,
+      html: `
+        <div style="text-align: left; font-size: 13px; color: #57534e;">
+          <div style="margin-bottom: 12px; padding: 10px 12px; background: #f5f5f4; border-radius: 8px; border: 1px solid #e7e5e4;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #78716c; font-weight: 700; margin-bottom: 2px;">Recipient</div>
+            <div style="font-size: 13px; font-weight: 600; color: #1c1917;">${userName}</div>
+            <div style="font-size: 12px; color: #0284c7;">${recipientEmail}</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #44403c;">Subject *</label>
+            <input id="swal-email-subject" class="swal2-input" placeholder="e.g. Important notice regarding your ARCHIVIO account" style="width: 100%; margin: 0; font-size: 13px; box-sizing: border-box; height: 38px; border-radius: 8px;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #44403c;">Message Body *</label>
+            <textarea id="swal-email-body" class="swal2-textarea" placeholder="Type your email message to this user..." style="width: 100%; margin: 0; font-size: 13px; box-sizing: border-box; min-height: 120px; border-radius: 8px; resize: vertical;"></textarea>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Send Message',
+      confirmButtonColor: '#801e38',
+      cancelButtonText: 'Cancel',
+      cancelButtonColor: '#78716c',
+      focusConfirm: false,
+      preConfirm: () => {
+        const subject = document.getElementById('swal-email-subject')?.value?.trim();
+        const body = document.getElementById('swal-email-body')?.value?.trim();
+        if (!subject) {
+          Swal.showValidationMessage('Please enter a message subject');
+          return false;
+        }
+        if (!body) {
+          Swal.showValidationMessage('Please enter your message');
+          return false;
+        }
+        return { subject, body };
+      }
+    });
+
+    if (!formValues) return;
+
+    Swal.fire({
+      title: 'Sending Email...',
+      html: `Delivering message to <strong>${recipientEmail}</strong>...`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const escapedBody = formValues.body
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e7e5e4; border-radius: 12px; background: #ffffff;">
+          <div style="background: #801e38; padding: 18px 22px; border-radius: 8px; color: #ffffff; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 19px; font-weight: 700; color: #ffffff;">ARCHIVIO Research Management</h2>
+            <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; color: #fecdd3;">Southwestern University PHINMA</p>
+          </div>
+          <p style="font-size: 14px; color: #292524; margin-bottom: 12px;">Hello <strong>${userName}</strong>,</p>
+          <div style="font-size: 14px; color: #1c1917; line-height: 1.6; background: #fafaf9; padding: 16px 18px; border-radius: 8px; border: 1px solid #f5f5f4; margin-bottom: 20px;">
+            ${escapedBody}
+          </div>
+          <div style="font-size: 12px; color: #78716c; border-top: 1px solid #e7e5e4; padding-top: 14px; margin-top: 20px;">
+            <p style="margin: 0 0 4px 0;">This email was sent by the ARCHIVIO System Administrator.</p>
+            <p style="margin: 0; color: #a8a29e;">Southwestern University PHINMA • Research Coordination Office</p>
+          </div>
+        </div>
+      `;
+
+      const result = await sendEmailWithFallback({
+        to: recipientEmail,
+        subject: formValues.subject,
+        html: emailHtml
+      });
+
+      if (result && result.success) {
+        try {
+          await logActivity({
+            user: auth.currentUser?.email || 'System Admin',
+            role: 'System Admin',
+            action: `Sent message to ${userName}`,
+            details: `To: ${recipientEmail} | Subject: "${formValues.subject}"`,
+            status: 'Success'
+          });
+        } catch (_) {}
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Message Sent!',
+          text: `Your email message has been sent to ${recipientEmail}.`,
+          confirmButtonColor: '#801e38'
+        });
+      } else {
+        throw new Error(result?.error || 'Failed to dispatch email');
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Send',
+        text: err.message || 'Could not send the email message. Please try again.',
+        confirmButtonColor: '#801e38'
+      });
     }
   };
 
@@ -689,36 +928,38 @@ export default function UserManagement() {
     }
   };
 
-  const handleHardDeleteSingleUser = async (user) => {
-    const result = await Swal.fire({
-      title: 'Permanently Delete?',
-      text: `Delete ${user.displayName}? This will wipe ALL their data from the system.`,
-      icon: 'error',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, wipe data!'
-    });
+  const handleHardDeleteSingleUser = (user) => {
+    setOpenDropdownId(null);
+    const targetName = user.displayName || user.name || user.email || 'this user';
+    setConfirmModalConfig({
+      isOpen: true,
+      title: `Permanently Delete ${targetName}?`,
+      description: `Are you sure you want to delete ${targetName}? This will wipe ALL their records (groups, submissions, and credentials) from ARCHIVIO. This operation cannot be reversed.`,
+      confirmWord: 'DELETE',
+      confirmButtonText: 'Yes, Wipe User Data',
+      severity: 'danger',
+      affectedItemsCount: 1,
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, loading: true }));
+        try {
+          // 1. Direct role collection document deletion (super_admins or deans)
+          const col = user._collection || (user.role === 'super-admin' ? 'super_admins' : 'deans');
+          await deleteDoc(doc(db, col, user.id)).catch(() => {});
 
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        // 1. Direct role collection document deletion (super_admins or deans)
-        const col = user._collection || (user.role === 'super-admin' ? 'super_admins' : 'deans');
-        await deleteDoc(doc(db, col, user.id)).catch(() => {});
+          // 2. Comprehensive wipe across all collections, references, and Auth
+          await wipeEmailData(user.email, user.uid || user.id);
 
-        // 2. Comprehensive wipe across all collections, references, and Auth
-        await wipeEmailData(user.email, user.uid || user.id);
-
-        Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
-      } catch (e) {
-        console.error('Error deleting user:', e);
-        Swal.fire('Error', 'Could not delete user.', 'error');
-      } finally {
-        setLoading(false);
+          Swal.fire('Deleted!', 'User has been permanently deleted.', 'success');
+          setConfirmModalConfig(prev => ({ ...prev, isOpen: false, loading: false }));
+        } catch (e) {
+          console.error('Error deleting user:', e);
+          Swal.fire('Error', 'Could not delete user.', 'error');
+          setConfirmModalConfig(prev => ({ ...prev, loading: false }));
+        }
       }
-    }
+    });
   };
+
 
   const handleCreateDean = async () => {
     setError('');
@@ -1053,17 +1294,14 @@ export default function UserManagement() {
 
       // ===== AUTO-SAVE DEPARTMENT =====
       try {
-        // Check if department already exists
-        const deptsQuery = query(
-          collection(db, 'departments'),
-          where('name', '==', formData.department)
-        );
-        const deptsSnapshot = await getDocs(deptsQuery);
+        const deptsSnapshot = await getDocs(collection(db, 'departments'));
+        const allDocs = deptsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const existingDept = findMatchingDepartment(formData.department, allDocs);
 
-        if (deptsSnapshot.empty) {
+        if (!existingDept && formData.department && formData.department.trim()) {
           // Department doesn't exist, create it
           await addDoc(collection(db, 'departments'), {
-            name: formData.department,
+            name: formData.department.trim(),
             status: 'Active',
             createdAt: new Date().toISOString()
           });
@@ -1118,7 +1356,8 @@ export default function UserManagement() {
       // Dispatch Dean Invitation Email (Primary: Direct Backend API, Fallback: Firestore 'mail' collection)
       try {
         const isDualRole = formData.role === 'dean+adviser';
-        const roleTitle = isDualRole ? "Dean & Research Adviser (Dual Role)" : "Dean";
+        const roleTitle = isDualRole ? "Dean & Research Adviser" : "Dean";
+        const roleTitleWithDept = formData.department ? `${roleTitle} for ${formData.department}` : roleTitle;
         const backendUrl = getBackendUrl();
         let sentDirectly = false;
 
@@ -1128,7 +1367,8 @@ export default function UserManagement() {
             deanName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
             invitationLink: invitationLink,
             temporaryPassword: temporaryPassword,
-            role: formData.role
+            role: formData.role,
+            department: formData.department
           });
           sentDirectly = true;
           console.log('✅ Direct backend dean invitation sent successfully');
@@ -1141,7 +1381,7 @@ export default function UserManagement() {
           await addDoc(collection(db, 'mail'), {
             to: formData.email.toLowerCase().trim(),
             message: {
-              subject: `Invitation to Join ARCHIVIO as a ${roleTitle}`,
+              subject: `Invitation to Join ARCHIVIO as a ${roleTitleWithDept}`,
               html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
                   <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
@@ -1151,11 +1391,11 @@ export default function UserManagement() {
                   </div>
                   
                   <div style="padding: 40px 30px; background-color: #ffffff;">
-                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()}!</h2>
+                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName.trim()} ${formData.lastName.trim()}!</h2>
                     <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">
-                      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>.
+                      You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>${formData.department ? ` for <strong>${formData.department}</strong>` : ''}.
                       ${isDualRole 
-                        ? 'With your dual role, you can oversee research at the Dean level and mentor student research groups as an Adviser, with an instant one-click portal switcher.' 
+                        ? `With your dual role, you can oversee research at the Dean level${formData.department ? ` for ${formData.department}` : ''} and mentor student research groups as an Adviser, with an instant one-click portal switcher.` 
                         : 'Step into your portal to oversee, manage, and empower the research initiatives within your department.'}
                     </p>
                     
@@ -1204,26 +1444,11 @@ export default function UserManagement() {
         details: `${formData.firstName.trim()} ${formData.lastName.trim()} — ${formData.department}`,
       });
 
-      await Swal.fire({
-        title: 'Dean Account Created & Invitation Dispatched!',
-        html: `
-          <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
-            <p style="margin-bottom: 12px;">An official invitation has been dispatched to <strong>${formData.email}</strong>.</p>
-            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
-              <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Account Credentials</p>
-              <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Email:</strong> ${formData.email.toLowerCase().trim()}</p>
-              <p style="margin: 0 0 6px 0; color: #718096; font-size: 12px;">Temporary Password:</p>
-              <code style="background-color: #ffffff; color: #541b2f; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 1px solid #d5c9bb; display: inline-block; letter-spacing: 1px;">${temporaryPassword}</code>
-            </div>
-            <p style="margin: 0; color: #718096; font-size: 12px;"><em>The Dean can log in immediately using these credentials at the portal, or via the link sent to their email.</em></p>
-          </div>
-        `,
-        icon: 'success',
-        confirmButtonColor: '#801e38',
-        confirmButtonText: 'Great, Copy & Done'
-      });
+      const dispatchedEmail = formData.email;
+      const dispatchedRoleTitle = formData.role === 'dean+adviser' ? 'Dean & Research Adviser' : 'Dean';
+      const dispatchedDepartment = formData.department;
 
-      // Reset form
+      // Reset form and close Add User modal
       setFormData({
         firstName: '',
         lastName: '',
@@ -1239,9 +1464,24 @@ export default function UserManagement() {
         }
       });
       setSelectedPrograms([]);
-
-      // Close modal
       setIsModalOpen(false);
+
+      await Swal.fire({
+        title: 'Dean Account Created & Invitation Dispatched!',
+        html: `
+          <p style="font-size: 14px; line-height: 1.6; margin: 8px 0 0 0;" class="text-stone-600 dark:text-stone-300">
+            An official invitation has been dispatched to <strong class="text-stone-800 dark:text-stone-100">${dispatchedEmail}</strong> as a <strong class="text-stone-800 dark:text-stone-100">${dispatchedRoleTitle}</strong>${dispatchedDepartment ? ` for <strong class="text-stone-800 dark:text-stone-100">${dispatchedDepartment}</strong>` : ''}.
+          </p>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#801e38',
+        confirmButtonText: 'Done',
+        width: '440px',
+        padding: '28px 24px',
+        customClass: {
+          popup: 'rounded-2xl',
+        }
+      });
 
     } catch (error) {
       console.error('Error creating dean:', error);
@@ -1367,13 +1607,16 @@ export default function UserManagement() {
         }
       } else {
         // Dean Reminder
+        const recipientDept = userData?.department || userData?.school || '';
+        const roleTitleWithDept = recipientDept ? `${roleTitle} for ${recipientDept}` : roleTitle;
         try {
           await authFetch(`${backendUrl}/api/send-dean-invitation-email`, {
             to: cleanEmail,
             deanName: recipientName,
             invitationLink: invitationLink,
             temporaryPassword: temporaryPassword || 'Your established password',
-            role: role
+            role: role,
+            department: recipientDept
           });
           sentDirectly = true;
           console.log('✅ Direct backend dean reminder sent successfully');
@@ -1385,7 +1628,7 @@ export default function UserManagement() {
           await addDoc(collection(db, 'mail'), {
             to: cleanEmail,
             message: {
-              subject: `Reminder: Invitation to Join ARCHIVIO as a ${roleTitle}`,
+              subject: `Reminder: Invitation to Join ARCHIVIO as a ${roleTitleWithDept}`,
               html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
                   <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
@@ -1396,7 +1639,7 @@ export default function UserManagement() {
                   
                   <div style="padding: 40px 30px; background-color: #ffffff;">
                     <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hi ${recipientName},</h2>
-                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>. Please log in to oversee and empower the research initiatives within your department.</p>
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">This is a friendly reminder that you have been invited to join the <strong>ARCHIVIO</strong> platform as a <strong>${roleTitle}</strong>${recipientDept ? ` for <strong>${recipientDept}</strong>` : ''}. Please log in to oversee and empower the research initiatives within ${recipientDept || 'your department'}.</p>
 
                     ${temporaryPassword ? `
                     <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 18px; margin: 25px 0;">
@@ -1422,11 +1665,15 @@ export default function UserManagement() {
         }
       }
 
+      const displayedRoleInfo = (!isSuperAdmin && (userData?.department || userData?.school)) 
+        ? `${roleTitle} for ${userData?.department || userData?.school}` 
+        : roleTitle;
+
       await Swal.fire({
         title: 'Invitation Dispatched!',
         html: `
           <div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
-            <p style="margin-bottom: 12px;">Invitation reminder dispatched to <strong>${cleanEmail}</strong> as <strong>${roleTitle}</strong>.</p>
+            <p style="margin-bottom: 12px;">Invitation reminder dispatched to <strong>${cleanEmail}</strong> as <strong>${displayedRoleInfo}</strong>.</p>
             ${temporaryPassword ? `
             <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0;">
               <p style="margin: 0 0 4px 0; color: #718096; font-size: 12px; text-transform: uppercase; font-weight: bold;">Account Credentials</p>
@@ -1463,6 +1710,16 @@ export default function UserManagement() {
     );
   }, [allUsers, searchQuery]);
 
+  const isAllSelected = filteredUsersList.length > 0 && filteredUsersList.every(d => selectedUsers.has(d.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(filteredUsersList.map(d => d.id)));
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(filteredUsersList.length / ITEMS_PER_PAGE));
   const paginatedUsers = filteredUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -1491,42 +1748,93 @@ export default function UserManagement() {
           {/* TABLE CONTAINER */}
           <Card className="flex flex-col overflow-hidden mb-6">
 
-            {/* Table Header Controls */}
-            <div className="p-4 border-b border-stone-100 dark:border-stone-800/50 flex flex-col sm:flex-row items-center justify-end gap-4 bg-stone-50 dark:bg-[#252525]/50">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <PremiumButton onClick={() => { setIsModalOpen(true); setFormErrors({}); setError(''); }} variant="primary" icon={<Plus className="w-4 h-4" />}>
-                  Add User
-                </PremiumButton>
-                {selectedUsers.size > 0 && (
-                  <>
-                    <PremiumButton onClick={handleDeleteSelectedDeans} disabled={loading} variant="primary" icon={<span className="font-bold text-xs">⊗</span>}>
-                      Deactivate ({selectedUsers.size})
-                    </PremiumButton>
-                    <PremiumButton onClick={handleHardDeleteSelectedUsers} disabled={loading} variant="danger" icon={<Trash2 className="w-4 h-4" />}>
-                      Delete ({selectedUsers.size})
-                    </PremiumButton>
-                  </>
-                )}
+            {/* Top Toolbar: Select All + Bulk Actions on the left (above Name column), Add User on the right */}
+            <div className="p-4 border-b border-stone-100 dark:border-stone-800/50 flex flex-wrap items-center justify-between gap-3 bg-stone-50 dark:bg-[#252525]/50">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Select All Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAll}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                    isAllSelected
+                      ? 'bg-[#801e38] text-white border-[#801e38] hover:bg-[#6a182e]'
+                      : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-700'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={() => {}} // Handled by button click
+                    className="w-3.5 h-3.5 text-[#801e38] accent-[#801e38] rounded pointer-events-none"
+                  />
+                  <span>{isAllSelected ? 'Deselect All' : 'Select All'}</span>
+                  {selectedUsers.size > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isAllSelected ? 'bg-white/20 text-white' : 'bg-[#801e38]/10 text-[#801e38] dark:bg-[#801e38]/30 dark:text-red-300'
+                    }`}>
+                      {selectedUsers.size}
+                    </span>
+                  )}
+                </button>
+
+                {/* [Deactivate] Button beside Select All */}
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedDeans}
+                  disabled={selectedUsers.size === 0 || loading}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+                    selectedUsers.size > 0
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer active:scale-95'
+                      : 'bg-stone-100 dark:bg-stone-800/40 text-stone-400 dark:text-stone-600 border-stone-200 dark:border-stone-700/60 cursor-not-allowed opacity-60'
+                  }`}
+                  title={selectedUsers.size === 0 ? 'Select users to deactivate' : 'Deactivate selected users'}
+                >
+                  <ShieldOff className="w-3.5 h-3.5" />
+                  <span>Deactivate</span>
+                  {selectedUsers.size > 0 && <span className="text-[11px] font-semibold">({selectedUsers.size})</span>}
+                </button>
+
+                {/* [Delete] Button beside Select All */}
+                <button
+                  type="button"
+                  onClick={handleHardDeleteSelectedUsers}
+                  disabled={selectedUsers.size === 0 || loading}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+                    selectedUsers.size > 0
+                      ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-300 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer active:scale-95'
+                      : 'bg-stone-100 dark:bg-stone-800/40 text-stone-400 dark:text-stone-600 border-stone-200 dark:border-stone-700/60 cursor-not-allowed opacity-60'
+                  }`}
+                  title={selectedUsers.size === 0 ? 'Select users to delete' : 'Permanently delete selected users'}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                  {selectedUsers.size > 0 && <span className="text-[11px] font-semibold">({selectedUsers.size})</span>}
+                </button>
               </div>
+
+              {/* Add User on the right */}
+              <PremiumButton 
+                onClick={() => { setIsModalOpen(true); setFormErrors({}); setError(''); }} 
+                variant="primary" 
+                icon={<Plus className="w-4 h-4" />}
+                size="sm"
+              >
+                Add User
+              </PremiumButton>
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-h-[380px] pb-36">
               <table className="w-full text-left text-xs border-separate" style={{ borderSpacing: '0 8px' }}>
                 <thead>
                   <tr className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">
                     <th className="px-4 py-2 w-10 text-center">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === filteredUsersList.length && filteredUsersList.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedUsers(new Set(filteredUsersList.map(d => d.id)));
-                          } else {
-                            setSelectedUsers(new Set());
-                          }
-                        }}
-                        className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
+                        checked={isAllSelected}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 text-[#801e38] accent-[#801e38] rounded cursor-pointer"
+                        title={isAllSelected ? 'Deselect all' : 'Select all'}
                       />
                     </th>
                     <th className="py-2 px-3 font-bold text-stone-400 cursor-pointer hover:text-stone-600 dark:hover:text-stone-300">NAME ↕</th>
@@ -1558,109 +1866,142 @@ export default function UserManagement() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedUsers.map(user => (
+                    paginatedUsers.map((user, index) => (
                       <tr 
                         key={user.id} 
-                        className="group bg-white dark:bg-stone-800/40 hover:bg-stone-50 dark:hover:bg-stone-800/80 transition-all duration-300 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md rounded-xl cursor-default border border-transparent"
+                        className={`group bg-white dark:bg-stone-800/40 hover:bg-stone-50 dark:hover:bg-stone-800/80 transition-all duration-300 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-md rounded-xl cursor-default border border-transparent ${
+                          selectedUsers.has(user.id) ? 'bg-[#801e38]/5 dark:bg-[#801e38]/10' : ''
+                        }`}
                       >
                         <td className="px-4 py-4 text-center rounded-l-xl border-y border-l border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
                           <input
                             type="checkbox"
                             checked={selectedUsers.has(user.id)}
                             onChange={() => toggleSelectDean(user.id)}
-                            className="w-4 h-4 text-[#801e38] rounded cursor-pointer"
+                            className="w-4 h-4 text-[#801e38] accent-[#801e38] rounded cursor-pointer"
                           />
                         </td>
                         <td className="px-3 py-4 font-bold text-stone-900 dark:text-stone-100 text-[13px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.displayName}</td>
                         <td className="px-3 py-4 text-stone-500 dark:text-stone-400 text-[12px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.email}</td>
                         <td className="px-3 py-4 text-stone-700 dark:text-stone-200 font-medium border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{user.department || '—'}</td>
                         <td className="px-3 py-4 border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
-                          <div className="flex gap-1.5 flex-wrap">
-                            {user.role === 'super-admin' && (
-                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200/50 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/30">
-                                Super Admin
-                              </span>
-                            )}
-                            {user.role === 'dean' && (
-                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-pink-50 text-pink-700 border border-pink-200/50 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800/30">
-                                Dean
-                              </span>
-                            )}
-                            {user.role === 'dean+adviser' && (
-                              <>
-                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-pink-50 text-pink-700 border border-pink-200/50 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800/30">
-                                  Dean
-                                </span>
-                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30">
-                                  Adviser
-                                </span>
-                              </>
-                            )}
-                          </div>
+                          <AdminStatusBadge status={user.role} size="sm" />
                         </td>
                         <td className="px-3 py-4 text-center border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
-                            user.status === 'active' 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
-                              : 'bg-stone-50 text-stone-600 border-stone-200 dark:bg-stone-800/40 dark:text-stone-400 dark:border-stone-700/30'
-                            }`}>
-                            {user.status === 'active' ? 'Active' : 'Inactive'}
-                          </span>
+                          <AdminStatusBadge status={isUserPending(user) ? 'pending' : (user.status || 'active')} size="sm" />
                         </td>
                         <td className="px-3 py-4 text-stone-500 dark:text-stone-400 font-medium text-[12px] border-y border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                        <td className="px-3 py-4 rounded-r-xl border-y border-r border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors">
-                          {user.status === 'pending' ? (
-                            <div className="flex justify-center">
-                              <button
-                                onClick={() => resendInvitation(user.id, user.email, user.displayName, user.role, user._collection)}
-                                className="bg-[#801e38] hover:bg-[#601328] text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+
+                        
+                        {/* 3-dots Actions Column */}
+                        <td className="px-3 py-4 text-center rounded-r-xl border-y border-r border-stone-100 dark:border-stone-700/50 group-hover:border-stone-200 dark:group-hover:border-stone-700 transition-colors relative">
+                          <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-700/60 transition-colors cursor-pointer"
+                              title="Actions"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {/* 3-dots Dropdown Menu (Positioned strictly below the dots) */}
+                            {openDropdownId === user.id && (
+                              <div
+                                className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-xl shadow-2xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100"
                               >
-                                Resend
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleViewUser(user)}
-                                className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
-                                title="View details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => resendInvitation(user.id, user.email, user.displayName, user.role, user._collection)}
-                                className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
-                                title="Resend invitation / credentials email"
-                              >
-                                <Mail className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleEditUser(user)}
-                                className="p-2 text-stone-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all cursor-pointer hover:-translate-y-0.5"
-                                title="Edit user"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSingleUser(user)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:-translate-y-0.5 ${
-                                  user.status === 'inactive'
-                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400'
-                                    : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-400'
-                                }`}
-                                title={user.status === 'inactive' ? 'Activate user' : 'Deactivate user'}
-                              >
-                                {user.status === 'inactive' ? 'Activate' : 'Deactivate'}
-                              </button>
-                              <button
-                                onClick={() => handleHardDeleteSingleUser(user)}
-                                className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all hover:-translate-y-0.5"
-                                title="Permanently Delete user"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
+                                {/* View */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleViewUser(user);
+                                  }}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-left"
+                                >
+                                  <Eye className="w-4 h-4 text-blue-500 shrink-0" />
+                                  <span>View Details</span>
+                                </button>
+
+                                {/* Edit */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleEditUser(user);
+                                  }}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-left"
+                                >
+                                  <Edit2 className="w-4 h-4 text-amber-500 shrink-0" />
+                                  <span>Edit User</span>
+                                </button>
+
+                                {/* Resend Invite (if pending) OR Message (if active) */}
+                                {isUserPending(user) ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      resendInvitation(user.id, user.email, user.displayName, user.role, user._collection);
+                                    }}
+                                    className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-left"
+                                  >
+                                    <Mail className="w-4 h-4 text-emerald-500 shrink-0" />
+                                    <span>Resend Invite</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleSendMessage(user);
+                                    }}
+                                    className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-left"
+                                  >
+                                    <Mail className="w-4 h-4 text-blue-500 shrink-0" />
+                                    <span>Message</span>
+                                  </button>
+                                )}
+
+                                {/* Deactivate / Activate */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleDeleteSingleUser(user);
+                                  }}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-left"
+                                >
+                                  {user.status === 'inactive' ? (
+                                    <>
+                                      <Unlock className="w-4 h-4 text-emerald-500 shrink-0" />
+                                      <span>Activate</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShieldOff className="w-4 h-4 text-amber-500 shrink-0" />
+                                      <span>Deactivate</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                <div className="h-px bg-stone-100 dark:bg-stone-800 my-1" />
+
+                                {/* Delete */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleHardDeleteSingleUser(user);
+                                  }}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer text-left"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -2260,13 +2601,13 @@ export default function UserManagement() {
 
                 <div>
                   <span className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full text-white shadow-sm ${
-                    selectedViewUser.status === 'inactive'
+                    (selectedViewUser.status || '').toLowerCase() === 'inactive'
                       ? 'bg-red-600'
-                      : selectedViewUser.status === 'pending'
+                      : isUserPending(selectedViewUser)
                       ? 'bg-amber-500'
                       : 'bg-[#15803d]'
                   }`}>
-                    {selectedViewUser.status ? selectedViewUser.status.charAt(0).toUpperCase() + selectedViewUser.status.slice(1) : 'Active'}
+                    {isUserPending(selectedViewUser) ? 'Pending' : (selectedViewUser.status ? selectedViewUser.status.charAt(0).toUpperCase() + selectedViewUser.status.slice(1) : 'Active')}
                   </span>
                 </div>
               </div>
@@ -2346,27 +2687,55 @@ export default function UserManagement() {
                 >
                   Close
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resendInvitation(
-                      selectedViewUser.id,
-                      selectedViewUser.email,
-                      selectedViewUser.displayName,
-                      selectedViewUser.role,
-                      selectedViewUser._collection
-                    );
-                  }}
-                  className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[#801e38] hover:bg-[#601328] transition shadow-sm cursor-pointer flex items-center gap-2"
-                >
-                  <Mail className="w-4 h-4" />
-                  Resend Invitation Email
-                </button>
+                {isUserPending(selectedViewUser) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resendInvitation(
+                        selectedViewUser.id,
+                        selectedViewUser.email,
+                        selectedViewUser.displayName,
+                        selectedViewUser.role,
+                        selectedViewUser._collection
+                      );
+                    }}
+                    className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[#801e38] hover:bg-[#601328] transition shadow-sm cursor-pointer flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Resend Invitation Email
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSendMessage(selectedViewUser);
+                    }}
+                    className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[#801e38] hover:bg-[#601328] transition shadow-sm cursor-pointer flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Send Email Message
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Defensive Destructive Action Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        onClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModalConfig.onConfirm}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        confirmWord={confirmModalConfig.confirmWord}
+        confirmButtonText={confirmModalConfig.confirmButtonText}
+        severity={confirmModalConfig.severity}
+        affectedItemsCount={confirmModalConfig.affectedItemsCount}
+        loading={confirmModalConfig.loading}
+      />
     </div>
   );
 }
+

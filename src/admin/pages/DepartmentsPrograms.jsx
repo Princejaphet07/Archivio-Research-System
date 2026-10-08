@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { db } from '../firebase/config';
 import { Card, PremiumButton } from '../../components/ui/Card';
 import CardSkeleton from '../components/skeletons/CardSkeleton';
+import { areDepartmentsEqual, findMatchingDepartment } from '../../utils/departmentUtils';
 
 // Program code options for the dropdown
 const programCodeOptions = [
@@ -98,10 +99,19 @@ export default function DepartmentsProgramsTab() {
     const trimmedName = departmentForm.name.trim();
 
     try {
-      // Check if department already exists
-      const existing = departments.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
+      // Check if department already exists (case, "College of", acronyms, etc.)
+      const existing = findMatchingDepartment(trimmedName, departments);
       if (existing) {
-        setError('This department already exists');
+        setError(`This department already exists as "${existing.name}". Duplicate departments with variations like "College of" or acronyms are not allowed.`);
+        return;
+      }
+
+      // Check real-time from Firestore as well
+      const snap = await getDocs(collection(db, 'departments'));
+      const allDepts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const remoteExisting = findMatchingDepartment(trimmedName, allDepts);
+      if (remoteExisting) {
+        setError(`This department already exists as "${remoteExisting.name}". Duplicate departments with variations like "College of" or acronyms are not allowed.`);
         return;
       }
 
@@ -265,7 +275,7 @@ export default function DepartmentsProgramsTab() {
       confirmButtonColor: '#d33',
       confirmButtonText: 'Delete Permanently',
       inputValidator: (value) => {
-        if (value !== dept.name) {
+        if (!value || value.trim().toLowerCase() !== (dept.name || '').trim().toLowerCase()) {
           return 'Department name does not match!';
         }
       }

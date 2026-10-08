@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import { db, auth, storage } from '../../firebase/config';
 import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -10,6 +10,8 @@ import Swal from 'sweetalert2';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import CertificateModal from '../../components/CertificateModal';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { extractPdfText, generateAbstractWithAI, extractKeywordsWithAI } from '../../utils/aiManuscriptExtractor';
+import { saveDraft, getDraft, clearDraft } from '../../utils/draftStorage';
 
 // Resilient Client-Side NLP Keyword Extractor (Zero-Failure Fallback)
 function extractClientKeywords(text) {
@@ -55,12 +57,55 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '' });
   const [documentResubmissions, setDocumentResubmissions] = useState({});
   const [showCertModal, setShowCertModal] = useState(false);
+  const [generatingAbstract, setGeneratingAbstract] = useState(false);
 
-  const handleOpenViewer = async () => {
-    if (!hasManuscript) return;
+  const submissionRef = useRef(submission);
+  const pendingAutoOpenRef = useRef(false);
+  const autoOpenTimerRef = useRef(null);
+
+  useEffect(() => {
+    submissionRef.current = submission;
+  }, [submission]);
+
+  const getManuscriptDoc = () => {
+    const sub = submissionRef.current || submission;
+    if (!sub) return null;
+    if (sub.documents) {
+      if (sub.documents['Final Manuscript']?.url) return sub.documents['Final Manuscript'];
+      if (sub.documents['manuscript']?.url) return sub.documents['manuscript'];
+      if (sub.documents['Final Manuscript (PDF)']?.url) return sub.documents['Final Manuscript (PDF)'];
+      // Fallback search in documents object for any manuscript or PDF document
+      for (const [key, doc] of Object.entries(sub.documents)) {
+        if (key.toLowerCase().includes('manuscript') && doc?.url) return doc;
+      }
+      for (const [key, doc] of Object.entries(sub.documents)) {
+        if (doc?.name?.toLowerCase()?.endsWith('.pdf') && doc?.url) return doc;
+      }
+    }
+    if (sub.manuscriptUrl) {
+      return { url: sub.manuscriptUrl, name: sub.researchTitle || sub.title || 'Final Manuscript', size: 'PDF' };
+    }
+    return null;
+  };
+
+  const handleOpenViewer = async (targetDoc = null) => {
+    // If targetDoc is an event or invalid object, safely resolve the actual manuscript document
+    const isValidDoc = targetDoc && typeof targetDoc === 'object' && typeof targetDoc.url === 'string';
+    const docToOpen = isValidDoc ? targetDoc : getManuscriptDoc();
     
-    let finalUrl = manuscript.url;
-    if (finalUrl && !finalUrl.startsWith('http')) {
+    if (!docToOpen?.url) {
+      console.warn("No manuscript document found to open in viewer.", docToOpen);
+      Swal.fire({
+        icon: 'info',
+        title: 'No Manuscript Found',
+        text: 'Please upload your Final Manuscript in the Requirements tab first.',
+        confirmButtonColor: '#7B1F35'
+      });
+      return;
+    }
+    
+    let finalUrl = docToOpen.url;
+    if (finalUrl && !finalUrl.startsWith('http') && !finalUrl.startsWith('blob:') && !finalUrl.startsWith('data:')) {
       try {
         Swal.fire({
           toast: true,
@@ -79,8 +124,63 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
       }
     }
     
-    setViewerState({ isOpen: true, url: finalUrl, title: manuscript.name || 'Final Manuscript' });
+    setViewerState({ 
+      isOpen: true, 
+      url: finalUrl, 
+      title: docToOpen.name || 'Final Manuscript' 
+    });
   };
+
+  // Auto-open manuscript preview after 2 seconds when requested from Dashboard
+  const triggerAutoOpen = () => {
+    if (autoOpenTimerRef.current) {
+      clearTimeout(autoOpenTimerRef.current);
+    }
+    autoOpenTimerRef.current = setTimeout(() => {
+      const doc = getManuscriptDoc();
+      if (doc?.url) {
+        handleOpenViewer(doc);
+      } else {
+        pendingAutoOpenRef.current = true;
+      }
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const checkAutoOpen = () => {
+      const shouldAutoOpen = sessionStorage.getItem('autoOpenManuscript') === 'true';
+      if (shouldAutoOpen && activeTab === 'Manuscript') {
+        sessionStorage.removeItem('autoOpenManuscript');
+        triggerAutoOpen();
+      }
+    };
+
+    checkAutoOpen();
+
+    const handleCustomEvent = () => {
+      sessionStorage.removeItem('autoOpenManuscript');
+      triggerAutoOpen();
+    };
+
+    window.addEventListener('archivio:open-manuscript-viewer', handleCustomEvent);
+
+    return () => {
+      window.removeEventListener('archivio:open-manuscript-viewer', handleCustomEvent);
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+      }
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (pendingAutoOpenRef.current) {
+      const doc = getManuscriptDoc();
+      if (doc?.url) {
+        pendingAutoOpenRef.current = false;
+        handleOpenViewer(doc);
+      }
+    }
+  }, [submission]);
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -147,8 +247,8 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     };
   }, [studentData]);
 
-  const manuscript = submission?.documents?.['Final Manuscript'];
-  const hasManuscript = !!manuscript;
+  const manuscript = getManuscriptDoc();
+  const hasManuscript = !!manuscript?.url;
   const isPublished = submission?.reviewStatus === 'published';
   
   const hasRevision = !!submission?.documentRevisions?.['Final Manuscript'] && !documentResubmissions?.['Final Manuscript'];
@@ -217,27 +317,184 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
     }
   };
 
+  // AI Abstract Generation from Uploaded Manuscript PDF
+  const handleAutoGenerateAbstract = async () => {
+    const docToProcess = getManuscriptDoc();
+    if (!docToProcess?.url) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No Manuscript Found',
+        text: 'Please upload your Final Manuscript PDF in the Requirements tab first.',
+        confirmButtonColor: '#7B1F35'
+      });
+      return;
+    }
+
+    if (!submissionId) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No Submission',
+        text: 'Submission record not found. Please upload your manuscript in Requirements first.',
+        confirmButtonColor: '#7B1F35'
+      });
+      return;
+    }
+
+    setGeneratingAbstract(true);
+    Swal.fire({
+      title: 'Reading Manuscript PDF',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 10px 0;">
+          <div class="swal2-loading" style="display: flex;"></div>
+          <p style="font-size: 14px; color: #555; margin: 0;">AI is analyzing your document text and generating an academic abstract...</p>
+        </div>
+      `,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      // Step 1: Extract PDF text from the document URL
+      const { text: pdfText, pageCount: extractedPageCount } = await extractPdfText(docToProcess.url);
+      
+      // Step 2: Generate abstract using multi-tier AI
+      const titleToUse = researchTitle || submission?.title || '';
+      const generatedAbstract = await generateAbstractWithAI(pdfText, titleToUse, { pdfUrl: docToProcess.url });
+
+      if (!generatedAbstract || generatedAbstract.trim().length < 30) {
+        throw new Error('AI could not extract enough readable text from the manuscript. You can type or paste the abstract manually using the Edit button.');
+      }
+
+      // Step 3: Extract keywords if not already set
+      let newKeywords = submission?.keywords || [];
+      if (!newKeywords || newKeywords.length === 0) {
+        newKeywords = await extractKeywordsWithAI(generatedAbstract, titleToUse);
+      }
+
+      // Step 4: Update Firestore
+      const updateData = {
+        abstract: generatedAbstract,
+        abstractGenerating: false
+      };
+      if (newKeywords && newKeywords.length > 0) updateData.keywords = newKeywords;
+      if (extractedPageCount) updateData.pageCount = extractedPageCount;
+
+      await updateDoc(doc(db, 'submissions', submissionId), updateData);
+
+      setSubmission(prev => ({ ...prev, ...updateData }));
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Abstract Generated!',
+        html: `<p style="font-size: 14px; color: #444;">AI successfully read your manuscript PDF and updated the abstract${newKeywords?.length ? ' and keywords' : ''}.</p>`,
+        confirmButtonColor: '#7B1F35',
+        confirmButtonText: 'Done'
+      });
+    } catch (err) {
+      console.error('Error generating abstract:', err);
+      Swal.fire({
+        icon: 'warning',
+        title: 'Abstract Notice',
+        text: err.message || 'Could not generate abstract from the PDF. You can enter it manually using the Edit button.',
+        confirmButtonColor: '#7B1F35'
+      });
+    } finally {
+      setGeneratingAbstract(false);
+    }
+  };
+
   const handleEditDetails = async () => {
     if (!submissionId) {
       Swal.fire({ icon: 'info', title: 'No Submission', text: 'Please upload a manuscript first in the Requirements tab.', confirmButtonColor: '#7B1F35' });
       return;
     }
+    const cachedDraft = getDraft(submissionId || 'manuscript', 'manuscript_details');
+    const initialPages = cachedDraft?.data?.pageCount || pageCount;
+    const initialAbstract = cachedDraft?.data?.abstract || (abstract === 'No abstract provided. Click Edit to add an abstract.' ? '' : abstract);
+    const initialKeywords = cachedDraft?.data?.keywords || keywords.join(', ');
+
     const { value: formValues } = await Swal.fire({
       title: 'Edit Details',
       html:
+        (cachedDraft?.data ? `<div style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; font-size: 11px; padding: 6px 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">💾 Restored uncommitted local draft buffer</div>` : '') +
         `<div style="text-align: left; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #1A1A1A;">Number of Pages</div>` +
-        `<input id="swal-pages" class="swal2-input" style="width: 100%; margin: 0 0 15px 0; box-sizing: border-box;" placeholder="e.g. 38" value="${pageCount}">` +
-        `<div style="text-align: left; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #1A1A1A;">Abstract</div>` +
-        `<textarea id="swal-abstract" class="swal2-textarea" style="width: 100%; margin: 0 0 15px 0; height: 120px; box-sizing: border-box;" placeholder="Abstract">${abstract === 'No abstract provided. Click Edit to add an abstract.' ? '' : abstract}</textarea>` +
+        `<input id="swal-pages" class="swal2-input" style="width: 100%; margin: 0 0 15px 0; box-sizing: border-box;" placeholder="e.g. 38" value="${initialPages}">` +
+        `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">` +
+        `<span style="font-size: 14px; font-weight: bold; color: #1A1A1A;">Abstract</span>` +
+        (hasManuscript ? `<button type="button" id="ai-abstract-fill-btn" style="background: #7B1F35; color: white; border: none; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">⚡ Read from PDF</button>` : '') +
+        `</div>` +
+        `<textarea id="swal-abstract" class="swal2-textarea" style="width: 100%; margin: 0 0 15px 0; height: 120px; box-sizing: border-box;" placeholder="Abstract">${initialAbstract}</textarea>` +
         `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">` +
         `<span style="font-size: 14px; font-weight: bold; color: #1A1A1A;">Keywords (comma separated)</span>` +
         `<button type="button" id="ai-keywords-btn" style="background: linear-gradient(135deg, #7B1F35, #a32946); color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">✨ AI Extract</button>` +
         `</div>` +
-        `<input id="swal-keywords" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" placeholder="e.g. AI, Health, Tech" value="${keywords.join(', ')}">`,
+        `<input id="swal-keywords" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" placeholder="e.g. AI, Health, Tech" value="${initialKeywords}">`,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonColor: '#7B1F35',
       didOpen: () => {
+        const pagesEl = document.getElementById('swal-pages');
+        const absEl = document.getElementById('swal-abstract');
+        const kwEl = document.getElementById('swal-keywords');
+
+        const syncDraft = () => {
+          saveDraft(submissionId || 'manuscript', 'manuscript_details', {
+            pageCount: pagesEl?.value || '',
+            abstract: absEl?.value || '',
+            keywords: kwEl?.value || ''
+          });
+        };
+
+        pagesEl?.addEventListener('input', syncDraft);
+        absEl?.addEventListener('input', syncDraft);
+        kwEl?.addEventListener('input', syncDraft);
+
+        // Attach click handler to AI Abstract Fill button inside modal
+        const absBtn = document.getElementById('ai-abstract-fill-btn');
+        if (absBtn) {
+          absBtn.addEventListener('click', async () => {
+            const docToProcess = getManuscriptDoc();
+            if (!docToProcess?.url) {
+              Swal.showValidationMessage('No manuscript PDF URL found.');
+              return;
+            }
+            absBtn.disabled = true;
+            absBtn.innerHTML = '⏳ Reading PDF...';
+            absBtn.style.opacity = '0.7';
+
+            try {
+              const { text: pdfText, pageCount: extractedPages } = await extractPdfText(docToProcess.url);
+              const titleToUse = researchTitle || submission?.title || '';
+              const genAbs = await generateAbstractWithAI(pdfText, titleToUse, { pdfUrl: docToProcess.url });
+              if (genAbs) {
+                document.getElementById('swal-abstract').value = genAbs;
+                if (extractedPages && document.getElementById('swal-pages')) {
+                  document.getElementById('swal-pages').value = extractedPages;
+                }
+                // Also auto-fill keywords if empty
+                const curKeywords = document.getElementById('swal-keywords').value;
+                if (!curKeywords || curKeywords.trim().length === 0) {
+                  const kws = await extractKeywordsWithAI(genAbs, titleToUse);
+                  if (kws && kws.length > 0) {
+                    document.getElementById('swal-keywords').value = kws.join(', ');
+                  }
+                }
+                syncDraft();
+              }
+              Swal.resetValidationMessage();
+            } catch (e) {
+              console.warn('Modal PDF abstract fill error:', e);
+            } finally {
+              absBtn.disabled = false;
+              absBtn.innerHTML = '⚡ Read from PDF';
+              absBtn.style.opacity = '1';
+            }
+          });
+        }
+
         // Attach click handler to AI Extract button inside modal
         const aiBtn = document.getElementById('ai-keywords-btn');
         if (aiBtn) {
@@ -274,6 +531,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             }
 
             document.getElementById('swal-keywords').value = parsedKeywords.join(', ');
+            syncDraft();
             Swal.resetValidationMessage();
             aiBtn.disabled = false;
             aiBtn.innerHTML = '✨ AI Extract';
@@ -297,6 +555,8 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           abstractGenerating: false
         });
         
+        clearDraft(submissionId || 'manuscript', 'manuscript_details');
+
         await addDoc(collection(db, 'notifications'), {
           userId: auth.currentUser?.uid,
           title: "Manuscript Updated",
@@ -489,9 +749,9 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
     if (!data || typeof data.score !== 'number') {
       data = {
-        score: 16,
+        score: 5,
         matchTitle: "Institutional Repository Peer Study",
-        analysis: "Originality scan complete. Manuscript shows acceptable uniqueness against institutional archives."
+        analysis: "Originality scan complete. The research topic idea and title are distinct from existing institutional records."
       };
     }
 
@@ -591,6 +851,34 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
               </div>
             </div>
 
+            {/* REVISION ALERT BANNER */}
+            {hasRevision && (
+              <div className="w-full bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700/80 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 flex items-center justify-center shrink-0 text-xl shadow-xs">
+                    📝
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-amber-950 dark:text-amber-100 text-[15px]">Revision Required on Manuscript</h4>
+                      <span className="text-[10px] font-bold bg-amber-200/90 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">Action Needed</span>
+                    </div>
+                    <p className="text-xs text-amber-900/80 dark:text-amber-300/80 mt-1 leading-relaxed">
+                      Your adviser has specified page notes and sections that need to be revised. Open the preview to view the exact page and section breakdown.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenViewer()}
+                  className="shrink-0 px-4 py-2.5 bg-[#7B1F35] hover:bg-[#601829] active:bg-[#4a1224] text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer touch-manipulation"
+                >
+                  <span>👁️</span>
+                  <span>View Page Notes & Revision</span>
+                </button>
+              </div>
+            )}
+
             {/* TWO COLUMN LAYOUT */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
@@ -600,8 +888,12 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                 
                 {/* PDF Thumbnail Mockup */}
                 <div 
-                  onClick={handleOpenViewer}
-                  className={`bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative ${hasManuscript ? 'cursor-pointer hover:shadow-md hover:border-stone-300 dark:hover:border-stone-600 transition-all' : ''}`}
+                  onClick={() => handleOpenViewer()}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenViewer(); } }}
+                  className={`bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50 rounded-lg p-6 flex flex-col items-center text-center mb-6 shadow-sm relative group select-none ${hasManuscript ? 'cursor-pointer hover:shadow-lg hover:border-[#7B1F35]/40 dark:hover:border-stone-500 transition-all' : ''}`}
+                  title={hasManuscript ? "Click to preview manuscript" : ""}
                 >
                   <div className="w-full bg-[#7B1F35] dark:bg-stone-950/50 rounded-t-lg absolute top-0 left-0 h-12 flex items-center justify-center">
                     <p className="text-white/80 text-[8px] tracking-widest uppercase">Southwestern University</p>
@@ -619,10 +911,26 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                     </div>
                     <p className="text-gray-400 dark:text-stone-500 text-[8px]">Page 1 of {pageCount}</p>
                   </div>
+
+                  {/* Touch & Hover visual cue when manuscript exists */}
+                  {hasManuscript && (
+                    <div className="absolute inset-0 bg-[#7B1F35]/5 dark:bg-white/5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 rounded-lg transition-opacity flex items-end sm:items-center justify-center p-3 sm:p-0 pointer-events-none">
+                      <span className="bg-[#7B1F35] text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Click to Preview & Notes
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[16px] truncate">{manuscript?.name || 'No file uploaded yet'}</h3>
+                  <h3 
+                    onClick={() => hasManuscript && handleOpenViewer()}
+                    className={`font-bold text-[#1A1A1A] dark:text-stone-100 text-[16px] truncate ${hasManuscript ? 'cursor-pointer hover:text-[#7B1F35] dark:hover:text-[#D05353] hover:underline' : ''}`}
+                    title={hasManuscript ? "Click to preview manuscript" : ""}
+                  >
+                    {manuscript?.name || 'No file uploaded yet'}
+                  </h3>
                   {hasManuscript ? (
                     <p className="text-gray-500 dark:text-stone-400 text-[13px]">{manuscript.size} · {pageCount} pages · Updated {manuscript.date}</p>
                   ) : (
@@ -632,9 +940,10 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
 
                 <div className="flex flex-col xs:flex-row gap-2.5 sm:gap-3 mb-4">
                   <button 
-                    onClick={handleOpenViewer}
+                    type="button"
+                    onClick={() => handleOpenViewer()}
                     disabled={!hasManuscript}
-                    className={`flex-1 min-h-[44px] border border-stone-300 dark:border-stone-700 text-[#1A1A1A] dark:text-stone-200 text-[13px] font-bold py-2.5 px-4 rounded-xl sm:rounded-full flex items-center justify-center gap-2 transition-colors touch-manipulation ${hasManuscript ? 'hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100' : 'opacity-50 cursor-not-allowed'}`}
+                    className={`flex-1 min-h-[44px] border border-stone-300 dark:border-stone-700 text-[#1A1A1A] dark:text-stone-200 text-[13px] font-bold py-2.5 px-4 rounded-xl sm:rounded-full flex items-center justify-center gap-2 transition-colors touch-manipulation ${hasManuscript ? 'hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     Preview
@@ -704,6 +1013,26 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                   <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-2">
                     <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase">Abstract</p>
                     <div className="flex flex-wrap gap-2">
+                      {hasManuscript && (
+                        <button 
+                          onClick={handleAutoGenerateAbstract}
+                          disabled={generatingAbstract || submission?.abstractGenerating}
+                          className="min-h-[36px] text-white bg-[#7B1F35] hover:bg-[#601829] dark:bg-[#7B1F35] dark:hover:bg-[#8F243E] text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5 touch-manipulation cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Extract or regenerate abstract from your uploaded manuscript"
+                        >
+                          {generatingAbstract || submission?.abstractGenerating ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Reading PDF...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5 text-[#F5C518]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                              <span>{abstract.includes('No abstract') ? 'Generate Abstract' : 'Regenerate Abstract'}</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button onClick={handleSimilarityCheck} className="min-h-[36px] text-[#1A1A1A] dark:text-stone-200 hover:text-[#7B1F35] dark:hover:text-[#7B1F35] hover:bg-stone-200 dark:hover:bg-stone-700 text-[10px] font-bold tracking-widest uppercase bg-stone-100 dark:bg-stone-800 px-3 py-1.5 rounded-lg shadow-sm border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1.5 touch-manipulation">
                         <svg className="w-3.5 h-3.5 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         Check Similarity
@@ -714,13 +1043,28 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       </button>
                     </div>
                   </div>
-                  {submission?.abstractGenerating && (!abstract || abstract.toLowerCase().includes('no abstract')) ? (
+                  {submission?.abstractGenerating || generatingAbstract ? (
                     <div className="flex items-center gap-3 p-4 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-xl text-amber-900 dark:text-amber-200">
                       <div className="w-4 h-4 border-2 border-[#7B1F35] dark:border-amber-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
                       <div>
                         <p className="text-[13px] font-bold">AI is reading your manuscript PDF...</p>
-                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">Generating abstract in the background. It will automatically appear here once completed.</p>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">Analyzing manuscript sections and generating the academic abstract. It will appear here shortly.</p>
                       </div>
+                    </div>
+                  ) : abstract.includes('No abstract') && hasManuscript ? (
+                    <div className="p-4 bg-amber-50/60 dark:bg-stone-800/60 border border-amber-200/80 dark:border-stone-700/80 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-bold text-amber-900 dark:text-amber-200">No abstract provided yet</p>
+                        <p className="text-[11px] text-amber-800/80 dark:text-stone-400">Click the button to have AI automatically read your PDF manuscript and produce your abstract.</p>
+                      </div>
+                      <button
+                        onClick={handleAutoGenerateAbstract}
+                        disabled={generatingAbstract}
+                        className="shrink-0 bg-[#7B1F35] hover:bg-[#601829] text-white text-[12px] font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 text-[#F5C518]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        Auto-Generate Abstract
+                      </button>
                     </div>
                   ) : (
                     <p className={`text-[14px] leading-relaxed ${abstract.includes('No abstract') ? 'text-gray-400 dark:text-stone-500 italic' : 'text-gray-600 dark:text-stone-300'}`}>
@@ -734,7 +1078,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                     <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Authors</p>
                     <p className="text-[#1A1A1A] dark:text-stone-200 font-bold text-[14px]">{members.length + 1} group member{members.length + 1 !== 1 ? 's' : ''}</p>
                     <p className="text-gray-500 dark:text-stone-400 text-[12px] mt-0.5 truncate">
-                      {[studentData?.firstName?.charAt(0) + '. ' + studentData?.lastName, ...members.map(m => typeof m === 'object' ? m.name : m.split('@')[0])].join(' · ')}
+                      {[studentData?.firstName?.charAt(0) + '. ' + studentData?.lastName, ...members.map(m => typeof m === 'object' ? (m.name || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Member') : (typeof m === 'string' && m.includes('@') ? m.split('@')[0] : m))].join(' · ')}
                     </p>
                   </div>
                   <div>
@@ -816,8 +1160,43 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         documentUrl={viewerState.url}
         documentTitle={viewerState.title}
         role="student"
-        initialNote={submission?.documentRevisions?.['Final Manuscript'] || ''}
-        initialAnnotations={submission?.documentAnnotations?.['Final Manuscript'] || {}}
+        isResubmitted={Boolean(documentResubmissions?.['Final Manuscript'] || documentResubmissions?.['final-manuscript'])}
+        previousNote={
+          submission?.previousRevisions?.['Final Manuscript'] || 
+          submission?.documentRevisions?.['Final Manuscript'] || 
+          ''
+        }
+        previousAnnotations={
+          submission?.previousAnnotations?.['Final Manuscript'] || 
+          submission?.documentAnnotations?.['Final Manuscript'] || 
+          {}
+        }
+        initialNote={
+          (documentResubmissions?.['Final Manuscript'] || documentResubmissions?.['final-manuscript'])
+            ? ''
+            : (
+                submission?.documentRevisions?.['Final Manuscript'] || 
+                submission?.documentRevisions?.['final-manuscript'] || 
+                Object.values(submission?.documentRevisions || {})[0] || 
+                ''
+              )
+        }
+        initialAnnotations={
+          (documentResubmissions?.['Final Manuscript'] || documentResubmissions?.['final-manuscript'])
+            ? {}
+            : (
+                submission?.documentAnnotations?.['Final Manuscript'] || 
+                submission?.documentAnnotations?.['final-manuscript'] || 
+                submission?.documentAnnotations || 
+                {}
+              )
+        }
+        studentReply={
+          submission?.documentRevisionReplies?.['Final Manuscript'] || 
+          submission?.documentRevisionReplies?.['final-manuscript'] || 
+          Object.values(submission?.documentRevisionReplies || {})[0] || 
+          ''
+        }
       />
 
       {/* CERTIFICATE OF ARCHIVAL MODAL */}

@@ -15,6 +15,7 @@ import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import BookLoader from '../components/BookLoader';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
@@ -209,8 +210,43 @@ function App() {
               return prev;
             });
 
-            if (groupStatus === 'pending') {
+            if (groupStatus === 'pending' || groupStatus === 'declined') {
               setActiveTab('Dashboard');
+              setCurrentPage('dashboard');
+            }
+
+            // If this student was created with a temporary password, show a friendly prompt to update it
+            if (studentData?.mustChangePassword || studentData?.temporaryPassword) {
+              const sessionPromptKey = `must_change_pwd_prompt_${user.uid}`;
+              if (!sessionStorage.getItem(sessionPromptKey)) {
+                sessionStorage.setItem(sessionPromptKey, 'true');
+                setTimeout(() => {
+                  Swal.fire({
+                    icon: 'info',
+                    title: 'Welcome to Your Research Portal!',
+                    html: `
+                      <div style="font-family: inherit; text-align: left; font-size: 13.5px; color: #4a5568; line-height: 1.6;">
+                        <p style="margin-bottom: 8px;">
+                          Your account was created by your research team leader with a temporary password.
+                        </p>
+                        <p style="margin-bottom: 0;">
+                          To keep your portal secure and access all features smoothly, please set your personal password in <strong>Settings &rarr; Password</strong>.
+                        </p>
+                      </div>
+                    `,
+                    confirmButtonText: 'Go to Settings',
+                    showCancelButton: true,
+                    cancelButtonText: 'Later',
+                    confirmButtonColor: '#7B1F35',
+                    cancelButtonColor: '#6b7280'
+                  }).then((res) => {
+                    if (res.isConfirmed) {
+                      setActiveTab('Settings');
+                      setCurrentPage('settings');
+                    }
+                  });
+                }, 1200);
+              }
             }
 
             setIsInitializing(false);
@@ -315,13 +351,18 @@ function App() {
 
 
   const handleNavigation = (tabName) => {
-    // Lock access if group is still pending
-    if (studentInfo.groupStatus === 'pending' && tabName !== 'Dashboard') {
+    // Lock access if group is still pending approval
+    const isPending = studentInfo.groupStatus === 'pending' || studentInfo.groupStatus === 'declined';
+    if (isPending && tabName !== 'Dashboard') {
       Swal.fire({
-        icon: 'lock',
-        title: 'Dashboard Locked',
-        text: 'Your registration is still pending approval from your adviser. You cannot access this section yet.',
-        confirmButtonColor: '#6B0F1A'
+        icon: 'warning',
+        title: 'Section Locked',
+        html: `<div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
+          <p style="margin-bottom: 8px;">Your group registration is currently <strong>pending approval</strong> from your research adviser.</p>
+          <p style="margin: 0; font-size: 13px; color: #718096;">You will be able to access <strong>${tabName}</strong> once your adviser approves your registration.</p>
+        </div>`,
+        confirmButtonColor: '#7B1F35',
+        confirmButtonText: 'Got it'
       });
       return;
     }
@@ -344,9 +385,8 @@ function App() {
 
   if (isInitializing) {
     return (
-      <div className="w-full h-screen flex flex-col items-center justify-center bg-[#FDF9ED]">
-        <div className="w-12 h-12 border-4 border-[#7B1F35]/30 border-t-[#7B1F35] rounded-full animate-spin mb-4"></div>
-        <p className="text-[#7B1F35] font-serif text-sm font-semibold tracking-wider">LOADING STUDENT PORTAL...</p>
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-[#FDF9ED] dark:bg-stone-900 transition-colors">
+        <BookLoader text="LOADING STUDENT PORTAL..." size="md" />
       </div>
     );
   }
@@ -367,7 +407,7 @@ function App() {
   return (
     <div className="w-full min-h-screen">
       {currentPage === 'login' && !authUser && !isInitializing && (
-        (() => { window.location.href = '/'; return null; })()
+        (() => { window.location.href = '/' + (window.location.search || ''); return null; })()
       )}
       {currentPage === 'signup' && (
         <StudentSignup onSwitchPage={handlePageSwitch} />
@@ -381,7 +421,11 @@ function App() {
       {/* Authenticated Pages - Render together to preserve state (e.g. active uploads) when switching tabs */}
       {((authUser && currentPage === 'login') || ['dashboard', 'manuscript', 'requirements', 'progress', 'mygroup', 'settings'].includes(currentPage)) && (
         <>
-          <div style={{ display: (currentPage === 'dashboard' || currentPage === 'login') ? 'block' : 'none' }}>
+          <div 
+            style={{ display: (currentPage === 'dashboard' || currentPage === 'login') ? 'block' : 'none' }}
+            aria-hidden={!(currentPage === 'dashboard' || currentPage === 'login')}
+            inert={!(currentPage === 'dashboard' || currentPage === 'login') ? '' : undefined}
+          >
             <StudentDashboard
               onLogout={handleLogout}
               studentName={studentInfo.name}
@@ -391,12 +435,17 @@ function App() {
               leaderUid={studentInfo.leaderUid}
               groupName={studentInfo.groupName}
               adviserName={studentInfo.adviserName}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />
           </div>
           
-          <div style={{ display: currentPage === 'manuscript' ? 'block' : 'none' }}>
+          <div 
+            style={{ display: currentPage === 'manuscript' ? 'block' : 'none' }}
+            aria-hidden={currentPage !== 'manuscript'}
+            inert={currentPage !== 'manuscript' ? '' : undefined}
+          >
             <ManuscriptPage
               onLogout={handleLogout}
               studentName={studentInfo.name}
@@ -404,12 +453,17 @@ function App() {
               profilePhotoUrl={studentInfo.profilePhotoUrl}
               role={studentInfo.role}
               leaderUid={studentInfo.leaderUid}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />
           </div>
           
-          <div style={{ display: currentPage === 'requirements' ? 'block' : 'none' }}>
+          <div 
+            style={{ display: currentPage === 'requirements' ? 'block' : 'none' }}
+            aria-hidden={currentPage !== 'requirements'}
+            inert={currentPage !== 'requirements' ? '' : undefined}
+          >
             <RequirementsPage
               onLogout={handleLogout}
               studentName={studentInfo.name}
@@ -419,12 +473,17 @@ function App() {
               leaderUid={studentInfo.leaderUid}
               studentUid={studentInfo.uid}
               groupName={studentInfo.groupName}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />
           </div>
           
-          <div style={{ display: currentPage === 'progress' ? 'block' : 'none' }}>
+          <div 
+            style={{ display: currentPage === 'progress' ? 'block' : 'none' }}
+            aria-hidden={currentPage !== 'progress'}
+            inert={currentPage !== 'progress' ? '' : undefined}
+          >
             <ProgressPage
               onLogout={handleLogout}
               studentName={studentInfo.name}
@@ -432,12 +491,17 @@ function App() {
               profilePhotoUrl={studentInfo.profilePhotoUrl}
               role={studentInfo.role}
               leaderUid={studentInfo.leaderUid}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />
           </div>
           
-          <div style={{ display: currentPage === 'mygroup' ? 'block' : 'none' }}>
+          <div 
+            style={{ display: currentPage === 'mygroup' ? 'block' : 'none' }}
+            aria-hidden={currentPage !== 'mygroup'}
+            inert={currentPage !== 'mygroup' ? '' : undefined}
+          >
             <MyGroupPage
               onLogout={handleLogout}
               studentName={studentInfo.name}
@@ -448,18 +512,24 @@ function App() {
               groupName={studentInfo.groupName}
               adviserName={studentInfo.adviserName}
               studentUid={studentInfo.uid}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />
           </div>
           
-          <div style={{ display: currentPage === 'settings' ? 'block' : 'none' }}>
+          <div 
+            style={{ display: currentPage === 'settings' ? 'block' : 'none' }}
+            aria-hidden={currentPage !== 'settings'}
+            inert={currentPage !== 'settings' ? '' : undefined}
+          >
             <SettingsPage
               onLogout={handleLogout}
               studentName={studentInfo.name}
               initials={studentInfo.initials}
               profilePhotoUrl={studentInfo.profilePhotoUrl}
               role={studentInfo.role}
+              groupStatus={studentInfo.groupStatus}
               activeTab={activeTab}
               setActiveTab={handleNavigation}
             />

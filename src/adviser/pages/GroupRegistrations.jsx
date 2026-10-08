@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { ClipboardList, GraduationCap, Tag, Calendar, Lightbulb, X, Check } from 'lucide-react';
 
 function GroupRegistrations() {
   const { adviserData, user } = useAdviser();
   const [pendingGroups, setPendingGroups] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [assignedCategory, setAssignedCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -24,7 +27,8 @@ function GroupRegistrations() {
     return group.groupName?.toLowerCase().includes(q) ||
       group.researchTitle?.toLowerCase().includes(q) ||
       group.leaderName?.toLowerCase().includes(q) ||
-      group.program?.toLowerCase().includes(q);
+      group.program?.toLowerCase().includes(q) ||
+      group.category?.toLowerCase().includes(q);
   };
 
   useEffect(() => {
@@ -58,7 +62,136 @@ function GroupRegistrations() {
     return () => unsubscribe();
   }, [user?.email, adviserData?.email]);
 
+  // Listen to research categories created by or assigned to this adviser, or global categories
+  useEffect(() => {
+    const email = (user?.email || adviserData?.email || auth.currentUser?.email || '').toLowerCase().trim();
+    const userUid = auth.currentUser?.uid || '';
+    if (!email && !userUid) return;
+
+    const unsub = onSnapshot(collection(db, 'categories'), (snap) => {
+      const fetched = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(c => {
+          if (!c.name) return false;
+          const catCreatedBy = (c.createdBy || '').toLowerCase().trim();
+          return (
+            !catCreatedBy ||
+            catCreatedBy === email ||
+            (userUid && c.adviserUid === userUid) ||
+            catCreatedBy === 'admin' ||
+            catCreatedBy === 'system'
+          );
+        })
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      setCategories(fetched);
+    }, (err) => {
+      console.error('Error fetching categories in GroupRegistrations:', err);
+    });
+
+    return () => unsub();
+  }, [user?.email, adviserData?.email]);
+
+  const handleOpenGroupModal = (group) => {
+    setSelectedGroup(group);
+    setAssignedCategory(group.category || '');
+  };
+
+  const handleCloseModal = () => {
+    setSelectedGroup(null);
+    setAssignedCategory('');
+  };
+
+  const handleQuickAddCategory = async () => {
+    const { value: categoryName } = await Swal.fire({
+      title: 'Add Research Category',
+      input: 'text',
+      inputLabel: 'Category Name',
+      inputPlaceholder: 'e.g. Artificial Intelligence, IoT, Security...',
+      showCancelButton: true,
+      confirmButtonText: 'Add Category',
+      confirmButtonColor: '#7a1f3d',
+      cancelButtonColor: '#6b7280',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Please enter a category name';
+        }
+      }
+    });
+
+    if (!categoryName || !categoryName.trim()) return;
+    const trimmedName = categoryName.trim();
+
+    // Check if category already exists in current list
+    const existing = categories.find(c => c.name?.toLowerCase().trim() === trimmedName.toLowerCase());
+    if (existing) {
+      setAssignedCategory(existing.name);
+      Swal.fire({
+        icon: 'info',
+        title: 'Category Already Exists',
+        text: `"${existing.name}" is already available and has been selected.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    try {
+      const userEmail = (user?.email || adviserData?.email || auth.currentUser?.email || 'Adviser').toLowerCase().trim();
+      const userUid = auth.currentUser?.uid || '';
+
+      await addDoc(collection(db, 'categories'), {
+        name: trimmedName,
+        icon: '🔗',
+        bgColor: '#7a2e46',
+        description: '',
+        createdBy: userEmail,
+        adviserUid: userUid,
+        createdAt: serverTimestamp()
+      });
+
+      try {
+        await addDoc(collection(db, 'systemLogs'), {
+          user: auth.currentUser?.email || userEmail,
+          role: 'Research Adviser',
+          action: 'Created new category',
+          details: `Category: ${trimmedName}`,
+          status: 'Success',
+          timestamp: new Date().toISOString()
+        });
+      } catch (logErr) {
+        console.warn('Logging skipped:', logErr);
+      }
+
+      setAssignedCategory(trimmedName);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Category Added!',
+        text: `"${trimmedName}" has been added and assigned.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error('Error adding category:', err);
+      Swal.fire('Error', 'Failed to add category. Please try again.', 'error');
+    }
+  };
+
   const handleDecision = async (group, decision) => {
+    if (decision === 'approve' && !assignedCategory) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Category Required',
+        text: 'Please assign a research category to this group before approving.',
+        confirmButtonColor: '#7a1f3d'
+      });
+      return;
+    }
+
     const actionText = decision === 'approve' ? 'approve' : 'decline';
     const confirmColor = decision === 'approve' ? '#10b981' : '#d33';
 
@@ -76,10 +209,14 @@ function GroupRegistrations() {
 
     try {
       // 1. Update groups collection
-      await updateDoc(doc(db, 'groups', group.id), {
+      const groupUpdate = {
         status: decision === 'approve' ? 'approved' : 'declined',
         updatedAt: new Date().toISOString()
-      });
+      };
+      if (decision === 'approve' && assignedCategory) {
+        groupUpdate.category = assignedCategory;
+      }
+      await updateDoc(doc(db, 'groups', group.id), groupUpdate);
 
       // 2. Update students collection (the leader's profile)
       if (group.leaderUid) {
@@ -88,6 +225,9 @@ function GroupRegistrations() {
         };
         if (decision === 'approve') {
           updateData.hasSeenApprovalNotification = false;
+          if (assignedCategory) {
+            updateData.category = assignedCategory;
+          }
         }
         await updateDoc(doc(db, 'students', group.leaderUid), updateData);
       }
@@ -107,6 +247,9 @@ function GroupRegistrations() {
             };
             if (decision === 'approve') {
               updateData.hasSeenApprovalNotification = false;
+              if (assignedCategory) {
+                updateData.category = assignedCategory;
+              }
             }
             return updateDoc(doc(db, 'students', memberDoc.id), updateData);
           });
@@ -120,7 +263,7 @@ function GroupRegistrations() {
         user: auth.currentUser?.email || 'Adviser',
         role: 'Research Adviser',
         action: `Group Registration ${decision === 'approve' ? 'Approved' : 'Declined'}`,
-        details: `Group: ${group.groupName} | Leader: ${group.leaderName}`,
+        details: `Group: ${group.groupName} | Leader: ${group.leaderName}${decision === 'approve' && assignedCategory ? ` | Category: ${assignedCategory}` : ''}`,
         status: 'Success',
         timestamp: new Date().toISOString()
       });
@@ -134,7 +277,7 @@ function GroupRegistrations() {
         timer: 2000,
         showConfirmButton: false
       });
-      setSelectedGroup(null);
+      handleCloseModal();
     } catch (err) {
       console.error(`Error ${decision} group:`, err);
       Swal.fire('Error', `Failed to ${decision}. Please try again.`, 'error');
@@ -189,7 +332,9 @@ function GroupRegistrations() {
             pendingGroups.filter(filterGroup).map((req) => (
               <Card key={req.id} glass={true} hover={true} className="p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-orange-200 dark:border-orange-800/50">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 bg-orange-100 dark:bg-stone-800 rounded-lg border border-orange-200 dark:border-stone-700 flex items-center justify-center text-xl shrink-0">📋</div>
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-stone-800 rounded-lg border border-orange-200 dark:border-stone-700 flex items-center justify-center shrink-0 text-orange-600 dark:text-orange-400">
+                    <ClipboardList className="w-6 h-6" />
+                  </div>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg flex items-center gap-2">
                       {req.groupName} <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800/50 uppercase tracking-wider font-bold">• Pending Approval</span>
@@ -199,7 +344,7 @@ function GroupRegistrations() {
                 </div>
                 <div className="flex lg:flex-col gap-2 w-full lg:w-32">
                   <PremiumButton
-                    onClick={() => setSelectedGroup(req)}
+                    onClick={() => handleOpenGroupModal(req)}
                     variant="primary"
                     size="sm"
                     className="w-full justify-center"
@@ -253,9 +398,10 @@ function GroupRegistrations() {
                   {item.researchTitle}
                 </p>
 
-                <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-1.5 border-t border-gray-100 dark:border-stone-800">
-                  <span>🎓 {item.department || item.program || 'N/A'}</span>
-                  <span>📅 {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
+                <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-1.5 border-t border-gray-100 dark:border-stone-800 gap-1">
+                  <span className="flex items-center gap-1"><GraduationCap className="w-3.5 h-3.5" /> {item.department || item.program || 'N/A'}</span>
+                  {item.category && <span className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-[10px] font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1"><Tag className="w-3 h-3" /> {item.category}</span>}
+                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
                 </div>
               </Card>
             ))
@@ -275,6 +421,7 @@ function GroupRegistrations() {
                   <th className="py-3 px-5">Group</th>
                   <th className="py-3 px-5">Leader</th>
                   <th className="py-3 px-5">Research Title</th>
+                  <th className="py-3 px-5">Category</th>
                   <th className="py-3 px-5">Program</th>
                   <th className="py-3 px-5">Decision</th>
                   <th className="py-3 px-5">Date</th>
@@ -283,7 +430,7 @@ function GroupRegistrations() {
               <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
                 {paginatedHistory.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="py-6 text-center text-gray-500 dark:text-stone-400">No registration history yet.</td>
+                    <td colSpan="7" className="py-6 text-center text-gray-500 dark:text-stone-400">No registration history yet.</td>
                   </tr>
                 ) : (
                   paginatedHistory.map((item) => (
@@ -291,6 +438,15 @@ function GroupRegistrations() {
                       <td className="py-3 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.leaderName}</td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.researchTitle}</td>
+                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">
+                        {item.category ? (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+                            {item.category}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.department || item.program}</td>
                       <td className="py-3 px-5">
                         <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
@@ -352,7 +508,7 @@ function GroupRegistrations() {
           <div className="bg-white dark:bg-stone-950 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto transform transition-all animate-scale-in">
             <div className="bg-[#7a1f3d] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-5 sm:px-6 py-4 flex justify-between items-center text-white dark:text-stone-100 pr-12 relative">
               <h2 className="font-bold text-lg sm:text-xl font-serif">Group Registration Details</h2>
-              <button onClick={() => setSelectedGroup(null)} className="absolute top-4 right-4 text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-2xl font-light leading-none cursor-pointer">&times;</button>
+              <button onClick={handleCloseModal} className="absolute top-4 right-4 text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-2xl font-light leading-none cursor-pointer">&times;</button>
             </div>
 
             <div className="p-5 sm:p-6 space-y-4 sm:space-y-5">
@@ -393,42 +549,105 @@ function GroupRegistrations() {
                     </div>
                   </li>
                   {selectedGroup.members?.map((m, idx) => {
-                    const memberName = typeof m === 'object' ? (m.name || m.email.split('@')[0]) : m.split('@')[0];
-                    const memberEmail = typeof m === 'object' ? m.email : m;
+                    const memberName = typeof m === 'object' 
+                      ? (m.name || (m.email?.includes('@') ? m.email.split('@')[0] : `Member ${idx + 2}`)) 
+                      : (typeof m === 'string' && m.includes('@') ? m.split('@')[0] : (m || `Member ${idx + 2}`));
+                    const memberEmail = typeof m === 'object' ? (m.email || '') : (typeof m === 'string' && m.includes('@') ? m : '');
+                    const initials = memberName.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || `${idx + 2}`;
+
                     return (
                       <li key={idx} className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-xl border border-gray-200 dark:border-stone-800 shadow-sm">
                         <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-stone-800 text-gray-700 dark:text-stone-300 flex items-center justify-center text-xs font-bold border border-gray-300 dark:border-stone-700 shrink-0">
-                          {memberName.substring(0, 2).toUpperCase()}
+                          {initials}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-stone-200 truncate">{memberName}</p>
-                          <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{memberEmail}</p>
+                          <p className="text-sm font-semibold text-gray-800 dark:text-stone-200 truncate flex items-center gap-2">
+                            <span className="truncate">{memberName}</span>
+                            <span className="text-[9px] bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded-full uppercase border border-stone-200 dark:border-stone-700 shrink-0">Member</span>
+                          </p>
+                          {memberEmail ? (
+                            <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 truncate">{memberEmail}</p>
+                          ) : (
+                            <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">Team Member</p>
+                          )}
                         </div>
                       </li>
                     );
                   })}
                 </ul>
               </div>
+
+              {/* Assign Research Category */}
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2 block">
+                  Assign Research Category <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <select
+                      value={assignedCategory}
+                      onChange={(e) => setAssignedCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-xl text-sm text-gray-900 dark:text-stone-100 focus:ring-2 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-transparent outline-none transition appearance-none cursor-pointer pr-10 shadow-sm"
+                    >
+                      <option value="">
+                        {categories.length === 0 ? '-- No categories yet --' : 'Select a Category...'}
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.name}>
+                          {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-stone-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleQuickAddCategory}
+                    title="Add Research Category"
+                    className="h-[42px] px-3.5 bg-[#7a1f3d] hover:bg-[#601830] dark:bg-[#f8d070] dark:hover:bg-[#e6be5e] text-white dark:text-stone-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="text-xs font-bold">Add</span>
+                  </button>
+                </div>
+                {categories.length === 0 ? (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 shrink-0" /> No categories added yet. Click <strong>+ Add</strong> to create one for this group.
+                  </p>
+                ) : (
+                  !assignedCategory && (
+                    <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">
+                      Please select a category or add a new one before approving.
+                    </p>
+                  )
+                )}
+              </div>
             </div>
 
             <div className="bg-gray-50 dark:bg-stone-900 px-5 sm:px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 border-t border-gray-200 dark:border-stone-800">
               <button
-                onClick={() => setSelectedGroup(null)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition text-sm text-center"
+                onClick={handleCloseModal}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition text-sm text-center cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDecision(selectedGroup, 'decline')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center justify-center gap-2 text-sm"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                ✕ Decline
+                <X className="w-4 h-4" /> Decline
               </button>
               <button
                 onClick={() => handleDecision(selectedGroup, 'approve')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2 text-sm"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                ✓ Approve
+                <Check className="w-4 h-4" /> Approve
               </button>
             </div>
           </div>

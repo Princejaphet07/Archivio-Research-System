@@ -11,6 +11,19 @@ import CardSkeleton from '../components/skeletons/CardSkeleton';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { 
+  Download, 
+  Inbox, 
+  FolderKanban, 
+  CheckCircle2, 
+  Globe, 
+  Clock, 
+  Users, 
+  TrendingUp, 
+  ThumbsUp, 
+  Eye, 
+  ArrowUpDown 
+} from 'lucide-react';
 
 const parseDate = (val) => {
   if (!val) return null;
@@ -22,8 +35,12 @@ const parseDate = (val) => {
 };
 
 export default function Dashboard({ activePage }) {
-  const { deanData } = useUser();
+  const { deanData, deanSettings } = useUser();
   const navigate = useNavigate();
+  const isDualRole = deanData?.role === 'dean+adviser' || (typeof deanData?.role === 'string' && deanData.role.includes('dean') && deanData.role.includes('adviser'));
+  
+  const activeSY = deanSettings?.schoolYears?.find(s => s.status === 'Active')?.label || deanSettings?.schoolYear || '2026-2027';
+  const displaySY = activeSY.includes('S.Y.') || activeSY.includes('SY') ? activeSY.replace(/^SY\s*/, 'S.Y. ') : `S.Y. ${activeSY}`;
   
   const [stats, setStats] = useState({
     totalGroups: 0,
@@ -42,6 +59,7 @@ export default function Dashboard({ activePage }) {
   const [topPapersSort, setTopPapersSort] = useState('views'); // 'views' | 'likes'
   const [chartFilter, setChartFilter] = useState('year'); // 'year' | 'month'
   const [adviserTableYear, setAdviserTableYear] = useState('All');
+  const [adviserSortOrder, setAdviserSortOrder] = useState('desc'); // 'desc' | 'asc'
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -182,7 +200,7 @@ export default function Dashboard({ activePage }) {
        const rate = adv.uploads > 0 ? Math.round((adv.published / adv.uploads) * 100) : 0;
        return { ...adv, rate };
     });
-    advArray.sort((a, b) => b.uploads - a.uploads);
+    advArray.sort((a, b) => adviserSortOrder === 'desc' ? b.uploads - a.uploads : a.uploads - b.uploads);
     setAdviserStats(advArray);
     
     setAllPapers(papers);
@@ -216,11 +234,12 @@ export default function Dashboard({ activePage }) {
       setYearlyStats(monthArray);
     }
 
-  }, [allRawSubmissions, allGroups, chartFilter, adviserTableYear]);
+  }, [allRawSubmissions, allGroups, chartFilter, adviserTableYear, adviserSortOrder]);
 
-  const handleRefresh = () => {
+  const handleSortFlip = () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
+    setAdviserSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    setTimeout(() => setIsRefreshing(false), 400);
   };
 
   if (loading) {
@@ -258,8 +277,13 @@ export default function Dashboard({ activePage }) {
     );
   }
 
-  const deanName = deanData?.displayName || 'Dean';
-  const firstName = deanName.split(' ')[0];
+  const rawDeanName = deanData?.displayName || (deanData?.firstName ? `${deanData.firstName} ${deanData.lastName || ''}`.trim() : '') || 'Dean';
+  const cleanDeanName = rawDeanName
+    .replace(/\(.*?\)/g, '')
+    .replace(/\[.*?\]/g, '')
+    .replace(/^(Dr\.|Prof\.|Engr\.|Atty\.|Mr\.|Ms\.|Mrs\.|Dean|Adviser)\s+/i, '')
+    .trim();
+  const firstName = deanData?.firstName || cleanDeanName.split(' ')[0] || 'Dean';
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -327,29 +351,61 @@ export default function Dashboard({ activePage }) {
           <div className="flex justify-between items-end mb-6">
             <div>
               <h1 className="text-3xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight flex items-center gap-2">
-                {getGreeting()}, {firstName} <span className="animate-wave origin-bottom-right inline-block">👋</span>
+                {getGreeting()}, {firstName} <span className="animate-wave inline-block text-2xl select-none" role="img" aria-label="wave">👋</span>
               </h1>
               <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-1 uppercase tracking-wider">
-                {deanData?.department || 'Department'} • S.Y. 2026–2027, 2nd Semester
+                {deanData?.department || 'Department'} • {displaySY}, 2nd Semester
               </p>
             </div>
             <div className="flex gap-2.5">
               <PremiumButton 
                 onClick={handleExportCSV}
                 variant="ghost"
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-2"
               >
-                <span>📤</span> Export
+                <Download className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+                <span>Export</span>
               </PremiumButton>
               <PremiumButton
                 onClick={() => navigate('/dean/publish-queue')}
                 variant="primary"
                 className="flex items-center gap-2"
               >
-                <span>📋</span> Publish Queue <span className="bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{stats.approved}</span>
+                <Inbox className="w-4 h-4" />
+                <span>Publish Queue</span>
+                <span className="bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{stats.approved}</span>
               </PremiumButton>
             </div>
           </div>
+
+          {/* ================= ACTION-REQUIRED EXECUTIVE BANNER (#1 User-Centric Design) ================= */}
+          {stats.approved > 0 && (
+            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#7B1F35]/15 via-amber-500/10 to-transparent border border-[#7B1F35]/30 dark:border-[#7B1F35]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-[#7B1F35] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Inbox className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                    Action Required: {stats.approved} Research Manuscript{stats.approved > 1 ? 's' : ''} Awaiting Final Release
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7B1F35] text-white">
+                      Action Needed
+                    </span>
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">
+                    Research Advisers have endorsed these papers with 100% requirements complete. Evaluate and release them to the Public Archive.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dean/publish-queue')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm hover:shadow transition-all cursor-pointer shrink-0"
+              >
+                <span>Review & Publish</span>
+                <span>➔</span>
+              </button>
+            </div>
+          )}
 
           {/* ================= KPI STATS HIGHLIGHT GRID ================= */}
           <div className="grid grid-cols-6 gap-4 mb-6">
@@ -363,12 +419,44 @@ export default function Dashboard({ activePage }) {
               </>
             ) : (
               <>
-                <KpiCard title="TOTAL GROUP" value={stats.totalGroups} trend="Total registered" icon="📁" />
-                <KpiCard title="APPROVED" value={stats.approved} trend="Awaiting publish" icon="✅" highlight />
-                <KpiCard title="PUBLISHED" value={stats.published} trend="Live in archive" icon="🌐" />
-                <KpiCard title="PENDING REVIEW" value={stats.pending} trend="Needs attention" icon="⏳" warning />
-                <KpiCard title="TOTAL ADVISERS" value={stats.totalAdvisers} subtext="Registered advisers" icon="👥" />
-                <KpiCard title="COMPLETION RATE" value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} trend="Published / Total" icon="📈" />
+                <KpiCard 
+                  title="TOTAL GROUP" 
+                  value={stats.totalGroups} 
+                  trend="Total registered" 
+                  icon={<FolderKanban className="w-5 h-5 text-[#7a1f3d] dark:text-[#f8d070]" />} 
+                />
+                <KpiCard 
+                  title="APPROVED" 
+                  value={stats.approved} 
+                  trend="Awaiting publish" 
+                  icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} 
+                  highlight 
+                />
+                <KpiCard 
+                  title="PUBLISHED" 
+                  value={stats.published} 
+                  trend="Live in archive" 
+                  icon={<Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />} 
+                />
+                <KpiCard 
+                  title="PENDING REVIEW" 
+                  value={stats.pending} 
+                  trend="Needs attention" 
+                  icon={<Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />} 
+                  warning 
+                />
+                <KpiCard 
+                  title="TOTAL ADVISERS" 
+                  value={stats.totalAdvisers} 
+                  subtext="Registered advisers" 
+                  icon={<Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />} 
+                />
+                <KpiCard 
+                  title="COMPLETION RATE" 
+                  value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} 
+                  trend="Published / Total" 
+                  icon={<TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} 
+                />
               </>
             )}
           </div>
@@ -419,7 +507,7 @@ export default function Dashboard({ activePage }) {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.2)" />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
                     <Area type="monotone" dataKey="count" name="Total Uploads" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={1500} />
                     <Area type="monotone" dataKey="approved" name="Approved Papers" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorApproved)" animationDuration={1500} />
                     <Area type="monotone" dataKey="published" name="Published Papers" stroke="#d97706" strokeWidth={3} fillOpacity={1} fill="url(#colorPublished)" animationDuration={1500} />
@@ -511,7 +599,7 @@ export default function Dashboard({ activePage }) {
                           ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </>
@@ -528,19 +616,29 @@ export default function Dashboard({ activePage }) {
                 <div className="flex bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[10px] font-bold">
                   <button 
                     onClick={() => setTopPapersSort('likes')}
-                    className={`${topPapersSort === 'likes' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all`}
-                  >👍 Liked</button>
+                    className={`${topPapersSort === 'likes' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5`}
+                  >
+                    <ThumbsUp className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                    <span>Liked</span>
+                  </button>
                   <button 
                     onClick={() => setTopPapersSort('views')}
-                    className={`${topPapersSort === 'views' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all`}
-                  >👁️ Viewed</button>
+                    className={`${topPapersSort === 'views' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5`}
+                  >
+                    <Eye className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    <span>Viewed</span>
+                  </button>
                 </div>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                 {sortedTopPapers.length > 0 ? sortedTopPapers.map((paper, i) => {
                   const score = topPapersSort === 'likes' ? (paper.likes?.length || 0) : (paper.views || 0);
-                  const icon = topPapersSort === 'likes' ? '👍' : '👁️';
-                  const highlight = paper.adviserUid === deanData?.uid;
+                  const icon = topPapersSort === 'likes' ? (
+                    <ThumbsUp className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                  ) : (
+                    <Eye className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                  );
+                  const highlight = isDualRole && (paper.adviserUid === deanData?.uid || (paper.adviserEmail && paper.adviserEmail === deanData?.email));
                   
                   const group = allGroups.find(g => g.leaderUid === paper.studentUid && (g.groupName === paper.groupName || g.researchTitle === (paper.researchTitle || paper.title)));
                   const displayTitle = group?.researchTitle || paper.researchTitle || paper.title || 'Untitled';
@@ -562,7 +660,11 @@ export default function Dashboard({ activePage }) {
             <div className="p-5 border-b border-stone-100 dark:border-stone-700/80 flex justify-between items-center bg-stone-50 dark:bg-stone-800/50">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Adviser Upload Statistics</h3>
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
+                {isDualRole ? (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">★ Your row is highlighted — you are also an Adviser</p>
+                ) : (
+                  <p className="text-xs text-stone-500 dark:text-stone-400 font-medium mt-0.5">Showing all Research Advisers under your department</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <select 
@@ -575,10 +677,11 @@ export default function Dashboard({ activePage }) {
                   ))}
                 </select>
                 <button 
-                  onClick={handleRefresh}
-                  className={`p-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md text-xs hover:bg-stone-50 dark:hover:bg-stone-700 transition-all ${isRefreshing ? 'animate-spin opacity-50' : ''}`}
+                  onClick={handleSortFlip}
+                  title={adviserSortOrder === 'desc' ? "Flip to ascending order" : "Flip to descending order"}
+                  className={`p-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md text-xs hover:bg-stone-50 dark:hover:bg-stone-700 transition-all text-stone-600 dark:text-stone-400 flex items-center justify-center ${isRefreshing ? 'opacity-50' : ''}`}
                 >
-                  🔄
+                  <ArrowUpDown className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -587,7 +690,7 @@ export default function Dashboard({ activePage }) {
                 <thead>
                   <tr className="bg-stone-50 dark:bg-stone-800/50 text-stone-400 text-[10px] font-bold uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
                     <th className="py-3 px-5">Adviser</th>
-                    <th className="py-3 px-4 text-left">Uploads <span className="text-[9px] inline-block ml-1 opacity-60">↓</span></th>
+                    <th className="py-3 px-4 text-left">Uploads <span className="text-[9px] inline-block ml-1 opacity-60">{adviserSortOrder === 'desc' ? '↓' : '↑'}</span></th>
                     <th className="py-3 px-4 text-left">Approved</th>
                     <th className="py-3 px-4 text-left">Published</th>
                     <th className="py-3 px-4 text-left">Pending</th>
@@ -603,7 +706,7 @@ export default function Dashboard({ activePage }) {
                     </tr>
                   ) : (
                     adviserStats.map((adv) => {
-                      const isYou = adv.uid === deanData?.uid;
+                      const isYou = isDualRole && (adv.uid === deanData?.uid || (adv.email && adv.email === deanData?.email));
                       const initials = adv.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
                       return (
                         <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/60 dark:hover:bg-amber-950/30' : 'hover:bg-stone-50 dark:hover:bg-stone-700'} transition-colors`}>
@@ -646,9 +749,9 @@ export default function Dashboard({ activePage }) {
 function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warning }) {
   return (
     <Card glass={true} className={`p-4 transition-all hover:-translate-y-[2px] ${highlight ? 'border-emerald-200 bg-emerald-50/30 dark:bg-emerald-900/20' : ''} flex flex-col justify-between`}>
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-[9px] font-extrabold text-stone-400 uppercase tracking-wider">{title}</span>
-        <span className="text-xs opacity-70">{icon}</span>
+      <div className="flex justify-between items-center mb-2 gap-1.5">
+        <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">{title}</span>
+        <span className="flex items-center justify-center opacity-90 shrink-0 [&>svg]:w-5 [&>svg]:h-5">{icon}</span>
       </div>
       <h4 className="text-2xl font-serif font-extrabold text-stone-900 dark:text-stone-100 leading-none mb-1.5">{value}</h4>
       {trend && (
@@ -689,8 +792,9 @@ function PaperRow({ rank, title, author, count, icon, highlight }) {
           <p className="text-[10px] text-stone-400 font-medium truncate mt-0.5">{author}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 dark:border-stone-700/80 shadow-sm">
-        <span>{icon || '👍'}</span> {count}
+      <div className="flex items-center gap-1.5 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 dark:border-stone-700/80 shadow-sm">
+        <span className="flex items-center justify-center">{icon}</span>
+        <span>{count}</span>
       </div>
     </div>
   );

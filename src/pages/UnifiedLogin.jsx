@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, getDoc, getCountFromServer, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { Mail, LockKeyhole, X } from 'lucide-react';
+import { Mail, LockKeyhole } from 'lucide-react';
 import ReCaptcha from '../components/ReCaptcha';
 
 import logo from '../assets/logo.png';
@@ -11,50 +11,12 @@ import loginBg from '../assets/parchment.png';
 import tornEdge from '../assets/torn-edge.png';
 import maroonBg from '../assets/maroon-bg.png';
 import { getBackendUrl } from '../utils/backendUrl';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 function UnifiedLogin() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ total: 24, pending: 8, published: 156 });
-  const [loadingStats, setLoadingStats] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      let totalCount = 0;
-      let pendingCount = 0;
-      let publishedCount = 0;
-      const subRef = collection(db, 'submissions');
-
-      try {
-        // Fetch Total Submissions (Might be blocked by rules for unauthenticated users)
-        const totalSnap = await getCountFromServer(subRef);
-        totalCount = totalSnap.data().count;
-      } catch (err) {
-        console.warn('Could not fetch total count (requires auth rules update)');
-      }
-
-      try {
-        // Fetch Pending Submissions (Might be blocked by rules)
-        const pendingQuery = query(subRef, where('reviewStatus', '==', 'pending'));
-        const pendingSnap = await getCountFromServer(pendingQuery);
-        pendingCount = pendingSnap.data().count;
-      } catch (err) {
-        console.warn('Could not fetch pending count (requires auth rules update)');
-      }
-
-      try {
-        // Fetch Published Submissions (Usually allowed for public)
-        const publishedQuery = query(subRef, where('reviewStatus', '==', 'published'));
-        const publishedSnap = await getCountFromServer(publishedQuery);
-        publishedCount = publishedSnap.data().count;
-      } catch (err) {
-        console.warn('Could not fetch published count');
-      }
-
-      setStats({ total: totalCount, pending: pendingCount, published: publishedCount });
-      setLoadingStats(false);
-    };
-    fetchStats();
-  }, []);
+  // Static Repository Stats
+  const stats = { total: 24, pending: 8, published: 156 };
 
   const [showPassword, setShowPassword] = useState(false);
   const [loginEmail, setLoginEmail] = useState(localStorage.getItem('archivio_remembered_email') || '');
@@ -62,25 +24,32 @@ function UnifiedLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('archivio_remembered_email'));
-  const [showTerms, setShowTerms] = useState(false);
+  const [privacyModalTab, setPrivacyModalTab] = useState('terms');
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
+  const [inviteNotice, setInviteNotice] = useState(null);
   const recaptchaRef = useRef(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, 'settings', 'system_preferences'),
-      (snap) => {
-        if (snap.exists()) {
-          setMaintenanceMode(snap.data().maintenance === true);
-        }
-      },
-      (err) => {
-        console.warn('System preferences listener notice (non-fatal):', err.message);
+    const params = new URLSearchParams(window.location.search);
+    const loginEmailParam = params.get('loginEmail') || params.get('email');
+    if (loginEmailParam && params.get('acceptInvite') !== 'true') {
+      setLoginEmail(loginEmailParam.trim().toLowerCase());
+    }
+
+    if (params.get('acceptInvite') === 'true') {
+      const leaderParam = params.get('leader');
+      const groupParam = params.get('group');
+      const emailParam = params.get('email');
+      if (leaderParam) {
+        setLoginEmail(leaderParam.trim().toLowerCase());
       }
-    );
-    return () => unsub();
+      setInviteNotice({
+        leader: leaderParam,
+        group: groupParam || 'Research Group',
+        email: emailParam
+      });
+    }
   }, []);
 
   const handleLoginSubmit = async (e) => {
@@ -356,21 +325,21 @@ function UnifiedLogin() {
           <div className="mt-12 flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl px-8 py-5 w-full max-w-sm backdrop-blur-md shadow-inner">
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.total}
+                {stats.total}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Submissions</span>
             </div>
             <div className="h-8 w-[1px] bg-white/10"></div>
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif font-semibold">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.pending}
+                {stats.pending}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Pending</span>
             </div>
             <div className="h-8 w-[1px] bg-white/10"></div>
             <div className="flex flex-col items-center px-2">
               <span className="text-[#d6ad60] font-bold text-2xl font-serif">
-                {loadingStats ? <div className="h-6 w-8 bg-white/20 animate-pulse rounded" /> : stats.published}
+                {stats.published}
               </span>
               <span className="text-white/60 text-[9px] uppercase tracking-wider font-semibold mt-1">Published</span>
             </div>
@@ -388,13 +357,7 @@ function UnifiedLogin() {
           backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* SYSTEM STATUS BANNER */}
-        <div className={`absolute top-6 right-8 hidden md:flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border shadow-sm animate-fade-in-down z-20 transition-colors duration-500 ${maintenanceMode ? 'border-amber-500/50' : 'border-green-500/20'}`}>
-          <div className={`w-2 h-2 rounded-full animate-pulse ${maintenanceMode ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`}></div>
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${maintenanceMode ? 'text-amber-700' : 'text-green-800'}`}>
-            {maintenanceMode ? 'System Under Maintenance' : 'All systems operational'}
-          </span>
-        </div>
+
 
         <div className="w-full max-w-md relative z-10 animate-fade-in-up">
           <div className="md:hidden flex flex-col items-center mb-8">
@@ -413,6 +376,22 @@ function UnifiedLogin() {
             <div className="mb-8 p-4 bg-red-50/90 backdrop-blur-sm border-l-4 border-red-600 rounded-r-xl flex items-center gap-3 shadow-md animate-shake">
               <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
               <span className="text-sm text-red-900 font-medium">{error}</span>
+            </div>
+          )}
+
+          {inviteNotice && (
+            <div className="mb-6 p-4 bg-emerald-50/95 backdrop-blur-sm border border-emerald-300 rounded-xl shadow-sm text-left">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg">🎉</span>
+                <div className="text-xs leading-relaxed text-emerald-950">
+                  <p className="font-bold text-[13px] text-emerald-900 mb-0.5">
+                    Invitation Accepted for {inviteNotice.group}!
+                  </p>
+                  <p className="text-emerald-800">
+                    Your member status is active. Please log in using your group leader's credentials{inviteNotice.leader ? <> (<strong>{inviteNotice.leader}</strong>)</> : ''} below to enter the portal.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -516,101 +495,31 @@ function UnifiedLogin() {
           <div className="flex items-center justify-center gap-3 text-[#8c7a6b] text-xs font-medium tracking-wide">
             <span>&copy; {new Date().getFullYear()} SWU PHINMA. All rights reserved.</span>
             <span className="w-1 h-1 rounded-full bg-[#d2c9b6]"></span>
-            <button type="button" onClick={() => setShowTerms(true)} className="hover:text-[#7a1f3d] transition-colors focus:outline-none">Terms of Use</button>
+            <button 
+              type="button" 
+              onClick={() => { setPrivacyModalTab('terms'); setShowPrivacy(true); }} 
+              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer"
+            >
+              Terms and Conditions
+            </button>
             <span className="w-1 h-1 rounded-full bg-[#d2c9b6]"></span>
-            <button type="button" onClick={() => setShowPrivacy(true)} className="hover:text-[#7a1f3d] transition-colors focus:outline-none">Privacy Policy</button>
+            <button 
+              type="button" 
+              onClick={() => { setPrivacyModalTab('privacy'); setShowPrivacy(true); }} 
+              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer"
+            >
+              Privacy Policy
+            </button>
           </div>
         </div>
       </div>
 
-      {/* TERMS MODAL */}
-      {showTerms && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in-up">
-          <div className="bg-[#fcfaf5] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-[#c1b49a]">
-            <div className="flex justify-between items-center p-6 border-b border-[#d2c9b6] bg-white/50">
-              <h2 className="text-2xl font-serif font-bold text-[#7a1f3d]">Terms of Use</h2>
-              <button onClick={() => setShowTerms(false)} className="text-[#8c7a6b] hover:text-[#7a1f3d] transition-colors focus:outline-none">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh] prose prose-stone max-w-none text-sm text-[#5c4a40]">
-              <p className="font-semibold text-[#8c7a6b] uppercase tracking-widest mb-6 text-xs">Last Updated: {new Date().toLocaleDateString()}</p>
-              
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mt-0 mb-2">1. Acceptance of Terms</h3>
-              <p className="mb-6">By accessing and using ARCHIVIO, the Unified Research Portal of SWU PHINMA, you accept and agree to be bound by the terms and provision of this agreement. Furthermore, when using this system's particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">2. Access and Security</h3>
-              <p className="mb-2">Access to ARCHIVIO is strictly by invitation only and is restricted to actively enrolled students, faculty, and administrative staff of SWU PHINMA.</p>
-              <ul className="list-disc pl-4 mb-6 space-y-1">
-                <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
-                <li>You agree to notify the IT Support team immediately of any unauthorized use of your account.</li>
-                <li>The University reserves the right to terminate or suspend access to the portal for any violations of these terms or university policies.</li>
-              </ul>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">3. Intellectual Property and Plagiarism</h3>
-              <p className="mb-2">All research manuscripts, abstracts, and related documents uploaded to ARCHIVIO remain the intellectual property of their respective authors. However, by uploading to this platform, you grant SWU PHINMA a non-exclusive right to archive, index, and display your work within the university network for academic purposes.</p>
-              <p className="mb-6">Strict adherence to academic integrity is required. Plagiarism or the submission of fraudulent research is strictly prohibited and will result in disciplinary action in accordance with the SWU PHINMA Student/Faculty Manual.</p>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">4. Limitation of Liability</h3>
-              <p>The University shall not be liable for any direct, indirect, incidental, special, or consequential damages resulting from the use or inability to use the system, or from unauthorized access to or alteration of your transmissions or data.</p>
-            </div>
-            <div className="p-4 border-t border-[#d2c9b6] bg-white/80 flex justify-end">
-              <button onClick={() => setShowTerms(false)} className="bg-[#7a1f3d] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#5c172e] transition-colors shadow-md">
-                I Understand
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PRIVACY MODAL */}
-      {showPrivacy && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in-up">
-          <div className="bg-[#fcfaf5] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-[#c1b49a]">
-            <div className="flex justify-between items-center p-6 border-b border-[#d2c9b6] bg-white/50">
-              <h2 className="text-2xl font-serif font-bold text-[#7a1f3d]">Privacy Policy</h2>
-              <button onClick={() => setShowPrivacy(false)} className="text-[#8c7a6b] hover:text-[#7a1f3d] transition-colors focus:outline-none">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh] prose prose-stone max-w-none text-sm text-[#5c4a40]">
-              <p className="font-semibold text-[#8c7a6b] uppercase tracking-widest mb-6 text-xs">Last Updated: {new Date().toLocaleDateString()}</p>
-              
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mt-0 mb-2">1. Information We Collect</h3>
-              <p className="mb-2">ARCHIVIO collects information to provide better services to all our users. We collect information in the following ways:</p>
-              <ul className="list-disc pl-4 mb-6 space-y-1">
-                <li><strong>Information you give us:</strong> This includes your university email address, name, department, and role (student, adviser, dean) when your account is provisioned.</li>
-                <li><strong>Information we get from your use of the system:</strong> This includes research manuscripts, abstracts, comments, annotations, and system logs such as access times and IP addresses for security auditing.</li>
-              </ul>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">2. How We Use Information</h3>
-              <p className="mb-2">The information we collect from the portal is used to:</p>
-              <ul className="list-disc pl-4 mb-6 space-y-1">
-                <li>Provide, maintain, and improve the ARCHIVIO platform.</li>
-                <li>Authenticate users and ensure secure access to academic research.</li>
-                <li>Index and archive university research for access by authorized university personnel.</li>
-                <li>Communicate with you regarding system updates, research statuses, or administrative notices.</li>
-              </ul>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">3. Data Security</h3>
-              <p className="mb-2">We work hard to protect SWU PHINMA and our users from unauthorized access to or unauthorized alteration, disclosure, or destruction of information we hold. In particular:</p>
-              <ul className="list-disc pl-4 mb-6 space-y-1">
-                <li>We encrypt many of our services using SSL.</li>
-                <li>We restrict access to personal information to SWU PHINMA employees, contractors, and agents who need to know that information in order to process it for us.</li>
-              </ul>
-
-              <h3 className="text-lg font-serif font-bold text-[#2d1b11] mb-2">4. Sharing of Information</h3>
-              <p>We do not share personal information with companies, organizations, and individuals outside of SWU PHINMA unless one of the following circumstances applies: with your consent, for external academic processing (if applicable), or for legal reasons. Research abstracts may be made available to other enrolled students or faculty within the platform.</p>
-            </div>
-            <div className="p-4 border-t border-[#d2c9b6] bg-white/80 flex justify-end">
-              <button onClick={() => setShowPrivacy(false)} className="bg-[#7a1f3d] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#5c172e] transition-colors shadow-md">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Official Standalone Policy Modals */}
+      <PrivacyPolicyModal 
+        isOpen={showPrivacy} 
+        mode={privacyModalTab}
+        onClose={() => setShowPrivacy(false)} 
+      />
     </div>
   );
 }

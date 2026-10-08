@@ -13,7 +13,7 @@ import { auth } from '../firebase/config';
  * @param {object} body - JSON body to send
  * @returns {Promise<Response>}
  */
-export async function authFetch(url, body) {
+export async function authFetch(url, body, options = {}) {
   let idToken = null;
 
   try {
@@ -29,7 +29,10 @@ export async function authFetch(url, body) {
     console.warn('Could not get ID token:', err.message);
   }
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
   if (idToken) {
     headers['Authorization'] = `Bearer ${idToken}`;
   }
@@ -38,5 +41,6 @@ export async function authFetch(url, body) {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    ...options
   });
 }

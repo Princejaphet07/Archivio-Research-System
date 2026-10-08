@@ -43,8 +43,17 @@ function MobileBottomNav({ onOpenMenu }) {
           let count = 0;
           groupsData.forEach(group => {
             const sub = subsData.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
-            const status = sub.reviewStatus || 'in_progress';
-            if (status === 'pending' || status === 'in_progress') count++;
+            const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
+            const docKeys = sub.documents && typeof sub.documents === 'object' ? Object.keys(sub.documents) : [];
+            const uploadedCount = Math.max(uploadedDocs.length, docKeys.length, (sub.manuscriptUrl || sub.fileUrl ? 1 : 0));
+
+            // Do not put notification if student hasn't uploaded a file or requirements
+            if (uploadedCount === 0) return;
+
+            const status = sub.reviewStatus;
+            if (status === 'pending' || status === 'needs_review' || status === 'reviewed') {
+              count++;
+            }
           });
           setPendingSubCount(count);
         });

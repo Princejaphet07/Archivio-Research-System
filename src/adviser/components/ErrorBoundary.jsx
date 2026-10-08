@@ -1,4 +1,5 @@
 import React from 'react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -64,7 +65,13 @@ class ErrorBoundary extends React.Component {
             textAlign: 'center',
             maxWidth: '500px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{isChunkError ? '🔄' : '⚠️'}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              {isChunkError ? (
+                <RefreshCw className="w-12 h-12 text-[#7a2e46] animate-spin" />
+              ) : (
+                <AlertTriangle className="w-12 h-12 text-amber-500" />
+              )}
+            </div>
             <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>
               {isChunkError ? 'New Update Available' : 'Oops! Something went wrong.'}
             </h1>

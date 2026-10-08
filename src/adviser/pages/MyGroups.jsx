@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { Users, Calendar, FolderKanban, User, X, CheckCircle2 } from 'lucide-react';
+import RequirementIcon from '../components/RequirementIcon';
 
 function MyGroups() {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [requirements, setRequirements] = useState([]);
@@ -123,7 +127,7 @@ function MyGroups() {
             <TableSkeleton columns={3} rows={3} />
           ) : paginatedGroups.length === 0 ? (
             <Card glass={true} className="p-8 text-center">
-              <span className="text-3xl block mb-2">📋</span>
+              <FolderKanban className="w-10 h-10 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
               <p className="text-gray-600 dark:text-stone-300 font-medium">
                 {searchQuery ? 'No groups match your search' : 'No approved groups yet'}
               </p>
@@ -164,8 +168,8 @@ function MyGroups() {
                   )}
 
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
-                    <span>👥 {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
-                    <span>📅 {registeredDate}</span>
+                    <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {registeredDate}</span>
                   </div>
 
                   <PremiumButton
@@ -203,7 +207,7 @@ function MyGroups() {
                   <tr>
                     <td colSpan="6" className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
-                        <span className="text-3xl">📋</span>
+                        <FolderKanban className="w-10 h-10 text-stone-300 dark:text-stone-600 mb-1" />
                         <p className="text-gray-500 dark:text-stone-400 font-medium">
                           {searchQuery ? 'No groups match your search' : 'No approved groups yet'}
                         </p>
@@ -234,13 +238,25 @@ function MyGroups() {
                           </div>
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <PremiumButton
-                            onClick={() => handleView(group)}
-                            variant="ghost"
-                            size="sm"
-                          >
-                            View
-                          </PremiumButton>
+                          <div className="flex items-center justify-center gap-2">
+                            <PremiumButton
+                              onClick={() => handleView(group)}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              View
+                            </PremiumButton>
+                            <PremiumButton
+                              onClick={() => {
+                                navigate('/adviser/review-submissions', { state: { filterGroup: group.groupName } });
+                              }}
+                              variant="primary"
+                              size="sm"
+                              className="bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900 text-xs"
+                            >
+                              Review
+                            </PremiumButton>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -315,7 +331,7 @@ function MyGroups() {
                   onClick={() => setShowModal(false)}
                   className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-sm cursor-pointer"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
                 <p className="text-white/70 dark:text-stone-400 text-[10px] tracking-widest uppercase font-bold mb-1">Group Details</p>
                 <h2 className="text-xl sm:text-2xl font-serif font-bold leading-tight">{selectedGroup.groupName}</h2>
@@ -371,14 +387,19 @@ function MyGroups() {
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-2">Group Members</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
-                      👤 {selectedGroup.leaderName} (Leader)
+                    <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" /> {selectedGroup.leaderName} (Leader)
                     </span>
-                    {selectedGroup.members?.map((m, i) => (
-                      <span key={i} className="bg-gray-100 dark:bg-stone-800 text-gray-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full">
-                        {m.name || m.email}
-                      </span>
-                    ))}
+                    {selectedGroup.members?.map((m, i) => {
+                      const memberName = typeof m === 'object'
+                        ? (m.name || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || `Member ${i + 2}`)
+                        : (typeof m === 'string' && m.includes('@') ? m.split('@')[0] : (m || `Member ${i + 2}`));
+                      return (
+                        <span key={i} className="bg-gray-100 dark:bg-stone-800 text-gray-700 dark:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 dark:border-stone-700 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5" /> {memberName}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -408,7 +429,9 @@ function MyGroups() {
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="text-lg shrink-0">{req.icon || '📄'}</span>
+                            <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0 border border-stone-200/50 dark:border-stone-700/50">
+                              <RequirementIcon icon={req.icon} type={req.type} title={req.title} className="w-4 h-4" />
+                            </div>
                             <div className="min-w-0 flex-1">
                               <p className={`text-sm font-bold ${isUploaded ? 'text-green-800 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{req.title || req.id}</p>
                               {isUploaded && docMeta && (
@@ -419,7 +442,9 @@ function MyGroups() {
                           <div className="flex items-center gap-2 shrink-0">
                             {isUploaded ? (
                               <>
-                                <span className="text-green-700 dark:text-green-500 font-bold text-xs">✓</span>
+                                <span className="text-green-700 dark:text-green-500 font-bold text-xs flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </span>
                                 {docMeta?.url && docMeta.url !== '#' && (
                                   <a
                                     href={docMeta.url}
@@ -432,7 +457,9 @@ function MyGroups() {
                                 )}
                               </>
                             ) : (
-                              <span className="text-red-600 dark:text-red-500 font-bold text-xs">✕ Missing</span>
+                              <span className="text-red-600 dark:text-red-500 font-bold text-xs flex items-center gap-1">
+                                <X className="w-3.5 h-3.5" /> Missing
+                              </span>
                             )}
                           </div>
                         </div>
@@ -455,13 +482,24 @@ function MyGroups() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex justify-end bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
+              <div className="border-t border-gray-200 dark:border-stone-800 p-4 flex items-center justify-between bg-gray-50 dark:bg-stone-900 rounded-b-2xl">
                 <button
                   onClick={() => setShowModal(false)}
                   className="border border-gray-300 dark:border-stone-700 text-gray-700 dark:text-stone-300 px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-stone-800 transition"
                 >
                   Close
                 </button>
+                <PremiumButton
+                  onClick={() => {
+                    setShowModal(false);
+                    navigate('/adviser/review-submissions', { state: { filterGroup: selectedGroup.groupName } });
+                  }}
+                  variant="primary"
+                  size="sm"
+                  className="bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900"
+                >
+                  Open in Review Queue →
+                </PremiumButton>
               </div>
             </div>
           </div>

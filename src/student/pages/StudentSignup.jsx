@@ -8,6 +8,7 @@ import parchmentBg from '../../assets/parchment.jpg';
 import Swal from 'sweetalert2';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
 import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
+import PolicyAgreement from '../../components/PolicyAgreement';
 
 const DEFAULT_CATEGORIES_LIST = [];
 const DEFAULT_PROGRAMS_LIST = [];
@@ -21,6 +22,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [policyAccepted, setPolicyAccepted] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [isPrefilled, setIsPrefilled] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -40,42 +42,80 @@ export default function StudentSignup({ onSwitchPage }) {
   const [groupInfo, setGroupInfo] = useState({
     groupName: '',
     researchTitle: '',
-    category: '', // NEW
+    researchAdviser: '',
     members: []
   });
-  const [memberInput, setMemberInput] = useState('');
   const [memberNameInput, setMemberNameInput] = useState('');
-  const [categoriesList, setCategoriesList] = useState([]); // Dynamic from Adviser
+  const [advisersList, setAdvisersList] = useState([]);
   const [programsList, setProgramsList] = useState([]);
 
-  // Fetch Categories dynamically from the Adviser's created research categories
+  // Fetch Advisers dynamically from Firestore for auto-complete suggestions
   useEffect(() => {
-    const adviserEmail = (invitationData?.sentBy || '').toLowerCase().trim();
-    const adviserUid = invitationData?.adviserId || '';
+    let advisersArr = [];
+    let deansArr = [];
 
-    const unsubCats = onSnapshot(collection(db, 'categories'), (snap) => {
-      const allCats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      let relevantCats = [];
-      if (adviserEmail || adviserUid) {
-        relevantCats = allCats.filter(c => {
-          const catCreatedBy = (c.createdBy || '').toLowerCase().trim();
-          return catCreatedBy === adviserEmail || (adviserUid && c.adviserUid === adviserUid);
-        });
-      } else {
-        relevantCats = [];
+    const updateAdvisers = () => {
+      const combined = [...advisersArr, ...deansArr];
+      const uniqueAdvisers = [];
+      const seen = new Set();
+      for (const a of combined) {
+        const key = (a.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          uniqueAdvisers.push(a);
+        }
       }
+      uniqueAdvisers.sort((a, b) => a.name.localeCompare(b.name));
+      setAdvisersList(uniqueAdvisers);
+    };
 
-      const catNames = relevantCats.map(c => c.name?.trim()).filter(Boolean);
-      const uniqueNames = [...new Set(catNames)];
-      setCategoriesList(uniqueNames);
-    }, (error) => {
-      console.error("Error fetching categories:", error);
-      setCategoriesList([]);
+    const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
+      advisersArr = snap.docs.map(d => {
+        const data = d.data();
+        const fullName = data.displayName || (data.firstName ? `${data.firstName} ${data.lastName}` : '').trim();
+        return {
+          id: d.id,
+          name: fullName,
+          email: data.email || '',
+          department: data.department || ''
+        };
+      }).filter(a => a.name);
+      updateAdvisers();
+    }, (err) => {
+      console.warn("Notice: Advisers list fetch:", err);
     });
 
-    return () => unsubCats();
-  }, [invitationData?.sentBy, invitationData?.adviserId]);
+    const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
+      deansArr = snap.docs.map(d => {
+        const data = d.data();
+        const fullName = data.displayName || (data.firstName ? `${data.firstName} ${data.lastName}` : '').trim();
+        return {
+          id: d.id,
+          name: fullName,
+          email: data.email || '',
+          department: data.department || ''
+        };
+      }).filter(a => a.name);
+      updateAdvisers();
+    }, (err) => {
+      console.warn("Notice: Deans list fetch:", err);
+    });
+
+    return () => {
+      unsubAdvisers();
+      unsubDeans();
+    };
+  }, []);
+
+  // Research Adviser is locked to the adviser who sent the invitation
+  const isAdviserLocked = !!invitationData?.sentByName;
+
+  // Pre-fill researchAdviser if invitation has sentByName
+  useEffect(() => {
+    if (invitationData?.sentByName) {
+      setGroupInfo(prev => ({ ...prev, researchAdviser: invitationData.sentByName }));
+    }
+  }, [invitationData?.sentByName]);
 
   // Fetch Programs dynamically from Firestore (created by Admin in System Settings > Departments & Programs)
   useEffect(() => {
@@ -88,6 +128,28 @@ export default function StudentSignup({ onSwitchPage }) {
     });
     return () => unsubProgs();
   }, []);
+
+  // Sanitizes course name so it NEVER includes parenthetical college/school/department suffixes
+  const cleanCourseName = (name, school, department) => {
+    if (!name) return '';
+    let cleaned = name.replace(/\s*\((?:College|School|Department|Faculty)[^)]*\)/gi, '').trim();
+    if (school) {
+      const escSchool = school.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      cleaned = cleaned.replace(new RegExp(`\\s*\\(${escSchool}\\)`, 'gi'), '').trim();
+    }
+    if (department) {
+      const escDept = department.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      cleaned = cleaned.replace(new RegExp(`\\s*\\(${escDept}\\)`, 'gi'), '').trim();
+    }
+    return cleaned;
+  };
+
+  // Generates clean option label: "CODE - Course Name" (e.g. "BSIT - Bachelor of Science in Information Technology")
+  const getCourseOptionLabel = (prog) => {
+    if (!prog) return '';
+    const cleanName = cleanCourseName(prog.name, prog.school, prog.department);
+    return prog.code ? `${prog.code} - ${cleanName}` : cleanName;
+  };
 
   // Autofill schoolEmail if present in URL and pre-fetch invitation data
   useEffect(() => {
@@ -147,44 +209,35 @@ export default function StudentSignup({ onSwitchPage }) {
   };
 
   const handleAddMember = () => {
-    const email = memberInput.trim().toLowerCase();
     const name = memberNameInput.trim();
-    const mErrors = {};
-    if (!name) mErrors.memberNameInput = 'Member name is required';
-    if (!email) {
-      mErrors.memberInput = 'Member email is required';
-    } else {
-      const memberEmailCheck = validateStudentSchoolEmail(email);
-      if (!memberEmailCheck.isValid) {
-        mErrors.memberInput = memberEmailCheck.error;
-      }
-    }
-    if (Object.keys(mErrors).length > 0) {
-      setFormErrors(prev => ({ ...prev, ...mErrors }));
-      setError('Please provide valid member details');
-      const firstKey = Object.keys(mErrors)[0];
-      document.getElementById(`signup-${firstKey}`)?.focus();
+    if (!name) {
+      setFormErrors(prev => ({ ...prev, memberNameInput: 'Member name is required' }));
+      setError('Please provide a member name');
+      document.getElementById('signup-memberNameInput')?.focus();
       return;
     }
-    if (groupInfo.members.find(m => m.email === email)) {
-      setFormErrors(prev => ({ ...prev, memberInput: 'This member is already added' }));
+    const alreadyExists = groupInfo.members.some(m => {
+      const existingName = typeof m === 'object' ? m.name : m;
+      return existingName?.trim().toLowerCase() === name.toLowerCase();
+    });
+    if (alreadyExists) {
+      setFormErrors(prev => ({ ...prev, memberNameInput: 'This member is already added' }));
       setError('This member is already added');
       return;
     }
     setError('');
-    setFormErrors(prev => ({ ...prev, memberInput: '', memberNameInput: '' }));
+    setFormErrors(prev => ({ ...prev, memberNameInput: '' }));
     setGroupInfo(prev => ({
       ...prev,
-      members: [...prev.members, { email, name }]
+      members: [...prev.members, { name, email: '' }]
     }));
-    setMemberInput('');
     setMemberNameInput('');
   };
 
-  const handleRemoveMember = (email) => {
+  const handleRemoveMember = (indexToRemove) => {
     setGroupInfo(prev => ({
       ...prev,
-      members: prev.members.filter(m => m.email !== email)
+      members: prev.members.filter((_, idx) => idx !== indexToRemove)
     }));
   };
 
@@ -274,10 +327,8 @@ export default function StudentSignup({ onSwitchPage }) {
   const validateStep2 = () => {
     const errors = {};
     if (!groupInfo.groupName.trim()) errors.groupName = 'Group name is required';
-    if (!groupInfo.category) {
-      errors.category = categoriesList.length === 0
-        ? 'No categories available. Your research adviser has not added any categories yet.'
-        : 'Category is required';
+    if (!groupInfo.researchAdviser.trim()) {
+      errors.researchAdviser = 'Research Adviser is required';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -313,8 +364,8 @@ export default function StudentSignup({ onSwitchPage }) {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!securityInfo.agreeTerms) {
-      errors.agreeTerms = 'You must agree to the Terms and Conditions';
+    if (!securityInfo.agreeTerms || !policyAccepted) {
+      errors.agreeTerms = 'You must read and agree to both the Terms and Conditions and Privacy Policy';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -358,7 +409,10 @@ export default function StudentSignup({ onSwitchPage }) {
       await Promise.all(deleteGroupPromises);
 
       // Resolve selected course/program and its department (created by Admin)
-      const selectedProg = programsList.find(p => p.name === personalInfo.course || p.code === personalInfo.course);
+      const selectedProg = programsList.find(p => {
+        const cleaned = cleanCourseName(p.name, p.school, p.department);
+        return cleaned === personalInfo.course || p.name === personalInfo.course || p.code === personalInfo.course;
+      });
       const resolvedDept = selectedProg?.school || selectedProg?.department || invitationData?.department || 'Not specified';
       const resolvedProgCode = selectedProg?.code || '';
 
@@ -415,6 +469,13 @@ export default function StudentSignup({ onSwitchPage }) {
 
       } else {
         // --- LEADER SIGNUP ---
+        const chosenAdviserName = groupInfo.researchAdviser.trim();
+        const matchedAdviser = advisersList.find(a => 
+          a.name.toLowerCase() === chosenAdviserName.toLowerCase()
+        );
+        const resolvedAdviserEmail = matchedAdviser?.email || invitationData.sentBy || '';
+        const resolvedAdviserName = chosenAdviserName || invitationData.sentByName || 'Not assigned';
+
         await setDoc(doc(db, 'students', uid), {
           uid,
           firstName: personalInfo.firstName.trim(),
@@ -428,9 +489,11 @@ export default function StudentSignup({ onSwitchPage }) {
           yearLevel: personalInfo.yearLevel,
           groupName: groupInfo.groupName.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
+          researchAdviser: resolvedAdviserName,
+          adviserName: resolvedAdviserName,
           groupMembers: groupInfo.members,
-          invitedBy: invitationData.sentBy,
-          invitedByName: invitationData.sentByName,
+          invitedBy: resolvedAdviserEmail || invitationData.sentBy,
+          invitedByName: resolvedAdviserName,
           department: resolvedDept,
           role: 'student',
           status: 'active',
@@ -452,7 +515,8 @@ export default function StudentSignup({ onSwitchPage }) {
         await addDoc(collection(db, 'groups'), {
           groupName: groupInfo.groupName.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
-          category: groupInfo.category || 'Uncategorized',
+          researchAdviser: resolvedAdviserName,
+          category: 'General',
           leaderUid: uid,
           leaderName: `${personalInfo.firstName.trim()} ${personalInfo.lastName.trim()}`,
           leaderEmail: email,
@@ -460,8 +524,8 @@ export default function StudentSignup({ onSwitchPage }) {
           programCode: resolvedProgCode,
           department: resolvedDept,
           members: groupInfo.members,
-          adviserUid: invitationData.sentBy,
-          adviserName: invitationData.sentByName,
+          adviserUid: resolvedAdviserEmail,
+          adviserName: resolvedAdviserName,
           status: 'pending',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -581,7 +645,7 @@ export default function StudentSignup({ onSwitchPage }) {
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-lg bg-[#fdfaf4] rounded-2xl shadow-xl p-5 sm:p-8 border border-[#ddd5c8]">
+      <div className="w-full max-w-xl bg-[#fdfaf4] rounded-2xl shadow-xl p-6 sm:p-9 border border-[#ddd5c8]">
 
         <StepIndicator />
 
@@ -600,13 +664,15 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 1: Personal Info ──────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h2 className="text-2xl font-bold text-[#2A1115] text-center mb-1">Personal Information</h2>
-            <p className="text-xs text-gray-500 text-center mb-1">Please provide your details to continue</p>
+            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Personal Information</h2>
+            <p className="text-sm text-gray-500 text-center mb-1.5">Please provide your details to continue</p>
             <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">* First Name</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  First Name <span className="text-red-500 font-bold ml-0.5">*</span>
+                </label>
                 <input 
                   id="signup-firstName"
                   name="firstName" 
@@ -614,7 +680,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Juan"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
                     formErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
@@ -625,7 +691,9 @@ export default function StudentSignup({ onSwitchPage }) {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">Middle Name</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  Middle Name
+                </label>
                 <input 
                   id="signup-middleName"
                   name="middleName" 
@@ -633,14 +701,16 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Carlos"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#6B0F1A]" 
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:border-[#6B0F1A]" 
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Last Name</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  Last Name <span className="text-red-500 font-bold ml-0.5">*</span>
+                </label>
                 <input 
                   id="signup-lastName"
                   name="lastName" 
@@ -648,7 +718,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Reyes"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
                     formErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
@@ -659,7 +729,9 @@ export default function StudentSignup({ onSwitchPage }) {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Student Number</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  Student Number <span className="text-red-500 font-bold ml-0.5">*</span>
+                </label>
                 <input 
                   id="signup-studentNumber"
                   name="studentNumber" 
@@ -667,7 +739,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="20-2222-001"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
                     formErrors.studentNumber ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
@@ -679,8 +751,10 @@ export default function StudentSignup({ onSwitchPage }) {
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* School Email</label>
+            <div className="mb-3.5">
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                School Email <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <input 
                 id="signup-schoolEmail"
                 name="schoolEmail" 
@@ -689,7 +763,7 @@ export default function StudentSignup({ onSwitchPage }) {
                 type="email" 
                 placeholder="jcreyes.swu@phinmaed.com"
                 readOnly={isPrefilled}
-                className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none transition-colors ${
+                className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
                   formErrors.schoolEmail ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                 } ${isPrefilled ? 'opacity-70 cursor-not-allowed bg-gray-100/50' : ''}`} 
               />
@@ -698,31 +772,36 @@ export default function StudentSignup({ onSwitchPage }) {
                   <span>⚠️</span> {formErrors.schoolEmail}
                 </p>
               )}
-              <p className="text-[10px] text-gray-400 mt-1 pl-2">
+              <p className="text-xs text-gray-500 mt-1.5 pl-2">
                 {isPrefilled ? "Pre-filled from your invitation link (Cannot be edited)" : "Must be a valid @phinmaed.com email"}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="grid grid-cols-2 gap-3.5 mb-6">
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Course</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  Course <span className="text-red-500 font-bold ml-0.5">*</span>
+                </label>
                 <select 
                   id="signup-course"
                   name="course" 
                   value={personalInfo.course} 
                   onChange={handlePersonalChange}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
                     formErrors.course ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
                   <option value="">
                     {programsList.length === 0 ? 'No courses available (Contact Admin)' : 'Select your course'}
                   </option>
-                  {programsList.map(prog => (
-                    <option key={prog.id || prog.code} value={prog.name}>
-                      {prog.code ? `${prog.code} - ` : ''}{prog.name}{prog.school ? ` (${prog.school})` : prog.department ? ` (${prog.department})` : ''}
-                    </option>
-                  ))}
+                  {programsList.map(prog => {
+                    const cleanName = cleanCourseName(prog.name, prog.school, prog.department) || prog.name;
+                    return (
+                      <option key={prog.id || prog.code} value={cleanName}>
+                        {getCourseOptionLabel(prog)}
+                      </option>
+                    );
+                  })}
                 </select>
                 {formErrors.course && (
                   <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
@@ -731,13 +810,15 @@ export default function StudentSignup({ onSwitchPage }) {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Year Level</label>
+                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                  Year Level <span className="text-red-500 font-bold ml-0.5">*</span>
+                </label>
                 <select 
                   id="signup-yearLevel"
                   name="yearLevel" 
                   value={personalInfo.yearLevel} 
                   onChange={handlePersonalChange}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
                     formErrors.yearLevel ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
@@ -756,16 +837,16 @@ export default function StudentSignup({ onSwitchPage }) {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3.5">
               <button
                 type="button" onClick={() => onSwitchPage('login')}
-                className="flex-1 py-2.5 border border-[#6B0F1A] text-[#6B0F1A] rounded-full text-sm font-semibold hover:bg-[#6B0F1A]/5 transition">
+                className="flex-1 min-h-[46px] py-3 border border-[#6B0F1A] text-[#6B0F1A] rounded-full text-sm sm:text-base font-semibold hover:bg-[#6B0F1A]/5 transition flex items-center justify-center">
                 ‹ Back
               </button>
               <button
                 type="button" onClick={handleContinueFromStep1}
                 disabled={loading}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition disabled:opacity-50 flex items-center justify-center">
+                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition disabled:opacity-50 flex items-center justify-center">
                 {loading ? 'Checking...' : 'Continue ›'}
               </button>
             </div>
@@ -775,12 +856,14 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 2: Group Info ─────────────────────────────────── */}
         {step === 2 && (
           <div>
-            <h2 className="text-2xl font-bold text-[#2A1115] text-center mb-1">Group Information</h2>
-            <p className="text-xs text-gray-500 text-center mb-1">Tell us about your research group and team members</p>
+            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Group Information</h2>
+            <p className="text-sm text-gray-500 text-center mb-1.5">Tell us about your research group and team members</p>
             <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
 
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Group Name</label>
+            <div className="mb-3.5">
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                Group Name <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <div className="relative">
                 <input 
                   id="signup-groupName"
@@ -791,11 +874,11 @@ export default function StudentSignup({ onSwitchPage }) {
                   }}
                   type="text" 
                   placeholder="e.g., Group HealthAI"
-                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
                     formErrors.groupName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
-                <span className="absolute right-3 top-2.5 text-gray-300 text-sm">👥</span>
+                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">👥</span>
               </div>
               {formErrors.groupName && (
                 <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
@@ -804,8 +887,10 @@ export default function StudentSignup({ onSwitchPage }) {
               )}
             </div>
 
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Research Title</label>
+            <div className="mb-3.5">
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                Research Title <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <div className="relative">
                 <input 
                   id="signup-researchTitle"
@@ -816,11 +901,11 @@ export default function StudentSignup({ onSwitchPage }) {
                   }}
                   type="text" 
                   placeholder="e.g., ML-Based Health Monitor"
-                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
                     formErrors.researchTitle ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
-                <span className="absolute right-3 top-2.5 text-gray-300 text-sm">📄</span>
+                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">📄</span>
               </div>
               {formErrors.researchTitle && (
                 <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
@@ -829,126 +914,114 @@ export default function StudentSignup({ onSwitchPage }) {
               )}
             </div>
 
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Category</label>
+            <div className="mb-3.5">
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                Research Adviser <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <div className="relative">
-                <select 
-                  id="signup-category"
-                  value={groupInfo.category} 
+                <input 
+                  id="signup-researchAdviser"
+                  list={isAdviserLocked ? undefined : 'signup-advisers-list'}
+                  value={groupInfo.researchAdviser} 
                   onChange={e => {
-                    setGroupInfo(p => ({ ...p, category: e.target.value }));
-                    if (formErrors.category) setFormErrors(p => ({ ...p, category: '' }));
+                    if (isAdviserLocked) return;
+                    setGroupInfo(p => ({ ...p, researchAdviser: e.target.value }));
+                    if (formErrors.researchAdviser) setFormErrors(p => ({ ...p, researchAdviser: '' }));
                   }}
-                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs text-gray-700 focus:outline-none appearance-none transition-colors ${
-                    formErrors.category ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
-                  }`}
-                >
-                  <option value="">
-                    {categoriesList.length === 0 ? 'No categories available (Adviser must add research categories)' : 'Select Category'}
-                  </option>
-                  {categoriesList.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  disabled={isAdviserLocked}
+                  type="text" 
+                  placeholder="e.g., Dr. Juan Dela Cruz"
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
+                    formErrors.researchAdviser ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  } ${isAdviserLocked ? 'opacity-70 cursor-not-allowed bg-gray-100/50 text-gray-700' : ''}`} 
+                />
+                <datalist id="signup-advisers-list">
+                  {advisersList.map((adv, idx) => (
+                    <option key={adv.id || idx} value={adv.name} />
                   ))}
-                </select>
-                <span className="absolute right-3 top-2.5 text-gray-300 text-sm pointer-events-none">▼</span>
+                </datalist>
+                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">👨‍🏫</span>
               </div>
-              {formErrors.category && (
+              {formErrors.researchAdviser && (
                 <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
-                  <span>⚠️</span> {formErrors.category}
+                  <span>⚠️</span> {formErrors.researchAdviser}
+                </p>
+              )}
+              {isAdviserLocked && (
+                <p className="text-xs text-gray-500 mt-1.5 pl-2">
+                  Assigned from your invitation (Cannot be edited)
                 </p>
               )}
             </div>
 
             {/* Team Members */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-[#2A1115] mb-1 uppercase tracking-wide">Team Members</label>
-              <p className="text-[10px] text-gray-400 mb-2">Add your group members (you are the Leader)</p>
+            <div className="mb-5">
+              <label className="block text-sm font-bold text-[#2A1115] mb-1 uppercase tracking-wide">Team Members</label>
+              <p className="text-xs text-gray-500 mb-2.5">Add your group members (you are the Leader)</p>
 
               {/* Leader (self) */}
-              <div className="flex items-center gap-2 p-3 bg-[#6B0F1A] text-white rounded-xl mb-2">
+              <div className="flex items-center gap-2.5 p-3 sm:p-3.5 bg-[#6B0F1A] text-white rounded-xl mb-2.5">
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {personalInfo.firstName.charAt(0)}{personalInfo.lastName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">{personalInfo.firstName} {personalInfo.lastName} (You)</p>
-                  <p className="text-[10px] opacity-70 truncate">{personalInfo.studentNumber} · {personalInfo.schoolEmail}</p>
+                  <p className="text-xs sm:text-sm font-semibold truncate">{personalInfo.firstName} {personalInfo.lastName} (You)</p>
+                  <p className="text-[11px] opacity-75 truncate">{personalInfo.studentNumber} · {personalInfo.schoolEmail}</p>
                 </div>
                 <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full flex-shrink-0">LEADER</span>
               </div>
 
               {/* Added members */}
               {groupInfo.members.map((m, i) => (
-                <div key={m.email} className="flex items-center gap-2 p-3 bg-[#faf6f0] border border-[#d5c9bb] rounded-xl mb-2">
+                <div key={i} className="flex items-center gap-2.5 p-3 bg-[#faf6f0] border border-[#d5c9bb] rounded-xl mb-2.5">
                   <div className="w-7 h-7 rounded-full bg-[#6B0F1A]/10 flex items-center justify-center text-xs font-bold text-[#6B0F1A] flex-shrink-0">
                     {i + 2}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{m.name}</p>
-                    <p className="text-[10px] text-gray-500 truncate">{m.email}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate">{typeof m === 'object' ? m.name : m}</p>
+                    {m.email ? <p className="text-[11px] text-gray-500 truncate">{m.email}</p> : null}
                   </div>
-                  <button onClick={() => handleRemoveMember(m.email)} className="text-gray-400 hover:text-red-500 text-sm flex-shrink-0">✕</button>
+                  <button type="button" onClick={() => handleRemoveMember(i)} className="text-gray-400 hover:text-red-500 text-sm flex-shrink-0 p-1 cursor-pointer">✕</button>
                 </div>
               ))}
 
               {/* Add member input */}
-              <div className="flex gap-2 mt-2">
-                <div className="flex-1 flex flex-col gap-2">
-                  <div>
-                    <input
-                      id="signup-memberNameInput"
-                      value={memberNameInput} 
-                      onChange={e => {
-                        setMemberNameInput(e.target.value);
-                        if (formErrors.memberNameInput) setFormErrors(p => ({ ...p, memberNameInput: '' }));
-                      }}
-                      type="text" 
-                      placeholder="Full Name (e.g. Juan Dela Cruz)"
-                      className={`w-full bg-[#faf6f0] border rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${
-                        formErrors.memberNameInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
-                      }`} 
-                    />
-                    {formErrors.memberNameInput && (
-                      <p className="text-[10px] text-red-500 mt-0.5 font-semibold pl-1">
-                        <span>⚠️</span> {formErrors.memberNameInput}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      id="signup-memberInput"
-                      value={memberInput} 
-                      onChange={e => {
-                        setMemberInput(e.target.value);
-                        if (formErrors.memberInput) setFormErrors(p => ({ ...p, memberInput: '' }));
-                      }}
-                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
-                      type="email" 
-                      placeholder="Email (member.swu@phinmaed.com)"
-                      className={`w-full bg-[#faf6f0] border rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${
-                        formErrors.memberInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
-                      }`} 
-                    />
-                    {formErrors.memberInput && (
-                      <p className="text-[10px] text-red-500 mt-0.5 font-semibold pl-1">
-                        <span>⚠️</span> {formErrors.memberInput}
-                      </p>
-                    )}
-                  </div>
+              <div className="flex gap-2.5 mt-2.5 items-start">
+                <div className="flex-1">
+                  <input
+                    id="signup-memberNameInput"
+                    value={memberNameInput} 
+                    onChange={e => {
+                      setMemberNameInput(e.target.value);
+                      if (formErrors.memberNameInput) setFormErrors(p => ({ ...p, memberNameInput: '' }));
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
+                    type="text" 
+                    placeholder="Full Name (e.g. Juan Dela Cruz)"
+                    className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors min-h-[46px] ${
+                      formErrors.memberNameInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                    }`} 
+                  />
+                  {formErrors.memberNameInput && (
+                    <p className="text-[11px] text-red-500 mt-1 font-semibold pl-1">
+                      <span>⚠️</span> {formErrors.memberNameInput}
+                    </p>
+                  )}
                 </div>
                 <button type="button" onClick={handleAddMember}
-                  className="px-4 py-2 bg-[#6B0F1A] text-white rounded-lg text-xs font-semibold hover:bg-[#540c14] transition self-stretch min-h-[44px] touch-manipulation flex items-center justify-center">
+                  className="px-6 py-2.5 bg-[#6B0F1A] text-white rounded-xl text-sm font-semibold hover:bg-[#540c14] transition min-h-[46px] touch-manipulation flex items-center justify-center cursor-pointer shrink-0">
                   Add
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3.5">
               <button type="button" onClick={() => setStep(1)}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
+                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
                 ‹ Back
               </button>
               <button type="button" onClick={() => { if (validateStep2()) setStep(3); }}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
+                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
                 Continue ›
               </button>
             </div>
@@ -958,12 +1031,14 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 3: Account Security ───────────────────────────── */}
         {step === 3 && (
           <form onSubmit={handleCreateAccount}>
-            <h2 className="text-2xl font-bold text-[#2A1115] text-center mb-1">Account Security</h2>
-            <p className="text-xs text-gray-500 text-center mb-1">Set your password and verify your email</p>
+            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Account Security</h2>
+            <p className="text-sm text-gray-500 text-center mb-1.5">Set your password and verify your email</p>
             <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
 
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Password</label>
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                Password <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <div className="relative">
                 <input 
                   id="signup-password"
@@ -981,12 +1056,12 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2 text-xs focus:outline-none select-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none select-none transition-colors pr-11 ${
                     formErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-base">
                   {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
@@ -998,8 +1073,8 @@ export default function StudentSignup({ onSwitchPage }) {
 
               {/* Password Strength indicator */}
               {securityInfo.password && (
-                <div className="mt-2.5">
-                  <div className="flex gap-1 h-1 mb-1.5">
+                <div className="mt-3">
+                  <div className="flex gap-1 h-1 mb-2">
                     {[1, 2, 3, 4].map((level) => (
                       <div 
                         key={level}
@@ -1015,22 +1090,22 @@ export default function StudentSignup({ onSwitchPage }) {
                   </div>
                   
                   {/* Password Checklist */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2 p-2 bg-[#faf6f0]/50 rounded-lg border border-[#d5c9bb]/50">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2.5 p-3 bg-[#faf6f0]/50 rounded-xl border border-[#d5c9bb]/50">
                     <div className="flex items-center gap-1.5">
-                      {hasEight ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
-                      <span className={`text-[10px] ${hasEight ? 'text-[#2A1115]' : 'text-gray-500'}`}>At least 8 characters</span>
+                      {hasEight ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
+                      <span className={`text-xs ${hasEight ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>At least 8 characters</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {hasUp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
-                      <span className={`text-[10px] ${hasUp ? 'text-[#2A1115]' : 'text-gray-500'}`}>Uppercase letter</span>
+                      {hasUp ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
+                      <span className={`text-xs ${hasUp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Uppercase letter</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {hasNum ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
-                      <span className={`text-[10px] ${hasNum ? 'text-[#2A1115]' : 'text-gray-500'}`}>Number (0-9)</span>
+                      {hasNum ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
+                      <span className={`text-xs ${hasNum ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Number (0-9)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {hasSp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
-                      <span className={`text-[10px] ${hasSp ? 'text-[#2A1115]' : 'text-gray-500'}`}>Special char (!@#$%)</span>
+                      {hasSp ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
+                      <span className={`text-xs ${hasSp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Special char (!@#$%)</span>
                     </div>
                   </div>
                 </div>
@@ -1038,7 +1113,9 @@ export default function StudentSignup({ onSwitchPage }) {
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-[#2A1115] mb-1">* Confirm Password</label>
+              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                Confirm Password <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
               <div className="relative">
                 <input
                   id="signup-confirmPassword"
@@ -1056,12 +1133,12 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className={`w-full bg-[#faf6f0] border rounded-lg px-4 py-2.5 text-xs focus:outline-none pr-10 select-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none pr-11 select-none transition-colors ${
                     formErrors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-2 text-gray-400 hover:text-[#6B0F1A] text-base">
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-base">
                   {showConfirmPassword ? '🙈' : '👁'}
                 </button>
               </div>
@@ -1073,38 +1150,30 @@ export default function StudentSignup({ onSwitchPage }) {
             </div>
 
             {/* Terms */}
-            <div className={`flex items-start gap-2 mb-5 p-2 rounded-lg transition-colors ${formErrors.agreeTerms ? 'bg-red-50 border border-red-200' : ''}`}>
-              <input 
-                type="checkbox" 
+            <div className="mb-5">
+              <PolicyAgreement
                 id="signup-agreeTerms"
-                checked={securityInfo.agreeTerms}
-                onChange={e => {
-                  setSecurityInfo(p => ({ ...p, agreeTerms: e.target.checked }));
+                checked={securityInfo.agreeTerms && policyAccepted}
+                initiallyAccepted={policyAccepted}
+                disabled={loading}
+                error={formErrors.agreeTerms}
+                onChange={(v) => {
+                  if (v) setPolicyAccepted(true);
+                  setSecurityInfo(p => ({ ...p, agreeTerms: v }));
                   if (formErrors.agreeTerms) setFormErrors(p => ({ ...p, agreeTerms: '' }));
                 }}
-                className="w-3.5 h-3.5 mt-0.5 text-[#6B0F1A] border-gray-300 rounded" 
               />
-              <div>
-                <label htmlFor="signup-agreeTerms" className="text-[11px] text-gray-600">
-                  I agree to the <span onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-[#6B0F1A] font-semibold cursor-pointer hover:underline">Terms and Conditions and Privacy Policy</span>
-                </label>
-                {formErrors.agreeTerms && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold">
-                    <span>⚠️</span> {formErrors.agreeTerms}
-                  </p>
-                )}
-              </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3.5">
               <button type="button" onClick={() => setStep(2)}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
+                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center cursor-pointer">
                 ‹ Back
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 min-h-[44px] touch-manipulation py-2.5 rounded-full text-sm font-semibold transition disabled:opacity-50 bg-[#6B0F1A] hover:bg-[#540c14] text-white flex items-center justify-center">
+                disabled={loading || !securityInfo.agreeTerms || !policyAccepted}
+                className="flex-1 min-h-[46px] touch-manipulation py-3 rounded-full text-sm sm:text-base font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#6B0F1A] hover:bg-[#540c14] text-white flex items-center justify-center cursor-pointer">
                 {loading ? 'Creating...' : 'Create Account ✓'}
               </button>
             </div>
@@ -1113,75 +1182,12 @@ export default function StudentSignup({ onSwitchPage }) {
       </div>
 
       {/* Footer */}
-      <p className="mt-5 text-xs text-gray-500 relative z-10">
+      <p className="mt-5 text-sm text-gray-500 relative z-10">
         Already have an account?{' '}
         <button onClick={() => onSwitchPage('login')} className="text-[#6B0F1A] font-semibold hover:underline">
           Sign In
         </button>
       </p>
-
-      {/* Terms and Conditions Modal */}
-      {showTerms && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#faf6f0] border-2 border-[#d5c9bb] w-full max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all">
-            
-            <div className="bg-gradient-to-r from-[#541b2f] to-[#7a2744] p-5 flex justify-between items-center text-white shrink-0">
-              <div>
-                <h3 className="font-serif font-bold text-xl tracking-wide">ARCHIVIO</h3>
-                <p className="text-xs text-[#f7d2db] uppercase tracking-wider">Terms & Privacy Policy</p>
-              </div>
-              <button onClick={() => setShowTerms(false)} className="text-[#f7d2db] hover:text-white transition-colors text-2xl font-light leading-none">
-                &times;
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-700 leading-relaxed space-y-5 custom-scrollbar">
-              <section>
-                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">1. Acceptance of Terms</h4>
-                <p>By creating an account on the ARCHIVIO Research Management System, you agree to comply with and be bound by these Terms and Conditions. This platform is exclusively designed for students and faculty of Southwestern University PHINMA for the purpose of managing and archiving research projects.</p>
-              </section>
-
-              <section>
-                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">2. User Responsibilities & Conduct</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>You must provide accurate, current, and complete information during the registration process.</li>
-                  <li>You are responsible for safeguarding your password and any activities or actions under your account.</li>
-                  <li>You agree not to upload, share, or transmit any data that infringes upon intellectual property rights, is plagiarized, or violates university academic integrity policies.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">3. Privacy Policy & Data Usage</h4>
-                <p>Your privacy is important to us. The personal information you provide (such as your name, student number, and @phinmaed.com email) will be used solely for platform functionality, academic verification, and communication regarding your research submissions.</p>
-                <p className="mt-2">We implement strict security measures to protect your data. We will not sell, distribute, or lease your personal information to third parties unless required by law or university administrative policies.</p>
-              </section>
-
-              <section>
-                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">4. Intellectual Property</h4>
-                <p>All research papers, documents, and materials uploaded to ARCHIVIO remain the intellectual property of the respective authors. However, by submitting your work, you grant Southwestern University PHINMA a non-exclusive license to archive, preserve, and make the work accessible within the university's academic network for educational purposes.</p>
-              </section>
-
-              <section>
-                <h4 className="font-bold text-[#6B0F1A] mb-2 text-base">5. Modifications to the Service</h4>
-                <p>ARCHIVIO reserves the right to modify or discontinue, temporarily or permanently, the service (or any part thereof) with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the service.</p>
-              </section>
-            </div>
-
-            <div className="p-4 border-t border-[#d5c9bb] bg-white/50 shrink-0 flex justify-end">
-              <button 
-                onClick={() => {
-                  setSecurityInfo(p => ({ ...p, agreeTerms: true }));
-                  setShowTerms(false);
-                }}
-                className="px-6 py-2 bg-[#6B0F1A] text-white rounded-full text-sm font-semibold hover:bg-[#540c14] transition shadow-md"
-              >
-                I Agree & Continue
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );

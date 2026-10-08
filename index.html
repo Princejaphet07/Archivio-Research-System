@@ -30,5 +30,37 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Clean up injected browser extension overlays (e.g. Adobe Acrobat AI Assistant)
+      (function() {
+        const cleanupExtensionElements = () => {
+          try {
+            const targets = document.querySelectorAll('body > *:not(#root), html > *:not(head):not(body)');
+            targets.forEach(el => {
+              const tag = el.tagName.toLowerCase();
+              if (['script', 'style', 'noscript'].includes(tag)) return;
+              const text = ((el.innerText || el.textContent || '') + ' ' + (el.id || '') + ' ' + (el.className || '') + ' ' + tag).toLowerCase();
+              if (text.includes('adobe') || text.includes('acrobat') || text.includes('summarize with ai') || text.includes('convert to pdf') || text.includes('efaidnbmn')) {
+                el.style.setProperty('display', 'none', 'important');
+                el.style.setProperty('visibility', 'hidden', 'important');
+                el.style.setProperty('pointer-events', 'none', 'important');
+                try { el.remove(); } catch (e) {}
+              }
+              if (el.shadowRoot) {
+                const shadowText = (el.shadowRoot.textContent || '').toLowerCase();
+                if (shadowText.includes('adobe') || shadowText.includes('acrobat') || shadowText.includes('summarize') || shadowText.includes('convert to pdf')) {
+                  el.style.setProperty('display', 'none', 'important');
+                  try { el.remove(); } catch (e) {}
+                }
+              }
+            });
+          } catch (err) {}
+        };
+        const obs = new MutationObserver(cleanupExtensionElements);
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+        window.addEventListener('DOMContentLoaded', cleanupExtensionElements);
+        window.addEventListener('load', cleanupExtensionElements);
+      })();
+    </script>
   </body>
 </html>

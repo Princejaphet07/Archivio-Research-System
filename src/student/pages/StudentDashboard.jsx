@@ -10,7 +10,7 @@ import { Card, CardHeader, CardBody, CardFooter, StatCard, StatusBadge, SectionT
 // ── Progress step config ─────────────────────────────────────────────────────
 const STEPS = ['Account', 'Manuscript', 'Documents', 'Review', 'Published'];
 
-export default function StudentDashboard({ onLogout, studentName, initials, groupName, adviserName, onUploadClick, activeTab, setActiveTab, profilePhotoUrl, role, leaderUid }) {
+export default function StudentDashboard({ onLogout, studentName, initials, groupName, adviserName, onUploadClick, activeTab, setActiveTab, profilePhotoUrl, role, leaderUid, groupStatus }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Real backend state
@@ -32,6 +32,13 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   // Navigate to Requirements page
   const goToRequirements = () => {
     if (setActiveTab) setActiveTab('Requirements');
+  };
+
+  // Navigate to Manuscript page with auto-open preview after 2 seconds
+  const handleViewManuscript = () => {
+    sessionStorage.setItem('autoOpenManuscript', 'true');
+    window.dispatchEvent(new CustomEvent('archivio:open-manuscript-viewer'));
+    if (setActiveTab) setActiveTab('Manuscript');
   };
 
   // ── Fetch real data from Firestore ─────────────────────────────────────────
@@ -72,11 +79,32 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
     const unsubscribeSubmission = onSnapshot(submissionQuery, (snapshot) => {
       if (!snapshot.empty) {
         const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const getTime = (val) => {
+          if (!val) return 0;
+          if (typeof val.toMillis === 'function') return val.toMillis();
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+          if (val.seconds) return val.seconds * 1000;
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
+        // Smart sort to pick the active, approved, most-complete submission
         subs.sort((a, b) => {
-          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const isApprovedA = a.reviewStatus === 'approved' || a.reviewStatus === 'published' || a.status === 'approved' || a.status === 'published';
+          const isApprovedB = b.reviewStatus === 'approved' || b.reviewStatus === 'published' || b.status === 'approved' || b.status === 'published';
+          if (isApprovedA && !isApprovedB) return -1;
+          if (!isApprovedA && isApprovedB) return 1;
+
+          const docsA = (a.uploadedDocs?.length || Object.keys(a.documents || {}).length || 0);
+          const docsB = (b.uploadedDocs?.length || Object.keys(b.documents || {}).length || 0);
+          if (docsA !== docsB) return docsB - docsA;
+
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
           return timeB - timeA;
         });
+
         const sub = subs[0];
         
         setAllSubmissions(subs);
@@ -119,9 +147,9 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   const displayName       = studentData?.displayName || (studentData?.firstName ? `${studentData.firstName} ${studentData.lastName || ''}`.trim() : null) || studentName || 'Student';
   const displayGroupName  = studentData?.groupName   || studentData?.groupMembers?.groupName || groupName   || 'Your Group';
   const displayAdviser    = studentData?.invitedByName || studentData?.groupMembers?.invitedByName || adviserName || 'Your Adviser';
-  const researchTitle     = studentData?.researchTitle || submission?.title || '—';
+  const researchTitle     = studentData?.researchTitle || submission?.title || submission?.researchTitle || '—';
 
-  const hasManuscript     = !!submission?.manuscriptUrl || docsUploaded.includes('Final Manuscript');
+  const hasManuscript     = !!submission?.manuscriptUrl || docsUploaded.includes('Final Manuscript') || !!submission?.documents?.['Final Manuscript'];
   const uploadedCount     = docsUploaded.length;
   const totalRequired     = docsRequired.length || 6;
   const missingDocs       = docsRequired.filter(d => !docsUploaded.includes(d));
@@ -131,44 +159,51 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   // Determine current step
   // 0=none, 1=account created, 2=manuscript, 3=documents, 4=review, 5=published
   const hasAccount    = true; // always true if logged in
-  const allDocsSubmitted = missingCount === 0 && uploadedCount > 0;
+  const allDocsSubmitted = (missingCount === 0 && uploadedCount > 0) || (uploadedCount >= totalRequired && totalRequired > 0);
   
   // Real logic based on the actual Firestore fields used by Adviser & Dean systems
-  const isReviewed    = submission?.reviewStatus === 'approved' || submission?.reviewStatus === 'published';
-  const isPublished   = submission?.reviewStatus === 'published';
+  const reviewStatus  = submission?.reviewStatus || submission?.status || '';
+  const isRevision    = reviewStatus === 'revision' || reviewStatus === 'dean_revision' || (submission?.documentRevisions && Object.keys(submission.documentRevisions).length > 0 && !Object.values(submission.documentResubmissions || {}).every(Boolean));
+  const isDeanRevision = reviewStatus === 'dean_revision' || !!submission?.deanComments;
+  const isReviewed    = reviewStatus === 'approved' || reviewStatus === 'published' || submission?.status === 'approved' || submission?.status === 'published';
+  const isPublished   = reviewStatus === 'published';
 
   let currentStep = 1; // Account always done
   if (hasManuscript) currentStep = 2;
-  if (allDocsSubmitted) currentStep = 3;
+  if (allDocsSubmitted || (isReviewed && hasManuscript)) currentStep = 3;
   if (isReviewed)    currentStep = 4;
   if (isPublished)   currentStep = 5;
 
   const progressPercent = Math.round((Math.min(currentStep, STEPS.length - 1) / (STEPS.length - 1)) * 100);
 
   // What's next text
-  const whatsNextTitle = currentStep === 1
-    ? 'Upload your manuscript'
-    : currentStep === 2
-      ? `Upload your missing documents`
+  const whatsNextTitle = isRevision
+    ? (isDeanRevision ? "Address Dean's Revision Directive" : "Address Adviser Revision Notes")
+    : currentStep === 1
+      ? 'Upload your manuscript'
+      : currentStep === 2
+        ? `Upload your missing documents`
+        : currentStep === 3
+          ? 'Waiting for adviser review'
+          : currentStep === 4
+            ? 'Your research is under review'
+            : 'Congratulations — research published!';
+
+  const whatsNextDesc = isRevision
+    ? 'Revisions are needed before your submission can be endorsed. Check requirement feedback and resubmit.'
+    : currentStep === 1
+      ? 'Start by uploading your research manuscript to proceed.'
+      : currentStep === 2
+        ? missingCount > 0
+          ? `You're missing ${missingCount} document${missingCount > 1 ? 's' : ''} — ${missingDocs.slice(0, 2).join(' and ')}${missingCount > 2 ? ` and ${missingCount - 2} more` : ''}.`
+          : 'All documents submitted! Awaiting review.'
       : currentStep === 3
-        ? 'Waiting for adviser review'
+        ? 'Your adviser will review your submission soon.'
         : currentStep === 4
-          ? 'Your research is under review'
-          : 'Congratulations — research published!';
+          ? 'Your research has been approved and is being processed.'
+          : 'Your research is now publicly available in the archive.';
 
-  const whatsNextDesc = currentStep === 1
-    ? 'Start by uploading your research manuscript to proceed.'
-    : currentStep === 2
-      ? missingCount > 0
-        ? `You're missing ${missingCount} document${missingCount > 1 ? 's' : ''} — ${missingDocs.slice(0, 2).join(' and ')}${missingCount > 2 ? ` and ${missingCount - 2} more` : ''}.`
-        : 'All documents submitted! Awaiting review.'
-    : currentStep === 3
-      ? 'Your adviser will review your submission soon.'
-      : currentStep === 4
-        ? 'Your research has been approved and is being processed.'
-        : 'Your research is now publicly available in the archive.';
-
-  const showUploadButton = currentStep <= 2;
+  const showUploadButton = currentStep <= 2 || isRevision;
 
   // ── Loading skeleton ────────────────────────────────────────────────────────
   const Skeleton = ({ className }) => (
@@ -187,7 +222,9 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
         onLogout={onLogout}
         studentName={displayName}
         initials={initials}
-        profilePhotoUrl={profilePhotoUrl} role={role}
+        profilePhotoUrl={profilePhotoUrl} 
+        role={role}
+        groupStatus={studentData?.groupStatus || groupStatus}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -250,7 +287,12 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                 ) : (
                   <p className="text-white/80 text-[13px] sm:text-[14px]">
                     Your submission is <span className="text-white font-bold">
-                      {isPublished ? 'Published ✓'
+                      {studentData?.groupStatus === 'pending'
+                        ? 'Pending Adviser Approval'
+                        : studentData?.groupStatus === 'declined'
+                        ? 'Registration Declined'
+                        : isPublished ? 'Published ✓'
+                        : isRevision ? (isDeanRevision ? "Action Required: Dean's Revision Directive" : "Action Required: Manuscript Revision Requested")
                         : isReviewed ? 'Under Review · Step 4 of 5'
                         : allDocsSubmitted ? 'Documents Complete · Step 3 of 5'
                         : hasManuscript ? 'In Progress · Step 2 of 5'
@@ -277,8 +319,53 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                   You will be able to start your research and upload documents once approved.
                 </p>
               </div>
+            ) : studentData?.groupStatus === 'declined' ? (
+              <div className="bg-[#fef2f2] dark:bg-red-950/30 border border-[#fecaca] dark:border-red-900/50 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center text-center shadow-sm mt-4 transition-colors">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#fee2e2] dark:bg-red-900/50 text-[#dc2626] dark:text-red-400 rounded-full flex items-center justify-center mb-5">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h3 className="font-serif text-[22px] sm:text-[28px] font-bold text-[#b91c1c] dark:text-red-400 mb-2">Registration Declined</h3>
+                <p className="text-[#b91c1c]/80 dark:text-red-400/80 text-[14px] sm:text-[16px] max-w-md">
+                  Your research adviser has declined your group registration. Please contact your adviser or review your submission.
+                </p>
+              </div>
             ) : (
               <>
+                {/* ── REVISION REQUIRED ALERT ── */}
+                {isRevision && (
+                  <div className="mt-4 sm:mt-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-400 dark:border-amber-700/80 rounded-2xl p-5 sm:p-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 flex items-center justify-center shrink-0 text-2xl shadow-xs">
+                        ⚠️
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-serif font-bold text-amber-950 dark:text-amber-100 text-[18px]">
+                            {isDeanRevision ? "Dean's Revision Directive" : "Adviser Revision Requested"}
+                          </h3>
+                          <span className="text-[10px] font-bold bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Action Needed
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-amber-900/90 dark:text-amber-200/90 mt-1 leading-relaxed max-w-2xl">
+                          {submission?.deanComments || submission?.deanFeedback?.comments || submission?.adviserComments || "Specific revisions were requested on your uploaded documents. Please review the notes and resubmit your updated files."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                      <button
+                        onClick={goToRequirements}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-[#7B1F35] hover:bg-[#5f1728] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                      >
+                        <span>📝</span>
+                        <span>Open Requirements & Resubmit →</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* ── WHAT'S NEXT CARD ──────────────────────────────── */}
                 <Card hover className="mt-4 sm:mt-6">
                   {/* left accent bar */}
@@ -412,7 +499,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                     {hasManuscript ? (
                       <>
                         <PremiumButton onClick={goToRequirements} variant="ghost" size="sm" className="min-h-[40px] touch-manipulation">Edit</PremiumButton>
-                        <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">View Manuscript</PremiumButton>
+                        <PremiumButton onClick={handleViewManuscript} size="sm" className="min-h-[40px] touch-manipulation">View Manuscript</PremiumButton>
                       </>
                     ) : (
                       <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">Upload Manuscript</PremiumButton>

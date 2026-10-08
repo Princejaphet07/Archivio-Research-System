@@ -4,9 +4,16 @@ import { db, auth } from '../../firebase/config';
 import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
-export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl, role }) {
+export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl, role, groupStatus }) {
   const [missingCount, setMissingCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [internalGroupStatus, setInternalGroupStatus] = useState(groupStatus || null);
+
+  useEffect(() => {
+    if (groupStatus !== undefined && groupStatus !== null) {
+      setInternalGroupStatus(groupStatus);
+    }
+  }, [groupStatus]);
 
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
@@ -33,6 +40,17 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     const uid = auth.currentUser?.uid;
     if (!uid) return;
 
+    // Real-time listener for student approval status
+    const unsubStudent = onSnapshot(doc(db, 'students', uid), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const status = data.groupStatus || data.groupMembers?.groupStatus || 'approved';
+        setInternalGroupStatus(status);
+      }
+    }, (err) => {
+      console.warn('Sidebar student status listener notice:', err.message);
+    });
+
     let requiredTitles = [];
     let uploadedDocs = [];
 
@@ -54,7 +72,9 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     const q = query(collection(db, 'submissions'), where('studentUid', '==', uid));
     const unsubSub = onSnapshot(q, (snap) => {
       if (!snap.empty) {
-        uploadedDocs = snap.docs[0].data().uploadedDocs || [];
+        const subs = snap.docs.map(d => d.data());
+        subs.sort((a, b) => (b.uploadedDocs?.length || 0) - (a.uploadedDocs?.length || 0));
+        uploadedDocs = subs[0]?.uploadedDocs || [];
       } else {
         uploadedDocs = [];
       }
@@ -62,6 +82,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     });
 
     return () => {
+      unsubStudent();
       unsubSettings();
       unsubSub();
     };
@@ -101,75 +122,125 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     };
   }, [isOpen]);
 
+  const isPendingApproval = internalGroupStatus === 'pending' || internalGroupStatus === 'declined';
+
   const menuItems = [
     { 
       name: 'Dashboard', 
+      isLocked: false,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></svg> 
     },
     { 
       name: 'Manuscript', 
+      isLocked: isPendingApproval,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></svg> 
     },
     { 
       name: 'Requirements', 
-      badge: missingCount > 0 ? missingCount.toString() : null,
+      isLocked: isPendingApproval,
+      badge: (!isPendingApproval && missingCount > 0) ? missingCount.toString() : null,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg> 
     },
     { 
       name: 'Progress', 
+      isLocked: isPendingApproval,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg> 
     },
     { 
       name: 'My Group', 
+      isLocked: isPendingApproval,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> 
     },
     { 
       name: 'Settings', 
+      isLocked: isPendingApproval,
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     }
   ];
 
-  const NavButton = ({ name, icon, badge }) => {
+  const NavButton = ({ name, icon, badge, isLocked }) => {
     const isActive = activeTab === name;
+
+    const handleClick = (e) => {
+      if (isLocked) {
+        e.preventDefault();
+        e.stopPropagation();
+        Swal.fire({
+          icon: 'warning',
+          title: 'Section Locked',
+          html: `<div style="text-align: left; font-size: 14px; color: #4a5568; line-height: 1.6;">
+            <p style="margin-bottom: 8px;">Your group registration is currently <strong>pending approval</strong> from your research adviser.</p>
+            <p style="margin: 0; font-size: 13px; color: #718096;">The <strong>${name}</strong> section will be unlocked automatically once your registration has been approved.</p>
+          </div>`,
+          confirmButtonColor: '#7B1F35',
+          confirmButtonText: 'Got it'
+        });
+        return;
+      }
+      setActiveTab(name);
+      setIsOpen(false);
+    };
 
     return (
       <button
         type="button"
-        onClick={() => { setActiveTab(name); setIsOpen(false); }}
-        className={`group relative w-full flex items-center justify-between px-4 py-3 min-h-[46px] mb-1.5 rounded-xl text-xs font-bold transition-all duration-200 ease-out overflow-hidden touch-manipulation active:scale-[0.98] ${
-          isActive
-            ? 'text-white shadow-lg shadow-black/25 bg-gradient-to-r from-white/15 to-transparent border border-white/15'
-            : 'text-gray-300 dark:text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
+        onClick={handleClick}
+        aria-disabled={isLocked}
+        title={isLocked ? `${name} is locked (registration pending approval)` : undefined}
+        className={`group relative w-full flex items-center justify-between px-4 py-3 min-h-[46px] mb-1.5 rounded-xl text-xs font-bold transition-all duration-200 ease-out overflow-hidden touch-manipulation ${
+          isLocked
+            ? 'opacity-40 hover:opacity-65 cursor-not-allowed text-stone-300/50 bg-white/[0.02] border border-transparent select-none'
+            : isActive
+              ? 'text-white shadow-lg shadow-black/25 bg-gradient-to-r from-white/15 to-transparent border border-white/15 active:scale-[0.98]'
+              : 'text-gray-300 dark:text-stone-300 hover:text-white hover:bg-white/5 border border-transparent active:scale-[0.98]'
         }`}
       >
         <div 
           className={`absolute inset-0 rounded-xl transition-all duration-200 ease-out ${
-            isActive 
+            !isLocked && isActive 
               ? 'opacity-100' 
-              : 'opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 bg-white/5'
+              : !isLocked 
+                ? 'opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 bg-white/5'
+                : 'opacity-0'
           }`} 
         />
         
         <div 
           className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#d0a36e] ${
-            isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
+            !isLocked && isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
           }`}
         />
 
-        <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-200 group-hover:translate-x-1">
-          <div className={`transition-all duration-200 ${isActive ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' : 'text-gray-300 dark:text-stone-300 group-hover:text-white'}`}>
+        <div className={`relative flex items-center gap-3 z-10 transform transition-transform duration-200 ${!isLocked ? 'group-hover:translate-x-1' : ''}`}>
+          <div className={`transition-all duration-200 ${
+            isLocked
+              ? 'text-stone-400/50'
+              : isActive 
+                ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' 
+                : 'text-gray-300 dark:text-stone-300 group-hover:text-white'
+          }`}>
             {icon}
           </div>
-          <span className="tracking-wide text-[13px]">{name}</span>
+          <span className={`tracking-wide text-[13px] ${isLocked ? 'text-stone-300/60 font-medium' : ''}`}>{name}</span>
         </div>
         
-        {badge && (
+        {isLocked ? (
+          <div 
+            className="relative z-10 flex items-center justify-center w-5 h-5 rounded-md bg-black/35 border border-white/10 text-amber-300/80 shadow-sm"
+            title="Locked"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+          </div>
+        ) : badge ? (
           <span className={`relative z-10 text-[10px] font-bold min-w-[18px] h-4.5 px-1.5 flex items-center justify-center rounded-full shadow-sm transition-all duration-200 ${
             isActive ? 'bg-[#d0a36e] text-[#541b2f]' : 'bg-[#CF3645] text-white'
           }`}>
             {badge}
           </span>
-        )}
+        ) : null}
       </button>
     );
   };
@@ -226,6 +297,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
                 name={item.name}
                 icon={item.icon}
                 badge={item.badge}
+                isLocked={item.isLocked}
               />
             ))}
           </div>

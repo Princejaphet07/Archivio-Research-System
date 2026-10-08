@@ -1,29 +1,61 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { logActivity } from '../../firebase/logActivity';
+import RequirementIcon from '../components/RequirementIcon';
+import { Info, AlertTriangle, X } from 'lucide-react';
 
 function SubmissionRequirements() {
+  const location = useLocation();
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newReq, setNewReq] = useState({ title: '', desc: '', type: 'file', icon: '📄' });
+  const [newReq, setNewReq] = useState({ title: '', desc: '', type: 'file', icon: 'file' });
+  const [highlightedReqId, setHighlightedReqId] = useState(location.state?.requirementId || null);
 
   useEffect(() => {
-    const email = auth.currentUser?.email;
-    if (!email) { setLoading(false); return; }
+    if (location.state?.requirementId) {
+      setHighlightedReqId(location.state.requirementId);
+    }
+  }, [location.state]);
+
+  // Scroll to highlighted requirement when loaded
+  useEffect(() => {
+    if (highlightedReqId && !loading && requirements.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`req-${highlightedReqId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedReqId, loading, requirements]);
+
+  useEffect(() => {
+    const email = auth.currentUser?.email?.toLowerCase();
+    const uid = auth.currentUser?.uid;
+    if (!email && !uid) { setLoading(false); return; }
 
     const reqQuery = query(collection(db, 'requirements'));
     const unsub = onSnapshot(reqQuery, (snapshot) => {
       const allReqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       
       // Filter for global + adviser's own requirements
-      const filtered = allReqs.filter(r => 
-        r.scope === 'global' || 
-        (r.scope === 'adviser' && r.adviserUid === email)
-      );
+      const filtered = allReqs.filter(r => {
+        if (r.scope === 'global') return true;
+        if (r.scope === 'adviser') {
+          const rAdvUid = (r.adviserUid || '').toLowerCase();
+          const rAdvEmail = (r.adviserEmail || '').toLowerCase();
+          if (email && (rAdvUid === email || rAdvEmail === email)) return true;
+          if (uid && (r.adviserUid === uid || r.adviserId === uid)) return true;
+        }
+        return false;
+      });
       
       // Sort: global first by priority, then adviser specific
       filtered.sort((a, b) => {
@@ -43,19 +75,140 @@ function SubmissionRequirements() {
   const handleAddRequirement = async (e) => {
     e.preventDefault();
     try {
-      const email = auth.currentUser?.email;
-      await addDoc(collection(db, 'requirements'), {
+      const email = auth.currentUser?.email || '';
+      let adviserDisplayName = auth.currentUser?.displayName;
+
+      // 1. Try checking users collection
+      if ((!adviserDisplayName || adviserDisplayName.includes('@')) && auth.currentUser?.uid) {
+        try {
+          const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+          if (userSnap.exists()) {
+            const uData = userSnap.data();
+            const name = uData.displayName || `${uData.firstName || ''} ${uData.lastName || ''}`.trim();
+            if (name && !name.includes('@')) adviserDisplayName = name;
+          }
+        } catch (e) {}
+      }
+
+      // 2. Try checking advisers collection by UID and by Email
+      if ((!adviserDisplayName || adviserDisplayName.includes('@')) && auth.currentUser?.uid) {
+        try {
+          const advSnap = await getDoc(doc(db, 'advisers', auth.currentUser.uid));
+          if (advSnap.exists()) {
+            const advData = advSnap.data();
+            const name = advData.displayName || advData.name || `${advData.firstName || ''} ${advData.lastName || ''}`.trim();
+            if (name && !name.includes('@')) adviserDisplayName = name;
+          }
+        } catch (e) {}
+      }
+
+      if ((!adviserDisplayName || adviserDisplayName.includes('@')) && email) {
+        try {
+          const advQ = query(collection(db, 'advisers'), where('email', '==', email.toLowerCase()));
+          const advSnap = await getDocs(advQ);
+          if (!advSnap.empty) {
+            const advData = advSnap.docs[0].data();
+            const name = advData.displayName || advData.name || `${advData.firstName || ''} ${advData.lastName || ''}`.trim();
+            if (name && !name.includes('@')) adviserDisplayName = name;
+          }
+        } catch (e) {}
+      }
+
+      // 3. Fallback: Parse human name from institutional email
+      if (!adviserDisplayName || adviserDisplayName.includes('@')) {
+        if (email.includes('@')) {
+          const handle = email.split('@')[0];
+          const parts = handle.split(/[._-]/).filter(p => {
+            const lower = p.toLowerCase();
+            return lower !== 'swu' && lower !== 'phinmaed' && isNaN(p);
+          });
+          if (parts.length > 0) {
+            adviserDisplayName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+          }
+        }
+      }
+
+      if (!adviserDisplayName) adviserDisplayName = 'Research Adviser';
+
+      const reqDocRef = await addDoc(collection(db, 'requirements'), {
         title: newReq.title,
         desc: newReq.desc,
         type: newReq.type,
         icon: newReq.icon,
         scope: 'adviser',
         adviserUid: email,
+        adviserEmail: email,
+        adviserId: auth.currentUser?.uid || '',
+        adviserName: adviserDisplayName,
         status: 'pending',
         createdAt: new Date().toISOString()
       });
+
+      // Log the activity
+      try {
+        await logActivity({
+          user: email || 'Adviser',
+          role: 'Research Adviser',
+          action: 'Proposed submission requirement',
+          details: `Title: ${newReq.title} | Type: ${newReq.type}`,
+          status: 'Success'
+        });
+      } catch (logErr) {
+        console.warn("Failed to log activity:", logErr);
+      }
+
+      // Notify the Dean(s)
+      try {
+        const deanUids = new Set();
+
+        // 1. Query users collection for deans
+        try {
+          const usersSnap = await getDocs(collection(db, 'users'));
+          usersSnap.forEach(d => {
+            const data = d.data() || {};
+            const role = (data.role || '').toLowerCase();
+            if (role === 'dean' || role === 'dean+adviser') {
+              if (d.id && d.id.length >= 20) deanUids.add(d.id);
+              if (data.uid && data.uid.length >= 20) deanUids.add(data.uid);
+            }
+          });
+        } catch (uErr) {
+          console.warn("Failed querying users collection for deans:", uErr);
+        }
+
+        // 2. Query deans collection
+        try {
+          const deansSnap = await getDocs(collection(db, 'deans'));
+          deansSnap.forEach(d => {
+            const data = d.data() || {};
+            if (data.uid && data.uid.length >= 20) deanUids.add(data.uid);
+            if (d.id && d.id.length >= 20) deanUids.add(d.id);
+          });
+        } catch (dErr) {
+          console.warn("Failed querying deans collection:", dErr);
+        }
+
+        // Create in-app notification for each dean
+        const notifPromises = Array.from(deanUids).map(deanId =>
+          addDoc(collection(db, 'notifications'), {
+            userId: deanId,
+            title: "New Requirement Proposal",
+            message: `Adviser ${adviserDisplayName} has proposed a new requirement: "${newReq.title}". Click to review and approve.`,
+            type: "requirement_proposal",
+            requirementId: reqDocRef.id,
+            link: "/dean/settings",
+            tab: "completion",
+            isRead: false,
+            createdAt: serverTimestamp()
+          })
+        );
+        await Promise.all(notifPromises);
+      } catch (notifyErr) {
+        console.error("Failed to notify Dean:", notifyErr);
+      }
+
       setShowModal(false);
-      setNewReq({ title: '', desc: '', type: 'file', icon: '📄' });
+      setNewReq({ title: '', desc: '', type: 'file', icon: 'file' });
       Swal.fire({ icon: 'success', title: 'Added', text: 'Requirement proposed to Dean for approval', confirmButtonColor: '#7a2e46' });
     } catch (err) {
       console.error(err);
@@ -90,8 +243,8 @@ function SubmissionRequirements() {
         </SectionTitle>
 
         {/* Info Banner */}
-        <div className="bg-[#eff6ff] dark:bg-blue-900/20 border border-[#bfdbfe] dark:border-blue-800/50 p-4 rounded-lg flex gap-3 text-sm text-[#1e40af] dark:text-blue-400">
-          <span className="text-xl">ℹ️</span>
+        <div className="bg-[#eff6ff] dark:bg-blue-900/20 border border-[#bfdbfe] dark:border-blue-800/50 p-4 rounded-lg flex items-center gap-3 text-sm text-[#1e40af] dark:text-blue-400">
+          <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p>Global department-wide requirements are set by the Dean. You may propose additional requirements for your groups, which must be approved by the Dean before students can see them.</p>
         </div>
 
@@ -119,12 +272,31 @@ function SubmissionRequirements() {
             ) : requirements.length === 0 ? (
               <p className="text-gray-500 dark:text-stone-400 text-sm py-6 text-center">No requirements found.</p>
             ) : (
-              requirements.map((req) => (
-                <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-gray-200 dark:border-stone-800 rounded-xl p-3.5 sm:p-4 hover:bg-gray-50 dark:hover:bg-stone-800/50 transition">
+              requirements.map((req) => {
+                const isTargeted = highlightedReqId === req.id;
+                return (
+                <div 
+                  key={req.id} 
+                  id={`req-${req.id}`}
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border rounded-xl p-3.5 sm:p-4 transition-all duration-300 ${
+                    isTargeted
+                      ? 'border-[#7a1f3d] dark:border-[#f8d070] ring-2 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/50 bg-rose-50/70 dark:bg-rose-950/20 shadow-md scale-[1.01]'
+                      : 'border-gray-200 dark:border-stone-800 hover:bg-gray-50 dark:hover:bg-stone-800/50'
+                  }`}
+                >
                   <div className="flex items-start sm:items-center gap-3">
-                    <span className="text-2xl shrink-0 p-1 bg-stone-100 dark:bg-stone-800 rounded-lg">{req.icon}</span>
+                    <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0 border border-stone-200/50 dark:border-stone-700/50">
+                      <RequirementIcon icon={req.icon} type={req.type} title={req.title} />
+                    </div>
                     <div className="min-w-0">
-                      <span className="text-sm font-bold text-gray-900 dark:text-stone-100 block truncate">{req.title}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-gray-900 dark:text-stone-100 block truncate">{req.title}</span>
+                        {isTargeted && (
+                          <span className="bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-stone-900 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shrink-0">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5 line-clamp-2">{req.desc}</p>
                     </div>
                   </div>
@@ -132,7 +304,7 @@ function SubmissionRequirements() {
                     {/* Status Badge */}
                     {(req.storageEnabled === false || req.storageStatus === 'suspended') ? (
                       <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-200 dark:border-amber-800/50 flex items-center gap-1">
-                        <span>⚠️</span> Unavailable (Admin Suspended)
+                        <AlertTriangle className="w-3 h-3" /> Unavailable (Admin Suspended)
                       </span>
                     ) : req.scope === 'global' ? (
                       <span className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-blue-200 dark:border-blue-800/50">Global</span>
@@ -160,7 +332,8 @@ function SubmissionRequirements() {
                     </button>
                   </div>
                 </div>
-              ))
+              );
+            })
             )}
           </div>
         </Card>
@@ -175,9 +348,9 @@ function SubmissionRequirements() {
               <button 
                 type="button" 
                 onClick={() => setShowModal(false)}
-                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 text-white text-lg transition"
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 text-white transition"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleAddRequirement} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
@@ -208,7 +381,7 @@ function SubmissionRequirements() {
                   <label className="block text-xs font-bold text-gray-600 dark:text-stone-400 mb-1">Input Type</label>
                   <select 
                     value={newReq.type}
-                    onChange={e => setNewReq({...newReq, type: e.target.value, icon: e.target.value === 'url' ? '🔗' : '📄'})}
+                    onChange={e => setNewReq({...newReq, type: e.target.value, icon: e.target.value === 'url' ? 'link' : 'file'})}
                     className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
                   >
                     <option value="file">File Upload</option>

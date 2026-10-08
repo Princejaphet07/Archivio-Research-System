@@ -1,15 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  doc, 
+  deleteDoc, 
+  updateDoc, 
+  query, 
+  where, 
+  onSnapshot, 
+  limit 
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
-import { wipeEmailData } from '../../firebase/wipeEmailData';
-import { verifySchoolEmailOnline, validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
-import { authFetch } from '../../utils/authFetch';
-import { getBackendUrl } from '../../utils/backendUrl';
+import { validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
+import { sendEmailWithFallback } from '../../utils/emailDispatcher';
+import { 
+  RefreshCw, 
+  Trash2, 
+  Copy, 
+  Check, 
+  Send, 
+  Users, 
+  UserPlus, 
+  Search, 
+  Clock, 
+  CheckCircle2, 
+  AlertCircle,
+  Mail,
+  ShieldCheck
+} from 'lucide-react';
 
 export default function Invitations() {
   const { deanData, deanSettings } = useUser();
@@ -18,14 +42,27 @@ export default function Invitations() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formErrors, setFormErrors] = useState({});
+  const [inviteMode, setInviteMode] = useState('single'); // 'single' | 'bulk'
+  const [copiedId, setCopiedId] = useState(null);
 
-  // Form state
+  // Search & Status Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'active' | 'expired'
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Form state for Single Mode
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     message: ''
   });
+
+  // Bulk Mode state
+  const [bulkInput, setBulkInput] = useState('');
 
   // Default invitation message
   const defaultMessage = deanSettings?.emailTemplates?.adviserInvitation?.body || `Dear [Adviser Name],
@@ -40,7 +77,7 @@ As a Research Adviser, you will be able to:
 
 Please click the button below to activate your account and set up your credentials.`;
 
-  const defaultSubject = deanSettings?.emailTemplates?.adviserInvitation?.subject || "You're Invited to Join ARCHIVIO — SWU PHINMA Research Management System";
+  const defaultSubject = deanSettings?.emailTemplates?.adviserInvitation?.subject || "Invitation: Join ARCHIVIO as a Research Adviser";
 
   // Pre-fill form when settings load
   useEffect(() => {
@@ -50,7 +87,7 @@ Please click the button below to activate your account and set up your credentia
     }));
   }, [defaultMessage]);
 
-  // Fetch advisers on mount and when deanData changes using onSnapshot
+  // Fetch advisers on mount and when deanData changes
   useEffect(() => {
     if (!deanData?.email) return;
 
@@ -60,12 +97,20 @@ Please click the button below to activate your account and set up your credentia
     );
 
     const unsubscribe = onSnapshot(advisersQuery, (snapshot) => {
-      const advisersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const advisersData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const sentDate = new Date(data.invitationSentAt || data.createdAt || 0);
+        const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+        const isExpired = data.status === 'pending' && daysSinceSent > 7;
 
-      // Sort by invitationDate or createdAt descending
+        return {
+          id: doc.id,
+          ...data,
+          isExpired,
+          computedStatus: data.status === 'active' ? 'active' : isExpired ? 'expired' : 'pending'
+        };
+      });
+
       advisersData.sort((a, b) => {
         const dateA = new Date(a.invitationSentAt || a.createdAt || 0);
         const dateB = new Date(b.invitationSentAt || b.createdAt || 0);
@@ -80,26 +125,41 @@ Please click the button below to activate your account and set up your credentia
     return () => unsubscribe();
   }, [deanData?.email]);
 
+  // Helper to copy invitation link to clipboard (#5 Feedback & #7 Affordance)
+  const handleCopyLink = (adviser) => {
+    const link = adviser.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviser.email)}`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(adviser.id);
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Link Copied!',
+      text: `Activation link for ${adviser.email} copied to clipboard.`,
+      showConfirmButton: false,
+      timer: 2500
+    });
+
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2500);
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (formErrors[name]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  const handleSendInvitation = async (e) => {
+  // Single Invitation Dispatcher (#6 Error Prevention)
+  const handleSendSingleInvitation = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Per-field validation with auto-focus and highlights
     const errors = {};
     if (!formData.firstName.trim()) errors.firstName = 'First name is required';
     if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
@@ -111,259 +171,355 @@ Please click the button below to activate your account and set up your credentia
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      const firstKey = Object.keys(errors)[0];
-      const el = document.getElementById(`dean-invite-${firstKey}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.focus();
-      }
       return;
     }
 
-    setFormErrors({});
     setLoading(true);
+    Swal.fire({
+      title: 'Sending Invitation...',
+      text: `Preparing institutional invitation for ${formData.email.toLowerCase().trim()}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
 
     try {
-      const emailCheck = await verifySchoolEmailOnline(formData.email, 'adviser');
+      const emailCheck = validateAdviserSchoolEmail(formData.email);
       if (!emailCheck.isValid) {
+        Swal.close();
         setError(`❌ ${emailCheck.error}`);
         setLoading(false);
         return;
       }
       const targetEmail = emailCheck.normalizedEmail;
 
-      // Generate a simple invitation token to track this specific invitation
-      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-      // 1. Check if email is already registered to an active account
-      const qUser = query(collection(db, 'users'), where('email', '==', targetEmail));
+      // Duplicate check in active users
+      const qUser = query(collection(db, 'users'), where('email', '==', targetEmail), limit(1));
       const snapUser = await getDocs(qUser);
       if (!snapUser.empty) {
-        setError('This email is already registered to an active account.');
+        Swal.close();
+        setError('This email is already registered to an active ARCHIVIO account.');
         setLoading(false);
         return;
       }
 
-      // 2. Check if a pending invitation already exists in advisers
+      // Check existing pending invitation
       const qAdvPending = query(
         collection(db, 'advisers'),
         where('email', '==', targetEmail),
-        where('status', '==', 'pending')
+        where('status', '==', 'pending'),
+        limit(1)
       );
       const snapAdvPending = await getDocs(qAdvPending);
       if (!snapAdvPending.empty) {
-        setError('This email already has a pending invitation. You can resend or remove it in the Sent Invitations table.');
+        Swal.close();
+        setError('This email already has a pending invitation in the Sent Invitations table.');
         setLoading(false);
         return;
       }
 
-      // 3. Clean up any stale or orphaned records to guarantee a fresh, conflict-free invitation
-      await wipeEmailData(targetEmail);
-
-      // Clean link to the Sign Up page — no token exposed in the URL, only the email
+      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const adviserPortalUrl = window.location.origin;
-      const cleanEmail = encodeURIComponent(formData.email.toLowerCase().trim());
+      const cleanEmail = encodeURIComponent(targetEmail);
       const invitationLink = `${adviserPortalUrl}/adviser/signup?email=${cleanEmail}`;
 
-      // Create adviser invitation in Firestore
+      const resolvedSenderEmail = deanData?.email || '';
+      const resolvedSenderName = deanData?.displayName || deanData?.name || 'Dean';
+      const resolvedDepartment = deanData?.department || 'SWU Phinma';
+
       const adviserData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-        email: formData.email.toLowerCase().trim(),
-        invitedBy: deanData?.email,
-        invitedByName: deanData?.displayName,
-        department: deanData?.department,
+        email: targetEmail,
+        invitedBy: resolvedSenderEmail,
+        invitedByName: resolvedSenderName,
+        department: resolvedDepartment,
         status: 'pending',
-        invitationToken: invitationToken,
-        invitationLink: invitationLink,
-        message: formData.message || defaultMessage,
+        invitationToken,
+        invitationLink,
+        message: formData.message || defaultMessage || '',
         invitationSentAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
 
       await addDoc(collection(db, 'advisers'), adviserData);
 
-      // 1. Trigger Direct Backend Dispatch (over HTTPS / zero cloud port blocking)
-      const backendUrl = getBackendUrl();
-      let sentDirectly = false;
-      try {
-        await authFetch(`${backendUrl}/api/send-invitation-email`, {
-          to: formData.email.toLowerCase().trim(),
-          adviserName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+      // Email HTML (Unified with official ARCHIVIO template)
+      const adviserFullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+      const emailMessage = (formData.message || defaultMessage || '')
+        .replace('[Adviser Name]', adviserFullName)
+        .replace('[ACTIVATION_LINK]', invitationLink)
+        .replace('[Sender Name]', resolvedSenderName)
+        .replace('[Department]', resolvedDepartment);
+
+      const emailHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5;">
+  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
+    
+    <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+      <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+      <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
+      <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
+    </div>
+    
+    <div style="padding: 40px 30px; background-color: #ffffff;">
+      <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${adviserFullName}!</h2>
+      <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
+      
+      <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+        <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
+        <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(emailMessage || '').replace(/\n/g, '<br/>')}</p>
+      </div>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
+        <strong style="color: #2b6cb0; font-size: 14px; display: block; margin-bottom: 10px;">📋 How to Access Your Account:</strong>
+        <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+          <li>Click the <strong>"Create Your Account"</strong> button below</li>
+          <li>You will be taken to the <strong>Research Adviser Sign Up page</strong></li>
+          <li>Register using your <strong>@phinmaed.com</strong> email address</li>
+          <li>After signing up, log in to access your <strong>Research Adviser Dashboard</strong></li>
+        </ol>
+      </div>
+      
+      <div style="text-align: center; margin: 40px 0 30px 0;">
+        <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+      </div>
+      
+      <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 30px 0; display: flex; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 16px;">⏰</span>
+        <p style="margin: 0;"><strong>Important:</strong> This invitation link will expire in 7 days. Please activate your account as soon as possible.</p>
+      </div>
+
+      <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
+        Best regards,<br>
+        <strong>${resolvedSenderName}</strong><br>
+        ${resolvedDepartment}<br>
+      </p>
+    </div>
+    
+    <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+      <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      await sendEmailWithFallback({
+        to: targetEmail,
+        subject: defaultSubject,
+        html: emailHTML,
+        backendEndpoint: '/api/send-invitation-email',
+        backendPayload: {
+          to: targetEmail,
+          adviserName: adviserFullName,
           subject: defaultSubject,
-          message: formData.message || defaultMessage,
-          invitationLink: invitationLink,
-          senderName: deanData?.displayName || 'Dean',
-          senderDepartment: deanData?.department || 'SWU Phinma'
-        });
-        sentDirectly = true;
-        console.log('✅ Direct backend invitation dispatch successful');
-      } catch (err) {
-        console.warn('⚠️ Direct backend dispatch notice, falling back to mail queue:', err.message);
-      }
-
-      // 2. Fallback in Firestore 'mail' collection only if direct dispatch failed (prevents duplicate emails)
-      if (!sentDirectly) {
-        try {
-          await addDoc(collection(db, 'mail'), {
-            to: formData.email.toLowerCase().trim(),
-            message: {
-              subject: defaultSubject,
-              html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-                  <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
-                    <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-                    <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
-                    <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
-                  </div>
-                  
-                  <div style="padding: 40px 30px; background-color: #ffffff;">
-                    <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${formData.firstName}!</h2>
-                    <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
-                    
-                    <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
-                      <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
-                      <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(formData.message || defaultMessage).replace(/\n/g, '<br/>')}</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 40px 0 10px 0;">
-                      <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Set up your account</a>
-                    </div>
-                    
-                    <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
-                      Best regards,<br>
-                      <strong>${deanData?.displayName || 'Dean'}</strong><br>
-                      ${deanData?.department || 'SWU Phinma'}<br>
-                    </p>
-                  </div>
-                  
-                  <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
-                    <p style="color: #a0aec0; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Southwestern University PHINMA.<br>All rights reserved.</p>
-                  </div>
-                </div>
-              `
-            }
-          });
-          console.log('📨 Fallback adviser invitation enqueued to Firestore mail collection');
-        } catch (mErr) {
-          console.warn('Firestore mail queue fallback notice:', mErr);
+          message: formData.message || defaultMessage || '',
+          invitationLink,
+          senderName: resolvedSenderName,
+          senderDepartment: resolvedDepartment
         }
-      }
-
-      // Show simple success alert
-      await Swal.fire({
-        title: 'Invitation Sent!',
-        text: `Invitation email has been successfully sent to ${formData.email.toLowerCase().trim()}`,
-        icon: 'success',
-        confirmButtonColor: '#801e38',
-        confirmButtonText: 'OK'
       });
 
-      // Reset form
+      Swal.fire({
+        icon: 'success',
+        title: 'Invitation Dispatched!',
+        text: `Official invite sent to ${targetEmail}`,
+        confirmButtonColor: '#7B1F35'
+      });
+
       setFormData({
         firstName: '',
         lastName: '',
         email: '',
-        message: ''
+        message: defaultMessage
       });
-
-    } catch (error) {
-      console.error('Error sending invitation:', error);
-      setError('Failed to send invitation. Please try again.');
+      setFormErrors({});
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Dispatch Error', text: 'Failed to send invitation.', confirmButtonColor: '#7B1F35' });
     } finally {
       setLoading(false);
     }
   };
 
+  // Bulk Invitation Dispatcher (#1 User-Centric Design)
+  const handleSendBulkInvitations = async (e) => {
+    e.preventDefault();
+    if (!bulkInput.trim()) {
+      setError('Please enter at least one institutional email.');
+      return;
+    }
+
+    const lines = bulkInput.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+    const validEmails = [];
+    const invalidEmails = [];
+
+    for (const item of lines) {
+      if (item.toLowerCase().endsWith('@phinmaed.com') && item.includes('@')) {
+        validEmails.push(item.toLowerCase());
+      } else {
+        invalidEmails.push(item);
+      }
+    }
+
+    if (validEmails.length === 0) {
+      setError('No valid @phinmaed.com emails found. Please verify your entries.');
+      return;
+    }
+
+    const confirmRes = await Swal.fire({
+      title: `Send ${validEmails.length} Invitations?`,
+      text: invalidEmails.length > 0 
+        ? `${invalidEmails.length} invalid email(s) will be skipped.` 
+        : `Official invitations will be dispatched to ${validEmails.length} advisers.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#7B1F35',
+      confirmButtonText: 'Yes, Send Invitations'
+    });
+
+    if (!confirmRes.isConfirmed) return;
+
+    setLoading(true);
+    Swal.fire({
+      title: 'Sending Bulk Invitations...',
+      text: `Processing ${validEmails.length} institutional accounts...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    let successCount = 0;
+    const resolvedSenderEmail = deanData?.email || '';
+    const resolvedSenderName = deanData?.displayName || deanData?.name || 'Dean';
+    const resolvedDepartment = deanData?.department || 'SWU Phinma';
+
+    for (const email of validEmails) {
+      try {
+        const username = email.split('@')[0];
+        const nameParts = username.split('.');
+        const firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Faculty';
+        const lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Adviser';
+        const invitationToken = Math.random().toString(36).substring(2, 15);
+        const invitationLink = `${window.location.origin}/adviser/signup?email=${encodeURIComponent(email)}`;
+
+        await addDoc(collection(db, 'advisers'), {
+          firstName,
+          lastName,
+          displayName: `${firstName} ${lastName}`,
+          email,
+          invitedBy: resolvedSenderEmail,
+          invitedByName: resolvedSenderName,
+          department: resolvedDepartment,
+          status: 'pending',
+          invitationToken,
+          invitationLink,
+          message: defaultMessage,
+          invitationSentAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        });
+
+        successCount++;
+      } catch (err) {
+        console.error('Failed to send bulk item:', email, err);
+      }
+    }
+
+    setLoading(false);
+    setBulkInput('');
+    Swal.fire({
+      icon: 'success',
+      title: 'Bulk Invitations Sent!',
+      text: `Successfully invited ${successCount} research advisers.`,
+      confirmButtonColor: '#7B1F35'
+    });
+  };
+
+  // Resend / Renew Invitation
   const handleResendInvitation = async (adviserId, adviserEmail) => {
     setLoading(true);
+    Swal.fire({
+      title: 'Resending Invitation...',
+      text: `Dispatching renewed link to ${adviserEmail}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     try {
-      // Update invitation sent time
+      const nowIso = new Date().toISOString();
       await updateDoc(doc(db, 'advisers', adviserId), {
-        invitationSentAt: new Date().toISOString()
+        invitationSentAt: nowIso,
+        status: 'pending'
       });
 
-      // Get adviser data
       const adviser = advisers.find(a => a.id === adviserId);
       const link = adviser?.invitationLink || `${window.location.origin}/adviser/signup?email=${encodeURIComponent(adviserEmail)}`;
 
-      // 1. Resend via direct backend
-      let sentDirectly = false;
-      try {
-        const backendUrl = getBackendUrl();
-        await authFetch(`${backendUrl}/api/send-invitation-email`, {
+      await sendEmailWithFallback({
+        to: adviserEmail,
+        subject: defaultSubject || 'Reminder: Invitation to Join ARCHIVIO',
+        html: `<p>Hello ${adviser?.firstName || 'Faculty'}, please activate your account at: <a href="${link}">${link}</a></p>`,
+        backendEndpoint: '/api/send-invitation-email',
+        backendPayload: {
           to: adviserEmail,
-          adviserName: adviser?.firstName || adviser?.displayName || 'Adviser',
+          adviserName: adviser?.displayName || 'Adviser',
           subject: defaultSubject,
           message: adviser?.message || defaultMessage,
           invitationLink: link,
           senderName: deanData?.displayName || 'Dean',
           senderDepartment: deanData?.department || 'SWU Phinma'
-        });
-        sentDirectly = true;
-        console.log('✅ Direct backend adviser invitation resend successful');
-      } catch (emailError) {
-        console.warn('Backend resend notice, falling back to mail queue:', emailError);
-      }
-
-      // 2. Fallback queue in Firestore 'mail' only if direct dispatch failed (prevents duplicate emails)
-      if (!sentDirectly) {
-        try {
-          await addDoc(collection(db, 'mail'), {
-            to: adviserEmail,
-            message: {
-              subject: defaultSubject,
-              text: `Reminder: You have been invited as a Research Adviser in ARCHIVIO. Access link: ${link}`
-            }
-          });
-          console.log('📨 Fallback adviser invitation resend enqueued to Firestore mail collection');
-        } catch (mErr) {
-          console.warn('Firestore mail resend notice:', mErr);
         }
-      }
+      });
 
       Swal.fire({
-        title: 'Sent!',
-        text: `Invitation resent to ${adviserEmail}`,
         icon: 'success',
-        confirmButtonColor: '#801e38'
+        title: 'Invitation Renewed & Sent',
+        text: `A fresh invitation link was sent to ${adviserEmail}`,
+        confirmButtonColor: '#7B1F35'
       });
-    } catch (error) {
-      setError('Failed to resend invitation');
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Resend Failed', text: 'Could not deliver renewed invitation.', confirmButtonColor: '#7B1F35' });
     } finally {
       setLoading(false);
     }
   };
 
+  // Remove Invitation with correct deleteDoc call (#6 Error Prevention)
   const handleRemoveInvitation = async (adviserId, adviserEmail) => {
     const result = await Swal.fire({
-      title: 'Remove Invitation?',
-      text: `Are you sure you want to remove the invitation for ${adviserEmail}? All associated invitation data will be permanently wiped.`,
+      title: 'Revoke Invitation?',
+      text: `Are you sure you want to revoke the invitation for ${adviserEmail}? The activation link will immediately become invalid.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, remove it'
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Revoke Access'
     });
 
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        await wipeEmailData(adviserEmail);
+        await deleteDoc(doc(db, 'advisers', adviserId));
         Swal.fire({
-          title: 'Removed!',
-          text: 'The invitation and all associated email data have been permanently removed.',
           icon: 'success',
-          confirmButtonColor: '#801e38'
+          title: 'Invitation Revoked',
+          text: `Invitation record for ${adviserEmail} has been removed.`,
+          confirmButtonColor: '#7B1F35'
         });
       } catch (error) {
         console.error('Error removing invitation:', error);
         Swal.fire({
-          title: 'Error',
-          text: 'Failed to remove invitation.',
           icon: 'error',
-          confirmButtonColor: '#801e38'
+          title: 'Removal Error',
+          text: 'Failed to remove invitation record.',
+          confirmButtonColor: '#7B1F35'
         });
       } finally {
         setLoading(false);
@@ -371,211 +527,369 @@ Please click the button below to activate your account and set up your credentia
     }
   };
 
+  // Filtered Advisers
+  const filteredAdvisers = advisers.filter(adv => {
+    const matchesStatus = 
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && adv.status === 'active') ||
+      (statusFilter === 'pending' && adv.computedStatus === 'pending') ||
+      (statusFilter === 'expired' && adv.computedStatus === 'expired');
+
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      adv.displayName.toLowerCase().includes(q) ||
+      adv.email.toLowerCase().includes(q);
+
+    return matchesStatus && matchesSearch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredAdvisers.length / itemsPerPage));
+  const paginatedAdvisers = filteredAdvisers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const pendingCount = advisers.filter(a => a.computedStatus === 'pending').length;
+  const activeCount = advisers.filter(a => a.status === 'active').length;
+  const expiredCount = advisers.filter(a => a.computedStatus === 'expired').length;
+
   return (
-    <div className="flex h-screen w-full bg-[#f5f0e6] dark:bg-stone-900 transition-colors overflow-hidden font-sans antialiased">
+    <div className="flex h-screen w-full bg-[#fbfbfa] dark:bg-stone-950 transition-colors overflow-hidden font-sans antialiased text-stone-900 dark:text-stone-100">
       <Sidebar activePage="invitations" />
-      <div className="flex-1 flex flex-col overflow-y-auto">
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activePage="invitations" />
 
-        <main className="p-6 max-w-[1400px] w-full mx-auto space-y-6">
-          <div>
-            <SectionTitle sub="Send invitation links to Research Advisers for account creation">
-              Send Invitations
-            </SectionTitle>
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
+
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <SectionTitle sub="Manage research faculty invitations, link activations, and institutional access.">
+                Adviser Directory & Invitations
+              </SectionTitle>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                {activeCount} Active Advisers
+              </span>
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                {pendingCount} Pending Activation
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* Left Column: Form Panel */}
-            <Card glass={true} className="lg:col-span-4 overflow-hidden">
-              <div className="bg-[#4a1024] dark:bg-stone-950 p-5 text-white relative">
-                <span className="text-xl">✉️</span>
-                <h3 className="font-serif text-base font-bold mt-2">Invite a Research Adviser</h3>
-                <p className="text-[11px] text-stone-300">They'll receive a secure link to create their account</p>
+            {/* Left Column: Form Panel (Single & Bulk Toggle) */}
+            <Card glass={true} className="lg:col-span-5 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#7B1F35] to-[#541B2F] p-5 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <UserPlus className="w-5 h-5 text-amber-300" />
+                    <h3 className="font-serif text-base font-bold">Invite Research Faculty</h3>
+                  </div>
+
+                  {/* Mode Toggle Pills (#3 Simplicity & #7 Affordance) */}
+                  <div className="flex bg-black/20 p-0.5 rounded-xl text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setInviteMode('single')}
+                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                        inviteMode === 'single' ? 'bg-white text-stone-900 shadow-xs' : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      Single
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInviteMode('bulk')}
+                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                        inviteMode === 'bulk' ? 'bg-white text-stone-900 shadow-xs' : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      Bulk Paste
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-white/80 mt-1">
+                  {inviteMode === 'single' ? 'Invite an individual faculty member by institutional email' : 'Paste multiple institutional emails separated by commas or lines'}
+                </p>
               </div>
 
               <div className="p-5 space-y-4">
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                    <span className="text-red-500 text-sm">⚠️</span>
-                    <p className="text-sm text-red-700">{error}</p>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 rounded-xl flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{error}</span>
                   </div>
                 )}
 
-                <form onSubmit={handleSendInvitation} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">First Name <span className="text-red-500">*</span></label>
-                    <input
-                      id="dean-invite-firstName"
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Maria"
-                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
-                        formErrors.firstName
-                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
-                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
-                      }`}
+                {inviteMode === 'single' ? (
+                  <form onSubmit={handleSendSingleInvitation} className="space-y-3.5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+                          First Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Roberto"
+                          className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
+                          disabled={loading}
+                        />
+                        {formErrors.firstName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.firstName}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+                          Last Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Gomez"
+                          className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
+                          disabled={loading}
+                        />
+                        {formErrors.lastName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.lastName}</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+                        Institutional Email <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="adviser@phinmaed.com"
+                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
+                        disabled={loading}
+                      />
+                      {formErrors.email ? (
+                        <p className="text-[11px] text-rose-500 mt-1">{formErrors.email}</p>
+                      ) : (
+                        <p className="text-[10px] text-stone-400 mt-1">Restricted to @phinmaed.com institutional accounts</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                          Invitation Memo
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(p => ({ ...p, message: defaultMessage }))}
+                          className="text-[10px] text-[#7B1F35] dark:text-amber-400 hover:underline cursor-pointer font-semibold"
+                        >
+                          Reset Default
+                        </button>
+                      </div>
+                      <textarea
+                        name="message"
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        rows={4}
+                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-800 dark:text-stone-200 outline-none focus:ring-2 focus:ring-[#7B1F35]/40 resize-none font-sans"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
                       disabled={loading}
-                    />
-                    {formErrors.firstName && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
-                        <span>⚠️</span> {formErrors.firstName}
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{loading ? 'Sending Invitation...' : 'Send Official Invitation'}</span>
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleSendBulkInvitations} className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+                        Paste Institutional Emails
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={bulkInput}
+                        onChange={(e) => setBulkInput(e.target.value)}
+                        placeholder="r.gomez@phinmaed.com&#10;c.morales@phinmaed.com&#10;a.troy@phinmaed.com"
+                        className="w-full text-xs p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40 font-mono resize-none leading-relaxed"
+                        disabled={loading}
+                      />
+                      <p className="text-[10px] text-stone-400 mt-1">
+                        Separate multiple emails with commas, semicolons, or newlines. Names will be automatically formatted from usernames.
                       </p>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Last Name <span className="text-red-500">*</span></label>
-                    <input
-                      id="dean-invite-lastName"
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Reyes"
-                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
-                        formErrors.lastName
-                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
-                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
-                      }`}
+                    <button
+                      type="submit"
                       disabled={loading}
-                    />
-                    {formErrors.lastName && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
-                        <span>⚠️</span> {formErrors.lastName}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1.5 tracking-wide">Email Address <span className="text-red-500">*</span></label>
-                    <input
-                      id="dean-invite-email"
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="adviser@phinmaed.com"
-                      className={`w-full text-xs p-2.5 bg-transparent dark:bg-stone-900/50 text-stone-900 dark:text-stone-100 border rounded-xl outline-none transition-colors disabled:opacity-50 ${
-                        formErrors.email
-                          ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
-                          : 'border-stone-200 dark:border-stone-700 focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070]'
-                      }`}
-                      disabled={loading}
-                    />
-                    {formErrors.email ? (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
-                        <span>⚠️</span> {formErrors.email}
-                      </p>
-                    ) : (
-                      <p className="text-[9px] text-stone-400 mt-1">Must use @phinmaed.com domain</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase mb-1 flex justify-between tracking-wide">
-                      <span>Invitation Message</span>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, message: '' }))}
-                        className="text-blue-600 lowercase font-normal cursor-pointer hover:underline text-[9px]"
-                      >
-                        💡 Reset to default
-                      </button>
-                    </label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      placeholder={defaultMessage}
-                      rows={5}
-                      className="w-full text-xs p-2.5 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-900/50 text-stone-600 dark:text-stone-300 leading-relaxed outline-none focus:ring-1 focus:ring-[#4a1024] dark:focus:ring-[#f8d070] resize-none disabled:opacity-50"
-                      disabled={loading}
-                    />
-                    <p className="text-[10px] text-stone-400 mt-1">You can customize this message before sending.</p>
-                  </div>
-
-                  <PremiumButton
-                    type="submit"
-                    disabled={loading}
-                    variant="primary"
-                    className="w-full flex items-center justify-center gap-2 mt-2"
-                  >
-                    <span>✉️</span> {loading ? 'Sending...' : 'Send Invitation Link'}
-                  </PremiumButton>
-                </form>
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>{loading ? 'Dispatching...' : 'Dispatch Bulk Invitations'}</span>
+                    </button>
+                  </form>
+                )}
               </div>
             </Card>
 
-            {/* Right Column: Tracker Log Panel */}
-            <Card glass={true} className="lg:col-span-8 p-5">
-              <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-700/80 pb-4 mb-4">
+            {/* Right Column: Tracker & Management Console (#1 & #7) */}
+            <Card glass={true} className="lg:col-span-7 p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100 dark:border-stone-800">
                 <div>
-                  <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Sent Invitations</h3>
-                  <p className="text-[11px] text-stone-400">Track invitation status and resend if needed</p>
+                  <h3 className="font-serif text-sm font-bold text-stone-900 dark:text-stone-100">
+                    Faculty Invitation Status
+                  </h3>
+                  <p className="text-xs text-stone-400">
+                    {filteredAdvisers.length} records matching current criteria
+                  </p>
+                </div>
+
+                {/* Filter Pills (#2 Consistency) */}
+                <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl text-[11px] font-semibold">
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                      statusFilter === 'all' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs' : 'text-stone-500'
+                    }`}
+                  >
+                    All ({advisers.length})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('pending')}
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                      statusFilter === 'pending' ? 'bg-white dark:bg-stone-700 text-amber-700 dark:text-amber-400 shadow-xs' : 'text-stone-500'
+                    }`}
+                  >
+                    Pending ({pendingCount})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('active')}
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                      statusFilter === 'active' ? 'bg-white dark:bg-stone-700 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-stone-500'
+                    }`}
+                  >
+                    Active ({activeCount})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('expired')}
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                      statusFilter === 'expired' ? 'bg-white dark:bg-stone-700 text-rose-700 dark:text-rose-400 shadow-xs' : 'text-stone-500'
+                    }`}
+                  >
+                    Expired ({expiredCount})
+                  </button>
                 </div>
               </div>
 
-              {advisers.length === 0 ? (
-                <div className="text-center py-8 text-stone-400">
-                  <p className="text-sm">No invitations sent yet. Use the form to invite your first adviser!</p>
+              {/* Search in table */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter advisers by name or email..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/40 text-stone-800 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7B1F35]"
+                />
+              </div>
+
+              {/* Table List */}
+              {paginatedAdvisers.length === 0 ? (
+                <div className="p-8 text-center text-stone-400 text-xs">
+                  No adviser invitations found matching this filter.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 dark:border-stone-700/80">
-                        <th className="pb-3 w-1/3">Recipient</th>
-                        <th className="pb-3 w-1/4">Email</th>
-                        <th className="pb-3">Sent</th>
-                        <th className="pb-3">Status</th>
-                        <th className="pb-3 text-center">Actions</th>
+                      <tr className="text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 dark:border-stone-800">
+                        <th className="pb-2.5">Adviser Name</th>
+                        <th className="pb-2.5">Email</th>
+                        <th className="pb-2.5">Status</th>
+                        <th className="pb-2.5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50 dark:divide-stone-700/60 font-medium text-stone-700 dark:text-stone-300">
-                      {advisers.map((adviser) => (
-                        <tr key={adviser.id} className="hover:bg-stone-50 dark:hover:bg-stone-700">
-                          <td className="py-3.5 flex items-center gap-3">
-                            <div className="w-7 h-7 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center text-[10px] font-bold border border-purple-100 dark:border-purple-800/50">
-                              {adviser.firstName[0]}{adviser.lastName[0]}
-                            </div>
-                            <span className="font-bold text-stone-800 dark:text-stone-200">{adviser.displayName}</span>
-                          </td>
-                          <td className="py-3.5 text-stone-500 dark:text-stone-400 font-normal">{adviser.email}</td>
-                          <td className="py-3.5 text-stone-500 dark:text-stone-400 font-normal">
-                            {adviser.invitationSentAt ? new Date(adviser.invitationSentAt).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="py-3.5">
-                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${adviser.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border border-amber-100 dark:border-amber-800/60'}`}>
-                              {adviser.status === 'active' ? 'Accepted' : 'Pending'}
-                            </span>
-                          </td>
-                          <td className="py-3.5 text-center">
-                            {adviser.status === 'pending' && (
-                              <div className="flex items-center justify-center gap-2">
-                                <PremiumButton
-                                  onClick={() => handleResendInvitation(adviser.id, adviser.email)}
-                                  disabled={loading}
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                >
-                                  🔄 Resend
-                                </PremiumButton>
-                                <PremiumButton
-                                  onClick={() => handleRemoveInvitation(adviser.id, adviser.email)}
-                                  disabled={loading}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1"
-                                  title="Remove invitation and wipe data"
-                                >
-                                  🗑️
-                                </PremiumButton>
+                    <tbody className="divide-y divide-stone-100 dark:divide-stone-800/70 font-medium">
+                      {paginatedAdvisers.map((adv) => (
+                        <tr key={adv.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition">
+                          <td className="py-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-[#7B1F35]/10 text-[#7B1F35] dark:text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                {adv.firstName?.[0] || 'A'}{adv.lastName?.[0] || ''}
                               </div>
+                              <span className="font-bold text-stone-800 dark:text-stone-200 truncate">
+                                {adv.displayName}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3 text-stone-500 dark:text-stone-400 font-mono text-[11px]">
+                            {adv.email}
+                          </td>
+
+                          <td className="py-3">
+                            {adv.status === 'active' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 className="w-3 h-3" /> Active
+                              </span>
+                            ) : adv.computedStatus === 'expired' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                                <Clock className="w-3 h-3" /> Link Expired
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                <Clock className="w-3 h-3" /> Pending
+                              </span>
                             )}
+                          </td>
+
+                          <td className="py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Copy Link (#7 Affordance) */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyLink(adv)}
+                                className="p-1.5 rounded-lg text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition cursor-pointer"
+                                title="Copy direct sign-up link"
+                              >
+                                {copiedId === adv.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+
+                              {adv.status !== 'active' && (
+                                <>
+                                  {/* Resend Link */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResendInvitation(adv.id, adv.email)}
+                                    className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                                    title="Resend invitation email"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Revoke Link */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveInvitation(adv.id, adv.email)}
+                                    className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                    title="Revoke and wipe invitation"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -583,9 +897,33 @@ Please click the button below to activate your account and set up your credentia
                   </table>
                 </div>
               )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-400">
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 disabled:opacity-40 cursor-pointer"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 disabled:opacity-40 cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </Card>
 
           </div>
+
         </main>
       </div>
     </div>
