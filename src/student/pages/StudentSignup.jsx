@@ -1184,15 +1184,6 @@ export default function StudentSignup({ onSwitchPage }) {
           </form>
         )}
       </div>
-
-      {/* Footer */}
-      <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500 relative z-10 shrink-0">
-        Already have an account?{' '}
-        <button onClick={() => onSwitchPage('login')} className="text-[#6B0F1A] font-semibold hover:underline">
-          Sign In
-        </button>
-      </p>
-
     </div>
   );
 }

@@ -479,10 +479,6 @@ export default function StudentActivate() {
               >
                 {loading ? 'Activating...' : 'Activate My Account'}
               </button>
-
-              <p className="text-center text-sm text-gray-600 mt-6">
-                Already have an account? <a href="/" className="text-purple-600 font-semibold hover:text-purple-800">Sign in here</a>
-              </p>
             </form>
           </div>
         ) : (
