@@ -161,7 +161,7 @@ function ArchiveHome() {
       if (!subsList.length) {
         setPublishedPapers([]);
         setPopularDepartments([]);
-        setStats({ papers: 0, authors: 0, departments: 1, advisers: 0 });
+        setStats({ papers: 0, authors: 0, departments: 0, advisers: 0 });
         setTimeout(() => setLoading(false), 800);
         return;
       }
@@ -219,7 +219,7 @@ function ArchiveHome() {
       setStats({
         papers: enrichedPapers.length,
         authors: uniqueAuthors.size,
-        departments: uniqueDepartments.size || 1, // Fallback to at least 1 if program missing
+        departments: uniqueDepartments.size,
         advisers: uniqueAdvisers.size
       });
       setTimeout(() => setLoading(false), 800);
