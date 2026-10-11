@@ -2109,9 +2109,11 @@ app.post('/api/delete-cloudinary', async (req, res) => {
 // with automatic fallback to secondary models if needed.
 // ============================================
 const GEMINI_MODELS = [
-  'gemini-1.5-flash',          // High-throughput, fully supported, ultra-fast
-  'gemini-2.0-flash',          // Modern fast model
-  'gemini-1.5-pro'             // Advanced reasoning fallback
+  'gemini-3.5-flash',          // Active, fast, reliable Gemini model
+  'gemini-3.5-flash-lite',     // Lightweight high-throughput fallback
+  'gemini-flash-latest',       // Auto-updating latest Flash alias
+  'gemini-3.7-flash',          // Secondary fallback
+  'gemini-3.8-flash'           // Higher reasoning tier fallback
 ];
 
 async function generateWithGroqFallback(systemPrompt, userPrompt, jsonMode = false) {

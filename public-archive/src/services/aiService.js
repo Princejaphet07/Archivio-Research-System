@@ -8,9 +8,8 @@ import app from '../firebase/config';
 import { getBackendUrl } from '../utils/backendUrl';
 
 // Note: Client-side firebase/ai requires App Check attestation tokens (otherwise returns 401).
-// We default isAiLogicDisabled to true to route immediately to our high-throughput Backend SSE Stream,
-// eliminating 3-5s client roundtrip delays and ensuring instant responses.
-let isAiLogicDisabled = true;
+// Firebase AI Logic starts enabled, and automatically falls back to Backend SSE Stream if App Check is not yet configured.
+let isAiLogicDisabled = false;
 
 /**
  * Streams AI chat response using dual-engine approach
@@ -38,8 +37,8 @@ export async function streamAIChat({
   // ----------------------------------------------------
   if (!isAiLogicDisabled) {
     try {
-      const { getAI, getGenerativeModel } = await import('firebase/ai');
-      const ai = getAI(app);
+      const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
+      const ai = getAI(app, { backend: new GoogleAIBackend() });
       const model = getGenerativeModel(ai, { model: 'gemini-2.5-flash' });
 
       let systemPrompt = '';
