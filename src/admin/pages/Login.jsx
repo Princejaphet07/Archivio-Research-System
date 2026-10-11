@@ -10,12 +10,13 @@ import logo from '../../assets/logo.png';
 import loginBg from '../../assets/parchment.png';
 import tornEdge from '../../assets/torn-edge.png';
 import maroonBg from '../../assets/maroon-bg.png'; 
+import { useRepositoryStats } from '../../utils/useRepositoryStats';
 
 function Login() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
-  // Static Repository Stats
-  const stats = { total: 24, pending: 8, published: 156 };
+  // Real-time Cloud Firestore Repository Stats
+  const { stats } = useRepositoryStats();
   
   // Input states
   const [showPassword, setShowPassword] = useState(false);

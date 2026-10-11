@@ -10,9 +10,11 @@ import leftBg from '../../assets/Frame (1).png';
 import rightBg from '../../assets/Rectangle 9 (1).png';
 import tornEdge from '../../assets/Vector 3.png';
 import logo from '../../assets/logo.png';
+import { useRepositoryStats } from '../../utils/useRepositoryStats';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { stats } = useRepositoryStats();
 
   const [view, setView] = useState('login'); // 'login' | 'activate' | 'change-password'
   const [showPassword, setShowPassword] = useState(false);
@@ -289,15 +291,15 @@ export default function Login() {
           {/* Stats Box */}
           <div className="flex w-full max-w-sm divide-x divide-[#d4af37]/20 rounded-xl border border-[#d4af37]/20 bg-[#590000]/40 py-4 backdrop-blur-sm">
             <div className="flex flex-1 flex-col items-center">
-              <span className="font-serif text-2xl font-bold text-[#fae1a0]">24</span>
+              <span className="font-serif text-2xl font-bold text-[#fae1a0]">{stats.total}</span>
               <span className="text-[10px] text-stone-300">Submissions</span>
             </div>
             <div className="flex flex-1 flex-col items-center">
-              <span className="font-serif text-2xl font-bold text-[#fae1a0]">8</span>
+              <span className="font-serif text-2xl font-bold text-[#fae1a0]">{stats.pending}</span>
               <span className="text-[10px] text-stone-300">Pending</span>
             </div>
             <div className="flex flex-1 flex-col items-center">
-              <span className="font-serif text-2xl font-bold text-[#fae1a0]">156</span>
+              <span className="font-serif text-2xl font-bold text-[#fae1a0]">{stats.published}</span>
               <span className="text-[10px] text-stone-300">Published</span>
             </div>
           </div>

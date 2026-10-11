@@ -12,11 +12,12 @@ import tornEdge from '../assets/torn-edge.png';
 import maroonBg from '../assets/maroon-bg.png';
 import { getBackendUrl } from '../utils/backendUrl';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import { useRepositoryStats } from '../utils/useRepositoryStats';
 
 function UnifiedLogin() {
   const navigate = useNavigate();
-  // Static Repository Stats
-  const stats = { total: 24, pending: 8, published: 156 };
+  // Real-time Cloud Firestore Repository Stats
+  const { stats } = useRepositoryStats();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loginEmail, setLoginEmail] = useState(localStorage.getItem('archivio_remembered_email') || '');

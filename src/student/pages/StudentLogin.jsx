@@ -8,8 +8,10 @@ import parchmentBg from '../../assets/parchment.jpg';
 import tornEdge from '../../assets/torn-edge.png';
 import Swal from 'sweetalert2';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { useRepositoryStats } from '../../utils/useRepositoryStats';
 
 export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) {
+  const { stats } = useRepositoryStats();
   const [email, setEmail] = useState(prefilledEmail || localStorage.getItem('student_remembered_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -257,17 +259,17 @@ export default function StudentLogin({ onSwitchPage, onLogin, prefilledEmail }) 
           {/* Stats Box */}
           <div className="flex bg-[#4f1826] rounded-xl py-3 px-6 border border-white/5 shadow-xl w-full max-w-[340px] justify-between">
             <div className="flex flex-col items-center">
-              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">24</span>
+              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">{stats.total}</span>
               <span className="text-white/70 text-[11px] font-sans tracking-wide">Submissions</span>
             </div>
             <div className="w-[1px] bg-white/10 mx-2"></div>
             <div className="flex flex-col items-center">
-              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">8</span>
+              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">{stats.pending}</span>
               <span className="text-white/70 text-[11px] font-sans tracking-wide">Pending</span>
             </div>
             <div className="w-[1px] bg-white/10 mx-2"></div>
             <div className="flex flex-col items-center">
-              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">156</span>
+              <span className="text-[#C6A87C] text-xl font-serif font-bold mb-0.5">{stats.published}</span>
               <span className="text-white/70 text-[11px] font-sans tracking-wide">Published</span>
             </div>
           </div>

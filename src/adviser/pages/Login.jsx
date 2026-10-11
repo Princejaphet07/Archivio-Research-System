@@ -8,9 +8,11 @@ import logoImg from '../../assets/logo.png';
 import bgTexture from '../../assets/Rectangle 9 (2).png';
 import leftPanelBg from '../../assets/left-panel-bg.png';
 import jaggedEdge from '../../assets/jagged-edge.png';
+import { useRepositoryStats } from '../../utils/useRepositoryStats';
 
 function Login() {
   const navigate = useNavigate();
+  const { stats } = useRepositoryStats();
   const [email, setEmail] = useState(localStorage.getItem('adviser_remembered_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -115,15 +117,15 @@ function Login() {
         {/* Stats Row */}
         <div className="flex w-full max-w-sm justify-between border border-[#5a1f33]/60 rounded-xl p-3 bg-[#481426]/50 backdrop-blur-sm relative z-10">
           <div className="text-center w-1/3 border-r border-[#5a1f33]/60">
-            <div className="text-[#d0a36e] text-xl font-bold font-serif">24</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">{stats.total}</div>
             <div className="text-[10px] text-gray-300 mt-0.5">Submissions</div>
           </div>
           <div className="text-center w-1/3 border-r border-[#5a1f33]/60">
-            <div className="text-[#d0a36e] text-xl font-bold font-serif">8</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">{stats.pending}</div>
             <div className="text-[10px] text-gray-300 mt-0.5">Pending</div>
           </div>
           <div className="text-center w-1/3">
-            <div className="text-[#d0a36e] text-xl font-bold font-serif">156</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">{stats.published}</div>
             <div className="text-[10px] text-gray-300 mt-0.5">Published</div>
           </div>
         </div>
