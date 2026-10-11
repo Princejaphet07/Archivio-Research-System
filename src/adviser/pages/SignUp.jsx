@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -525,12 +525,6 @@ function SignUp() {
               </>
             )}
           </button>
-
-          <div className="text-center pt-3 border-t border-stone-100 mt-4">
-            <p className="text-xs font-medium text-stone-500">
-              Already have an account? <Link to="/" className="text-[#770000] font-bold hover:underline ml-1">Sign in here</Link>
-            </p>
-          </div>
         </form>
       </div>
 
