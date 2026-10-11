@@ -4,6 +4,7 @@ const app = require('./server');
 /**
  * ARCHIVIO Backend API
  * Deployed as a 2nd Generation Firebase Cloud Function.
+ * Updated: October 2026
  * 
  * - Memory: 1GiB (optimized for PDF parsing and memory-intensive AI tasks)
  * - Timeout: 300 seconds (plenty of time for large manuscript thesis parsing)

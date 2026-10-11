@@ -1,6 +1,6 @@
 {
   "name": "archivio-email-service",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Email service for ARCHIVIO Research Management System",
   "main": "index.js",
   "engines": {
