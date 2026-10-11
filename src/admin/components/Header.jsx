@@ -51,7 +51,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
       text: 'Are you sure you want to log out?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, log out'
     });
@@ -128,7 +128,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
               {breadcrumbs && breadcrumbs.map((crumb, index) => (
                 <React.Fragment key={index}>
                   <span className="mx-1.5 text-stone-300 dark:text-stone-600">›</span>
-                  <span className={index === breadcrumbs.length - 1 ? "text-[#801e38] dark:text-[#ff8ca3] font-semibold" : "text-stone-800 dark:text-stone-200"}>
+                  <span className={index === breadcrumbs.length - 1 ? "text-[#770000] dark:text-[#ff8ca3] font-semibold" : "text-stone-800 dark:text-stone-200"}>
                     {crumb}
                   </span>
                 </React.Fragment>
@@ -152,7 +152,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
                 placeholder="Search anything.." 
                 value={searchQuery !== undefined ? searchQuery : ''}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-48 lg:w-64 pl-9 pr-4 py-2 bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-xl text-sm outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] transition-all dark:text-stone-200"
+                className="w-48 lg:w-64 pl-9 pr-4 py-2 bg-stone-50 dark:bg-[#252525] border border-stone-200 dark:border-stone-700 rounded-xl text-sm outline-none focus:border-[#770000] focus:ring-1 focus:ring-[#770000] transition-all dark:text-stone-200"
               />
             </div>
           )}
@@ -163,14 +163,14 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
               value={selectedYear}
               onChange={(e) => changeYear(e.target.value)}
               aria-label="Select Academic School Year"
-              className="px-3 sm:px-4 py-2 bg-[#faf9f6] dark:bg-[#1e1e1e] border border-[#801e38] dark:border-stone-600 rounded-xl text-xs sm:text-sm text-[#801e38] dark:text-stone-300 font-bold outline-none cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 appearance-none pr-7 sm:pr-8 transition shadow-2xs"
+              className="px-3 sm:px-4 py-2 bg-[#faf9f6] dark:bg-[#1e1e1e] border border-[#770000] dark:border-stone-600 rounded-xl text-xs sm:text-sm text-[#770000] dark:text-stone-300 font-bold outline-none cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 appearance-none pr-7 sm:pr-8 transition shadow-2xs"
             >
               {academicYears.map(yr => (
                 <option key={yr} value={yr}>{yr}</option>
               ))}
               <option value="All">All Time</option>
             </select>
-            <span className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-[8px] text-[#801e38] dark:text-stone-300" aria-hidden="true">
+            <span className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-[8px] text-[#770000] dark:text-stone-300" aria-hidden="true">
               ▼
             </span>
           </div>
@@ -215,7 +215,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
           />
 
           {/* Slide-out Sidebar Panel */}
-          <div className="relative w-72 max-w-[85vw] bg-[#3b1220] dark:bg-[#121212] text-white flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-250">
+          <div className="relative w-72 max-w-[85vw] bg-[#590000] dark:bg-[#121212] text-white flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-250">
             <div>
               {/* Header */}
               <div className="p-5 border-b border-white/10 flex items-center justify-between">
@@ -274,7 +274,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
             {/* User Profile & Logout */}
             <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border border-white/10 ${isSuperAdmin ? 'bg-amber-700' : 'bg-[#801e38]'} text-[#f5ebd9]`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border border-white/10 ${isSuperAdmin ? 'bg-amber-700' : 'bg-[#770000]'} text-[#f5ebd9]`}>
                   {initials}
                 </div>
                 <div className="truncate max-w-[130px]">

@@ -191,7 +191,7 @@ function MyGroups() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="bg-[#7a2e46] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 text-[10px] uppercase tracking-wider">
+                <tr className="bg-[#590000] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 text-[10px] uppercase tracking-wider">
                   <th className="py-4 px-6 font-semibold w-16">No.</th>
                   <th className="py-4 px-6 font-semibold">Group Name</th>
                   <th className="py-4 px-6 font-semibold">Members</th>
@@ -252,7 +252,7 @@ function MyGroups() {
                               }}
                               variant="primary"
                               size="sm"
-                              className="bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900 text-xs"
+                              className="bg-[#770000] hover:bg-[#590000] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900 text-xs"
                             >
                               Review
                             </PremiumButton>
@@ -287,7 +287,7 @@ function MyGroups() {
                   onClick={() => setCurrentPage(page)}
                   className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs sm:text-sm font-medium transition ${
                     currentPage === page
-                      ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                      ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900'
                       : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
                   }`}
                 >
@@ -326,7 +326,7 @@ function MyGroups() {
             <div className="bg-white dark:bg-stone-950 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
 
               {/* Modal Header */}
-              <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-4 sm:p-6 rounded-t-2xl relative pr-12">
+              <div className="bg-[#590000] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-4 sm:p-6 rounded-t-2xl relative pr-12">
                 <button
                   onClick={() => setShowModal(false)}
                   className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition text-sm cursor-pointer"
@@ -344,19 +344,19 @@ function MyGroups() {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
                   <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-3 sm:p-4 text-center">
-                    <p className="text-xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{1 + (selectedGroup.members?.length || 0)}</p>
+                    <p className="text-xl font-bold text-[#590000] dark:text-[#f8d070]">{1 + (selectedGroup.members?.length || 0)}</p>
                     <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Members</p>
                   </div>
-                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                    <p className="text-xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{uploadedCount}/{requiredCount}</p>
+                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-3 sm:p-4 text-center">
+                    <p className="text-xl font-bold text-[#590000] dark:text-[#f8d070]">{uploadedCount}/{requiredCount}</p>
                     <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Documents</p>
                   </div>
-                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                    <p className="text-xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{percent}%</p>
+                  <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-3 sm:p-4 text-center">
+                    <p className="text-xl font-bold text-[#590000] dark:text-[#f8d070]">{percent}%</p>
                     <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Complete</p>
                   </div>
                   <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                    <p className="text-xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{sub?.pageCount || '—'}</p>
+                    <p className="text-xl font-bold text-[#590000] dark:text-[#f8d070]">{sub?.pageCount || '—'}</p>
                     <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Pages</p>
                   </div>
                 </div>
@@ -387,7 +387,7 @@ function MyGroups() {
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-2">Group Members</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <span className="bg-[#590000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5" /> {selectedGroup.leaderName} (Leader)
                     </span>
                     {selectedGroup.members?.map((m, i) => {
@@ -450,7 +450,7 @@ function MyGroups() {
                                     href={docMeta.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition"
+                                    className="bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1 rounded-lg hover:bg-[#590000] dark:hover:bg-[#ffe090] transition"
                                   >
                                     View
                                   </a>
@@ -474,7 +474,7 @@ function MyGroups() {
                     <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-2">Keywords</p>
                     <div className="flex flex-wrap gap-2">
                       {sub.keywords.map((kw, i) => (
-                        <span key={i} className="border border-[#DDA3B6] dark:border-stone-700 text-[#7a2e46] dark:text-[#f8d070] bg-[#F9EBF0] dark:bg-stone-800 px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
+                        <span key={i} className="border border-[#770000]/30 dark:border-stone-700 text-[#590000] dark:text-[#f8d070] bg-[#F9EBF0] dark:bg-stone-800 px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
                       ))}
                     </div>
                   </div>
@@ -496,7 +496,7 @@ function MyGroups() {
                   }}
                   variant="primary"
                   size="sm"
-                  className="bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900"
+                  className="bg-[#770000] hover:bg-[#590000] dark:bg-[#f8d070] dark:hover:bg-[#ffe090] text-white dark:text-stone-900"
                 >
                   Open in Review Queue →
                 </PremiumButton>

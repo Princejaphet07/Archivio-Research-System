@@ -162,7 +162,7 @@ function Dashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-[#5a1831] to-[#802a46] rounded-2xl p-5 sm:p-7 md:p-8 text-white relative overflow-hidden shadow-lg">
+        <div className="bg-gradient-to-r from-[#590000] to-[#770000] rounded-2xl p-5 sm:p-7 md:p-8 text-white relative overflow-hidden shadow-lg">
           <div className="absolute right-0 top-0 w-64 h-full bg-white/5 rounded-l-full blur-3xl transform translate-x-20"></div>
           <div className="relative z-10">
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-1.5">Research Adviser Portal</p>
@@ -262,10 +262,10 @@ function Dashboard() {
                         let badgeText = '• Pending Review';
                         
                         if (isApproved) {
-                          borderColor = 'border-[#5a1831]';
+                          borderColor = 'border-[#590000]';
                           textColor = 'text-green-700';
                           bgColor = 'bg-green-100';
-                          barColor = 'bg-[#5a1831]';
+                          barColor = 'bg-[#590000]';
                           badgeText = '• Complete';
                         } else if (sub.missingDocs.length > 0) {
                           borderColor = 'border-blue-400';
@@ -334,7 +334,7 @@ function Dashboard() {
                                     </span>
                                   ) : (sub.missingDocs.length > 0 ? `Missing: ${sub.missingDocs.map(d => d.title).join(', ')}` : 'Ready for review')}
                                 </span>
-                                <span className={`font-bold shrink-0 ${isApproved ? 'text-[#5a1831] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
+                                <span className={`font-bold shrink-0 ${isApproved ? 'text-[#590000] dark:text-[#f8d070]' : (sub.missingDocs.length > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400')}`}>
                                   {isApproved ? (sub.reviewStatus === 'published' ? 'Published' : 'Approved') : `${sub.uploadedCount} of ${sub.requiredCount}`}
                                 </span>
                               </div>
@@ -366,7 +366,7 @@ function Dashboard() {
                                 onClick={() => setCurrentSubPage(page)}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-medium transition ${
                                   currentSubPage === page
-                                    ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                                    ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900'
                                     : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
                                 }`}
                               >
@@ -442,7 +442,7 @@ function Dashboard() {
             <Card glass={true}>
               <CardBody>
                 <h3 className="font-bold text-[13px] text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-[#7a1f3d] dark:text-[#f8d070] shrink-0" />
+                  <BarChart3 className="w-4 h-4 text-[#590000] dark:text-[#f8d070] shrink-0" />
                   <span>Group Progress</span>
                 </h3>
                 <div className="h-48">

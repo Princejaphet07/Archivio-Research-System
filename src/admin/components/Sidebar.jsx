@@ -32,7 +32,7 @@ function Sidebar() {
       text: 'Are you sure you want to log out?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, log out'
     });
@@ -111,7 +111,7 @@ function Sidebar() {
         
         {badge && (
           <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${
-            isActive ? 'bg-[#d6ad60] text-[#3b1220]' : 'bg-[#801e38] text-white'
+            isActive ? 'bg-[#d6ad60] text-[#590000]' : 'bg-[#770000] text-white'
           }`}>
             {badge}
           </span>
@@ -125,7 +125,7 @@ function Sidebar() {
     : 'SA';
 
   return (
-    <aside className="w-64 bg-[#3b1220] dark:bg-[#121212] text-white flex flex-col justify-between shrink-0 hidden md:flex border-r border-stone-200/10 dark:border-stone-800">
+    <aside className="w-64 bg-[#590000] dark:bg-[#121212] text-white flex flex-col justify-between shrink-0 hidden md:flex border-r border-stone-200/10 dark:border-stone-800">
       <div>
         {/* Logo Header */}
         <div className="p-6 border-b border-white/5 flex items-center gap-3">
@@ -136,7 +136,7 @@ function Sidebar() {
               <p className="text-[9px] text-stone-400 tracking-wider uppercase">
                 {isSuperAdmin ? 'Super Administrator' : 'System Administrator'}
               </p>
-              <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide ${isSuperAdmin ? 'bg-amber-700/70 text-amber-200' : 'bg-[#801e38] text-white'}`}>
+              <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide ${isSuperAdmin ? 'bg-amber-700/70 text-amber-200' : 'bg-[#770000] text-white'}`}>
                 {isSuperAdmin ? 'Super' : 'Admin'}
               </span>
             </div>
@@ -265,7 +265,7 @@ function Sidebar() {
       {/* Profile Card & Logout Button */}
       <div className="p-4 border-t border-white/5 flex items-center justify-between bg-black/10">
         <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border border-white/10 shadow-inner ${isSuperAdmin ? 'bg-amber-700' : 'bg-[#801e38]'} text-[#f5ebd9]`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border border-white/10 shadow-inner ${isSuperAdmin ? 'bg-amber-700' : 'bg-[#770000]'} text-[#f5ebd9]`}>
             {initials}
           </div>
           <div>
@@ -277,7 +277,7 @@ function Sidebar() {
           onClick={handleLogout}
           disabled={isLoggingOut}
           title="Logout"
-          className="w-8 h-8 rounded-lg bg-[#801e38]/10 hover:bg-[#801e38] text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-8 h-8 rounded-lg bg-[#770000]/20 hover:bg-[#770000] text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoggingOut ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

@@ -44,7 +44,7 @@ export default function UndoPublishBanner({
       <div className="relative overflow-hidden rounded-2xl bg-stone-900/95 dark:bg-stone-950/95 backdrop-blur-md border border-stone-700 shadow-2xl text-white p-4">
         {/* Visual Progress Bar (#5 Feedback) */}
         <div 
-          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#B8860B] to-[#7B1F35] transition-all duration-1000 ease-linear"
+          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#B8860B] to-[#770000] transition-all duration-1000 ease-linear"
           style={{ width: `${percentProgress}%` }}
         />
 

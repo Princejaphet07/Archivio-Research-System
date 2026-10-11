@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import TermsAndConditionsModal from './TermsAndConditionsModal';
 
 function Footer() {
   const [totalViews, setTotalViews] = useState(0);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [policyTab, setPolicyTab] = useState('terms');
 
   useEffect(() => {
     const qSubs = query(collection(db, 'submissions'), where('reviewStatus', '==', 'published'));
@@ -20,6 +23,11 @@ function Footer() {
 
     return () => unsubscribe();
   }, []);
+
+  const openPolicy = (tab) => {
+    setPolicyTab(tab);
+    setShowPolicyModal(true);
+  };
 
   return (
     <footer className="bg-[#1a050d] text-stone-400 pt-10 pb-6 px-6 md:px-16 font-sans text-[11px] border-t-4 border-[#3d0c1b] relative overflow-hidden">
@@ -38,7 +46,6 @@ function Footer() {
             </h2>
             <p className="mb-0.5 text-stone-300">Research Archive Management System</p>
             <p className="mb-4">SWU PHINMA • Cebu City, Philippines</p>
-
           </div>
 
           {/* Top Departments */}
@@ -68,12 +75,25 @@ function Footer() {
 
           {/* Quick Links */}
           <div className="flex flex-col items-center md:items-end">
-            <h3 className="text-[#8c7435] font-bold mb-3 tracking-widest uppercase text-[9px]">Quick Links</h3>
-            <div className="flex flex-row md:flex-col gap-4 md:gap-2 md:items-end">
+            <h3 className="text-[#8c7435] font-bold mb-3 tracking-widest uppercase text-[9px]">Quick Links &amp; Policies</h3>
+            <div className="flex flex-row md:flex-col flex-wrap justify-center gap-4 md:gap-2 md:items-end">
               <Link to="/" className="hover:text-white transition">Home</Link>
               <Link to="/browse" className="hover:text-white transition">Browse</Link>
               <Link to="/about" className="hover:text-white transition">About</Link>
-              <a href="#" className="hover:text-white transition">Library</a>
+              <button 
+                type="button" 
+                onClick={() => openPolicy('terms')} 
+                className="hover:text-[#f3e5ab] transition cursor-pointer text-left md:text-right"
+              >
+                Terms of Use
+              </button>
+              <button 
+                type="button" 
+                onClick={() => openPolicy('privacy')} 
+                className="hover:text-[#f3e5ab] transition cursor-pointer text-left md:text-right"
+              >
+                Privacy Policy
+              </button>
             </div>
           </div>
 
@@ -93,14 +113,39 @@ function Footer() {
             <span>Total Archive Views: <strong className="text-white ml-1">{totalViews.toLocaleString()}</strong></span>
           </div>
 
-          {/* Copyright */}
+          {/* Copyright & Legal Links */}
           <div className="text-center md:text-right">
             <p className="mb-0.5 text-[10px]">© {new Date().getFullYear()} SWU PHINMA • ARCHIVIO</p>
-            <p className="text-[10px] text-stone-600">Capstone Project • BSIT</p>
+            <div className="flex items-center justify-center md:justify-end gap-2 text-[10px] text-stone-500">
+              <button 
+                type="button" 
+                onClick={() => openPolicy('terms')} 
+                className="hover:text-[#f3e5ab] transition cursor-pointer underline"
+              >
+                Terms and Conditions
+              </button>
+              <span>•</span>
+              <button 
+                type="button" 
+                onClick={() => openPolicy('privacy')} 
+                className="hover:text-[#f3e5ab] transition cursor-pointer underline"
+              >
+                Privacy Policy
+              </button>
+              <span>•</span>
+              <span className="text-stone-600">BSIT Capstone</span>
+            </div>
           </div>
         </div>
 
       </div>
+
+      {/* POLICY MODAL */}
+      <TermsAndConditionsModal
+        isOpen={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+        initialTab={policyTab}
+      />
     </footer>
   );
 }

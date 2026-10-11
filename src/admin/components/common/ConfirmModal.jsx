@@ -50,14 +50,14 @@ export default function ConfirmModal({
       btn: 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-500 shadow-sm shadow-amber-600/20'
     },
     info: {
-      icon: <ShieldAlert className="w-6 h-6 text-[#801e38] dark:text-[#ff8ca3]" aria-hidden="true" />,
-      badgeBg: 'bg-[#801e38]/10 border-[#801e38]/20',
-      btn: 'bg-[#801e38] hover:bg-[#68182d] text-white focus:ring-[#801e38]'
+      icon: <ShieldAlert className="w-6 h-6 text-[#770000] dark:text-[#ff8ca3]" aria-hidden="true" />,
+      badgeBg: 'bg-[#770000]/10 border-[#770000]/20',
+      btn: 'bg-[#770000] hover:bg-[#5b0000] text-white focus:ring-[#770000]'
     }
   }[severity] || {
     icon: <AlertCircle className="w-6 h-6 text-stone-600" aria-hidden="true" />,
     badgeBg: 'bg-stone-50 border-stone-200',
-    btn: 'bg-[#801e38] text-white hover:bg-[#601328]'
+    btn: 'bg-[#770000] text-white hover:bg-[#5b0000]'
   };
 
   return (

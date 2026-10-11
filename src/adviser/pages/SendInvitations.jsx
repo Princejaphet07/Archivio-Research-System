@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAdviser } from '../context/AdviserContext';
@@ -16,7 +16,9 @@ import {
   Search, 
   AlertCircle, 
   AlertTriangle, 
-  X 
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 function SendInvitations() {
@@ -212,17 +214,32 @@ function SendInvitations() {
 
       await addDoc(collection(db, 'studentInvitations'), invitationData);
 
+      // Derive student name for email greeting
+      const studentDisplayName = (() => {
+        if (studentEmail && studentEmail.includes('@')) {
+          const prefix = studentEmail.split('@')[0];
+          const parts = prefix.split(/[\._\-]/).filter(Boolean);
+          const cleanParts = parts.map(part => {
+            const clean = part.replace(/\d+/g, '').trim();
+            if (!clean) return '';
+            return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+          }).filter(Boolean);
+          if (cleanParts.length > 0) return cleanParts.join(' ');
+        }
+        return 'Student';
+      })();
+
       // 4. Fast Multi-tier Email Dispatch (<2.5s)
       const emailHTML = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-          <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+          <div style="background: linear-gradient(135deg, #590000 0%, #770000 100%); padding: 40px 20px; text-align: center;">
             <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
             <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
             <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
           </div>
           
           <div style="padding: 40px 30px; background-color: #ffffff;">
-            <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, Student!</h2>
+            <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Hello ${studentDisplayName},</h2>
             <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Student Researcher</strong>.</p>
             
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 30px 0;">
@@ -235,7 +252,7 @@ function SendInvitations() {
             </div>
             
             <div style="text-align: center; margin: 40px 0 10px 0;">
-              <a href="${invitationLink}" target="_blank" style="background-color: #7a1f3d !important; background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(122, 31, 61, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
+              <a href="${invitationLink}" target="_blank" style="background-color: #770000 !important; background: linear-gradient(135deg, #770000 0%, #590000 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(119, 0, 0, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
             </div>
             
             <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
@@ -258,6 +275,7 @@ function SendInvitations() {
         backendEndpoint: '/api/send-student-invitation-email',
         backendPayload: {
           to: studentEmail.toLowerCase().trim(),
+          studentName: studentDisplayName,
           invitationLink: invitationLink,
           senderName: adviserData.displayName || 'Research Adviser',
           senderDepartment: adviserData.department || 'SWU Phinma'
@@ -324,7 +342,7 @@ function SendInvitations() {
 
       const resendHTML = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-          <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+          <div style="background: linear-gradient(135deg, #590000 0%, #770000 100%); padding: 40px 20px; text-align: center;">
             <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
             <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
             <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
@@ -339,7 +357,7 @@ function SendInvitations() {
             </div>
             
             <div style="text-align: center; margin: 40px 0 10px 0;">
-              <a href="${link}" target="_blank" style="background-color: #7a1f3d !important; background: linear-gradient(135deg, #7a1f3d 0%, #9e2752 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(122, 31, 61, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
+              <a href="${link}" target="_blank" style="background-color: #770000 !important; background: linear-gradient(135deg, #770000 0%, #590000 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(119, 0, 0, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
             </div>
             
             <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
@@ -362,6 +380,7 @@ function SendInvitations() {
         backendEndpoint: '/api/send-student-invitation-email',
         backendPayload: {
           to: studentEmail.toLowerCase().trim(),
+          studentName: studentDisplayName,
           invitationLink: link,
           senderName: adviserData.displayName || 'Research Adviser',
           senderDepartment: adviserData.department || 'SWU Phinma'
@@ -423,6 +442,14 @@ function SendInvitations() {
     }
   };
 
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page to 1 on search or data change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, invitations.length]);
+
   const filteredInvitations = invitations.filter((inv) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
@@ -431,6 +458,13 @@ function SendInvitations() {
     const date = inv.invitationSentAt ? new Date(inv.invitationSentAt).toLocaleDateString().toLowerCase() : '';
     return email.includes(q) || status.includes(q) || date.includes(q);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvitations.length / itemsPerPage));
+
+  const paginatedInvitations = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredInvitations.slice(start, start + itemsPerPage);
+  }, [filteredInvitations, currentPage, itemsPerPage]);
 
   return (
     <Layout title="Send Invitations" breadcrumb="ARCHIVIO › Send Invitations" showSearch={false}>
@@ -457,10 +491,10 @@ function SendInvitations() {
 
         {/* Action Card */}
         <Card glass={true} className="p-5 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7a2e46]/10 to-[#7a2e46]/20 dark:from-[#f8d070]/10 dark:to-[#f8d070]/20 border border-[#7a2e46]/20 dark:border-[#f8d070]/30 flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] mb-3 shadow-inner">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#590000]/10 to-[#590000]/20 dark:from-[#f8d070]/10 dark:to-[#f8d070]/20 border border-[#590000]/20 dark:border-[#f8d070]/30 flex items-center justify-center text-[#590000] dark:text-[#f8d070] mb-3 shadow-inner">
             <Mail className="w-7 h-7" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#7a2e46] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
+          <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#590000] dark:text-[#f8d070] mb-2">Send Student Registration Link</h2>
           <p className="text-gray-500 dark:text-stone-400 text-xs sm:text-sm max-w-lg mb-5 sm:mb-6">
             Type the student's institutional email address below and click Send. The student will receive a registration link to create their account in ARCHIVIO.
           </p>
@@ -482,7 +516,7 @@ function SendInvitations() {
                   className={`w-full bg-white dark:bg-stone-950 border text-gray-900 dark:text-stone-100 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm outline-none transition-colors disabled:opacity-50 ${
                     emailError
                       ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20 dark:bg-red-950/20'
-                      : 'border-gray-300 dark:border-stone-700 focus:border-[#7a2e46] dark:focus:border-[#f8d070]'
+                      : 'border-gray-300 dark:border-stone-700 focus:border-[#770000] dark:focus:border-[#f8d070]'
                   }`}
                   disabled={loading}
                 />
@@ -531,7 +565,7 @@ function SendInvitations() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search sent invitations..."
-                className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]"
               />
               {searchQuery && (
                 <button
@@ -550,51 +584,77 @@ function SendInvitations() {
               {searchQuery ? `No invitations match "${searchQuery}"` : 'No invitations sent yet. Send your first one above!'}
             </Card>
           ) : (
-            filteredInvitations.map((invitation) => (
-              <Card key={invitation.id} glass={true} className="p-4 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-stone-200 truncate">
-                      {invitation.studentEmail}
-                    </p>
-                    <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">
-                      Sent: {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
-                    </p>
+            <>
+              {paginatedInvitations.map((invitation) => (
+                <Card key={invitation.id} glass={true} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-stone-200 truncate">
+                        {invitation.studentEmail}
+                      </p>
+                      <p className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">
+                        Sent: {invitation.invitationSentAt ? new Date(invitation.invitationSentAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      invitation.status === 'active' 
+                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
+                        : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                      {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                    </span>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                    invitation.status === 'active' 
-                      ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
-                      : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                    {invitation.status === 'active' ? 'Registered' : 'Pending'}
-                  </span>
-                </div>
 
-                {invitation.status === 'pending' && (
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-stone-800">
-                    <button 
+                  {invitation.status === 'pending' && (
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-stone-800">
+                      <button 
+                        type="button"
+                        onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span>Resend</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/60 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  )}
+                </Card>
+              ))}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2 px-1 text-xs text-gray-500 dark:text-stone-400">
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
                       type="button"
-                      onClick={() => handleResendInvitation(invitation.id, invitation.studentEmail)}
-                      disabled={loading}
-                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 disabled:opacity-40"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      <span>Resend</span>
+                      Prev
                     </button>
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => handleRemoveInvitation(invitation.id, invitation.studentEmail)}
-                      disabled={loading}
-                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/60 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 disabled:opacity-40"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove</span>
+                      Next
                     </button>
                   </div>
-                )}
-              </Card>
-            ))
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -614,7 +674,7 @@ function SendInvitations() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search sent invitations..."
-                className="w-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] transition-colors"
+                className="w-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] transition-colors"
               />
               {searchQuery && (
                 <button
@@ -638,7 +698,7 @@ function SendInvitations() {
                 <button 
                   type="button" 
                   onClick={() => setSearchQuery('')}
-                  className="mt-2 text-xs text-[#7a2e46] dark:text-[#f8d070] font-semibold underline cursor-pointer"
+                  className="mt-2 text-xs text-[#590000] dark:text-[#f8d070] font-semibold underline cursor-pointer"
                 >
                   Clear search
                 </button>
@@ -647,7 +707,7 @@ function SendInvitations() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
+                <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
                   <tr>
                     <th className="py-3 px-6">Student Email</th>
                     <th className="py-3 px-6">Sent</th>
@@ -656,7 +716,7 @@ function SendInvitations() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
-                  {filteredInvitations.map((invitation) => (
+                  {paginatedInvitations.map((invitation) => (
                     <tr key={invitation.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50 transition-colors">
                       <td className="py-4 px-6 text-gray-700 dark:text-stone-300 font-medium">{invitation.studentEmail}</td>
                       <td className="py-4 px-6 text-gray-500 dark:text-stone-400">
@@ -702,6 +762,51 @@ function SendInvitations() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Desktop Pagination Controls */}
+          {filteredInvitations.length > 0 && (
+            <div className="p-4 border-t border-gray-200 dark:border-stone-800 flex items-center justify-between text-xs sm:text-sm">
+              <span className="text-gray-500 dark:text-stone-400 font-medium">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredInvitations.length)}–{Math.min(currentPage * itemsPerPage, filteredInvitations.length)} of {filteredInvitations.length} invitations
+              </span>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 shadow-xs'
+                          : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </Card>

@@ -38,7 +38,7 @@ export default function ExecutivePaperRow({
       <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#E06D85]">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#590000]/10 text-[#590000] dark:text-[#f8d070]">
               {program}
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
@@ -51,7 +51,7 @@ export default function ExecutivePaperRow({
 
           <h3 
             onClick={() => onViewPdf(item)}
-            className="font-serif text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 hover:text-[#7B1F35] dark:hover:text-[#E06D85] cursor-pointer transition-colors leading-snug"
+            className="font-serif text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 hover:text-[#590000] dark:hover:text-[#f8d070] cursor-pointer transition-colors leading-snug"
             title="Click to preview manuscript"
           >
             {title}
@@ -91,7 +91,7 @@ export default function ExecutivePaperRow({
           <button
             type="button"
             onClick={() => onPublish(item)}
-            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-xs hover:shadow-md transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] active:scale-95 shadow-xs hover:shadow-md transition-all cursor-pointer"
             title="Publish manuscript to live archive"
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
@@ -153,7 +153,7 @@ export default function ExecutivePaperRow({
             <button
               type="button"
               onClick={() => onCheckSimilarity(item)}
-              className="text-[#7B1F35] dark:text-[#E06D85] hover:underline font-bold inline-flex items-center gap-1.5 cursor-pointer text-xs"
+              className="text-[#590000] dark:text-[#f8d070] hover:underline font-bold inline-flex items-center gap-1.5 cursor-pointer text-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Run AI Similarity Scan</span>

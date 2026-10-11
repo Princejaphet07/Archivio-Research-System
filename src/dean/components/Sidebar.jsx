@@ -22,7 +22,7 @@ const NAV_ITEMS_MAIN = [
   {
     id: 'research-records',
     label: 'Research Records',
-    badgeStyle: 'bg-[#f8d070] text-[#4a1024]',
+    badgeStyle: 'bg-[#f8d070] text-[#590000]',
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h4m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -74,7 +74,7 @@ const NAV_ITEMS_MANAGEMENT = [
     id: 'user-management',
     label: 'User Management',
     badge: '3',
-    badgeStyle: 'bg-[#f8d070] text-[#4a1024]',
+    badgeStyle: 'bg-[#f8d070] text-[#590000]',
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -171,7 +171,7 @@ export default function Sidebar({ onNavigate }) {
       text: 'Are you sure you want to log out?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, log out'
     });
@@ -247,7 +247,7 @@ export default function Sidebar({ onNavigate }) {
         </div>
         
         {badge && (
-          <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${badgeStyle || 'bg-[#801e38] text-white'}`}>
+          <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${badgeStyle || 'bg-[#770000] text-white'}`}>
             {badge}
           </span>
         )}
@@ -257,7 +257,7 @@ export default function Sidebar({ onNavigate }) {
 
   return (
     <>
-      <aside className="w-[260px] bg-[#4a1024] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0">
+      <aside className="w-[260px] bg-[#590000] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0 border-r border-[#770000]/40 dark:border-stone-800">
 
       {/* LOGO AREA */}
       <div className="p-6 flex items-center gap-3">

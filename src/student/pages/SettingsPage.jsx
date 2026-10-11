@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, getDoc, setDoc, updateDoc, doc, onSn
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
 import Swal from 'sweetalert2';
+import { logActivity } from '../../firebase/logActivity';
 
 const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
 
@@ -199,12 +200,12 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         }
       } catch (e) {}
 
-      await addDoc(collection(db, 'notifications'), {
-        userId: user?.uid,
-        title: "Profile Updated",
-        message: "Your profile information was successfully updated.",
-        isRead: false,
-        createdAt: serverTimestamp()
+      await logActivity({
+        user: newDisplayName || user?.email || 'Student',
+        role: 'Student',
+        action: 'Updated profile information',
+        status: 'Success',
+        details: `Updated profile name to "${newDisplayName}"`
       });
 
       Swal.fire({
@@ -289,6 +290,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       // Optimistic local state update
       setStudentData(prev => ({ ...(prev || {}), profilePhotoUrl: downloadURL }));
       
+      await logActivity({
+        user: `${firstName} ${lastName}`.trim() || auth.currentUser?.email || 'Student',
+        role: 'Student',
+        action: 'Uploaded profile photo',
+        status: 'Success',
+        details: 'Updated profile avatar photo'
+      });
+
       Swal.fire({
         title: 'Success!',
         text: 'Profile photo updated.',
@@ -356,6 +365,14 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       } catch (e) {}
 
       setStudentData(prev => ({ ...(prev || {}), profilePhotoUrl: null }));
+
+      await logActivity({
+        user: `${firstName} ${lastName}`.trim() || auth.currentUser?.email || 'Student',
+        role: 'Student',
+        action: 'Removed profile photo',
+        status: 'Success',
+        details: 'Removed profile avatar photo'
+      });
 
       Swal.fire({
         title: 'Removed!',
@@ -470,6 +487,15 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+
+      await logActivity({
+        user: `${firstName} ${lastName}`.trim() || auth.currentUser?.email || 'Student',
+        role: 'Student',
+        action: 'Changed password',
+        status: 'Success',
+        details: 'Updated account password'
+      });
+
       Swal.fire({
         title: 'Success!',
         text: 'Your password has been successfully updated.',

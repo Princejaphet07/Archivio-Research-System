@@ -10,6 +10,7 @@ import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { Mail, Users, GraduationCap, Eye } from 'lucide-react';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -184,7 +185,7 @@ export default function UserManagement() {
           title: 'Success!',
           text: `Account has been ${newStatus}d.`,
           icon: 'success',
-          confirmButtonColor: '#4a1024'
+          confirmButtonColor: '#770000'
         });
       } catch (err) {
         console.error(err);
@@ -192,7 +193,7 @@ export default function UserManagement() {
           title: 'Error',
           text: 'Failed to update account status.',
           icon: 'error',
-          confirmButtonColor: '#4a1024'
+          confirmButtonColor: '#770000'
         });
       }
     }
@@ -217,11 +218,12 @@ export default function UserManagement() {
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752]">Users / Advisers</h1>
+              <h1 className="text-2xl font-serif font-bold text-[#590000] dark:text-[#f8d070]">Users / Advisers</h1>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Manage research adviser and student accounts under your supervision</p>
             </div>
-            <button onClick={() => navigate('/dean/invitations')} className="bg-[#4a1024] dark:bg-stone-950 hover:bg-[#6b1834] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">
-              ✉️ Invite New Adviser
+            <button onClick={() => navigate('/dean/invitations')} className="bg-[#770000] dark:bg-stone-950 hover:bg-[#590000] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors">
+              <Mail className="w-4 h-4" />
+              <span>Invite New Adviser</span>
             </button>
           </div>
 
@@ -241,15 +243,19 @@ export default function UserManagement() {
             <div className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-100 dark:border-stone-700 px-4 flex gap-6 text-xs font-bold text-stone-400">
               <button 
                 onClick={() => setActiveTab('advisers')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#4a1024] dark:border-[#f8d070] text-[#4a1024] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'advisers' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
               >
-                🧑‍🏫 Research Advisers <span className={`${activeTab === 'advisers' ? 'bg-[#4a1024]/10 dark:bg-[#f8d070]/20 text-[#4a1024] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
+                <Users className="w-4 h-4" />
+                <span>Research Advisers</span>
+                <span className={`${activeTab === 'advisers' ? 'bg-[#590000]/10 dark:bg-[#f8d070]/20 text-[#590000] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedAdvisers.length}</span>
               </button>
               <button 
                 onClick={() => setActiveTab('students')}
-                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#4a1024] dark:border-[#f8d070] text-[#4a1024] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
+                className={`py-3 flex items-center gap-1.5 transition-colors ${activeTab === 'students' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'border-b-2 border-transparent hover:text-stone-600 dark:hover:text-stone-300'}`}
               >
-                🎓 Students <span className={`${activeTab === 'students' ? 'bg-[#4a1024]/10 dark:bg-[#f8d070]/20 text-[#4a1024] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
+                <GraduationCap className="w-4 h-4" />
+                <span>Students</span>
+                <span className={`${activeTab === 'students' ? 'bg-[#590000]/10 dark:bg-[#f8d070]/20 text-[#590000] dark:text-[#f8d070]' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'} text-[10px] px-1.5 py-0.5 rounded-full`}>{enrichedStudents.length}</span>
               </button>
             </div>
 
@@ -334,7 +340,7 @@ export default function UserManagement() {
                                 variant="outline"
                                 size="sm"
                               >
-                                👁️ View
+                                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> View</span>
                               </PremiumButton>
                               {!row.isYou && (
                                 <PremiumButton 
@@ -386,7 +392,7 @@ export default function UserManagement() {
                                 size="sm"
                                 className="mr-2"
                               >
-                                👁️ View
+                                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> View</span>
                               </PremiumButton>
                               <PremiumButton 
                                 onClick={() => handleDeactivate(row)}
@@ -413,7 +419,7 @@ export default function UserManagement() {
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowUserModal(false)}>
           <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 relative flex items-center gap-4">
+            <div className="bg-[#590000] dark:bg-stone-950 text-white p-6 relative flex items-center gap-4">
               <button
                 onClick={() => setShowUserModal(false)}
                 className="absolute top-4 right-4 w-8 h-8 bg-white text-stone-800 dark:bg-stone-800/20 dark:text-white rounded-full flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800/30 transition text-lg"
@@ -447,7 +453,7 @@ export default function UserManagement() {
                     </div>
                     <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100 dark:border-stone-700">
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Published</p>
-                      <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedUser.publishedCount}</p>
+                      <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedUser.publishedCount}</p>
                     </div>
                   </div>
                   <div>

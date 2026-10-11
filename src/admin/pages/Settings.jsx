@@ -36,6 +36,8 @@ import { logActivity } from '../../firebase/logActivity';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { authFetch } from '../../utils/authFetch';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import RequirementIcon from '../../components/ui/RequirementIcon';
+
 
 export default function Settings() {
   const { availableYears } = useAcademicYear();
@@ -1701,7 +1703,9 @@ export default function Settings() {
                 {pendingAdminRequirements.map(req => (
                   <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white dark:bg-stone-800 rounded-lg border border-amber-200 dark:border-amber-900/50 gap-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-lg">{req.icon || '📄'}</span>
+                      <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-700 flex items-center justify-center shrink-0">
+                        <RequirementIcon icon={req.icon} type={req.type} title={req.title} className="w-4 h-4" />
+                      </div>
                       <div>
                         <span className="text-xs font-bold text-stone-900 dark:text-stone-100">{req.title}</span>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400">{req.desc || 'Custom submission requirement'} • Proposer: {req.adviserUid || req.requestedBy || 'Dean'}</p>
@@ -1770,7 +1774,7 @@ export default function Settings() {
                       {storageFiles[item.title] && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">{item.icon}</span>
+                      <RequirementIcon icon={item.icon} type={item.type} title={item.title} className="w-4 h-4 shrink-0" />
                       <span className="text-sm font-bold text-stone-800 dark:text-stone-100 truncate">{item.title}</span>
                     </div>
                   </div>

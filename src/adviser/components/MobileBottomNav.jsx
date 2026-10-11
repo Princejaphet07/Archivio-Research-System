@@ -42,16 +42,23 @@ function MobileBottomNav({ onOpenMenu }) {
           const subsData = subSnap.docs.map(d => d.data());
           let count = 0;
           groupsData.forEach(group => {
-            const sub = subsData.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
+            const sub = subsData.find(s => 
+              (s.studentUid && (s.studentUid === group.leaderUid || s.studentUid === group.leaderEmail)) || 
+              (s.groupName && s.groupName === group.groupName) || 
+              (s.title && s.title === group.researchTitle) || 
+              (s.researchTitle && s.researchTitle === group.researchTitle)
+            ) || {};
             const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
-            const docKeys = sub.documents && typeof sub.documents === 'object' ? Object.keys(sub.documents) : [];
+            const docKeys = sub.documents && typeof sub.documents === 'object' 
+              ? Object.keys(sub.documents).filter(k => !!(sub.documents[k]?.url || sub.documents[k]?.name)) 
+              : [];
             const uploadedCount = Math.max(uploadedDocs.length, docKeys.length, (sub.manuscriptUrl || sub.fileUrl ? 1 : 0));
 
             // Do not put notification if student hasn't uploaded a file or requirements
             if (uploadedCount === 0) return;
 
-            const status = sub.reviewStatus;
-            if (status === 'pending' || status === 'needs_review' || status === 'reviewed') {
+            const status = sub.reviewStatus || sub.status || 'in_progress';
+            if (status !== 'approved' && status !== 'published') {
               count++;
             }
           });
@@ -145,12 +152,12 @@ function MobileBottomNav({ onOpenMenu }) {
                   type="button"
                   onClick={item.onClick}
                   aria-label={item.label}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl sm:rounded-2xl transition-all duration-200 text-stone-500 dark:text-stone-400 hover:text-[#7B1F35] dark:hover:text-[#f8d070] hover:bg-stone-100/60 dark:hover:bg-stone-800/60 active:scale-95 cursor-pointer group"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl sm:rounded-2xl transition-all duration-200 text-stone-500 dark:text-stone-400 hover:text-[#590000] dark:hover:text-[#f8d070] hover:bg-stone-100/60 dark:hover:bg-stone-800/60 active:scale-95 cursor-pointer group"
                 >
                   <div className="relative mb-0.5 group-hover:scale-110 transition-transform duration-200">
                     {item.icon}
                   </div>
-                  <span className="text-[10px] font-medium tracking-tight leading-none text-stone-600 dark:text-stone-400 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070]">
+                  <span className="text-[10px] font-medium tracking-tight leading-none text-stone-600 dark:text-stone-400 group-hover:text-[#590000] dark:group-hover:text-[#f8d070]">
                     {item.label}
                   </span>
                 </button>
@@ -165,7 +172,7 @@ function MobileBottomNav({ onOpenMenu }) {
                 aria-label={item.label}
                 className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-xl sm:rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer ${
                   isActive 
-                    ? 'bg-[#7B1F35]/10 dark:bg-[#f8d070]/15 text-[#7B1F35] dark:text-[#f8d070] shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]' 
+                    ? 'bg-[#590000]/10 dark:bg-[#f8d070]/15 text-[#590000] dark:text-[#f8d070] shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]' 
                     : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100/50 dark:hover:bg-stone-800/50'
                 }`}
               >
@@ -185,7 +192,7 @@ function MobileBottomNav({ onOpenMenu }) {
                     {item.label}
                   </span>
                   {isActive && (
-                    <span className="w-1 h-1 rounded-full bg-[#7B1F35] dark:bg-[#f8d070] shrink-0 animate-pulse"></span>
+                    <span className="w-1 h-1 rounded-full bg-[#590000] dark:bg-[#f8d070] shrink-0 animate-pulse"></span>
                   )}
                 </div>
               </button>

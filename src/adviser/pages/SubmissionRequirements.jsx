@@ -209,7 +209,7 @@ function SubmissionRequirements() {
 
       setShowModal(false);
       setNewReq({ title: '', desc: '', type: 'file', icon: 'file' });
-      Swal.fire({ icon: 'success', title: 'Added', text: 'Requirement proposed to Dean for approval', confirmButtonColor: '#7a2e46' });
+      Swal.fire({ icon: 'success', title: 'Added', text: 'Requirement proposed to Dean for approval', confirmButtonColor: '#770000' });
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Could not add requirement' });
@@ -280,7 +280,7 @@ function SubmissionRequirements() {
                   id={`req-${req.id}`}
                   className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border rounded-xl p-3.5 sm:p-4 transition-all duration-300 ${
                     isTargeted
-                      ? 'border-[#7a1f3d] dark:border-[#f8d070] ring-2 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/50 bg-rose-50/70 dark:bg-rose-950/20 shadow-md scale-[1.01]'
+                      ? 'border-[#590000] dark:border-[#f8d070] ring-2 ring-[#590000]/50 dark:ring-[#f8d070]/50 bg-rose-50/70 dark:bg-rose-950/20 shadow-md scale-[1.01]'
                       : 'border-gray-200 dark:border-stone-800 hover:bg-gray-50 dark:hover:bg-stone-800/50'
                   }`}
                 >
@@ -292,7 +292,7 @@ function SubmissionRequirements() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-bold text-gray-900 dark:text-stone-100 block truncate">{req.title}</span>
                         {isTargeted && (
-                          <span className="bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-stone-900 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shrink-0">
+                          <span className="bg-[#590000] text-white dark:bg-[#f8d070] dark:text-stone-900 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shrink-0">
                             Updated
                           </span>
                         )}
@@ -343,7 +343,7 @@ function SubmissionRequirements() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-stone-950 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden my-auto border border-stone-200 dark:border-stone-800 animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
-            <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 p-4 sm:p-5 text-white dark:text-stone-100 flex items-center justify-between shrink-0">
+            <div className="bg-[#590000] dark:bg-stone-900 dark:border-b dark:border-stone-800 p-4 sm:p-5 text-white dark:text-stone-100 flex items-center justify-between shrink-0">
               <h2 className="font-bold text-base sm:text-lg">Propose New Requirement</h2>
               <button 
                 type="button" 
@@ -361,7 +361,7 @@ function SubmissionRequirements() {
                   type="text" 
                   value={newReq.title}
                   onChange={e => setNewReq({...newReq, title: e.target.value})}
-                  className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]" 
+                  className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]" 
                   placeholder="e.g. Source Code Repository"
                 />
               </div>
@@ -372,7 +372,7 @@ function SubmissionRequirements() {
                   type="text" 
                   value={newReq.desc}
                   onChange={e => setNewReq({...newReq, desc: e.target.value})}
-                  className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]" 
+                  className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]" 
                   placeholder="e.g. Link to your public GitHub repo"
                 />
               </div>
@@ -382,7 +382,7 @@ function SubmissionRequirements() {
                   <select 
                     value={newReq.type}
                     onChange={e => setNewReq({...newReq, type: e.target.value, icon: e.target.value === 'url' ? 'link' : 'file'})}
-                    className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                    className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]"
                   >
                     <option value="file">File Upload</option>
                     <option value="url">URL / Link</option>
@@ -394,13 +394,13 @@ function SubmissionRequirements() {
                     type="text" 
                     value={newReq.icon}
                     onChange={e => setNewReq({...newReq, icon: e.target.value})}
-                    className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]" 
+                    className="w-full bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100 border border-gray-300 dark:border-stone-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]" 
                   />
                 </div>
               </div>
               <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-4 border-t border-gray-100 dark:border-stone-800">
                 <button type="button" onClick={() => setShowModal(false)} className="w-full sm:flex-1 border border-gray-300 dark:border-stone-700 text-gray-600 dark:text-stone-300 rounded-lg py-2.5 text-sm font-bold hover:bg-gray-50 dark:hover:bg-stone-800 transition">Cancel</button>
-                <button type="submit" className="w-full sm:flex-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg py-2.5 text-sm font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm">Propose Requirement</button>
+                <button type="submit" className="w-full sm:flex-1 bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg py-2.5 text-sm font-bold hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm">Propose Requirement</button>
               </div>
             </form>
           </div>

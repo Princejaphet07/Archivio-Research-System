@@ -14,6 +14,8 @@ import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { extractPdfText, generateAbstractWithAI, extractKeywordsWithAI } from '../../utils/aiManuscriptExtractor';
+import RequirementIcon from '../../components/ui/RequirementIcon';
+
 
 // Dynamic requirements fetched from DB with resilient defense fallback
 const DEFAULT_REQUIREMENTS = [
@@ -630,15 +632,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       currentDocId = addedDoc.id;
     }
 
-    // Student self-notification (notify current user who uploaded)
-    await addDoc(collection(db, 'notifications'), {
-      userId: auth.currentUser?.uid,
-      title: hadRevision ? '✅ Revision Resubmitted' : 'Document Uploaded',
-      message: hadRevision
-        ? `You resubmitted "${itemTitle}" after revision. Your adviser will review it.`
-        : `You successfully uploaded: ${itemTitle}`,
-      isRead: false,
-      createdAt: serverTimestamp()
+    // Log activity to System Admin Activity Log
+    await logActivity({
+      user: displayName || auth.currentUser?.email || 'Student',
+      role: 'Student',
+      action: hadRevision ? 'Resubmitted requirement revision' : 'Uploaded requirement document',
+      status: 'Success',
+      details: `Document: "${itemTitle}" (${effectiveGroupName || 'Research Group'})`
     });
 
     // If uploaded by a member, also notify the group leader
@@ -652,15 +652,34 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       }).catch(() => {});
     }
 
-    // Notify the adviser if student resubmitted a revised document
-    if (hadRevision && adviserUid) {
+    // Notify the adviser when a student uploads or resubmits a requirement
+    let targetAdviserUid = adviserUid;
+    if (!targetAdviserUid && effectiveUid) {
+      try {
+        const groupSnap = await getDocs(query(collection(db, 'groups'), where('leaderUid', '==', effectiveUid)));
+        if (!groupSnap.empty) {
+          targetAdviserUid = groupSnap.docs[0].data().adviserUid;
+        }
+      } catch (e) {
+        console.warn('Adviser UID lookup notice:', e);
+      }
+    }
+
+    if (targetAdviserUid) {
+      const notifTitle = hadRevision ? '📄 Student Resubmitted Revision' : '📄 Requirement Uploaded';
+      const notifMessage = hadRevision
+        ? `${displayName} (${effectiveGroupName}) has resubmitted "${itemTitle}" after your revision request.${studentReply ? ` Student Note: "${studentReply}"` : ''}`
+        : `${displayName} (${effectiveGroupName}) uploaded requirement document: "${itemTitle}".`;
+
       await addDoc(collection(db, 'notifications'), {
-        userId: adviserUid,
-        title: '📄 Student Resubmitted Revision',
-        message: `${displayName} has resubmitted "${itemTitle}" after your revision request.${studentReply ? ` Student Note: "${studentReply}"` : ''}`,
+        userId: targetAdviserUid,
+        title: notifTitle,
+        message: notifMessage,
         isRead: false,
+        type: 'requirement_upload',
+        groupName: effectiveGroupName,
         createdAt: serverTimestamp()
-      });
+      }).catch((err) => console.warn('Adviser notification send notice:', err));
     }
 
     // Update local state
@@ -719,12 +738,12 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         updatedAt: new Date().toISOString()
       });
 
-      await addDoc(collection(db, 'notifications'), {
-        userId: auth.currentUser?.uid,
-        title: "Document Removed",
-        message: `You removed: ${item.title}`,
-        isRead: false,
-        createdAt: serverTimestamp()
+      await logActivity({
+        user: displayName || auth.currentUser?.email || 'Student',
+        role: 'Student',
+        action: 'Removed requirement document',
+        status: 'Success',
+        details: `Removed document: "${item.title}"`
       });
 
       // Update local state
@@ -890,8 +909,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                       <div className={`absolute top-0 left-0 right-0 h-[3px] ${hasRevision ? 'bg-gradient-to-r from-amber-500 to-orange-400' : 'bg-gradient-to-r from-[#7B1F35] to-[#C73D4C]'}`} />
                       <CardBody className="flex flex-col flex-1 pt-7">
                         <div className="flex items-start gap-3 mb-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl ${hasRevision ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20'}`}>
-                            {item.icon}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${hasRevision ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20'}`}>
+                            <RequirementIcon icon={item.icon} type={item.type} title={item.title} className="w-5 h-5" />
                           </div>
                           <div>
                             <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>
@@ -995,8 +1014,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                     <div className={`absolute top-0 left-0 right-0 h-[3px] ${isSuspended ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : 'bg-gradient-to-r from-red-500 to-red-400'}`} />
                     <CardBody className="flex flex-col flex-1 pt-7">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl ${isSuspended ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
-                          {item.icon}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSuspended ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                          <RequirementIcon icon={item.icon} type={item.type} title={item.title} className="w-5 h-5" />
                         </div>
                         <div>
                           <h4 className="font-bold text-[#1A1A1A] dark:text-stone-100 text-[15px]">{item.title}</h4>

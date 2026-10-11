@@ -182,7 +182,7 @@ export default function NotificationBell() {
           text: newNotif.message,
           showConfirmButton: false,
           timer: 4000,
-          background: '#7B1F35',
+          background: '#590000',
           color: '#fff',
           iconColor: '#fff',
           customClass: { popup: 'rounded-xl shadow-xl' }
@@ -313,8 +313,8 @@ export default function NotificationBell() {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
           hasUnread
-            ? 'text-[#541b2f] bg-[#541b2f]/10 hover:bg-[#541b2f]/20'
-            : 'text-gray-400 hover:text-[#541b2f] hover:bg-gray-100'
+            ? 'text-[#590000] bg-[#590000]/10 hover:bg-[#590000]/20'
+            : 'text-gray-400 hover:text-[#590000] hover:bg-gray-100'
         }`}
         title={hasUnread ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'Notifications'}
       >
@@ -335,7 +335,7 @@ export default function NotificationBell() {
       {/* Dropdown Panel */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden z-50 transform origin-top-right transition-all">
-          <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center">
+          <div className="bg-[#590000] text-white px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-[14px]">Notifications</h3>
               {hasUnread && (
@@ -375,7 +375,7 @@ export default function NotificationBell() {
                     <div className="flex gap-2.5 items-start">
                       <span className="text-lg leading-none pt-0.5">{getIcon(n.title, n.message)}</span>
                       <div className="flex flex-col">
-                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300'}`}>
+                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300'}`}>
                           {n.title}
                         </span>
                         <p className="text-[12px] text-stone-600 dark:text-stone-400 leading-snug mt-0.5">{n.message}</p>

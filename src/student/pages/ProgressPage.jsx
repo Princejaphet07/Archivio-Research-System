@@ -10,6 +10,8 @@ import { Card, PremiumButton } from '../../components/ui/Card';
 import { authFetch } from '../../utils/authFetch';
 import CertificateModal from '../../components/CertificateModal';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { Landmark, AlertTriangle, MessageSquare, Award } from 'lucide-react';
+
 
 const getInitials = (name = '') => name?.substring(0, 2).toUpperCase() || 'ST';
 
@@ -527,7 +529,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                   <div className="mb-6 bg-rose-50/80 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 border-l-4 border-l-rose-600 dark:border-l-rose-500 p-5 rounded-r-xl shadow-sm transition-colors">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <h4 className="text-sm font-bold text-rose-900 dark:text-rose-300 flex items-center gap-2">
-                        <span className="text-base">🏛️</span> Dean's Review & Revision Directive
+                        <Landmark className="w-4 h-4 text-rose-700 dark:text-rose-400 shrink-0" /> Dean's Review & Revision Directive
                       </h4>
                       <div className="flex items-center gap-2">
                         {submission?.deanFeedback?.category && (
@@ -536,8 +538,8 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                           </span>
                         )}
                         {submission?.deanFeedback?.priority === 'urgent' && (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
-                            🚨 Urgent
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Urgent
                           </span>
                         )}
                       </div>
@@ -556,7 +558,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 {submission?.adviserComments && (
                   <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-700/50 p-4 rounded-r-lg shadow-sm transition-colors">
                     <h4 className="text-sm font-bold text-yellow-800 dark:text-[#7B1F35] mb-1 flex items-center gap-2">
-                      <span>💬</span> Adviser Feedback
+                      <MessageSquare className="w-4 h-4 text-yellow-700 dark:text-yellow-400 shrink-0" /> Adviser Feedback
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-400 italic whitespace-pre-wrap">"{submission.adviserComments}"</p>
                   </div>

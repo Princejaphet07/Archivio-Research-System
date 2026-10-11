@@ -117,6 +117,57 @@ const formatDepartment = (deptStr, activeDepartments = [], activePrograms = []) 
   return defaultDept;
 };
 
+const formatProgram = (userDocData, activePrograms = []) => {
+  if (!userDocData) return 'BSIT';
+
+  let rawProg = userDocData.programCode || userDocData.program || userDocData.programs || userDocData.course;
+
+  if (Array.isArray(rawProg)) {
+    rawProg = rawProg.filter(p => p && typeof p === 'string').join(', ');
+  }
+
+  if (rawProg && typeof rawProg === 'string') {
+    const trimmed = rawProg.trim();
+    if (trimmed && !['n/a', 'none', 'null', 'undefined', 'faculty', 'faculty / head', 'faculty/head'].includes(trimmed.toLowerCase())) {
+      const lower = trimmed.toLowerCase();
+      if (lower.includes('information tech') || lower.includes('bsit') || lower.includes('software')) {
+        return 'BSIT';
+      }
+      if (lower.includes('computer science') || lower.includes('bscs')) {
+        return 'BSCS';
+      }
+      if (lower.includes('information sys') || lower.includes('bsis')) {
+        return 'BSIS';
+      }
+      if (lower.includes('business') || lower.includes('bsba')) {
+        return 'BSBA';
+      }
+      if (lower.includes('nursing') || lower.includes('bsn')) {
+        return 'BSN';
+      }
+      if (lower.includes('criminology') || lower.includes('bscrim')) {
+        return 'BSCrim';
+      }
+      if (trimmed.length <= 8) {
+        return trimmed.toUpperCase();
+      }
+      return trimmed;
+    }
+  }
+
+  const deptStr = String(userDocData.department || userDocData.dept || '').toLowerCase();
+  if (deptStr.includes('information tech') || deptStr.includes('cit') || deptStr.includes('computer') || deptStr.includes('software')) {
+    return 'BSIT';
+  }
+
+  if (activePrograms && activePrograms.length > 0) {
+    const activeCode = activePrograms.find(p => p.status === 'Active' || p.code)?.code;
+    if (activeCode) return activeCode;
+  }
+
+  return 'BSIT';
+};
+
 export default function Reports() {
   const [selected, setSelected] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -161,7 +212,7 @@ export default function Reports() {
     const unsubDeans = onSnapshot(collection(db, 'deans'), (snap) => {
       deansData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Dean', dept: formatDepartment(d.data().department), prog: 'Faculty / Head', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Dean', dept: formatDepartment(d.data().department, departments, programs), prog: formatProgram(d.data(), programs), date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -170,7 +221,7 @@ export default function Reports() {
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snap) => {
       advisersData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Advisor', dept: formatDepartment(d.data().department), prog: 'Faculty', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Advisor', dept: formatDepartment(d.data().department, departments, programs), prog: formatProgram(d.data(), programs), date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();
@@ -179,7 +230,7 @@ export default function Reports() {
     const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
       studentsData = snap.docs.map(d => ({
         id: d.id, name: d.data().displayName || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim(),
-        role: 'Student', dept: formatDepartment(d.data().course || d.data().department), prog: d.data().yearLevel || 'N/A', date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
+        role: 'Student', dept: formatDepartment(d.data().course || d.data().department, departments, programs), prog: formatProgram(d.data(), programs), date: formatDate(d.data().createdAt), login: formatDate(d.data().lastLogin), status: d.data().status || 'Active',
         createdAt: d.data().createdAt
       }));
       updateUsers();

@@ -10,7 +10,7 @@ import { Pencil, Trash2, X } from 'lucide-react';
 
 function ResearchCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedColor, setSelectedColor] = useState('#7a2e46');
+  const [selectedColor, setSelectedColor] = useState('#590000');
   const [categoryName, setCategoryName] = useState('');
   const [categoryIcon, setCategoryIcon] = useState('🔗');
   const [categoryDescription, setCategoryDescription] = useState('');
@@ -62,7 +62,7 @@ function ResearchCategories() {
   }, []);
 
   const colorOptions = [
-    '#7a2e46', // Maroon
+    '#590000', // Rosewood
     '#1e40af', // Blue
     '#b91c1c', // Red
     '#eab308', // Yellow
@@ -75,7 +75,7 @@ function ResearchCategories() {
   const resetForm = () => {
     setCategoryName('');
     setCategoryIcon('🔗');
-    setSelectedColor('#7a2e46');
+    setSelectedColor('#590000');
     setCategoryDescription('');
     setEditingId(null);
     setIsModalOpen(false);
@@ -90,7 +90,7 @@ function ResearchCategories() {
   const openEditModal = (cat) => {
     setCategoryName(cat.name);
     setCategoryIcon(cat.icon || '🔗');
-    setSelectedColor(cat.bgColor || '#7a2e46');
+    setSelectedColor(cat.bgColor || '#590000');
     setCategoryDescription(cat.description || '');
     setEditingId(cat.id);
     setIsModalOpen(true);
@@ -197,18 +197,18 @@ function ResearchCategories() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           {loading ? (
             <>
-              <CardSkeleton borderTopColor="#7a2e46" />
+              <CardSkeleton borderTopColor="#590000" />
               <CardSkeleton borderTopColor="#1e40af" />
               <CardSkeleton borderTopColor="#b91c1c" />
               <CardSkeleton borderTopColor="#eab308" />
             </>
           ) : (
             filteredCategories.map((cat, i) => (
-              <Card key={cat.id || i} className="flex flex-col justify-between min-h-[160px] group" hover={true} style={{ borderTop: `4px solid ${cat.bgColor || '#7a2e46'}` }}>
+              <Card key={cat.id || i} className="flex flex-col justify-between min-h-[160px] group" hover={true} style={{ borderTop: `4px solid ${cat.bgColor || '#590000'}` }}>
                 <CardBody className="flex flex-col h-full p-4 sm:p-5">
                   <div className="flex-1 w-full">
                     <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform origin-left">{cat.icon || '🔗'}</div>
-                    <h3 className="font-bold text-[#2A1115] dark:text-stone-100 text-base sm:text-lg text-left group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] transition-colors leading-snug">{cat.name}</h3>
+                    <h3 className="font-bold text-[#2A1115] dark:text-stone-100 text-base sm:text-lg text-left group-hover:text-[#590000] dark:group-hover:text-[#f8d070] transition-colors leading-snug">{cat.name}</h3>
                     <p className="text-[11px] sm:text-xs text-gray-400 dark:text-stone-500 text-left mt-0.5">Adviser Category</p>
                   </div>
                   <div className="flex items-center gap-2 mt-4 pt-2 border-t border-gray-100 dark:border-stone-800">
@@ -236,10 +236,10 @@ function ResearchCategories() {
           <Card 
             hover={true}
             onClick={openAddModal}
-            className="border-2 border-dashed border-stone-300 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/40 hover:bg-white dark:hover:bg-stone-900/80 flex flex-col items-center justify-center min-h-[160px] group text-stone-500 dark:text-stone-400 hover:border-[#7B1F35] dark:hover:border-[#f8d070] hover:text-[#7B1F35] dark:hover:text-[#f8d070] cursor-pointer transition-all"
+            className="border-2 border-dashed border-stone-300 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/40 hover:bg-white dark:hover:bg-stone-900/80 flex flex-col items-center justify-center min-h-[160px] group text-stone-500 dark:text-stone-400 hover:border-[#590000] dark:hover:border-[#f8d070] hover:text-[#590000] dark:hover:text-[#f8d070] cursor-pointer transition-all"
           >
-            <span className="text-3xl font-light mb-1.5 group-hover:scale-110 transition-transform text-stone-400 dark:text-stone-400 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070]">+</span>
-            <span className="text-xs sm:text-[13px] font-bold text-stone-600 dark:text-stone-300 group-hover:text-[#7B1F35] dark:group-hover:text-[#f8d070] transition-colors">Add New Category</span>
+            <span className="text-3xl font-light mb-1.5 group-hover:scale-110 transition-transform text-stone-400 dark:text-stone-400 group-hover:text-[#590000] dark:group-hover:text-[#f8d070]">+</span>
+            <span className="text-xs sm:text-[13px] font-bold text-stone-600 dark:text-stone-300 group-hover:text-[#590000] dark:group-hover:text-[#f8d070] transition-colors">Add New Category</span>
           </Card>
         </div>
 
@@ -271,7 +271,7 @@ function ResearchCategories() {
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="e.g. Blockchain Technology" 
                     list="standard-categories"
-                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100"
+                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100"
                   />
                   <datalist id="standard-categories">
                     <option value="Computer Science" />
@@ -299,7 +299,7 @@ function ResearchCategories() {
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 flex justify-between items-center transition"
+                      className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 flex justify-between items-center transition"
                     >
                       <span className="text-xl leading-none">{categoryIcon}</span>
                       <span className="text-gray-400 dark:text-stone-500">
@@ -365,7 +365,7 @@ function ResearchCategories() {
                     onChange={(e) => setCategoryDescription(e.target.value)}
                     placeholder="Brief description of this research category..." 
                     rows="3"
-                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 resize-none"
+                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100 resize-none"
                   />
                 </div>
               </div>
@@ -380,7 +380,7 @@ function ResearchCategories() {
                 </button>
                 <button 
                   onClick={handleSaveCategory}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white dark:text-stone-900 bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition text-center shadow-sm"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white dark:text-stone-900 bg-[#770000] dark:bg-[#f8d070] hover:bg-[#590000] dark:hover:bg-[#ffe090] transition text-center shadow-sm"
                 >
                   {editingId ? 'Save Changes' : 'Create Category'}
                 </button>

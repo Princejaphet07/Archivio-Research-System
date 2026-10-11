@@ -332,84 +332,110 @@ function ArchiveHome() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
           {loading ? (
             [1, 2, 3].map(n => (
-              <div key={n} className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-gray-700/50 flex flex-col justify-between h-64 relative overflow-hidden">
+              <div key={n} className="bg-[#f8f2e4]/70 dark:bg-stone-900/40 rounded-2xl p-6 shadow-sm border-t-4 border-t-[#590000]/40 border-x border-b border-[#e5d8c3] dark:border-stone-800 flex flex-col justify-between h-72 relative overflow-hidden">
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <div className="h-6 w-28 rounded animate-shimmer"></div>
-                    <div className="h-5 w-12 rounded animate-shimmer"></div>
+                    <div className="h-6 w-28 rounded bg-[#ebdcc3]/80 animate-shimmer"></div>
+                    <div className="h-5 w-12 rounded bg-[#ebdcc3]/60 animate-shimmer"></div>
                   </div>
-                  <div className="h-7 w-3/4 rounded mb-3 animate-shimmer"></div>
-                  <div className="h-7 w-1/2 rounded mb-5 animate-shimmer"></div>
-                  <div className="h-4 w-1/3 rounded mb-4 animate-shimmer"></div>
+                  <div className="h-7 w-3/4 rounded bg-[#ebdcc3] mb-3 animate-shimmer"></div>
+                  <div className="h-7 w-1/2 rounded bg-[#ebdcc3] mb-5 animate-shimmer"></div>
+                  <div className="h-4 w-1/3 rounded bg-[#ebdcc3]/60 mb-4 animate-shimmer"></div>
                 </div>
-                <div className="flex justify-between items-center mt-8 pt-4 border-t border-stone-200/50 dark:border-gray-700/50">
-                  <div className="h-5 w-16 rounded animate-shimmer"></div>
-                  <div className="h-9 w-24 rounded animate-shimmer"></div>
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#e4d7c2]/80">
+                  <div className="h-5 w-16 rounded bg-[#ebdcc3]/60 animate-shimmer"></div>
+                  <div className="h-9 w-24 rounded bg-[#4a0e17]/30 animate-shimmer"></div>
                 </div>
               </div>
             ))
           ) : (
-            publishedPapers.slice(0, 3).map((paper) => (
-              <div
-                key={paper.id}
-                onMouseEnter={preloadViewer}
-                onTouchStart={preloadViewer}
-                className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-gray-700/60 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(107,20,44,0.1)] dark:hover:shadow-[0_20px_40px_rgb(243,229,171,0.05)] group overflow-hidden"
-              >
-                {/* Subtle Glow Effect on Hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+            publishedPapers.slice(0, 3).map((paper) => {
+              const categoryLabel = paper.category || paper.researchCategory || paper.categoryName || 'General';
+              const isLiked = paper.likes?.includes(currentUser?.uid);
 
-                <div className="relative z-10">
-                  <div className="flex justify-between items-center mb-4 text-xs text-stone-600 dark:text-gray-400">
-                    <span className="px-3 py-1 border border-stone-200/80 dark:border-gray-600/80 rounded-full bg-white/80 dark:bg-gray-700/80 truncate max-w-[180px] text-stone-800 dark:text-gray-200 font-medium shadow-sm">
-                      {normalizeDepartment(paper.program || paper.department || paper.category) || 'Research'}
-                    </span>
-                    <span className="font-medium bg-stone-100 dark:bg-gray-800 px-2 py-1 rounded-md">{new Date(paper.publishedAt || currentDate).getFullYear()}</span>
+              return (
+                <div
+                  key={paper.id}
+                  onMouseEnter={preloadViewer}
+                  onTouchStart={preloadViewer}
+                  className="relative bg-[#f8f2e4] dark:bg-[#1e1b18] rounded-2xl p-6 border-t-4 border-t-[#590000] dark:border-t-[#801e38] border-x border-b border-[#e5d8c3] dark:border-stone-700/80 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_36px_rgba(80,30,40,0.12)] dark:hover:shadow-[0_16px_36px_rgba(0,0,0,0.4)] group overflow-hidden shadow-sm"
+                >
+                  <div className="relative z-10 flex-1 flex flex-col justify-between">
+                    <div>
+                      {/* Top Row: Category Pill & Year */}
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="border border-[#a86576]/50 dark:border-[#a86576]/60 bg-[#f4e4e5] dark:bg-[#3d1822] text-[#590000] dark:text-[#f8a8b8] px-3.5 py-1 rounded-lg text-xs font-medium max-w-[200px] truncate shadow-sm">
+                          {categoryLabel}
+                        </span>
+                        <span className="text-stone-500 dark:text-stone-400 font-sans text-xs sm:text-sm font-normal">
+                          {new Date(paper.publishedAt || currentDate).getFullYear()}
+                        </span>
+                      </div>
+
+                      {/* Research Title */}
+                      <h3
+                        className="font-serif text-[#1c1917] dark:text-stone-100 font-bold text-xl md:text-[22px] leading-tight my-3.5 line-clamp-2 group-hover:text-[#590000] dark:group-hover:text-[#f8a8b8] transition-colors"
+                        title={paper.researchTitle || 'Untitled Research'}
+                      >
+                        {paper.researchTitle || 'Untitled Research'}
+                      </h3>
+
+                      {/* Authors & Adviser */}
+                      <p className="text-stone-700 dark:text-stone-300 text-xs sm:text-sm font-medium line-clamp-1 mb-1" title={paper.authorDisplay}>
+                        {paper.authorDisplay}
+                      </p>
+                      <p className="text-stone-500 dark:text-stone-400 text-xs italic">
+                        Adviser: {paper.adviserName || 'Unknown'}
+                      </p>
+
+                      {/* Divider */}
+                      <div className="border-b border-[#e4d7c2] dark:border-stone-700/80 my-4"></div>
+
+                      {/* Keywords */}
+                      <div className="flex gap-2 text-xs flex-wrap mb-4">
+                        {paper.keywords?.slice(0, 3).map(kw => (
+                          <span
+                            key={kw}
+                            className="bg-[#ebdcc3] dark:bg-stone-800 text-[#63513a] dark:text-stone-300 border border-[#d8c5a8] dark:border-stone-700 text-[11px] sm:text-xs px-3 py-1 rounded-full font-medium shadow-sm"
+                          >
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-lg text-stone-900 dark:text-gray-100 mb-2 leading-snug line-clamp-3 group-hover:text-[#7a2039] dark:group-hover:text-[#f3e5ab] transition-colors" title={paper.researchTitle || 'Untitled Research'}>
-                    {paper.researchTitle || 'Untitled Research'}
-                  </h3>
-                  <p className="text-xs text-stone-600 dark:text-gray-400 mb-1 line-clamp-1" title={paper.authorDisplay}>{paper.authorDisplay}</p>
-                  <p className="text-[11px] text-stone-500 dark:text-gray-500 italic">Adviser: {paper.adviserName || 'Unknown'}</p>
-                  <div className="flex gap-2 mt-4 text-[10px] flex-wrap">
-                    {paper.keywords?.slice(0, 3).map(kw => (
-                      <span key={kw} className="px-2 py-1 bg-stone-200/40 dark:bg-gray-700/50 rounded-full border border-stone-200/60 dark:border-gray-600/50 dark:text-gray-300">
-                        {kw}
+
+                  {/* Card Footer Bar */}
+                  <div className="mt-4 pt-3.5 border-t border-[#e4d7c2]/80 dark:border-stone-800 bg-[#efe2cd]/50 dark:bg-stone-900/40 -mx-6 -mb-6 px-6 py-3.5 flex items-center justify-between rounded-b-2xl relative z-10">
+                    <div className="text-xs text-stone-600 dark:text-stone-400 flex items-center gap-3 font-medium">
+                      <span
+                        onClick={(e) => handleLike(e, paper)}
+                        className="text-rose-600 hover:scale-110 transition-transform cursor-pointer flex items-center gap-1.5 font-bold"
+                        title="Like this paper"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke={isLiked ? "none" : "currentColor"} strokeWidth={1.5} className="w-4 h-4 text-rose-600">
+                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        </svg>
+                        {paper.likes?.length || 0}
                       </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-between items-center mt-8 relative z-10">
-                  <div className="text-xs text-stone-500 flex gap-3 font-medium">
-                    <span
-                      onClick={(e) => handleLike(e, paper)}
-                      className="text-stone-500 hover:text-rose-500 cursor-pointer hover:scale-110 transition-transform flex items-center gap-1"
-                      title="Like this paper"
+                      <span className="flex items-center gap-1.5 font-semibold text-stone-600 dark:text-stone-400 ml-2" title="Views">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-stone-500"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                        {paper.views || 0}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseEnter={preloadViewer}
+                      onTouchStart={preloadViewer}
+                      onClick={(e) => handleViewPaper(e, paper.id)}
+                      className="bg-[#4a0e17] hover:bg-[#380911] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                      {paper.likes?.includes(currentUser?.uid) ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-                      )}
-                      {paper.likes?.length || 0}
-                    </span>
-                    <span className="flex items-center gap-1" title="Views">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
-                      {paper.views || 0}
-                    </span>
+                      View Paper
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onMouseEnter={preloadViewer}
-                    onTouchStart={preloadViewer}
-                    onClick={(e) => handleViewPaper(e, paper.id)}
-                    className="px-5 py-2 bg-[#7a2039] text-white text-xs font-medium rounded-lg hover:bg-[#5a1528] transition-colors cursor-pointer inline-block shadow-sm"
-                  >
-                    View Paper
-                  </button>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           {!loading && publishedPapers.length === 0 && (
             <div className="col-span-3 text-center py-12 text-stone-500">

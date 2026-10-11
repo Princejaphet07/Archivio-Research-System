@@ -296,8 +296,8 @@ export default function Dashboard({ activePage }) {
   const maxCount = Math.max(...chartData.map(d => d.count || 0), 10);
   
   // Color palette for charts
-  const COLORS = ['#7a1f3d', '#2563eb', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
-  const BRAND_COLORS = ['#4a1024', '#7a1f3d', '#9e2752', '#d4af37', '#f8d070', '#8a7a7a', '#d6cfc7'];
+  const COLORS = ['#590000', '#770000', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
+  const BRAND_COLORS = ['#590000', '#770000', '#9e2752', '#d4af37', '#f8d070', '#8a7a7a', '#d6cfc7'];
 
   const sortedTopPapers = [...allPapers].sort((a, b) => {
     const aScore = topPapersSort === 'likes' ? (a.likes?.length || 0) : (a.views || 0);
@@ -350,7 +350,7 @@ export default function Dashboard({ activePage }) {
           {/* ================= WELCOME HEADER SECTION ================= */}
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-[#4a1024] dark:text-[#9e2752] tracking-tight flex items-center gap-2">
+              <h1 className="text-3xl font-serif font-bold text-[#590000] dark:text-[#f8d070] tracking-tight flex items-center gap-2">
                 {getGreeting()}, {firstName} <span className="animate-wave inline-block text-2xl select-none" role="img" aria-label="wave">👋</span>
               </h1>
               <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-1 uppercase tracking-wider">
@@ -380,15 +380,15 @@ export default function Dashboard({ activePage }) {
 
           {/* ================= ACTION-REQUIRED EXECUTIVE BANNER (#1 User-Centric Design) ================= */}
           {stats.approved > 0 && (
-            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#7B1F35]/15 via-amber-500/10 to-transparent border border-[#7B1F35]/30 dark:border-[#7B1F35]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#590000]/15 via-amber-500/10 to-transparent border border-[#590000]/30 dark:border-[#590000]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-[#7B1F35] text-white flex items-center justify-center shrink-0 shadow-sm">
+                <div className="w-11 h-11 rounded-2xl bg-[#590000] text-white flex items-center justify-center shrink-0 shadow-sm">
                   <Inbox className="w-5 h-5 text-amber-300" />
                 </div>
                 <div>
                   <h3 className="font-serif text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                     Action Required: {stats.approved} Research Manuscript{stats.approved > 1 ? 's' : ''} Awaiting Final Release
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7B1F35] text-white">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#770000] text-white">
                       Action Needed
                     </span>
                   </h3>
@@ -399,7 +399,7 @@ export default function Dashboard({ activePage }) {
               </div>
               <button
                 onClick={() => navigate('/dean/publish-queue')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm hover:shadow transition-all cursor-pointer shrink-0"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] active:scale-95 shadow-sm hover:shadow transition-all cursor-pointer shrink-0"
               >
                 <span>Review & Publish</span>
                 <span>➔</span>
@@ -423,7 +423,7 @@ export default function Dashboard({ activePage }) {
                   title="TOTAL GROUP" 
                   value={stats.totalGroups} 
                   trend="Total registered" 
-                  icon={<FolderKanban className="w-5 h-5 text-[#7a1f3d] dark:text-[#f8d070]" />} 
+                  icon={<FolderKanban className="w-5 h-5 text-[#590000] dark:text-[#f8d070]" />} 
                 />
                 <KpiCard 
                   title="APPROVED" 
@@ -474,13 +474,13 @@ export default function Dashboard({ activePage }) {
                 <div className="flex bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[11px] font-bold">
                   <button 
                     onClick={() => setChartFilter('year')}
-                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'year' ? 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
+                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'year' ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
                   >
                     By Year
                   </button>
                   <button 
                     onClick={() => setChartFilter('month')}
-                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'month' ? 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
+                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'month' ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
                   >
                     By Month
                   </button>
@@ -492,8 +492,8 @@ export default function Dashboard({ activePage }) {
                   <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7a1f3d" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#7a1f3d" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#590000" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#590000" stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
@@ -508,7 +508,7 @@ export default function Dashboard({ activePage }) {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
-                    <Area type="monotone" dataKey="count" name="Total Uploads" stroke="#7a1f3d" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={1500} />
+                    <Area type="monotone" dataKey="count" name="Total Uploads" stroke="#590000" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={1500} />
                     <Area type="monotone" dataKey="approved" name="Approved Papers" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorApproved)" animationDuration={1500} />
                     <Area type="monotone" dataKey="published" name="Published Papers" stroke="#d97706" strokeWidth={3} fillOpacity={1} fill="url(#colorPublished)" animationDuration={1500} />
                   </ComposedChart>
@@ -570,7 +570,7 @@ export default function Dashboard({ activePage }) {
                       <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest max-w-[120px] text-center truncate">
                         {activeIndex >= 0 ? topCategories[activeIndex].name : 'Total Papers'}
                       </span>
-                      <span className="text-3xl font-serif font-extrabold text-[#7a1f3d] dark:text-[#f8d070] leading-none mt-1">
+                      <span className="text-3xl font-serif font-extrabold text-[#590000] dark:text-[#f8d070] leading-none mt-1">
                         {activeIndex >= 0 ? topCategories[activeIndex].count : topCategories.reduce((acc, curr) => acc + curr.count, 0)}
                       </span>
                     </div>
@@ -618,14 +618,14 @@ export default function Dashboard({ activePage }) {
                     onClick={() => setTopPapersSort('likes')}
                     className={`${topPapersSort === 'likes' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5`}
                   >
-                    <ThumbsUp className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                    <ThumbsUp className="w-3 h-3 text-[#590000] dark:text-[#f8d070]" />
                     <span>Liked</span>
                   </button>
                   <button 
                     onClick={() => setTopPapersSort('views')}
                     className={`${topPapersSort === 'views' ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 shadow-sm' : 'text-stone-400 hover:text-stone-700 dark:text-stone-300'} px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5`}
                   >
-                    <Eye className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    <Eye className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <span>Viewed</span>
                   </button>
                 </div>
@@ -634,7 +634,7 @@ export default function Dashboard({ activePage }) {
                 {sortedTopPapers.length > 0 ? sortedTopPapers.map((paper, i) => {
                   const score = topPapersSort === 'likes' ? (paper.likes?.length || 0) : (paper.views || 0);
                   const icon = topPapersSort === 'likes' ? (
-                    <ThumbsUp className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                    <ThumbsUp className="w-3 h-3 text-[#590000] dark:text-[#f8d070]" />
                   ) : (
                     <Eye className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                   );
@@ -724,7 +724,7 @@ export default function Dashboard({ activePage }) {
                           <td className="py-3.5 px-5">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                                <div className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] h-full" style={{ width: `${adv.rate}%` }}></div>
+                                <div className="bg-[#590000] dark:bg-[#d4af37] dark:text-[#590000] h-full" style={{ width: `${adv.rate}%` }}></div>
                               </div>
                               <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400 w-8 text-right">{adv.rate}%</span>
                             </div>
@@ -769,9 +769,9 @@ function KpiCard({ title, value, trend, trendSub, subtext, icon, highlight, warn
 
 function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   return (
-    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all hover:-translate-y-[2px] shadow-sm ${active ? 'border-[#7a1f3d] dark:border-[#f8d070]/50 bg-[#7a1f3d]/10 dark:bg-[#f8d070]/10 ring-1 ring-[#7a1f3d]/50 dark:ring-[#f8d070]/30' : 'border-stone-200 dark:border-stone-700 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm hover:bg-stone-50/80 dark:hover:bg-stone-800/80'}`}>
-      <span className={`text-xs font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-800 dark:text-stone-200'}`}>{year}</span>
-      <span className={`text-lg font-serif font-bold ${active ? 'text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-900 dark:text-stone-100'} my-0.5`}>{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
+    <div className={`p-3 rounded-xl border flex flex-col justify-between transition-all hover:-translate-y-[2px] shadow-sm ${active ? 'border-[#590000] dark:border-[#f8d070]/50 bg-[#590000]/10 dark:bg-[#f8d070]/10 ring-1 ring-[#590000]/50 dark:ring-[#f8d070]/30' : 'border-stone-200 dark:border-stone-700 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm hover:bg-stone-50/80 dark:hover:bg-stone-800/80'}`}>
+      <span className={`text-xs font-bold ${active ? 'text-[#590000] dark:text-[#f8d070]' : 'text-stone-800 dark:text-stone-200'}`}>{year}</span>
+      <span className={`text-lg font-serif font-bold ${active ? 'text-[#590000] dark:text-[#f8d070]' : 'text-stone-900 dark:text-stone-100'} my-0.5`}>{count} <span className="text-[10px] font-sans font-medium text-stone-400">uploads</span></span>
       {badge && <span className="text-[9px] text-stone-400 font-bold tracking-tight uppercase">{badge}</span>}
       {growth && <span className={`text-[10px] font-extrabold ${textGreen ? 'text-emerald-600' : 'text-stone-500 dark:text-stone-400'}`}>{growth}</span>}
     </div>
@@ -782,7 +782,7 @@ function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
 
 function PaperRow({ rank, title, author, count, icon, highlight }) {
   return (
-    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all hover:-translate-y-[1px] shadow-sm ${highlight ? 'border-[#7a1f3d]/40 bg-[#7a1f3d]/10 dark:bg-[#d4af37]/10' : 'border-stone-200/50 dark:border-stone-700/50 bg-white/40 dark:bg-stone-800/40 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-stone-800/60'}`}>
+    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all hover:-translate-y-[1px] shadow-sm ${highlight ? 'border-[#590000]/40 bg-[#590000]/10 dark:bg-[#d4af37]/10' : 'border-stone-200/50 dark:border-stone-700/50 bg-white/40 dark:bg-stone-800/40 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-stone-800/60'}`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ${rank === 1 ? 'bg-amber-100 text-amber-700' : rank === 2 ? 'bg-stone-200 text-stone-700 dark:text-stone-300' : 'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'}`}>
           {rank}

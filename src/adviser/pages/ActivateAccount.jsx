@@ -262,7 +262,7 @@ export default function ActivateAccount() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50 font-sans">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#7a2e46] border-t-transparent mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#590000] border-t-transparent mb-4"></div>
           <p className="text-gray-600">Validating invitation link...</p>
         </div>
       </div>
@@ -277,12 +277,12 @@ export default function ActivateAccount() {
       <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-8 shadow-2xl backdrop-blur-md relative overflow-hidden transition-colors">
         
         {/* Top Accent line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7a1f3d]"></div>
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#590000]"></div>
 
         <div className="mb-6">
           <h2 className="font-serif text-3xl font-bold text-stone-900">Activate Account</h2>
           <div className="mt-2 flex flex-col items-start gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#590000] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
               Research Adviser
             </span>
             <p className="text-xs text-stone-500 font-medium">Create your password to get started</p>
@@ -308,7 +308,7 @@ export default function ActivateAccount() {
             {/* Adviser Info Read Only */}
             <div className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 mb-2">
               <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">Account Details</p>
-              <p className="font-serif text-lg font-bold text-[#7a1f3d]">{adviserData.displayName}</p>
+              <p className="font-serif text-lg font-bold text-[#590000]">{adviserData.displayName}</p>
               <p className="text-xs text-stone-500">{adviserData.email}</p>
             </div>
 
@@ -329,7 +329,7 @@ export default function ActivateAccount() {
                   className={`w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all disabled:opacity-50 ${
                     formErrors.password 
                       ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
-                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000]'
                   }`} 
                   disabled={loading}
                 />
@@ -391,7 +391,7 @@ export default function ActivateAccount() {
                   className={`w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all disabled:opacity-50 ${
                     formErrors.confirmPassword 
                       ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
-                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                      : 'bg-white text-stone-800 border border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000]'
                   }`} 
                   disabled={loading}
                 />
@@ -443,7 +443,7 @@ export default function ActivateAccount() {
                   handleInputChange(e);
                 }}
                 disabled={loading}
-                className={`w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5 accent-[#7a1f3d] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
+                className={`w-4 h-4 text-[#770000] border-stone-300 bg-white rounded focus:ring-[#770000] mt-0.5 accent-[#770000] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
               />
               <div>
                 <label htmlFor="adviser-activate-agreeTerms" className={`text-xs ${!bothAgreed ? 'text-stone-500 cursor-pointer' : 'text-stone-600'} leading-relaxed select-none`}>
@@ -456,7 +456,7 @@ export default function ActivateAccount() {
                       e.stopPropagation();
                       openPolicy('privacy');
                     }} 
-                    className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                    className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#770000] hover:text-[#590000]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
                   >
                     Privacy Policy{privacyAccepted && <Check className="w-3 h-3 inline text-emerald-600" />}
                   </span>{' '}
@@ -469,7 +469,7 @@ export default function ActivateAccount() {
                       e.stopPropagation();
                       openPolicy('terms');
                     }} 
-                    className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                    className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#770000] hover:text-[#590000]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
                   >
                     Terms and Conditions{termsAccepted && <Check className="w-3 h-3 inline text-emerald-600" />}
                   </span>{' '}
@@ -487,7 +487,7 @@ export default function ActivateAccount() {
             <button 
               type="submit"
               disabled={loading || !passwordValidation.isValid || !formData.agreeTerms || !bothAgreed || formData.password !== formData.confirmPassword}
-              className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-[#7a1f3d]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
+              className="w-full bg-[#770000] hover:bg-[#590000] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-[#770000]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
             >
               {loading ? (
                 <>
@@ -504,7 +504,7 @@ export default function ActivateAccount() {
 
             <div className="text-center pt-4 border-t border-stone-100 mt-6">
               <p className="text-xs font-medium text-stone-500">
-                Already activated? <Link to="/" className="text-[#7a1f3d] font-bold hover:underline ml-1">Sign in here</Link>
+                Already activated? <Link to="/" className="text-[#770000] font-bold hover:underline ml-1">Sign in here</Link>
               </p>
             </div>
           </form>

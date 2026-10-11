@@ -31,3 +31,8 @@ email-service/.env
 
 # Firebase CLI cache
 .firebase/
+
+# Scratch scripts & temporary files
+scratch/
+scratch_*.ps1
+

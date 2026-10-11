@@ -20,6 +20,7 @@ const ArchivePaperViewer = lazy(() => import('./pages/ArchivePaperViewer'));
 const ArchiveLogin = lazy(() => import('./pages/ArchiveLogin'));
 const ArchiveForgotPassword = lazy(() => import('./pages/ArchiveForgotPassword'));
 const ArchiveResetPassword = lazy(() => import('./pages/ArchiveResetPassword'));
+const ArchiveTerms = lazy(() => import('./pages/ArchiveTerms'));
 
 // Preload helper for instant paper viewer opening
 export const preloadPaperViewer = () => import('./pages/ArchivePaperViewer');
@@ -78,6 +79,8 @@ function App() {
               <Route path="/reset-password" element={<ArchiveResetPassword />} />
               <Route path="/browse" element={<ArchiveBrowse />} />
               <Route path="/about" element={<ArchiveAbout />} />
+              <Route path="/terms" element={<ArchiveTerms />} />
+              <Route path="/privacy" element={<ArchiveTerms />} />
               <Route path="/verify/:id" element={<ArchiveVerifyCertificate />} />
 
               {/* Protected Routes */}

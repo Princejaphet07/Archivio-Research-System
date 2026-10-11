@@ -48,8 +48,8 @@ const STATUS_CONFIGS = {
   },
   'system admin': {
     label: 'System Admin',
-    dot: 'bg-[#801e38]',
-    classes: 'bg-[#801e38]/10 text-[#801e38] border-[#801e38]/20 dark:bg-[#801e38]/20 dark:text-[#ff8ca3] dark:border-[#801e38]/40',
+    dot: 'bg-[#770000]',
+    classes: 'bg-[#770000]/10 text-[#770000] border-[#770000]/20 dark:bg-[#770000]/20 dark:text-[#ff8ca3] dark:border-[#770000]/40',
   },
   dean: {
     label: 'Dean',

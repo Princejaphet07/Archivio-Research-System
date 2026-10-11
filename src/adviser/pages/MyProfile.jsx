@@ -127,7 +127,7 @@ function MyProfile() {
       text: 'Are you sure you want to remove this organizational membership?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#7a2e46',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, remove'
     });
@@ -179,7 +179,7 @@ function MyProfile() {
         icon: 'success',
         title: 'Profile Updated',
         text: 'Your profile and organizational memberships have been saved.',
-        confirmButtonColor: '#7a2e46',
+        confirmButtonColor: '#770000',
         timer: 2000,
         showConfirmButton: false
       });
@@ -191,7 +191,7 @@ function MyProfile() {
         icon: 'error',
         title: 'Update Failed',
         text: error.message || 'Failed to update profile.',
-        confirmButtonColor: '#7a2e46'
+        confirmButtonColor: '#770000'
       });
     }
   };
@@ -245,7 +245,7 @@ function MyProfile() {
               onClick={() => setActiveTab('profile')}
               className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
                 activeTab === 'profile'
-                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  ? 'bg-white dark:bg-stone-800 text-[#590000] dark:text-[#f8d070] shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
@@ -257,7 +257,7 @@ function MyProfile() {
               onClick={() => setActiveTab('notifications')}
               className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
                 activeTab === 'notifications'
-                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  ? 'bg-white dark:bg-stone-800 text-[#590000] dark:text-[#f8d070] shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
@@ -269,7 +269,7 @@ function MyProfile() {
               onClick={() => setActiveTab('password')}
               className={`flex-1 min-w-[90px] py-2.5 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition ${
                 activeTab === 'password'
-                  ? 'bg-white dark:bg-stone-800 text-[#7a2e46] dark:text-[#f8d070] shadow-sm'
+                  ? 'bg-white dark:bg-stone-800 text-[#590000] dark:text-[#f8d070] shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
@@ -294,7 +294,7 @@ function MyProfile() {
                 onClick={() => setActiveTab('profile')}
                 className={`w-full text-left px-5 py-4 text-sm font-semibold flex items-center gap-3 transition-colors ${
                   activeTab === 'profile' 
-                    ? 'border-l-4 border-l-[#7a2e46] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-[#f8d070]' 
+                    ? 'border-l-4 border-l-[#590000] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-[#f8d070]' 
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
@@ -306,7 +306,7 @@ function MyProfile() {
                 onClick={() => setActiveTab('notifications')}
                 className={`w-full text-left px-5 py-4 text-sm font-medium flex items-center gap-3 border-t border-gray-100 dark:border-stone-800 transition-colors ${
                   activeTab === 'notifications' 
-                    ? 'border-l-4 border-l-[#7a2e46] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-[#f8d070]' 
+                    ? 'border-l-4 border-l-[#590000] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-[#f8d070]' 
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
@@ -318,7 +318,7 @@ function MyProfile() {
                 onClick={() => setActiveTab('password')}
                 className={`w-full text-left px-5 py-4 text-sm font-medium flex items-center gap-3 border-t border-gray-100 dark:border-stone-800 transition-colors ${
                   activeTab === 'password' 
-                    ? 'border-l-4 border-l-[#7a2e46] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-[#f8d070]' 
+                    ? 'border-l-4 border-l-[#590000] dark:border-l-[#f8d070] bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-[#f8d070]' 
                     : 'border-l-4 border-l-transparent text-gray-600 dark:text-stone-400 hover:bg-gray-50 dark:hover:bg-stone-800'
                 }`}
               >
@@ -358,11 +358,11 @@ function MyProfile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">First Name</label>
-                      <input type="text" value={userData.firstName} onChange={(e) => setUserData({...userData, firstName: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
+                      <input type="text" value={userData.firstName} onChange={(e) => setUserData({...userData, firstName: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Last Name</label>
-                      <input type="text" value={userData.lastName} onChange={(e) => setUserData({...userData, lastName: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
+                      <input type="text" value={userData.lastName} onChange={(e) => setUserData({...userData, lastName: e.target.value})} className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" disabled={loading} />
                     </div>
                   </div>
 
@@ -385,7 +385,7 @@ function MyProfile() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Title / Honorific</label>
-                    <select value={userData.title} onChange={(e) => setUserData({...userData, title: e.target.value})} className="bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] w-full sm:w-48 text-gray-900 dark:text-stone-100" disabled={loading}>
+                    <select value={userData.title} onChange={(e) => setUserData({...userData, title: e.target.value})} className="bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] w-full sm:w-48 text-gray-900 dark:text-stone-100" disabled={loading}>
                       <option value="Prof.">Prof.</option>
                       <option value="Dr.">Dr.</option>
                       <option value="Mr.">Mr.</option>
@@ -402,7 +402,7 @@ function MyProfile() {
                       <button 
                         type="button"
                         onClick={handleOpenMembershipModal}
-                        className="w-8 h-8 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
+                        className="w-8 h-8 bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg flex items-center justify-center font-bold hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
                         title="Add Organizational Membership"
                       >
                         <Plus className="w-4 h-4" />
@@ -419,7 +419,7 @@ function MyProfile() {
                         {userData.memberships.map((item) => (
                           <div 
                             key={item.id} 
-                            className="bg-gray-50/70 dark:bg-stone-800/60 border border-gray-200 dark:border-stone-700 rounded-xl p-4 flex items-center justify-between hover:border-[#7a2e46]/40 dark:hover:border-[#f8d070]/40 transition group"
+                            className="bg-gray-50/70 dark:bg-stone-800/60 border border-gray-200 dark:border-stone-700 rounded-xl p-4 flex items-center justify-between hover:border-[#590000]/40 dark:hover:border-[#f8d070]/40 transition group"
                           >
                             <div className="space-y-1">
                               <h5 className="text-sm font-bold text-gray-900 dark:text-stone-100">
@@ -484,7 +484,7 @@ function MyProfile() {
                           onChange={() => toggleNotification('newSubmissions')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:after:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#770000]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:after:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#770000] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
 
@@ -501,7 +501,7 @@ function MyProfile() {
                           onChange={() => toggleNotification('groupRegistrations')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#770000]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#770000] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
 
@@ -518,7 +518,7 @@ function MyProfile() {
                           onChange={() => toggleNotification('missingRequirements')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#770000]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#770000] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
 
@@ -535,7 +535,7 @@ function MyProfile() {
                           onChange={() => toggleNotification('paperApproved')}
                           className="sr-only peer" 
                         />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#7a2e46]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a2e46] dark:peer-checked:bg-[#f8d070]"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-stone-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#770000]/20 dark:peer-focus:ring-[#f8d070]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-checked:after:border-stone-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-gray-300 dark:border-stone-400 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#770000] dark:peer-checked:bg-[#f8d070]"></div>
                       </label>
                     </div>
                   </div>
@@ -565,7 +565,7 @@ function MyProfile() {
                       <input 
                         type="password" 
                         placeholder="••••••••" 
-                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
+                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
                       />
                     </div>
 
@@ -574,7 +574,7 @@ function MyProfile() {
                       <input 
                         type="password" 
                         placeholder="••••••••" 
-                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
+                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
                       />
                     </div>
 
@@ -583,7 +583,7 @@ function MyProfile() {
                       <input 
                         type="password" 
                         placeholder="••••••••" 
-                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
+                        className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100" 
                       />
                     </div>
 
@@ -624,7 +624,7 @@ function MyProfile() {
                     setMembershipForm({ ...membershipForm, organizationName: e.target.value });
                     if (membershipErrors.organizationName) setMembershipErrors({ ...membershipErrors, organizationName: null });
                   }}
-                  className={`w-full bg-stone-50 dark:bg-stone-900/60 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]`}
+                  className={`w-full bg-stone-50 dark:bg-stone-900/60 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]`}
                   placeholder="e.g. Philippine Computer Society"
                 />
                 {membershipErrors.organizationName && (
@@ -638,7 +638,7 @@ function MyProfile() {
                   type="text" 
                   value={membershipForm.role}
                   onChange={e => setMembershipForm({ ...membershipForm, role: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]"
                   placeholder="e.g. Member, Chairperson"
                 />
               </div>
@@ -649,7 +649,7 @@ function MyProfile() {
                   type="text" 
                   value={membershipForm.yearJoined}
                   onChange={e => setMembershipForm({ ...membershipForm, yearJoined: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070]"
+                  className="w-full bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070]"
                   placeholder="e.g. 2021"
                 />
               </div>
@@ -664,7 +664,7 @@ function MyProfile() {
                 </button>
                 <button 
                   type="submit" 
-                  className="px-5 py-2.5 rounded-lg bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-sm font-bold hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm"
+                  className="px-5 py-2.5 rounded-lg bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-sm font-bold hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm"
                 >
                   Add Membership
                 </button>

@@ -42,7 +42,6 @@ export default function Invitations() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formErrors, setFormErrors] = useState({});
-  const [inviteMode, setInviteMode] = useState('single'); // 'single' | 'bulk'
   const [copiedId, setCopiedId] = useState(null);
 
   // Search & Status Filter
@@ -60,9 +59,6 @@ export default function Invitations() {
     email: '',
     message: ''
   });
-
-  // Bulk Mode state
-  const [bulkInput, setBulkInput] = useState('');
 
   // Default invitation message
   const defaultMessage = deanSettings?.emailTemplates?.adviserInvitation?.body || `Dear [Adviser Name],
@@ -262,7 +258,7 @@ Please click the button below to activate your account and set up your credentia
 <body style="margin: 0; padding: 20px; background-color: #f5f5f5;">
   <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
     
-    <div style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); padding: 40px 20px; text-align: center;">
+    <div style="background: linear-gradient(135deg, #590000 0%, #770000 100%); padding: 40px 20px; text-align: center;">
       <img src="https://storage.googleapis.com/archivio-research-system.firebasestorage.app/public/swu-logo.png" alt="SWU PHINMA Logo" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
       <h1 style="color: #ffffff; margin: 0; font-family: 'Georgia', serif; font-size: 28px; font-weight: 600; letter-spacing: 1px;">ARCHIVIO</h1>
       <p style="color: #f7d2db; margin: 8px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: 500;">Research Management System</p>
@@ -272,7 +268,7 @@ Please click the button below to activate your account and set up your credentia
       <h2 style="color: #2d3748; margin-top: 0; font-size: 22px; font-weight: 600;">Welcome, ${adviserFullName}!</h2>
       <p style="color: #4a5568; line-height: 1.7; font-size: 15px; margin-bottom: 25px;">You have been exclusively invited to join the <strong>ARCHIVIO</strong> platform as a <strong>Research Adviser</strong>.</p>
       
-      <div style="background-color: #faf6f0; border-left: 4px solid #541b2f; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
+      <div style="background-color: #faf6f0; border-left: 4px solid #590000; border-radius: 4px 8px 8px 4px; padding: 20px; margin: 30px 0;">
         <p style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Message from your Dean</p>
         <p style="color: #4a5568; line-height: 1.6; font-size: 14px; margin: 0;">${(emailMessage || '').replace(/\n/g, '<br/>')}</p>
       </div>
@@ -288,7 +284,7 @@ Please click the button below to activate your account and set up your credentia
       </div>
       
       <div style="text-align: center; margin: 40px 0 30px 0;">
-        <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Create Your Account</a>
+        <a href="${invitationLink}" style="background: linear-gradient(135deg, #590000 0%, #770000 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(89, 0, 0, 0.25);">Create Your Account</a>
       </div>
       
       <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 30px 0; display: flex; align-items: flex-start; gap: 10px;">
@@ -331,7 +327,7 @@ Please click the button below to activate your account and set up your credentia
         icon: 'success',
         title: 'Invitation Dispatched!',
         text: `Official invite sent to ${targetEmail}`,
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#770000'
       });
 
       setFormData({
@@ -343,102 +339,10 @@ Please click the button below to activate your account and set up your credentia
       setFormErrors({});
     } catch (err) {
       console.error(err);
-      Swal.fire({ icon: 'error', title: 'Dispatch Error', text: 'Failed to send invitation.', confirmButtonColor: '#7B1F35' });
+      Swal.fire({ icon: 'error', title: 'Dispatch Error', text: 'Failed to send invitation.', confirmButtonColor: '#770000' });
     } finally {
       setLoading(false);
     }
-  };
-
-  // Bulk Invitation Dispatcher (#1 User-Centric Design)
-  const handleSendBulkInvitations = async (e) => {
-    e.preventDefault();
-    if (!bulkInput.trim()) {
-      setError('Please enter at least one institutional email.');
-      return;
-    }
-
-    const lines = bulkInput.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
-    const validEmails = [];
-    const invalidEmails = [];
-
-    for (const item of lines) {
-      if (item.toLowerCase().endsWith('@phinmaed.com') && item.includes('@')) {
-        validEmails.push(item.toLowerCase());
-      } else {
-        invalidEmails.push(item);
-      }
-    }
-
-    if (validEmails.length === 0) {
-      setError('No valid @phinmaed.com emails found. Please verify your entries.');
-      return;
-    }
-
-    const confirmRes = await Swal.fire({
-      title: `Send ${validEmails.length} Invitations?`,
-      text: invalidEmails.length > 0 
-        ? `${invalidEmails.length} invalid email(s) will be skipped.` 
-        : `Official invitations will be dispatched to ${validEmails.length} advisers.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#7B1F35',
-      confirmButtonText: 'Yes, Send Invitations'
-    });
-
-    if (!confirmRes.isConfirmed) return;
-
-    setLoading(true);
-    Swal.fire({
-      title: 'Sending Bulk Invitations...',
-      text: `Processing ${validEmails.length} institutional accounts...`,
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    let successCount = 0;
-    const resolvedSenderEmail = deanData?.email || '';
-    const resolvedSenderName = deanData?.displayName || deanData?.name || 'Dean';
-    const resolvedDepartment = deanData?.department || 'SWU Phinma';
-
-    for (const email of validEmails) {
-      try {
-        const username = email.split('@')[0];
-        const nameParts = username.split('.');
-        const firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Faculty';
-        const lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Adviser';
-        const invitationToken = Math.random().toString(36).substring(2, 15);
-        const invitationLink = `${window.location.origin}/adviser/signup?email=${encodeURIComponent(email)}`;
-
-        await addDoc(collection(db, 'advisers'), {
-          firstName,
-          lastName,
-          displayName: `${firstName} ${lastName}`,
-          email,
-          invitedBy: resolvedSenderEmail,
-          invitedByName: resolvedSenderName,
-          department: resolvedDepartment,
-          status: 'pending',
-          invitationToken,
-          invitationLink,
-          message: defaultMessage,
-          invitationSentAt: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        });
-
-        successCount++;
-      } catch (err) {
-        console.error('Failed to send bulk item:', email, err);
-      }
-    }
-
-    setLoading(false);
-    setBulkInput('');
-    Swal.fire({
-      icon: 'success',
-      title: 'Bulk Invitations Sent!',
-      text: `Successfully invited ${successCount} research advisers.`,
-      confirmButtonColor: '#7B1F35'
-    });
   };
 
   // Resend / Renew Invitation
@@ -481,11 +385,11 @@ Please click the button below to activate your account and set up your credentia
         icon: 'success',
         title: 'Invitation Renewed & Sent',
         text: `A fresh invitation link was sent to ${adviserEmail}`,
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#770000'
       });
     } catch (err) {
       console.error(err);
-      Swal.fire({ icon: 'error', title: 'Resend Failed', text: 'Could not deliver renewed invitation.', confirmButtonColor: '#7B1F35' });
+      Swal.fire({ icon: 'error', title: 'Resend Failed', text: 'Could not deliver renewed invitation.', confirmButtonColor: '#770000' });
     } finally {
       setLoading(false);
     }
@@ -511,7 +415,7 @@ Please click the button below to activate your account and set up your credentia
           icon: 'success',
           title: 'Invitation Revoked',
           text: `Invitation record for ${adviserEmail} has been removed.`,
-          confirmButtonColor: '#7B1F35'
+          confirmButtonColor: '#770000'
         });
       } catch (error) {
         console.error('Error removing invitation:', error);
@@ -519,7 +423,7 @@ Please click the button below to activate your account and set up your credentia
           icon: 'error',
           title: 'Removal Error',
           text: 'Failed to remove invitation record.',
-          confirmButtonColor: '#7B1F35'
+          confirmButtonColor: '#770000'
         });
       } finally {
         setLoading(false);
@@ -579,39 +483,15 @@ Please click the button below to activate your account and set up your credentia
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* Left Column: Form Panel (Single & Bulk Toggle) */}
+            {/* Left Column: Form Panel */}
             <Card glass={true} className="lg:col-span-5 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#7B1F35] to-[#541B2F] p-5 text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <UserPlus className="w-5 h-5 text-amber-300" />
-                    <h3 className="font-serif text-base font-bold">Invite Research Faculty</h3>
-                  </div>
-
-                  {/* Mode Toggle Pills (#3 Simplicity & #7 Affordance) */}
-                  <div className="flex bg-black/20 p-0.5 rounded-xl text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setInviteMode('single')}
-                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
-                        inviteMode === 'single' ? 'bg-white text-stone-900 shadow-xs' : 'text-white/80 hover:text-white'
-                      }`}
-                    >
-                      Single
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInviteMode('bulk')}
-                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
-                        inviteMode === 'bulk' ? 'bg-white text-stone-900 shadow-xs' : 'text-white/80 hover:text-white'
-                      }`}
-                    >
-                      Bulk Paste
-                    </button>
-                  </div>
+              <div className="bg-gradient-to-r from-[#590000] to-[#770000] p-5 text-white">
+                <div className="flex items-center gap-2.5">
+                  <UserPlus className="w-5 h-5 text-amber-300" />
+                  <h3 className="font-serif text-base font-bold">Invite Research Faculty</h3>
                 </div>
                 <p className="text-xs text-white/80 mt-1">
-                  {inviteMode === 'single' ? 'Invite an individual faculty member by institutional email' : 'Paste multiple institutional emails separated by commas or lines'}
+                  Invite an individual faculty member by institutional email
                 </p>
               </div>
 
@@ -623,123 +503,93 @@ Please click the button below to activate your account and set up your credentia
                   </div>
                 )}
 
-                {inviteMode === 'single' ? (
-                  <form onSubmit={handleSendSingleInvitation} className="space-y-3.5">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
-                          First Name <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Roberto"
-                          className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
-                          disabled={loading}
-                        />
-                        {formErrors.firstName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.firstName}</p>}
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
-                          Last Name <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Gomez"
-                          className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
-                          disabled={loading}
-                        />
-                        {formErrors.lastName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.lastName}</p>}
-                      </div>
-                    </div>
-
+                <form onSubmit={handleSendSingleInvitation} className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
-                        Institutional Email <span className="text-rose-500">*</span>
+                        First Name <span className="text-rose-500">*</span>
                       </label>
                       <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
+                        type="text"
+                        name="firstName"
+                        value={formData.firstName}
                         onChange={handleInputChange}
-                        placeholder="adviser@phinmaed.com"
-                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40"
+                        placeholder="e.g. Roberto"
+                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#770000]/40"
                         disabled={loading}
                       />
-                      {formErrors.email ? (
-                        <p className="text-[11px] text-rose-500 mt-1">{formErrors.email}</p>
-                      ) : (
-                        <p className="text-[10px] text-stone-400 mt-1">Restricted to @phinmaed.com institutional accounts</p>
-                      )}
+                      {formErrors.firstName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.firstName}</p>}
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                          Invitation Memo
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(p => ({ ...p, message: defaultMessage }))}
-                          className="text-[10px] text-[#7B1F35] dark:text-amber-400 hover:underline cursor-pointer font-semibold"
-                        >
-                          Reset Default
-                        </button>
-                      </div>
-                      <textarea
-                        name="message"
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        rows={4}
-                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-800 dark:text-stone-200 outline-none focus:ring-2 focus:ring-[#7B1F35]/40 resize-none font-sans"
-                        disabled={loading}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>{loading ? 'Sending Invitation...' : 'Send Official Invitation'}</span>
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleSendBulkInvitations} className="space-y-4">
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
-                        Paste Institutional Emails
+                        Last Name <span className="text-rose-500">*</span>
                       </label>
-                      <textarea
-                        rows={6}
-                        value={bulkInput}
-                        onChange={(e) => setBulkInput(e.target.value)}
-                        placeholder="r.gomez@phinmaed.com&#10;c.morales@phinmaed.com&#10;a.troy@phinmaed.com"
-                        className="w-full text-xs p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#7B1F35]/40 font-mono resize-none leading-relaxed"
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Gomez"
+                        className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#770000]/40"
                         disabled={loading}
                       />
-                      <p className="text-[10px] text-stone-400 mt-1">
-                        Separate multiple emails with commas, semicolons, or newlines. Names will be automatically formatted from usernames.
-                      </p>
+                      {formErrors.lastName && <p className="text-[11px] text-rose-500 mt-1">{formErrors.lastName}</p>}
                     </div>
+                  </div>
 
-                    <button
-                      type="submit"
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+                      Institutional Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="adviser@phinmaed.com"
+                      className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-[#770000]/40"
                       disabled={loading}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{loading ? 'Dispatching...' : 'Dispatch Bulk Invitations'}</span>
-                    </button>
-                  </form>
-                )}
+                    />
+                    {formErrors.email ? (
+                      <p className="text-[11px] text-rose-500 mt-1">{formErrors.email}</p>
+                    ) : (
+                      <p className="text-[10px] text-stone-400 mt-1">Restricted to @phinmaed.com institutional accounts</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                        Invitation Memo
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, message: defaultMessage }))}
+                        className="text-[10px] text-[#590000] dark:text-amber-400 hover:underline cursor-pointer font-semibold"
+                      >
+                        Reset Default
+                      </button>
+                    </div>
+                    <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      rows={4}
+                      className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-800/50 text-stone-800 dark:text-stone-200 outline-none focus:ring-2 focus:ring-[#770000]/40 resize-none font-sans"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{loading ? 'Sending Invitation...' : 'Send Official Invitation'}</span>
+                  </button>
+                </form>
               </div>
             </Card>
 
@@ -800,7 +650,7 @@ Please click the button below to activate your account and set up your credentia
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter advisers by name or email..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/40 text-stone-800 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7B1F35]"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/40 text-stone-800 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#770000]"
                 />
               </div>
 
@@ -825,7 +675,7 @@ Please click the button below to activate your account and set up your credentia
                         <tr key={adv.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition">
                           <td className="py-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-[#7B1F35]/10 text-[#7B1F35] dark:text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#590000]/10 text-[#590000] dark:text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
                                 {adv.firstName?.[0] || 'A'}{adv.lastName?.[0] || ''}
                               </div>
                               <span className="font-bold text-stone-800 dark:text-stone-200 truncate">

@@ -16,6 +16,7 @@ import logo from '../assets/logo.png';
 import bg from '../assets/parchment.png';
 import { useTheme } from '../context/ThemeContext';
 import ReCaptcha from '../components/ReCaptcha';
+import TermsAndConditionsModal from '../components/TermsAndConditionsModal';
 
 function ArchiveLogin() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -28,6 +29,7 @@ function ArchiveLogin() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsModalTab, setTermsModalTab] = useState('terms');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
@@ -560,7 +562,22 @@ function ArchiveLogin() {
                   className="mt-0.5 cursor-pointer w-3.5 h-3.5 accent-[#7a2039] dark:accent-[#f3e5ab]"
                 />
                 <label htmlFor="terms" className="text-[11px] text-stone-600 dark:text-stone-300 leading-snug">
-                  I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-[#7a2039] dark:text-[#f3e5ab] font-bold hover:underline cursor-pointer">Terms and Conditions</button> and acknowledge the Privacy Policy.
+                  I agree to the{' '}
+                  <button 
+                    type="button" 
+                    onClick={() => { setTermsModalTab('terms'); setShowTermsModal(true); }} 
+                    className="text-[#7a2039] dark:text-[#f3e5ab] font-bold hover:underline cursor-pointer"
+                  >
+                    Terms and Conditions
+                  </button>{' '}
+                  and acknowledge the{' '}
+                  <button 
+                    type="button" 
+                    onClick={() => { setTermsModalTab('privacy'); setShowTermsModal(true); }} 
+                    className="text-[#7a2039] dark:text-[#f3e5ab] font-bold hover:underline cursor-pointer"
+                  >
+                    Privacy Policy
+                  </button>.
                 </label>
               </div>
             )}
@@ -622,40 +639,16 @@ function ArchiveLogin() {
         </div>
       </div>
 
-      {/* TERMS MODAL */}
-      {showTermsModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#fdfbf7] dark:bg-[#1a1416] w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] border border-stone-200 dark:border-white/10">
-            <div className="flex justify-between items-center p-6 border-b border-stone-200 dark:border-white/10">
-              <h2 className="text-2xl font-bold text-[#7a2039] dark:text-[#f3e5ab]">Terms and Conditions</h2>
-              <button onClick={() => setShowTermsModal(false)} className="text-stone-400 hover:text-stone-600 dark:hover:text-white text-2xl leading-none cursor-pointer">&times;</button>
-            </div>
-            <div className="p-6 overflow-y-auto font-sans text-sm text-stone-700 dark:text-stone-300 space-y-4">
-              <p>Welcome to <strong>ARCHIVIO</strong>, the Research Archive Management System for SWU PHINMA.</p>
-
-              <h3 className="font-bold text-stone-900 dark:text-stone-100 text-base mt-4">1. Acceptance of Terms</h3>
-              <p>By creating an account, you agree to abide by these Terms and Conditions. This system is strictly for academic and research purposes.</p>
-
-              <h3 className="font-bold text-stone-900 dark:text-stone-100 text-base mt-4">2. Intellectual Property &amp; Plagiarism</h3>
-              <p>All research papers, theses, and capstone projects hosted on ARCHIVIO are the intellectual property of their respective student authors and SWU PHINMA. Users are strictly prohibited from copying, plagiarizing, distributing, or selling any materials found within this archive. The system disables copying and downloading to enforce academic integrity.</p>
-
-              <h3 className="font-bold text-stone-900 dark:text-stone-100 text-base mt-4">3. User Conduct</h3>
-              <p>You agree to use the platform respectfully. Any unauthorized attempts to scrape data, bypass security measures, or misrepresent your identity will result in immediate account termination.</p>
-
-              <h3 className="font-bold text-stone-900 dark:text-stone-100 text-base mt-4">4. Privacy &amp; Data</h3>
-              <p>Your email and name are collected solely for authentication and personalizing your experience (such as your personal reading list). We do not share this data with third-party advertisers.</p>
-            </div>
-            <div className="p-6 border-t border-stone-200 dark:border-white/10 flex justify-end">
-              <button
-                onClick={() => { setAgreedToTerms(true); setShowTermsModal(false); }}
-                className="px-6 py-2 bg-gradient-to-r from-[#7a2039] to-[#541223] text-white rounded-lg font-bold hover:brightness-110 transition cursor-pointer shadow-md"
-              >
-                I Understand
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* TERMS & PRIVACY POLICY MODAL */}
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setAgreedToTerms(true);
+          setShowTermsModal(false);
+        }}
+        initialTab={termsModalTab}
+      />
     </div>
   );
 }

@@ -84,86 +84,85 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex font-sans text-gray-800 overflow-x-hidden">
+    <div className="h-screen max-h-screen w-full flex font-sans text-gray-800 overflow-hidden bg-[#f5f0e6]">
 
       {/* Left Column: Info Panel */}
-      <div
-        className="w-full lg:w-[40%] text-white flex flex-col items-center justify-center py-12 px-10 xl:px-16 relative shadow-2xl z-10"
-        style={{
-          backgroundImage: `url("${leftPanelBg}")`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'top center'
-        }}
-      >
+      <div className="hidden lg:flex w-[40%] h-full text-white flex-col items-center justify-center py-6 px-8 xl:px-12 relative z-20">
+        {/* Background Layer at back of torn-edge */}
+        <div 
+          className="absolute inset-0 bg-cover bg-top pointer-events-none z-10"
+          style={{ backgroundImage: `url("${leftPanelBg}")`, backgroundColor: '#4a1525' }}
+        />
+
         {/* Fixed Jagged Edge */}
         <img
           src={jaggedEdge}
-          className="absolute top-0 right-0 h-full w-[36px] translate-x-1/2 z-30 pointer-events-none hidden lg:block object-cover"
-          alt=""
+          className="absolute top-0 right-0 h-full w-12 sm:w-14 lg:w-16 translate-x-[20%] z-20 pointer-events-none object-fill"
+          alt="Torn Edge"
         />
 
         {/* Header section */}
-        <div className="flex flex-col items-center mb-10 relative z-10">
-          <div className="w-20 h-20 bg-[#542133]/40 rounded-full flex items-center justify-center border border-[#d0a36e] mb-4 backdrop-blur-sm">
-            <img src={logoImg} alt="Archivio Logo" className="w-14 h-14 object-contain" />
+        <div className="flex flex-col items-center mb-6 relative z-30">
+          <div className="w-16 h-16 bg-[#542133]/40 rounded-full flex items-center justify-center border border-[#d0a36e] mb-3 backdrop-blur-sm">
+            <img src={logoImg} alt="Archivio Logo" className="w-12 h-12 object-contain" />
           </div>
-          <p className="text-[#d0a36e] text-xs tracking-[0.2em] font-semibold uppercase mb-2">SWU Phinma</p>
-          <h1 className="text-5xl font-serif tracking-widest mb-4 font-bold">ARCHIVIO</h1>
-          <div className="w-2 flex gap-1 mb-4 text-[#d0a36e]">♦</div>
-          <h2 className="text-lg font-serif text-[#d0a36e] mb-3">Research Archive Management System</h2>
+          <p className="text-[#d0a36e] text-[11px] tracking-[0.2em] font-semibold uppercase mb-1">SWU Phinma</p>
+          <h1 className="text-4xl xl:text-5xl font-serif tracking-widest mb-2 font-bold">ARCHIVIO</h1>
+          <div className="w-2 flex gap-1 mb-2 text-[#d0a36e]">♦</div>
+          <h2 className="text-sm font-serif text-[#d0a36e] mb-2 text-center">Research Archive Management System</h2>
         </div>
 
         {/* Stats Row */}
-        <div className="flex w-full max-w-sm justify-between border border-[#5a1f33]/60 rounded-xl p-4 mb-6 bg-[#481426]/50 backdrop-blur-sm relative z-10">
+        <div className="flex w-full max-w-sm justify-between border border-[#5a1f33]/60 rounded-xl p-3 bg-[#481426]/50 backdrop-blur-sm relative z-10">
           <div className="text-center w-1/3 border-r border-[#5a1f33]/60">
-            <div className="text-[#d0a36e] text-2xl font-bold font-serif">24</div>
-            <div className="text-[11px] text-gray-300 mt-1">Submissions</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">24</div>
+            <div className="text-[10px] text-gray-300 mt-0.5">Submissions</div>
           </div>
           <div className="text-center w-1/3 border-r border-[#5a1f33]/60">
-            <div className="text-[#d0a36e] text-2xl font-bold font-serif">8</div>
-            <div className="text-[11px] text-gray-300 mt-1">Pending</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">8</div>
+            <div className="text-[10px] text-gray-300 mt-0.5">Pending</div>
           </div>
           <div className="text-center w-1/3">
-            <div className="text-[#d0a36e] text-2xl font-bold font-serif">156</div>
-            <div className="text-[11px] text-gray-300 mt-1">Published</div>
+            <div className="text-[#d0a36e] text-xl font-bold font-serif">156</div>
+            <div className="text-[10px] text-gray-300 mt-0.5">Published</div>
           </div>
         </div>
       </div>
 
       {/* Right Column: Form Area */}
       <div
-        className="hidden lg:flex flex-1 flex-col justify-center p-6 bg-[#f5f0e6] transition-colors"
+        className="w-full lg:w-[60%] h-full flex flex-col justify-center items-center p-4 lg:p-6 bg-[#f5f0e6] transition-colors overflow-hidden"
         style={{ backgroundImage: `url("${bgTexture}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <div className="w-full max-w-lg mx-auto relative z-10 pl-4">
+        <div className="w-full max-w-md mx-auto relative z-10 my-auto">
 
           {/* Welcome Text Area */}
-          <div className="mb-6">
-            <h1 className="text-4xl font-serif font-bold text-gray-900 mb-2">Welcome Back!</h1>
-            <p className="text-sm text-gray-600 mb-3">Sign in to your ARCHIVIO account</p>
+          <div className="mb-4">
+            <h1 className="text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-1">Welcome Back!</h1>
+            <p className="text-xs sm:text-sm text-gray-600 mb-2">Sign in to your ARCHIVIO account</p>
             <div className="w-12 h-[2px] bg-[#d0a36e]"></div>
           </div>
 
           {/* Login Form Card */}
-          <div className="bg-white rounded-xl shadow-2xl w-full p-8 border border-transparent backdrop-blur-sm">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Sign In</h2>
+          <div className="bg-white rounded-xl shadow-2xl w-full p-6 sm:p-7 border border-transparent backdrop-blur-sm">
+            <div className="mb-3">
+              <h2 className="text-lg font-bold text-gray-900 mb-0.5">Sign In</h2>
               <p className="text-[11px] text-gray-400">Enter your institutional email and password</p>
             </div>
 
-            <hr className="border-gray-100 mb-5" />
+            <hr className="border-gray-100 mb-3.5" />
 
             <form onSubmit={handleLogin}>
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-xs text-red-700">{error}</p>
                 </div>
               )}
 
               {/* Email Address */}
-              <div className="mb-4">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
+              <div className="mb-3">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <Mail className="w-3.5 h-3.5" />
@@ -173,15 +172,15 @@ function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value.trim())}
                     placeholder="Enter your @phinmaed.com email"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#7a2e46] transition disabled:opacity-50"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#770000] transition disabled:opacity-50"
                     disabled={loading}
                   />
                 </div>
               </div>
 
               {/* Password */}
-              <div className="mb-4">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Password</label>
+              <div className="mb-3">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <Lock className="w-3.5 h-3.5" />
@@ -191,14 +190,14 @@ function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-12 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#7a2e46] transition disabled:opacity-50"
+                    className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg pl-9 pr-12 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#770000] transition disabled:opacity-50"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={loading}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[10px] font-bold text-[#7a2e46] hover:text-[#5f2135]"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[10px] font-bold text-[#770000] hover:text-[#590000]"
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
@@ -206,18 +205,18 @@ function Login() {
               </div>
 
               {/* Options Row */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     disabled={loading}
-                    className="w-3.5 h-3.5 text-[#7a2e46] bg-gray-100 border-gray-300 rounded focus:ring-[#7a2e46]"
+                    className="w-3.5 h-3.5 text-[#770000] bg-gray-100 border-gray-300 rounded focus:ring-[#770000]"
                   />
                   <label className="ml-2 text-[11px] text-gray-600">Remember me</label>
                 </div>
-                <Link to="/adviser/forgot-password" className="text-[11px] font-semibold text-[#7a2e46] hover:underline">
+                <Link to="/adviser/forgot-password" className="text-[11px] font-semibold text-[#770000] hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -226,21 +225,20 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm"
+                className="w-full bg-[#770000] hover:bg-[#590000] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 text-xs sm:text-sm"
               >
                 {loading ? 'Signing In...' : 'Sign In to ARCHIVIO'}
               </button>
 
-              <div className="mt-5 text-center text-xs text-gray-500">
-                Don't have an account? <Link to="/adviser/signup" className="text-[#7a2e46] font-semibold hover:underline">Sign Up here</Link>
+              <div className="mt-3 text-center text-xs text-gray-500">
+                Don't have an account? <Link to="/adviser/signup" className="text-[#770000] font-semibold hover:underline">Sign Up here</Link>
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-800">
-                <p className="font-semibold mb-1 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" /> Invited via Email?
+              <div className="mt-3 p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg text-[10.5px] text-blue-800">
+                <p className="font-semibold mb-0.5 flex items-center gap-1">
+                  <Mail className="w-3 h-3" /> Invited via Email?
                 </p>
-                <p className="mb-2">If you received an invitation email from your Dean, click the activation link in the email to create your account.</p>
-                <p className="text-[10px] text-blue-700">The activation link looks like: <span className="font-mono">http://localhost:5176/adviser-activate?token=...</span></p>
+                <p className="text-[10px]">If you received an invitation email from your Dean, click the activation link in the email to activate your account.</p>
               </div>
             </form>
 

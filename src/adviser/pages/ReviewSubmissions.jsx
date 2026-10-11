@@ -218,7 +218,7 @@ function ReviewSubmissions() {
   // Handle AI Summarize
   const handleSimilarityCheck = async (submission) => {
     if (!submission?.abstract || submission.abstract.includes('No abstract')) {
-      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'This submission does not have a valid abstract to check.', confirmButtonColor: '#7B1F35' });
+      Swal.fire({ icon: 'error', title: 'No Abstract', text: 'This submission does not have a valid abstract to check.', confirmButtonColor: '#770000' });
       return;
     }
 
@@ -267,12 +267,12 @@ function ReviewSubmissions() {
           <div style="font-size: 13px; color: #666; margin-bottom: 15px; font-style: italic;">"${data.matchTitle}"</div>
           <div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 10px; border-radius: 5px;">${data.analysis}</div>
         `,
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#770000'
       });
 
     } catch (err) {
       console.error(err);
-      Swal.fire({ icon: 'error', title: 'Check Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#7B1F35' });
+      Swal.fire({ icon: 'error', title: 'Check Failed', text: 'Could not reach the AI service.', confirmButtonColor: '#770000' });
     }
   };
 
@@ -379,7 +379,7 @@ function ReviewSubmissions() {
         confirmButtonText: 'Open Full Review',
         showCancelButton: true,
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#7a2e46',
+        confirmButtonColor: '#770000',
         cancelButtonColor: '#718096'
       }).then((result) => {
         if (result.isConfirmed) {
@@ -466,7 +466,7 @@ function ReviewSubmissions() {
                   subject: `Update on your submission: ${sub.researchTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                      <div style="background-color: #590000; padding: 20px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                       </div>
@@ -475,7 +475,7 @@ function ReviewSubmissions() {
                         <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
                         
                         ${comments ? `
-                        <div style="background-color: #f7fafc; border-left: 4px solid #541b2f; padding: 15px; margin: 20px 0;">
+                        <div style="background-color: #f7fafc; border-left: 4px solid #590000; padding: 15px; margin: 20px 0;">
                           <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
                           <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
                         </div>
@@ -504,7 +504,7 @@ function ReviewSubmissions() {
         });
       } catch (err) {
         console.error('Error approving:', err);
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#7a2e46' });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#770000' });
       }
     }
   };
@@ -580,7 +580,7 @@ function ReviewSubmissions() {
                   subject: `Revision required for your submission: ${sub.researchTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                      <div style="background-color: #590000; padding: 20px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                       </div>
@@ -618,7 +618,7 @@ function ReviewSubmissions() {
         });
       } catch (err) {
         console.error('Error rejecting:', err);
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#7a2e46' });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#770000' });
       }
     }
   };
@@ -711,7 +711,7 @@ function ReviewSubmissions() {
         title: 'Message Sent!',
         text: 'Your email and in-app notification have been successfully sent to the student.',
         icon: 'success',
-        confirmButtonColor: '#7a2e46'
+        confirmButtonColor: '#770000'
       });
 
       setShowMsgModal(false);
@@ -794,7 +794,7 @@ function ReviewSubmissions() {
             role="tab"
             aria-selected={activeTab === 'needs_review'}
             onClick={() => setActiveTab('needs_review')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'needs_review' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'needs_review' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>Needs Review</span>
@@ -824,7 +824,7 @@ function ReviewSubmissions() {
             role="tab"
             aria-selected={activeTab === 'approved'}
             onClick={() => setActiveTab('approved')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#7a2e46] dark:border-[#f8d070] text-[#7a2e46] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
             <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>Endorsed & Published</span>
@@ -838,7 +838,7 @@ function ReviewSubmissions() {
             <span className="text-gray-500 dark:text-stone-400 font-medium">Filter by source:</span>
             <button
               onClick={() => setRevisionFilter('all')}
-              className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer ${revisionFilter === 'all' ? 'bg-[#7a2e46] text-white dark:bg-[#f8d070] dark:text-stone-900' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-300 hover:bg-gray-200'}`}
+              className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer ${revisionFilter === 'all' ? 'bg-[#770000] text-white dark:bg-[#f8d070] dark:text-stone-900' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-300 hover:bg-gray-200'}`}
             >
               All ({revisionsCount})
             </button>
@@ -1043,7 +1043,7 @@ function ReviewSubmissions() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#7a2e46] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 font-bold uppercase tracking-wider text-[10px]">
+                <tr className="bg-[#590000] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3.5 px-4 text-center w-12">No.</th>
                   <th className="py-3.5 px-4">Research Title</th>
                   <th className="py-3.5 px-4">Group</th>
@@ -1255,7 +1255,7 @@ function ReviewSubmissions() {
             <span>Showing 1–{finalFiltered.length} of {finalFiltered.length} {activeTab}</span>
             <div className="flex items-center gap-1">
               <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">‹</button>
-              <button className="px-2.5 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded font-bold">1</button>
+              <button className="px-2.5 py-1 bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded font-bold">1</button>
               <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">›</button>
             </div>
           </div>
@@ -1267,7 +1267,7 @@ function ReviewSubmissions() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
           <div className="bg-white dark:bg-stone-950 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="bg-[#7a2e46] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-6 rounded-t-2xl relative">
+            <div className="bg-[#590000] dark:bg-stone-900 dark:border-b dark:border-stone-800 text-white dark:text-stone-100 p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
                 className="absolute top-4 right-4 w-8 h-8 bg-white/20 dark:bg-stone-800 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-stone-700 transition"
@@ -1311,15 +1311,15 @@ function ReviewSubmissions() {
               {/* Overview Stats */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
                   <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
                 <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
                   <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
                 <div className="bg-[#f8eff2] dark:bg-stone-900 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#7a2e46] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
                   <p className="text-xs text-gray-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
@@ -1329,7 +1329,7 @@ function ReviewSubmissions() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm">Abstract</h4>
-                    <button onClick={() => handleSimilarityCheck(selectedSubmission)} className="text-[#1A1A1A] dark:text-stone-200 hover:text-[#7B1F35] dark:hover:text-[#7B1F35] hover:bg-stone-200 dark:hover:bg-stone-700 text-[10px] font-bold tracking-widest uppercase bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1">
+                    <button onClick={() => handleSimilarityCheck(selectedSubmission)} className="text-[#1A1A1A] dark:text-stone-200 hover:text-[#770000] dark:hover:text-[#f8d070] hover:bg-stone-200 dark:hover:bg-stone-700 text-[10px] font-bold tracking-widest uppercase bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1">
                       <svg className="w-3 h-3 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                       Check Similarity
                     </button>
@@ -1341,7 +1341,7 @@ function ReviewSubmissions() {
               )}
 
               {/* Adviser AI Auto-Summarizer */}
-              <div className="bg-gradient-to-br from-[#7a2e46]/5 to-[#f8d070]/10 dark:from-stone-900 dark:to-stone-800 rounded-xl p-5 border border-[#7a2e46]/10 dark:border-stone-700 shadow-sm">
+              <div className="bg-gradient-to-br from-[#590000]/5 to-[#f8d070]/10 dark:from-stone-900 dark:to-stone-800 rounded-xl p-5 border border-[#590000]/10 dark:border-stone-700 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-gray-900 dark:text-stone-100 flex items-center gap-2 text-sm">
                     <Sparkles className="w-4 h-4 text-amber-500 inline mr-1" /> Adviser AI Auto-Summarizer
@@ -1391,7 +1391,7 @@ function ReviewSubmissions() {
               <div>
                 <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
                 <div className="flex flex-wrap gap-2">
-                  <span className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                  <span className="bg-[#590000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1">
                     <User className="w-3 h-3" /> {selectedSubmission.leaderName} (Leader)
                   </span>
                   {selectedSubmission.members?.map((m, i) => {
@@ -1521,7 +1521,7 @@ function ReviewSubmissions() {
                                     title: `${selectedSubmission.groupName} - ${req.title || req.id}`,
                                     reqId: req.id
                                   })}
-                                  className="bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
+                                  className="bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
                                 >
                                   Review Document
                                 </button>
@@ -1545,7 +1545,7 @@ function ReviewSubmissions() {
                   <h4 className="font-bold text-gray-900 dark:text-stone-100 text-sm mb-2">Keywords</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedSubmission.keywords.map((kw, i) => (
-                      <span key={i} className="border border-[#DDA3B6] dark:border-stone-700 text-[#7a2e46] dark:text-[#f8d070] bg-[#F9EBF0] dark:bg-stone-800 px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
+                      <span key={i} className="border border-[#770000]/30 dark:border-stone-700 text-[#590000] dark:text-[#f8d070] bg-[#F9EBF0] dark:bg-stone-800 px-3 py-1 rounded-full text-xs font-bold">{kw}</span>
                     ))}
                   </div>
                 </div>
@@ -1561,38 +1561,19 @@ function ReviewSubmissions() {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => setShowMsgModal(true)}
-                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Message Student
-                </button>
               </div>
               <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                 {selectedSubmission.reviewStatus !== 'approved' && selectedSubmission.reviewStatus !== 'published' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setShowReviewModal(false);
-                        handleReject(selectedSubmission);
-                      }}
-                      className="flex-1 sm:flex-initial bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition text-center cursor-pointer shadow-sm"
-                      title="Request revisions on this manuscript"
-                    >
-                      Request Revisions
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowReviewModal(false);
-                        handleApprove(selectedSubmission);
-                      }}
-                      className="flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Endorse for Dean Publication</span>
-                    </button>
-                  </>
+                  <button
+                    onClick={() => {
+                      setShowReviewModal(false);
+                      handleApprove(selectedSubmission);
+                    }}
+                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Endorse for Dean Publication</span>
+                  </button>
                 )}
                 {(selectedSubmission.reviewStatus === 'approved' || selectedSubmission.reviewStatus === 'published') && (
                   <button
@@ -1606,15 +1587,6 @@ function ReviewSubmissions() {
                     <span>Archival Certificate</span>
                   </button>
                 )}
-                <button
-                  onClick={() => {
-                    setShowReviewModal(false);
-                    handleDeleteSubmission(selectedSubmission);
-                  }}
-                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200 dark:border-red-800/50 text-center cursor-pointer"
-                >
-                  Delete
-                </button>
               </div>
             </div>
           </div>
@@ -1795,7 +1767,7 @@ function ReviewSubmissions() {
                           subject: `Revision required for your submission: ${selectedSubmission.researchTitle}`,
                           html: `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                              <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                              <div style="background-color: #590000; padding: 20px; text-align: center;">
                                 <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
                                 <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                               </div>
@@ -1851,7 +1823,7 @@ function ReviewSubmissions() {
       {showMsgModal && selectedSubmission && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#7a2e46] dark:bg-[#f8d070] px-6 py-5 flex items-center justify-between">
+            <div className="bg-[#590000] dark:bg-[#f8d070] px-6 py-5 flex items-center justify-between">
               <div>
                 <p className="text-white/70 dark:text-stone-800/70 text-[11px] font-bold tracking-widest uppercase mb-0.5">Direct Message</p>
                 <h3 className="text-white dark:text-stone-900 font-serif font-bold text-[18px]">Message Student</h3>
@@ -1888,7 +1860,7 @@ function ReviewSubmissions() {
                   onChange={e => setMsgSubject(e.target.value)}
                   required
                   placeholder="What is this about?"
-                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a2e46]/30 focus:border-[#7a2e46] transition"
+                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#770000]/30 focus:border-[#770000] transition"
                 />
               </div>
 
@@ -1900,7 +1872,7 @@ function ReviewSubmissions() {
                   required
                   rows="4"
                   placeholder="Type your message to the student here..."
-                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a2e46]/30 focus:border-[#7a2e46] transition resize-none"
+                  className="w-full border border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-950 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#770000]/30 focus:border-[#770000] transition resize-none"
                 />
               </div>
 
@@ -1908,7 +1880,7 @@ function ReviewSubmissions() {
                 <button
                   type="submit"
                   disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
-                  className="w-full bg-[#7a2e46] dark:bg-[#f8d070] hover:bg-[#5f2135] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-stone-900 font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-[#770000] dark:bg-[#f8d070] hover:bg-[#590000] disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-stone-900 font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {msgSending ? 'Sending...' : 'Send Message via Email'}
                   {!msgSending && (

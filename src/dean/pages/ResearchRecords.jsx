@@ -32,8 +32,8 @@ const STATUS_STYLES = {
 
 const ACTION_STYLES = {
   View: 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-700',
-  Publish: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
-  Review: 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white hover:bg-[#5a162d] dark:hover:bg-[#b09230]',
+  Publish: 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white hover:bg-[#590000] dark:hover:bg-[#b09230]',
+  Review: 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white hover:bg-[#590000] dark:hover:bg-[#b09230]',
 };
 
 const formatStatus = (status) => {
@@ -325,7 +325,7 @@ export default function ResearchRecords() {
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                     placeholder="Search title, group, adviser..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-400 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-400 outline-none focus:ring-1 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-[#770000] dark:focus:border-[#f8d070]"
                   />
                 </div>
 
@@ -340,7 +340,7 @@ export default function ResearchRecords() {
                     <select
                       value={value}
                       onChange={handleFilterChange(setter)}
-                      className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] cursor-pointer"
+                      className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-[#770000] dark:focus:border-[#f8d070] cursor-pointer"
                     >
                       {options.map((o) => <option key={o} value={o}>{o}</option>)}
                     </select>
@@ -359,7 +359,7 @@ export default function ResearchRecords() {
               ) : (
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
+                  <tr className="bg-[#590000] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 px-4 text-center w-12">No.</th>
                     <th className="py-3.5 px-4">Research Title</th>
                     <th className="py-3.5 px-4">Group</th>
@@ -409,10 +409,10 @@ export default function ResearchRecords() {
                         {/* Adviser */}
                         <td className="py-4 px-4 text-stone-700 dark:text-stone-300">
                           <div className="flex items-center gap-2">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${record.adviserSelf ? 'bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-[#4a1024]' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${record.adviserSelf ? 'bg-[#590000] text-white dark:bg-[#f8d070] dark:text-[#590000]' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'}`}>
                               {record.adviser.charAt(0).toUpperCase()}
                             </div>
-                            <span className={record.adviserSelf ? 'font-bold text-[#7a1f3d] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
+                            <span className={record.adviserSelf ? 'font-bold text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
                               {record.adviser}
                             </span>
                           </div>
@@ -458,7 +458,7 @@ export default function ResearchRecords() {
                           <button 
                             className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300 shadow-sm inline-flex items-center gap-1.5 mx-auto ${
                               record.action === 'Publish' || record.action === 'Review'
-                              ? 'bg-[#7a1f3d] dark:bg-[#d4af37] text-white dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#f8d070] hover:shadow-md hover:-translate-y-0.5' 
+                              ? 'bg-[#770000] dark:bg-[#d4af37] text-white dark:text-[#590000] hover:bg-[#590000] dark:hover:bg-[#f8d070] hover:shadow-md hover:-translate-y-0.5' 
                               : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-200 hover:border-stone-300 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-700 hover:-translate-y-0.5'
                             }`}
                             onClick={(e) => {
@@ -500,7 +500,7 @@ export default function ResearchRecords() {
                       setItemsPerPage(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-[11px] rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#7a1f3d]"
+                    className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-[11px] rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#770000]"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -526,7 +526,7 @@ export default function ResearchRecords() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors
                       ${currentPage === page
-                        ? 'bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white shadow-sm'
+                        ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white shadow-sm'
                         : 'border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 dark:bg-stone-800/80'
                       }`}
                   >
@@ -552,7 +552,7 @@ export default function ResearchRecords() {
       {showReviewModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
           <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#4a1024] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
+            <div className="bg-[#590000] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
                 className="absolute top-4 right-4 w-8 h-8 bg-white text-stone-800 dark:bg-stone-800/20 dark:text-white rounded-full flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800/30 transition text-lg"
@@ -568,16 +568,16 @@ export default function ResearchRecords() {
 
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
+                <div className="bg-[#590000]/10 dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Documents</p>
                 </div>
-                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
+                <div className="bg-[#590000]/10 dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.completionPercent}%</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Complete</p>
                 </div>
-                <div className="bg-[#f8ebef] dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-[#4a1024] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
+                <div className="bg-[#590000]/10 dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.pageCount || '—'}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Pages</p>
                 </div>
               </div>
@@ -595,7 +595,7 @@ export default function ResearchRecords() {
               <div>
                 <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-2">Group Members</h4>
                 <div className="flex flex-wrap gap-2">
-                  <span className="bg-[#4a1024] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
+                  <span className="bg-[#590000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-full">
                     👤 {selectedSubmission.leaderName || 'Leader'} (Leader)
                   </span>
                   {selectedSubmission.members?.map((m, i) => {
@@ -645,7 +645,7 @@ export default function ResearchRecords() {
                               url: docMeta.url,
                               title: docMeta.name || req.title
                             })}
-                            className="text-xs font-bold text-[#4a1024] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#4a1024]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#4a1024] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition flex items-center gap-1.5"
+                            className="text-xs font-bold text-[#590000] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#590000]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#590000] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition flex items-center gap-1.5"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

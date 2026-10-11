@@ -217,39 +217,39 @@ function SignUp() {
 
   return (
     <div 
-      className="min-h-screen w-full flex items-center justify-center font-sans p-6 bg-cover bg-center overflow-x-hidden"
+      className="h-screen max-h-screen w-full flex items-center justify-center font-sans p-3 sm:p-4 bg-cover bg-center overflow-hidden"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden transition-colors">
+      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-4 sm:p-5 shadow-2xl backdrop-blur-md relative overflow-y-auto scrollbar-hide max-h-[96vh] my-auto transition-colors">
         
         {/* Top Accent line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7a1f3d]"></div>
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#590000]"></div>
 
-        <div className="mb-4">
-          <h2 className="font-serif text-3xl font-bold text-stone-900">Create Account</h2>
-          <div className="mt-2 flex flex-col items-start gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a1f3d] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
+        <div className="mb-2.5">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900">Create Account</h2>
+          <div className="mt-1 flex flex-col items-start gap-1">
+            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#590000] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
               Research Adviser
             </span>
-            <p className="text-xs text-stone-500 font-medium">Register for your Adviser account</p>
+            <p className="text-[11px] sm:text-xs text-stone-500 font-medium">Register for your Adviser account</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="mb-3 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl p-2.5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
             <p className="text-xs text-red-800 font-medium leading-relaxed flex-1">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-xl p-4 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+          <div className="mb-3 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-xl p-2.5 flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
             <p className="text-xs text-green-800 font-medium leading-relaxed flex-1">{success}</p>
           </div>
         )}
 
-        <form onSubmit={handleSignUp} className="space-y-3">
+        <form onSubmit={handleSignUp} className="space-y-2.5">
           
           <div className="grid grid-cols-2 gap-3 mb-2">
             <div>
@@ -262,7 +262,7 @@ function SignUp() {
                 type="text" 
                 placeholder="e.g. Maria" 
                 className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
-                  formErrors.firstName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                  formErrors.firstName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000]'
                 } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
                 readOnly={isPrefilled} 
                 disabled={loading} 
@@ -283,7 +283,7 @@ function SignUp() {
                 type="text" 
                 placeholder="e.g. Cendana" 
                 className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
-                  formErrors.lastName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                  formErrors.lastName ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000]'
                 } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
                 readOnly={isPrefilled} 
                 disabled={loading} 
@@ -306,7 +306,7 @@ function SignUp() {
               type="email" 
               placeholder="e.g. adviser.cendana@phinmaed.com" 
               className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
-                formErrors.email ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d]'
+                formErrors.email ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' : 'border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000]'
               } ${isPrefilled ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : 'bg-white text-stone-800'}`} 
               readOnly={isPrefilled} 
               disabled={loading} 
@@ -333,7 +333,7 @@ function SignUp() {
                 className={`w-full px-4 py-2.5 rounded-xl focus:outline-none transition-all text-sm font-medium ${
                   formErrors.password 
                     ? 'border border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20' 
-                    : 'bg-[#f0f4f8] dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 focus:ring-2 focus:ring-[#7B1F35]/20 focus:border-[#7B1F35] dark:focus:border-[#D05353]'
+                    : 'bg-[#f0f4f8] dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000] dark:focus:border-[#D05353]'
                 }`}
                 placeholder="••••••••••••"
               />
@@ -414,7 +414,7 @@ function SignUp() {
                 className={`w-full border rounded-xl px-4 py-2 text-sm focus:outline-none transition-all disabled:opacity-50 ${
                   formErrors.confirmPassword 
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50/20 text-stone-800' 
-                    : 'border-stone-200 focus:ring-2 focus:ring-[#7a1f3d]/20 focus:border-[#7a1f3d] bg-white text-stone-800'
+                    : 'border-stone-200 focus:ring-2 focus:ring-[#770000]/20 focus:border-[#770000] bg-white text-stone-800'
                 }`} 
                 disabled={loading}
               />
@@ -464,7 +464,7 @@ function SignUp() {
                 handleChange(e);
               }} 
               type="checkbox" 
-              className={`w-4 h-4 text-[#7a1f3d] border-stone-300 bg-white rounded focus:ring-[#7a1f3d] mt-0.5 accent-[#7a1f3d] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
+              className={`w-4 h-4 text-[#770000] border-stone-300 bg-white rounded focus:ring-[#770000] mt-0.5 accent-[#770000] ${!bothAgreed ? 'opacity-40 cursor-pointer' : 'cursor-pointer'}`} 
               disabled={loading}
             />
             <div>
@@ -481,7 +481,7 @@ function SignUp() {
                     e.stopPropagation(); 
                     openPolicy('privacy'); 
                   }} 
-                  className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                  className={`font-bold ${privacyAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#770000] hover:text-[#590000]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
                 >
                   Privacy Policy{privacyAccepted && <Check className="w-3 h-3" />}
                 </span>{' '}
@@ -494,7 +494,7 @@ function SignUp() {
                     e.stopPropagation(); 
                     openPolicy('terms'); 
                   }} 
-                  className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#7a1f3d] hover:text-[#5a162d]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
+                  className={`font-bold ${termsAccepted ? 'text-emerald-700 hover:text-emerald-800' : 'text-[#770000] hover:text-[#590000]'} cursor-pointer hover:underline inline-flex items-center gap-1`}
                 >
                   Terms and Conditions{termsAccepted && <Check className="w-3 h-3" />}
                 </span>{' '}
@@ -511,7 +511,7 @@ function SignUp() {
           <button 
             type="submit" 
             disabled={loading || !formData.agreeTerms || !bothAgreed}
-            className="w-full bg-[#7a1f3d] hover:bg-[#5a162d] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#7a1f3d]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
+            className="w-full bg-[#770000] hover:bg-[#590000] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#770000]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 group mt-2"
           >
             {loading ? (
               <>
@@ -528,7 +528,7 @@ function SignUp() {
 
           <div className="text-center pt-3 border-t border-stone-100 mt-4">
             <p className="text-xs font-medium text-stone-500">
-              Already have an account? <Link to="/" className="text-[#7a1f3d] font-bold hover:underline ml-1">Sign in here</Link>
+              Already have an account? <Link to="/" className="text-[#770000] font-bold hover:underline ml-1">Sign in here</Link>
             </p>
           </div>
         </form>

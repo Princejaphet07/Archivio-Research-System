@@ -110,7 +110,7 @@ export default function ForgotPassword() {
           timer: 3500,
           showConfirmButton: true,
           confirmButtonText: 'Great, I will check',
-          confirmButtonColor: '#7a1f3d',
+          confirmButtonColor: '#770000',
           background: '#fff',
           color: '#333'
         });
@@ -134,7 +134,7 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen flex font-sans text-stone-800 dark:text-stone-200 bg-cover bg-center" style={{ backgroundImage: `url(${loginBg})` }}>
       <div className="w-full flex justify-center items-center p-6">
-        <div className="bg-white dark:bg-stone-800/95 rounded-2xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#7a1f3d]">
+        <div className="bg-white dark:bg-stone-800/95 rounded-2xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#590000]">
           
           <div className="flex flex-col items-center mb-6">
             <div className="w-20 h-20 bg-white dark:bg-stone-800 rounded-full flex items-center justify-center mb-6 shadow-md border border-gray-100">
@@ -168,7 +168,7 @@ export default function ForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. dean.swu@phinmaed.com"
-                    className="w-full pl-10 pr-4 py-3 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-sm focus:outline-none focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[#faf9f6] border border-stone-200 dark:border-stone-700 rounded-lg text-sm focus:outline-none focus:border-[#770000] focus:ring-1 focus:ring-[#770000] transition-all"
                     required
                     disabled={loading}
                     autoFocus
@@ -185,7 +185,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] hover:bg-[#5a162d] dark:hover:bg-[#b09230] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md flex items-center justify-center gap-2"
+                className="w-full bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] hover:bg-[#590000] dark:hover:bg-[#b09230] disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-lg transition duration-200 text-sm shadow-md flex items-center justify-center gap-2"
               >
                 {loading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
               </button>
@@ -200,22 +200,22 @@ export default function ForgotPassword() {
                 <p className="text-xs text-stone-600 dark:text-stone-300">
                   We've sent a secure password reset link to:
                 </p>
-                <div className="inline-block bg-stone-100 dark:bg-stone-700 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-600 font-mono text-xs font-bold text-[#7a1f3d] dark:text-[#d4af37]">
+                <div className="inline-block bg-stone-100 dark:bg-stone-700 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-600 font-mono text-xs font-bold text-[#590000] dark:text-[#d4af37]">
                   {email.trim().toLowerCase()}
                 </div>
               </div>
 
               <div className="w-full bg-stone-50 dark:bg-stone-700/50 border border-stone-200 dark:border-stone-600 rounded-xl p-4 text-left space-y-2 text-xs text-stone-600 dark:text-stone-300">
-                <p><span className="text-[#7a1f3d] dark:text-[#d4af37] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
-                <p><span className="text-[#7a1f3d] dark:text-[#d4af37] font-bold">2.</span> Click the link to create your new password.</p>
-                <p><span className="text-[#7a1f3d] dark:text-[#d4af37] font-bold">3.</span> Return here to log in.</p>
+                <p><span className="text-[#590000] dark:text-[#d4af37] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
+                <p><span className="text-[#590000] dark:text-[#d4af37] font-bold">2.</span> Click the link to create your new password.</p>
+                <p><span className="text-[#590000] dark:text-[#d4af37] font-bold">3.</span> Return here to log in.</p>
               </div>
 
               <a
                 href="https://mail.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 bg-[#7a1f3d] hover:bg-[#5a162d] text-white rounded-lg text-xs font-bold tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-[#770000] hover:bg-[#590000] text-white rounded-lg text-xs font-bold tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
               >
                 Open PHINMA Gmail
               </a>
@@ -227,7 +227,7 @@ export default function ForgotPassword() {
                     setIsSent(false);
                     setError('');
                   }}
-                  className="text-stone-500 hover:text-[#7a1f3d] transition-colors"
+                  className="text-stone-500 hover:text-[#590000] transition-colors"
                 >
                   ← Edit email
                 </button>
@@ -236,7 +236,7 @@ export default function ForgotPassword() {
                   type="button"
                   onClick={handleSendResetEmail}
                   disabled={loading || countdown > 0}
-                  className="font-bold text-[#7a1f3d] dark:text-[#d4af37] hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="font-bold text-[#590000] dark:text-[#d4af37] hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {countdown > 0 ? `Resend link (${countdown}s)` : 'Resend link'}
                 </button>
@@ -245,7 +245,7 @@ export default function ForgotPassword() {
           )}
 
           <div className="text-center mt-6 pt-4 border-t border-stone-100">
-            <Link to="/" className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-[#7a1f3d] dark:text-[#f8d070] transition-colors">
+            <Link to="/" className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-[#590000] dark:text-[#f8d070] transition-colors">
               ← Back to Login
             </Link>
           </div>

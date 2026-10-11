@@ -108,7 +108,7 @@ function ForgotPassword() {
           timer: 3500,
           showConfirmButton: true,
           confirmButtonText: 'Great, I will check',
-          confirmButtonColor: '#7a2e46',
+          confirmButtonColor: '#770000',
           background: '#fff',
           color: '#333'
         });
@@ -164,7 +164,7 @@ function ForgotPassword() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. adviser@phinmaed.com"
-                  className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#7a2e46] transition"
+                  className="w-full bg-[#faf7f5] border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#770000] transition"
                   required
                   disabled={loading}
                   autoFocus
@@ -180,7 +180,7 @@ function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#7a2e46] hover:bg-[#5f2135] disabled:opacity-60 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-md flex items-center justify-center gap-2"
+                className="w-full bg-[#770000] hover:bg-[#590000] disabled:opacity-60 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-sm shadow-md flex items-center justify-center gap-2"
               >
                 {loading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
               </button>
@@ -195,22 +195,22 @@ function ForgotPassword() {
                 <p className="text-xs text-gray-600">
                   We've sent a secure password reset link to:
                 </p>
-                <div className="inline-block bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 font-mono text-xs font-bold text-[#7a2e46]">
+                <div className="inline-block bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 font-mono text-xs font-bold text-[#770000]">
                   {email.trim().toLowerCase()}
                 </div>
               </div>
 
               <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left space-y-2 text-xs text-gray-600">
-                <p><span className="text-[#7a2e46] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
-                <p><span className="text-[#7a2e46] font-bold">2.</span> Click the link to create your new password.</p>
-                <p><span className="text-[#7a2e46] font-bold">3.</span> Return here to log in.</p>
+                <p><span className="text-[#590000] font-bold">1.</span> Open your PHINMA Gmail inbox.</p>
+                <p><span className="text-[#590000] font-bold">2.</span> Click the link to create your new password.</p>
+                <p><span className="text-[#590000] font-bold">3.</span> Return here to log in.</p>
               </div>
 
               <a
                 href="https://mail.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 bg-[#7a2e46] hover:bg-[#5f2135] text-white rounded-lg text-xs font-bold tracking-wider shadow-sm transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-[#770000] hover:bg-[#590000] text-white rounded-lg text-xs font-bold tracking-wider shadow-sm transition-all flex items-center justify-center gap-2"
               >
                 Open PHINMA Gmail
               </a>
@@ -222,7 +222,7 @@ function ForgotPassword() {
                     setIsSent(false);
                     setError('');
                   }}
-                  className="text-gray-500 hover:text-[#7a2e46] transition-colors"
+                  className="text-gray-500 hover:text-[#770000] transition-colors"
                 >
                   ← Edit email
                 </button>
@@ -231,7 +231,7 @@ function ForgotPassword() {
                   type="button"
                   onClick={handleSendResetEmail}
                   disabled={loading || countdown > 0}
-                  className="font-bold text-[#7a2e46] hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="font-bold text-[#770000] hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {countdown > 0 ? `Resend link (${countdown}s)` : 'Resend link'}
                 </button>
@@ -240,7 +240,7 @@ function ForgotPassword() {
           )}
 
           <div className="text-center mt-6 pt-4 border-t border-gray-100">
-            <Link to="/" className="text-xs font-semibold text-gray-500 hover:text-[#7a2e46] transition">
+            <Link to="/" className="text-xs font-semibold text-gray-500 hover:text-[#770000] transition">
               ← Back to Login
             </Link>
           </div>

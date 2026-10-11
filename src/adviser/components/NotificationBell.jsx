@@ -44,7 +44,7 @@ const getIcon = (title, message) => {
   if (lowerTitle.includes('group') || lowerTitle.includes('user') || lowerTitle.includes('adviser')) {
     return <Users className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />;
   }
-  return <Bell className="w-4 h-4 text-[#7B1F35] dark:text-[#f8d070] shrink-0" />;
+  return <Bell className="w-4 h-4 text-[#590000] dark:text-[#f8d070] shrink-0" />;
 };
 
 export default function NotificationBell() {
@@ -191,7 +191,7 @@ export default function NotificationBell() {
           text: newNotif.message,
           showConfirmButton: false,
           timer: 4000,
-          background: '#7B1F35',
+          background: '#590000',
           color: '#fff',
           iconColor: '#fff',
           customClass: { popup: 'rounded-xl shadow-xl' }
@@ -228,12 +228,21 @@ export default function NotificationBell() {
     }
     setIsOpen(false);
 
+    // Requirement upload from student
+    if (n.type === 'requirement_upload') {
+      navigate('/adviser/review-submissions', { 
+        state: { 
+          filterGroup: n.groupName || null,
+          _ts: Date.now() 
+        } 
+      });
+      return;
+    }
+
     // Requirement status or proposal
     if (
       n.type === 'requirement_status' || 
       n.type === 'requirement_proposal' || 
-      (n.title && n.title.toLowerCase().includes('requirement')) ||
-      (n.message && n.message.toLowerCase().includes('requirement')) ||
       (n.link && n.link.includes('submission-requirements'))
     ) {
       navigate('/adviser/submission-requirements', { 
@@ -317,8 +326,8 @@ export default function NotificationBell() {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
           hasUnread
-            ? 'text-[#541b2f] bg-[#541b2f]/10 hover:bg-[#541b2f]/20 dark:text-[#f8d070] dark:bg-[#f8d070]/10'
-            : 'text-gray-400 hover:text-[#541b2f] hover:bg-gray-100 dark:text-stone-500 dark:hover:text-[#f8d070] dark:hover:bg-white/5'
+            ? 'text-[#590000] bg-[#590000]/10 hover:bg-[#590000]/20 dark:text-[#f8d070] dark:bg-[#f8d070]/10'
+            : 'text-gray-400 hover:text-[#590000] hover:bg-gray-100 dark:text-stone-500 dark:hover:text-[#f8d070] dark:hover:bg-white/5'
         }`}
         title={hasUnread ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'Notifications'}
       >
@@ -339,7 +348,7 @@ export default function NotificationBell() {
       {/* Dropdown Panel */}
       {isOpen && (
         <div className="fixed inset-x-3 top-16 sm:top-auto sm:inset-x-auto sm:absolute sm:right-0 mt-2 sm:w-80 bg-white dark:bg-stone-900 rounded-2xl sm:rounded-xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden z-50 transform origin-top-right transition-all max-h-[80vh] flex flex-col">
-          <div className="bg-[#7B1F35] text-white px-4 py-3 flex justify-between items-center shrink-0">
+          <div className="bg-[#590000] text-white px-4 py-3 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-[14px]">Notifications</h3>
               {hasUnread && (
@@ -379,7 +388,7 @@ export default function NotificationBell() {
                     <div className="flex gap-2.5 items-start">
                       <span className="shrink-0 pt-0.5">{getIcon(n.title, n.message)}</span>
                       <div className="flex flex-col">
-                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#7B1F35] dark:text-[#f8d070]' : 'text-gray-700 dark:text-stone-300'}`}>
+                        <span className={`text-[13px] font-bold ${!n.isRead ? 'text-[#590000] dark:text-[#f8d070]' : 'text-gray-700 dark:text-stone-300'}`}>
                           {n.title}
                         </span>
                         <p className="text-[12px] text-gray-600 dark:text-stone-400 leading-snug mt-0.5">{n.message}</p>

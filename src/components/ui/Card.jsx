@@ -26,7 +26,7 @@ export function CardHeader({ children, className = '', accent = false }) {
       'px-6 py-4 flex items-center justify-between',
       'border-b border-stone-100 dark:border-stone-800',
       accent
-        ? 'bg-gradient-to-r from-[#7B1F35]/5 to-transparent dark:from-[#7B1F35]/10'
+        ? 'bg-gradient-to-r from-[#590000]/5 to-transparent dark:from-[#590000]/10'
         : 'bg-gradient-to-r from-stone-50/80 to-white dark:from-stone-800/60 dark:to-stone-900',
       className,
     ].join(' ')}>
@@ -52,7 +52,7 @@ export function CardFooter({ children, className = '' }) {
 // ── Stat Card ────────────────────────────────────────────────────────────────
 export function StatCard({ icon, label, value, sub, color = 'maroon', trend, className = '' }) {
   const colorMap = {
-    maroon: { bg: 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20', text: 'text-[#7B1F35] dark:text-[#D05353]', bar: 'bg-[#7B1F35]' },
+    maroon: { bg: 'bg-[#590000]/10 dark:bg-[#590000]/20', text: 'text-[#590000] dark:text-[#f8d070]', bar: 'bg-[#590000]' },
     green:  { bg: 'bg-green-100 dark:bg-green-900/30',     text: 'text-green-700 dark:text-green-400',  bar: 'bg-green-500' },
     amber:  { bg: 'bg-amber-100 dark:bg-amber-900/30',     text: 'text-amber-700 dark:text-amber-400',  bar: 'bg-amber-500' },
     blue:   { bg: 'bg-blue-100 dark:bg-blue-900/30',       text: 'text-blue-700 dark:text-blue-400',    bar: 'bg-blue-500' },
@@ -89,8 +89,8 @@ export function StatusBadge({ status }) {
     published:   { label: '✓ Published',       cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' },
     approved:    { label: '✓ Approved',         cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' },
     reviewed:    { label: '✓ Reviewed',         cls: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
-    uploaded:    { label: '✓ Uploaded',         cls: 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] border-[#7B1F35]/20' },
-    submitted:   { label: '✓ Submitted',        cls: 'bg-[#7B1F35]/10 dark:bg-[#7B1F35]/20 text-[#7B1F35] dark:text-[#D05353] border-[#7B1F35]/20' },
+    uploaded:    { label: '✓ Uploaded',         cls: 'bg-[#590000]/10 dark:bg-[#590000]/20 text-[#590000] dark:text-[#f8d070] border-[#590000]/20' },
+    submitted:   { label: '✓ Submitted',        cls: 'bg-[#590000]/10 dark:bg-[#590000]/20 text-[#590000] dark:text-[#f8d070] border-[#590000]/20' },
     pending:     { label: '⏳ Pending',          cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
     missing:     { label: '✗ Missing',          cls: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800' },
     revision:    { label: '⚠ Revision Req.',   cls: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' },
@@ -121,7 +121,7 @@ export function SectionTitle({ children, sub, action }) {
 export function PremiumButton({ children, onClick, variant = 'primary', size = 'md', icon, disabled, className = '' }) {
   const sizes = { sm: 'px-4 py-2 text-[12px]', md: 'px-6 py-2.5 text-[13px]', lg: 'px-8 py-3 text-[15px]' };
   const variants = {
-    primary: 'bg-[#7B1F35] hover:bg-[#63182a] text-white shadow-md hover:shadow-lg active:scale-95',
+    primary: 'bg-[#770000] hover:bg-[#590000] text-white shadow-md hover:shadow-lg active:scale-95',
     ghost:   'border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-300',
     outline: 'border border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1A1A1A] dark:text-stone-300',
     danger:  'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg active:scale-95',

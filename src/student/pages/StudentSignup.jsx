@@ -603,12 +603,12 @@ export default function StudentSignup({ onSwitchPage }) {
 
   // ── Stepper UI ──────────────────────────────────────────────────────────
   const StepIndicator = () => (
-    <div className="flex items-center justify-center mb-6">
+    <div className="flex items-center justify-center mb-3 sm:mb-4 shrink-0">
       {[1, 2, 3].map((s, i) => (
         <React.Fragment key={s}>
           <div className="flex flex-col items-center">
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
               style={{
                 backgroundColor: step > s ? '#6B0F1A' : step === s ? '#6B0F1A' : '#d1d5db',
                 color: 'white'
@@ -616,13 +616,13 @@ export default function StudentSignup({ onSwitchPage }) {
             >
               {step > s ? '✓' : s}
             </div>
-            <span className="text-[10px] mt-1 font-medium text-center" style={{ color: step >= s ? '#6B0F1A' : '#9ca3af' }}>
+            <span className="text-[10px] mt-0.5 font-medium text-center" style={{ color: step >= s ? '#6B0F1A' : '#9ca3af' }}>
               {['Personal Info', 'Group Info', 'Security'][i]}
             </span>
           </div>
           {i < 2 && (
             <div
-              className="w-8 sm:w-16 h-0.5 mb-4 mx-1 transition-all duration-300"
+              className="w-8 sm:w-14 h-0.5 mb-3 mx-1 transition-all duration-300"
               style={{ backgroundColor: step > s ? '#6B0F1A' : '#d1d5db' }}
             />
           )}
@@ -633,30 +633,30 @@ export default function StudentSignup({ onSwitchPage }) {
 
   return (
     <div
-      className="w-full min-h-screen bg-cover bg-center font-serif flex flex-col items-center justify-center py-6 sm:py-10 px-3 sm:px-4 relative"
+      className="w-full h-screen max-h-screen bg-cover bg-center font-serif flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden relative"
       style={{ backgroundImage: `url(${parchmentBg})` }}
     >
       {/* Logo & Title */}
-      <div className="flex items-center gap-2.5 sm:gap-3 mb-5 sm:mb-6 text-center">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#6B0F1A] p-0.5 bg-white shadow-sm flex items-center justify-center shrink-0">
-          <img src={swuLogoSeal} alt="SWU Logo" className="w-7 h-7 sm:w-9 sm:h-9 object-contain" />
+      <div className="flex items-center gap-2 sm:gap-2.5 mb-2 sm:mb-3 text-center shrink-0">
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-[#6B0F1A] p-0.5 bg-white shadow-sm flex items-center justify-center shrink-0">
+          <img src={swuLogoSeal} alt="SWU Logo" className="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
         </div>
-        <span className="text-[#2A1115] text-base sm:text-lg font-bold tracking-wide">Research Archive Management System</span>
+        <span className="text-[#2A1115] text-sm sm:text-base font-bold tracking-wide">Research Archive Management System</span>
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-xl bg-[#fdfaf4] rounded-2xl shadow-xl p-6 sm:p-9 border border-[#ddd5c8]">
+      <div className="w-full max-w-xl bg-[#fdfaf4] rounded-2xl shadow-xl p-4 sm:p-5 border border-[#ddd5c8] overflow-y-auto scrollbar-hide max-h-[84vh] my-auto">
 
         <StepIndicator />
 
         {/* Error / Success */}
         {error && (
-          <div className="mb-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <div className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+          <div className="mb-3 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
             {success}
           </div>
         )}
@@ -664,13 +664,13 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 1: Personal Info ──────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Personal Information</h2>
-            <p className="text-sm text-gray-500 text-center mb-1.5">Please provide your details to continue</p>
-            <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2A1115] text-center mb-0.5">Personal Information</h2>
+            <p className="text-xs text-gray-500 text-center mb-1">Please provide your details to continue</p>
+            <div className="flex justify-center mb-2"><span className="text-[#6B0F1A] text-sm">✦</span></div>
 
-            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+            <div className="grid grid-cols-2 gap-2.5 mb-2.5">
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   First Name <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <input 
@@ -680,18 +680,18 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Juan"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors ${
                     formErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
                 {formErrors.firstName && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                     <span>⚠️</span> {formErrors.firstName}
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   Middle Name
                 </label>
                 <input 
@@ -701,14 +701,14 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Carlos"
-                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:border-[#6B0F1A]" 
+                  className="w-full bg-[#faf6f0] border border-[#d5c9bb] rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:border-[#6B0F1A]" 
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+            <div className="grid grid-cols-2 gap-2.5 mb-2.5">
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   Last Name <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <input 
@@ -718,18 +718,18 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="Reyes"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors ${
                     formErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
                 {formErrors.lastName && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                     <span>⚠️</span> {formErrors.lastName}
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   Student Number <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <input 
@@ -739,20 +739,20 @@ export default function StudentSignup({ onSwitchPage }) {
                   onChange={handlePersonalChange}
                   type="text" 
                   placeholder="20-2222-001"
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors ${
                     formErrors.studentNumber ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
                 {formErrors.studentNumber && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                     <span>⚠️</span> {formErrors.studentNumber}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="mb-3.5">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 School Email <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <input 
@@ -763,23 +763,23 @@ export default function StudentSignup({ onSwitchPage }) {
                 type="email" 
                 placeholder="jcreyes.swu@phinmaed.com"
                 readOnly={isPrefilled}
-                className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors ${
+                className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors ${
                   formErrors.schoolEmail ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                 } ${isPrefilled ? 'opacity-70 cursor-not-allowed bg-gray-100/50' : ''}`} 
               />
               {formErrors.schoolEmail && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.schoolEmail}
                 </p>
               )}
-              <p className="text-xs text-gray-500 mt-1.5 pl-2">
+              <p className="text-[11px] text-gray-500 mt-0.5 pl-2">
                 {isPrefilled ? "Pre-filled from your invitation link (Cannot be edited)" : "Must be a valid @phinmaed.com email"}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3.5 mb-6">
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   Course <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <select 
@@ -787,7 +787,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   name="course" 
                   value={personalInfo.course} 
                   onChange={handlePersonalChange}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
                     formErrors.course ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
@@ -804,13 +804,13 @@ export default function StudentSignup({ onSwitchPage }) {
                   })}
                 </select>
                 {formErrors.course && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                     <span>⚠️</span> {formErrors.course}
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+                <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                   Year Level <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <select 
@@ -818,7 +818,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   name="yearLevel" 
                   value={personalInfo.yearLevel} 
                   onChange={handlePersonalChange}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 focus:outline-none appearance-none transition-colors ${
                     formErrors.yearLevel ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 >
@@ -830,23 +830,23 @@ export default function StudentSignup({ onSwitchPage }) {
                   <option>5th Year</option>
                 </select>
                 {formErrors.yearLevel && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                  <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                     <span>⚠️</span> {formErrors.yearLevel}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-3.5">
+            <div className="flex gap-2.5 sm:gap-3">
               <button
                 type="button" onClick={() => onSwitchPage('login')}
-                className="flex-1 min-h-[46px] py-3 border border-[#6B0F1A] text-[#6B0F1A] rounded-full text-sm sm:text-base font-semibold hover:bg-[#6B0F1A]/5 transition flex items-center justify-center">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] py-2 sm:py-2.5 border border-[#6B0F1A] text-[#6B0F1A] rounded-full text-xs sm:text-sm font-semibold hover:bg-[#6B0F1A]/5 transition flex items-center justify-center cursor-pointer">
                 ‹ Back
               </button>
               <button
                 type="button" onClick={handleContinueFromStep1}
                 disabled={loading}
-                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition disabled:opacity-50 flex items-center justify-center">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] touch-manipulation py-2 sm:py-2.5 bg-[#6B0F1A] text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-[#540c14] transition disabled:opacity-50 flex items-center justify-center cursor-pointer">
                 {loading ? 'Checking...' : 'Continue ›'}
               </button>
             </div>
@@ -856,12 +856,12 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 2: Group Info ─────────────────────────────────── */}
         {step === 2 && (
           <div>
-            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Group Information</h2>
-            <p className="text-sm text-gray-500 text-center mb-1.5">Tell us about your research group and team members</p>
-            <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2A1115] text-center mb-0.5">Group Information</h2>
+            <p className="text-xs text-gray-500 text-center mb-1">Tell us about your research group and team members</p>
+            <div className="flex justify-center mb-2"><span className="text-[#6B0F1A] text-sm">✦</span></div>
 
-            <div className="mb-3.5">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 Group Name <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="relative">
@@ -874,21 +874,21 @@ export default function StudentSignup({ onSwitchPage }) {
                   }}
                   type="text" 
                   placeholder="e.g., Group HealthAI"
-                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors pr-9 ${
                     formErrors.groupName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
-                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">👥</span>
+                <span className="absolute right-3 top-2 sm:top-2.5 text-gray-400 text-xs">👥</span>
               </div>
               {formErrors.groupName && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.groupName}
                 </p>
               )}
             </div>
 
-            <div className="mb-3.5">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 Research Title <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="relative">
@@ -901,21 +901,21 @@ export default function StudentSignup({ onSwitchPage }) {
                   }}
                   type="text" 
                   placeholder="e.g., ML-Based Health Monitor"
-                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors pr-9 ${
                     formErrors.researchTitle ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
-                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">📄</span>
+                <span className="absolute right-3 top-2 sm:top-2.5 text-gray-400 text-xs">📄</span>
               </div>
               {formErrors.researchTitle && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.researchTitle}
                 </p>
               )}
             </div>
 
-            <div className="mb-3.5">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 Research Adviser <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="relative">
@@ -931,7 +931,7 @@ export default function StudentSignup({ onSwitchPage }) {
                   disabled={isAdviserLocked}
                   type="text" 
                   placeholder="e.g., Dr. Juan Dela Cruz"
-                  className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors pr-10 ${
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors pr-9 ${
                     formErrors.researchAdviser ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   } ${isAdviserLocked ? 'opacity-70 cursor-not-allowed bg-gray-100/50 text-gray-700' : ''}`} 
                 />
@@ -940,53 +940,57 @@ export default function StudentSignup({ onSwitchPage }) {
                     <option key={adv.id || idx} value={adv.name} />
                   ))}
                 </datalist>
-                <span className="absolute right-3.5 top-3 sm:top-3.5 text-gray-400 text-sm">👨‍🏫</span>
+                <span className="absolute right-3 top-2 sm:top-2.5 text-gray-400 text-xs">👨‍🏫</span>
               </div>
               {formErrors.researchAdviser && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.researchAdviser}
                 </p>
               )}
               {isAdviserLocked && (
-                <p className="text-xs text-gray-500 mt-1.5 pl-2">
+                <p className="text-[11px] text-gray-500 mt-0.5 pl-2">
                   Assigned from your invitation (Cannot be edited)
                 </p>
               )}
             </div>
 
             {/* Team Members */}
-            <div className="mb-5">
-              <label className="block text-sm font-bold text-[#2A1115] mb-1 uppercase tracking-wide">Team Members</label>
-              <p className="text-xs text-gray-500 mb-2.5">Add your group members (you are the Leader)</p>
+            <div className="mb-3.5">
+              <label className="block text-xs font-bold text-[#2A1115] mb-0.5 uppercase tracking-wide">Team Members</label>
+              <p className="text-[11px] text-gray-500 mb-1.5">Add your group members (you are the Leader)</p>
 
               {/* Leader (self) */}
-              <div className="flex items-center gap-2.5 p-3 sm:p-3.5 bg-[#6B0F1A] text-white rounded-xl mb-2.5">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
+              <div className="flex items-center gap-2 p-2 sm:p-2.5 bg-[#6B0F1A] text-white rounded-xl mb-1.5">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                   {personalInfo.firstName.charAt(0)}{personalInfo.lastName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-semibold truncate">{personalInfo.firstName} {personalInfo.lastName} (You)</p>
-                  <p className="text-[11px] opacity-75 truncate">{personalInfo.studentNumber} · {personalInfo.schoolEmail}</p>
+                  <p className="text-xs font-semibold truncate">{personalInfo.firstName} {personalInfo.lastName} (You)</p>
+                  <p className="text-[10px] opacity-75 truncate">{personalInfo.studentNumber} · {personalInfo.schoolEmail}</p>
                 </div>
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full flex-shrink-0">LEADER</span>
+                <span className="text-[9px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full flex-shrink-0">LEADER</span>
               </div>
 
               {/* Added members */}
-              {groupInfo.members.map((m, i) => (
-                <div key={i} className="flex items-center gap-2.5 p-3 bg-[#faf6f0] border border-[#d5c9bb] rounded-xl mb-2.5">
-                  <div className="w-7 h-7 rounded-full bg-[#6B0F1A]/10 flex items-center justify-center text-xs font-bold text-[#6B0F1A] flex-shrink-0">
-                    {i + 2}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium truncate">{typeof m === 'object' ? m.name : m}</p>
-                    {m.email ? <p className="text-[11px] text-gray-500 truncate">{m.email}</p> : null}
-                  </div>
-                  <button type="button" onClick={() => handleRemoveMember(i)} className="text-gray-400 hover:text-red-500 text-sm flex-shrink-0 p-1 cursor-pointer">✕</button>
+              {groupInfo.members.length > 0 && (
+                <div className="max-h-24 overflow-y-auto scrollbar-hide space-y-1.5 mb-1.5">
+                  {groupInfo.members.map((m, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-[#faf6f0] border border-[#d5c9bb] rounded-xl">
+                      <div className="w-5 h-5 rounded-full bg-[#6B0F1A]/10 flex items-center justify-center text-[10px] font-bold text-[#6B0F1A] flex-shrink-0">
+                        {i + 2}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{typeof m === 'object' ? m.name : m}</p>
+                        {m.email ? <p className="text-[10px] text-gray-500 truncate">{m.email}</p> : null}
+                      </div>
+                      <button type="button" onClick={() => handleRemoveMember(i)} className="text-gray-400 hover:text-red-500 text-xs flex-shrink-0 p-1 cursor-pointer">✕</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
 
               {/* Add member input */}
-              <div className="flex gap-2.5 mt-2.5 items-start">
+              <div className="flex gap-2 mt-1.5 items-start">
                 <div className="flex-1">
                   <input
                     id="signup-memberNameInput"
@@ -998,30 +1002,30 @@ export default function StudentSignup({ onSwitchPage }) {
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddMember())}
                     type="text" 
                     placeholder="Full Name (e.g. Juan Dela Cruz)"
-                    className={`w-full bg-[#faf6f0] border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none transition-colors min-h-[46px] ${
+                    className={`w-full bg-[#faf6f0] border rounded-xl px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors ${
                       formErrors.memberNameInput ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                     }`} 
                   />
                   {formErrors.memberNameInput && (
-                    <p className="text-[11px] text-red-500 mt-1 font-semibold pl-1">
+                    <p className="text-[10px] text-red-500 mt-0.5 font-semibold pl-1">
                       <span>⚠️</span> {formErrors.memberNameInput}
                     </p>
                   )}
                 </div>
                 <button type="button" onClick={handleAddMember}
-                  className="px-6 py-2.5 bg-[#6B0F1A] text-white rounded-xl text-sm font-semibold hover:bg-[#540c14] transition min-h-[46px] touch-manipulation flex items-center justify-center cursor-pointer shrink-0">
+                  className="px-4 py-1.5 sm:py-2 bg-[#6B0F1A] text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-[#540c14] transition touch-manipulation flex items-center justify-center cursor-pointer shrink-0">
                   Add
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-3.5">
+            <div className="flex gap-2.5 sm:gap-3">
               <button type="button" onClick={() => setStep(1)}
-                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] touch-manipulation py-2 sm:py-2.5 bg-[#6B0F1A] text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center cursor-pointer">
                 ‹ Back
               </button>
               <button type="button" onClick={() => { if (validateStep2()) setStep(3); }}
-                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] touch-manipulation py-2 sm:py-2.5 bg-[#6B0F1A] text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center cursor-pointer">
                 Continue ›
               </button>
             </div>
@@ -1031,12 +1035,12 @@ export default function StudentSignup({ onSwitchPage }) {
         {/* ── STEP 3: Account Security ───────────────────────────── */}
         {step === 3 && (
           <form onSubmit={handleCreateAccount}>
-            <h2 className="text-2xl sm:text-[26px] font-bold text-[#2A1115] text-center mb-1.5">Account Security</h2>
-            <p className="text-sm text-gray-500 text-center mb-1.5">Set your password and verify your email</p>
-            <div className="flex justify-center mb-4"><span className="text-[#6B0F1A] text-lg">✦</span></div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2A1115] text-center mb-0.5">Account Security</h2>
+            <p className="text-xs text-gray-500 text-center mb-1">Set your password and verify your email</p>
+            <div className="flex justify-center mb-2"><span className="text-[#6B0F1A] text-sm">✦</span></div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 Password <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="relative">
@@ -1056,25 +1060,25 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none select-none transition-colors pr-11 ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none select-none transition-colors pr-9 ${
                     formErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`} 
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-base">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-sm">
                   {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
               {formErrors.password && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.password}
                 </p>
               )}
 
               {/* Password Strength indicator */}
               {securityInfo.password && (
-                <div className="mt-3">
-                  <div className="flex gap-1 h-1 mb-2">
+                <div className="mt-2">
+                  <div className="flex gap-1 h-1 mb-1.5">
                     {[1, 2, 3, 4].map((level) => (
                       <div 
                         key={level}
@@ -1090,30 +1094,30 @@ export default function StudentSignup({ onSwitchPage }) {
                   </div>
                   
                   {/* Password Checklist */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2.5 p-3 bg-[#faf6f0]/50 rounded-xl border border-[#d5c9bb]/50">
-                    <div className="flex items-center gap-1.5">
-                      {hasEight ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
-                      <span className={`text-xs ${hasEight ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>At least 8 characters</span>
+                  <div className="grid grid-cols-2 gap-1 p-2 bg-[#faf6f0]/50 rounded-xl border border-[#d5c9bb]/50">
+                    <div className="flex items-center gap-1">
+                      {hasEight ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasEight ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>At least 8 chars</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {hasUp ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
-                      <span className={`text-xs ${hasUp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Uppercase letter</span>
+                    <div className="flex items-center gap-1">
+                      {hasUp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasUp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Uppercase letter</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {hasNum ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
-                      <span className={`text-xs ${hasNum ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Number (0-9)</span>
+                    <div className="flex items-center gap-1">
+                      {hasNum ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasNum ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Number (0-9)</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {hasSp ? <span className="text-emerald-500 text-xs font-bold">✓</span> : <span className="text-gray-400 text-xs font-bold">○</span>}
-                      <span className={`text-xs ${hasSp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Special char (!@#$%)</span>
+                    <div className="flex items-center gap-1">
+                      {hasSp ? <span className="text-emerald-500 text-[10px] font-bold">✓</span> : <span className="text-gray-400 text-[10px] font-bold">○</span>}
+                      <span className={`text-[10px] ${hasSp ? 'text-[#2A1115] font-medium' : 'text-gray-500'}`}>Special char (!@#)</span>
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-[#2A1115] mb-1.5">
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
                 Confirm Password <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="relative">
@@ -1133,24 +1137,24 @@ export default function StudentSignup({ onSwitchPage }) {
                   onCopy={(e) => { e.preventDefault(); return false; }}
                   onCut={(e) => { e.preventDefault(); return false; }}
                   onContextMenu={(e) => { e.preventDefault(); return false; }}
-                  className={`w-full bg-[#faf6f0] border rounded-full px-4 py-2.5 sm:py-3 text-sm focus:outline-none pr-11 select-none transition-colors ${
+                  className={`w-full bg-[#faf6f0] border rounded-full px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none pr-9 select-none transition-colors ${
                     formErrors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
                   }`}
                 />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-base">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6B0F1A] text-sm">
                   {showConfirmPassword ? '🙈' : '👁'}
                 </button>
               </div>
               {formErrors.confirmPassword && (
-                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold pl-1">
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.confirmPassword}
                 </p>
               )}
             </div>
 
             {/* Terms */}
-            <div className="mb-5">
+            <div className="mb-3.5">
               <PolicyAgreement
                 id="signup-agreeTerms"
                 checked={securityInfo.agreeTerms && policyAccepted}
@@ -1165,15 +1169,15 @@ export default function StudentSignup({ onSwitchPage }) {
               />
             </div>
 
-            <div className="flex gap-3.5">
+            <div className="flex gap-2.5 sm:gap-3">
               <button type="button" onClick={() => setStep(2)}
-                className="flex-1 min-h-[46px] touch-manipulation py-3 bg-[#6B0F1A] text-white rounded-full text-sm sm:text-base font-semibold hover:bg-[#540c14] transition flex items-center justify-center cursor-pointer">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] touch-manipulation py-2 sm:py-2.5 bg-[#6B0F1A] text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-[#540c14] transition flex items-center justify-center cursor-pointer">
                 ‹ Back
               </button>
               <button
                 type="submit"
                 disabled={loading || !securityInfo.agreeTerms || !policyAccepted}
-                className="flex-1 min-h-[46px] touch-manipulation py-3 rounded-full text-sm sm:text-base font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#6B0F1A] hover:bg-[#540c14] text-white flex items-center justify-center cursor-pointer">
+                className="flex-1 min-h-[38px] sm:min-h-[42px] touch-manipulation py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#670319] hover:bg-[#520214] text-white flex items-center justify-center cursor-pointer">
                 {loading ? 'Creating...' : 'Create Account ✓'}
               </button>
             </div>
@@ -1182,7 +1186,7 @@ export default function StudentSignup({ onSwitchPage }) {
       </div>
 
       {/* Footer */}
-      <p className="mt-5 text-sm text-gray-500 relative z-10">
+      <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500 relative z-10 shrink-0">
         Already have an account?{' '}
         <button onClick={() => onSwitchPage('login')} className="text-[#6B0F1A] font-semibold hover:underline">
           Sign In

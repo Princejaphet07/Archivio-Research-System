@@ -156,7 +156,7 @@ function Header({
       text: 'Are you sure you want to log out?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#541b2f',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6B7280',
       confirmButtonText: 'Yes, log out'
     });
@@ -192,7 +192,7 @@ function Header({
         <button 
           type="button"
           onClick={onMenuToggle}
-          className="md:hidden p-2 -ml-1 text-stone-600 dark:text-stone-300 hover:text-[#541b2f] dark:hover:text-[#f8d070] rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
+          className="md:hidden p-2 -ml-1 text-stone-600 dark:text-stone-300 hover:text-[#590000] dark:hover:text-[#f8d070] rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
           aria-label="Open navigation menu"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -201,7 +201,7 @@ function Header({
         </button>
 
         <div className="min-w-0">
-          <h2 className="text-base sm:text-xl font-serif font-bold text-[#541b2f] dark:text-[#f8d070] leading-tight truncate">
+          <h2 className="text-base sm:text-xl font-serif font-bold text-[#590000] dark:text-[#f8d070] leading-tight truncate">
             {title}
           </h2>
           <p className="hidden sm:block text-[10px] text-gray-400 dark:text-stone-500 font-medium uppercase tracking-wider mt-0.5 truncate">
@@ -223,7 +223,7 @@ function Header({
               value={searchQuery !== undefined ? searchQuery : ''}
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               placeholder="Search groups, students, research titles..."
-              className="w-full bg-gray-50 dark:bg-stone-900 border border-gray-200 dark:border-stone-700 rounded-full pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-[#7a2e46] dark:focus:border-[#f8d070] text-stone-800 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 transition shadow-inner dark:shadow-none"
+              className="w-full bg-gray-50 dark:bg-stone-900 border border-gray-200 dark:border-stone-700 rounded-full pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-stone-800 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 transition shadow-inner dark:shadow-none"
             />
           </div>
         </div>
@@ -252,10 +252,10 @@ function Header({
           <button
             type="button"
             onClick={() => setSyDropdownOpen(prev => !prev)}
-            className="flex items-center gap-2 bg-pink-50 hover:bg-pink-100/80 dark:bg-[#7a1f3d]/20 dark:hover:bg-[#7a1f3d]/35 text-[#541b2f] dark:text-[#f8d070] border border-pink-100 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg transition-all cursor-pointer shadow-sm focus:outline-none"
+            className="flex items-center gap-2 bg-pink-50 hover:bg-pink-100/80 dark:bg-[#590000]/20 dark:hover:bg-[#590000]/35 text-[#590000] dark:text-[#f8d070] border border-pink-100 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg transition-all cursor-pointer shadow-sm focus:outline-none"
             title="Click to view or switch School Year"
           >
-            <Calendar className="w-3.5 h-3.5 text-[#7a1f3d] dark:text-[#f8d070]" />
+            <Calendar className="w-3.5 h-3.5 text-[#590000] dark:text-[#f8d070]" />
             <span>{displaySY}</span>
             <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${syDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -285,16 +285,16 @@ function Header({
                       onClick={() => handleSelectSY(sy)}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
                         isActive
-                          ? 'bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/10 dark:text-[#f8d070] font-bold'
+                          ? 'bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/10 dark:text-[#f8d070] font-bold'
                           : 'text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800/60'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#7a1f3d] dark:bg-[#f8d070]' : 'bg-stone-300 dark:bg-stone-600'}`}></span>
+                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#590000] dark:bg-[#f8d070]' : 'bg-stone-300 dark:bg-stone-600'}`}></span>
                         <span>{labelFormatted}</span>
                       </div>
                       {isActive ? (
-                        <span className="text-[10px] bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-stone-900 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
+                        <span className="text-[10px] bg-[#770000] text-white dark:bg-[#f8d070] dark:text-stone-900 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
                           <Check className="w-2.5 h-2.5" /> Active
                         </span>
                       ) : (
@@ -313,7 +313,7 @@ function Header({
         {/* Dark Mode Toggle */}
         <button 
           onClick={toggleDarkMode} 
-          className="relative text-gray-500 hover:text-[#541b2f] dark:text-stone-400 dark:hover:text-[#f8d070] transition-all p-2 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+          className="relative text-gray-500 hover:text-[#590000] dark:text-stone-400 dark:hover:text-[#f8d070] transition-all p-2 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
           title="Toggle Dark Mode"
           aria-label="Toggle Dark Mode"
         >
@@ -343,7 +343,7 @@ function Header({
           <button 
             type="button"
             onClick={() => setDropdownOpen(prev => !prev)}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-stone-200 dark:border-stone-700 overflow-hidden hover:ring-2 hover:ring-[#7a2e46] dark:hover:ring-[#f8d070] transition-all cursor-pointer shrink-0 focus:outline-none flex items-center justify-center"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-stone-200 dark:border-stone-700 overflow-hidden hover:ring-2 hover:ring-[#770000] dark:hover:ring-[#f8d070] transition-all cursor-pointer shrink-0 focus:outline-none flex items-center justify-center"
             aria-expanded={dropdownOpen}
             aria-haspopup="true"
             title={adviserName || "Adviser"}
@@ -351,7 +351,7 @@ function Header({
             {profilePhotoUrl ? (
               <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-[#f4e6eb] dark:bg-[#7a1f3d] flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] font-bold text-xs tracking-tight select-none">
+              <div className="w-full h-full bg-[#f4e6eb] dark:bg-[#590000] flex items-center justify-center text-[#590000] dark:text-[#f8d070] font-bold text-xs tracking-tight select-none">
                 {initials}
               </div>
             )}
@@ -370,8 +370,8 @@ function Header({
                     {auth.currentUser.email}
                   </p>
                 )}
-                <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
-                  <GraduationCap className="w-3 h-3 text-[#7a1f3d] dark:text-[#f8d070]" />
+                <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
+                  <GraduationCap className="w-3 h-3 text-[#590000] dark:text-[#f8d070]" />
                   <span>{isDualRole ? 'Dean + Adviser' : 'Research Adviser'}</span>
                 </span>
               </div>

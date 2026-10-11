@@ -113,7 +113,7 @@ function GroupRegistrations() {
       inputPlaceholder: 'e.g. Artificial Intelligence, IoT, Security...',
       showCancelButton: true,
       confirmButtonText: 'Add Category',
-      confirmButtonColor: '#7a1f3d',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6b7280',
       inputValidator: (value) => {
         if (!value || !value.trim()) {
@@ -146,7 +146,7 @@ function GroupRegistrations() {
       await addDoc(collection(db, 'categories'), {
         name: trimmedName,
         icon: '🔗',
-        bgColor: '#7a2e46',
+        bgColor: '#590000',
         description: '',
         createdBy: userEmail,
         adviserUid: userUid,
@@ -187,7 +187,7 @@ function GroupRegistrations() {
         icon: 'warning',
         title: 'Category Required',
         text: 'Please assign a research category to this group before approving.',
-        confirmButtonColor: '#7a1f3d'
+        confirmButtonColor: '#770000'
       });
       return;
     }
@@ -311,7 +311,7 @@ function GroupRegistrations() {
                 placeholder="Search groups..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#7B1F35] focus:border-[#7B1F35] dark:focus:border-[#f8d070] w-full text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 outline-none transition-all shadow-sm"
+                className="pl-10 pr-4 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#770000] focus:border-[#770000] dark:focus:border-[#f8d070] w-full text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 outline-none transition-all shadow-sm"
               />
             </div>
           }
@@ -416,7 +416,7 @@ function GroupRegistrations() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#7a2e46] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
+              <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
                 <tr>
                   <th className="py-3 px-5">Group</th>
                   <th className="py-3 px-5">Leader</th>
@@ -482,7 +482,7 @@ function GroupRegistrations() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition ${
                       currentPage === page
-                        ? 'bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                        ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900'
                         : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
                     }`}
                   >
@@ -506,7 +506,7 @@ function GroupRegistrations() {
       {selectedGroup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-stone-950 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto transform transition-all animate-scale-in">
-            <div className="bg-[#7a1f3d] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-5 sm:px-6 py-4 flex justify-between items-center text-white dark:text-stone-100 pr-12 relative">
+            <div className="bg-[#590000] dark:bg-stone-900 dark:border-b dark:border-stone-800 px-5 sm:px-6 py-4 flex justify-between items-center text-white dark:text-stone-100 pr-12 relative">
               <h2 className="font-bold text-lg sm:text-xl font-serif">Group Registration Details</h2>
               <button onClick={handleCloseModal} className="absolute top-4 right-4 text-white dark:text-stone-100 hover:text-gray-200 dark:hover:text-stone-300 text-2xl font-light leading-none cursor-pointer">&times;</button>
             </div>
@@ -537,7 +537,7 @@ function GroupRegistrations() {
                 <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2">Members ({1 + (selectedGroup.members?.length || 0)} total)</h3>
                 <ul className="space-y-2 mt-2">
                   <li className="flex items-center gap-3 bg-white dark:bg-stone-900 p-3 rounded-xl border border-gray-200 dark:border-stone-800 shadow-sm">
-                    <span className="w-9 h-9 rounded-full bg-[#7a1f3d] dark:bg-[#f8d070] text-white dark:text-stone-900 flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
+                    <span className="w-9 h-9 rounded-full bg-[#590000] dark:bg-[#f8d070] text-white dark:text-stone-900 flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
                       {selectedGroup.leaderName?.substring(0, 2).toUpperCase() || 'L'}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -587,7 +587,7 @@ function GroupRegistrations() {
                     <select
                       value={assignedCategory}
                       onChange={(e) => setAssignedCategory(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-xl text-sm text-gray-900 dark:text-stone-100 focus:ring-2 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-transparent outline-none transition appearance-none cursor-pointer pr-10 shadow-sm"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-xl text-sm text-gray-900 dark:text-stone-100 focus:ring-2 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-transparent outline-none transition appearance-none cursor-pointer pr-10 shadow-sm"
                     >
                       <option value="">
                         {categories.length === 0 ? '-- No categories yet --' : 'Select a Category...'}
@@ -608,7 +608,7 @@ function GroupRegistrations() {
                     type="button"
                     onClick={handleQuickAddCategory}
                     title="Add Research Category"
-                    className="h-[42px] px-3.5 bg-[#7a1f3d] hover:bg-[#601830] dark:bg-[#f8d070] dark:hover:bg-[#e6be5e] text-white dark:text-stone-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
+                    className="h-[42px] px-3.5 bg-[#770000] hover:bg-[#590000] dark:bg-[#f8d070] dark:hover:bg-[#e6be5e] text-white dark:text-stone-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />

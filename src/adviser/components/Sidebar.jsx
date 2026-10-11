@@ -84,16 +84,23 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
           let count = 0;
           
           groupsData.forEach(group => {
-            const sub = subsData.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
+            const sub = subsData.find(s => 
+              (s.studentUid && (s.studentUid === group.leaderUid || s.studentUid === group.leaderEmail)) || 
+              (s.groupName && s.groupName === group.groupName) || 
+              (s.title && s.title === group.researchTitle) || 
+              (s.researchTitle && s.researchTitle === group.researchTitle)
+            ) || {};
             const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
-            const docKeys = sub.documents && typeof sub.documents === 'object' ? Object.keys(sub.documents) : [];
+            const docKeys = sub.documents && typeof sub.documents === 'object' 
+              ? Object.keys(sub.documents).filter(k => !!(sub.documents[k]?.url || sub.documents[k]?.name)) 
+              : [];
             const uploadedCount = Math.max(uploadedDocs.length, docKeys.length, (sub.manuscriptUrl || sub.fileUrl ? 1 : 0));
 
             // Do not put notification in sidebar if student hasn't uploaded a file or requirements
             if (uploadedCount === 0) return;
 
-            const status = sub.reviewStatus;
-            if (status === 'pending' || status === 'needs_review' || status === 'reviewed') {
+            const status = sub.reviewStatus || sub.status || 'in_progress';
+            if (status !== 'approved' && status !== 'published') {
               count++;
             }
           });
@@ -185,7 +192,7 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
         
         {badge && (
           <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-200 ${
-            isActive ? 'bg-[#d0a36e] text-[#541b2f]' : 'bg-red-500 text-white'
+            isActive ? 'bg-[#d0a36e] text-[#590000]' : 'bg-red-500 text-white'
           }`}>
             {badge}
           </span>
@@ -207,7 +214,7 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
 
       {/* Sidebar Container: Fixed slide-out on mobile, static on desktop */}
       <aside 
-        className={`fixed md:static top-0 left-0 h-[100dvh] md:h-screen w-[285px] max-w-[85vw] md:w-64 bg-[#541b2f] dark:bg-stone-950 text-white flex flex-col z-[100] md:z-20 transition-transform duration-300 ease-in-out font-sans border-r border-[#6b253e] dark:border-stone-800 shadow-2xl md:shadow-xl overflow-hidden ${
+        className={`fixed md:static top-0 left-0 h-[100dvh] md:h-screen w-[285px] max-w-[85vw] md:w-64 bg-[#590000] dark:bg-stone-950 text-white flex flex-col z-[100] md:z-20 transition-transform duration-300 ease-in-out font-sans border-r border-[#700000] dark:border-stone-800 shadow-2xl md:shadow-xl overflow-hidden ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -238,12 +245,12 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
 
         {/* Adviser Mode Pill */}
         <div className="px-5 mb-4 mt-3">
-          <div className="bg-[#3e1322] dark:bg-black/30 rounded-full p-1 flex items-center justify-between border border-[#6b253e] dark:border-white/5 shadow-inner">
+          <div className="bg-[#450000] dark:bg-black/30 rounded-full p-1 flex items-center justify-between border border-[#700000] dark:border-white/5 shadow-inner">
             <div className="flex items-center gap-2 pl-2">
               <div className="w-2 h-2 rounded-full bg-[#d0a36e]"></div>
               <span className="text-[10px] font-semibold tracking-wider text-gray-200">ADVISER PORTAL</span>
             </div>
-            <div className="bg-[#6b253e] dark:bg-[#f8d070]/20 text-[9px] px-2.5 py-0.5 rounded-full text-white dark:text-[#f8d070] font-bold">
+            <div className="bg-[#770000] dark:bg-[#f8d070]/20 text-[9px] px-2.5 py-0.5 rounded-full text-white dark:text-[#f8d070] font-bold">
               Active
             </div>
           </div>
@@ -359,7 +366,7 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
                 onCloseMobile();
                 setShowSwitchModal(true);
               }}
-              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#7B1F35]/40 hover:bg-[#7B1F35]/60 border border-[#f8d070]/40 hover:border-[#f8d070]/70 rounded-xl text-[#f8d070] hover:text-amber-200 text-xs font-bold transition-all duration-200 shadow-md group cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#770000]/60 hover:bg-[#770000]/80 border border-[#f8d070]/40 hover:border-[#f8d070]/70 rounded-xl text-[#f8d070] hover:text-amber-200 text-xs font-bold transition-all duration-200 shadow-md group cursor-pointer"
               title="Switch to Dean Portal"
             >
               <span className="text-base group-hover:scale-125 transition-transform">⇄</span>

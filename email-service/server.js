@@ -401,6 +401,7 @@ app.post('/api/accept-student-invitation', async (req, res) => {
     console.error('Error accepting invitation:', err);
     return res.status(500).json({ error: err.message });
   }
+});
 // ============================================
 // CREATE GROUP MEMBER ACCOUNT (ADMIN PROVISIONING)
 // ============================================
@@ -1630,7 +1631,7 @@ app.post('/api/enable-auth-user', verifyToken, async (req, res) => {
 // ============================================
 app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => {
   try {
-    const { to, invitationLink, senderName, senderDepartment, message } = req.body;
+    const { to, invitationLink, senderName, senderDepartment, message, studentName, recipientName, name } = req.body;
 
     // Validate required fields
     if (!to || !invitationLink) {
@@ -1640,6 +1641,24 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
     // Validate email domain - only @phinmaed.com allowed
     if (!to.toLowerCase().endsWith('@phinmaed.com')) {
       return res.status(400).json({ error: 'Invitations can only be sent to @phinmaed.com email addresses' });
+    }
+
+    // Resolve student display name (from explicit field or email prefix formatting)
+    const rawProvidedName = studentName || recipientName || name;
+    let recipientDisplayName = 'Student';
+    if (rawProvidedName && typeof rawProvidedName === 'string' && rawProvidedName.trim()) {
+      recipientDisplayName = rawProvidedName.trim();
+    } else if (to && typeof to === 'string' && to.includes('@')) {
+      const prefix = to.split('@')[0];
+      const parts = prefix.split(/[\._\-]/).filter(Boolean);
+      const cleanParts = parts.map(part => {
+        const clean = part.replace(/\d+/g, '').trim();
+        if (!clean) return '';
+        return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+      }).filter(Boolean);
+      if (cleanParts.length > 0) {
+        recipientDisplayName = cleanParts.join(' ');
+      }
     }
 
     // Email template for student invitation
@@ -1774,7 +1793,7 @@ app.post('/api/send-student-invitation-email', verifyToken, async (req, res) => 
 
     <!-- Main Content -->
     <div class="content">
-      <div class="greeting">Hello,</div>
+      <div class="greeting">Hello ${recipientDisplayName},</div>
 
       <div class="message">You have been invited to join the <strong>ARCHIVIO Research Management System</strong> as a student researcher by <strong>${senderName}</strong> from <strong>${senderDepartment}</strong>.</div>
 

@@ -206,10 +206,10 @@ export default function ResetPassword() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 md:p-6 font-sans bg-cover bg-center text-stone-800 dark:text-stone-100"
+      className="h-screen max-h-screen overflow-hidden flex items-center justify-center p-3 sm:p-4 font-sans bg-cover bg-center text-stone-800 dark:text-stone-100"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="bg-white dark:bg-[#1e1e1e]/95 rounded-2xl shadow-2xl w-full max-w-md p-8 relative border-t-4 border-[#801e38]">
+      <div className="bg-white dark:bg-[#1e1e1e]/95 rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative border-t-4 border-[#801e38] max-h-[94vh] overflow-y-auto scrollbar-hide my-auto">
         
         {/* Header with Logo */}
         <div className="flex flex-col items-center mb-6">

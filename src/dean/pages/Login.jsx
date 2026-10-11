@@ -257,22 +257,20 @@ export default function Login() {
     <div className="flex h-screen w-full overflow-hidden font-sans">
 
       {/* ================== LEFT COLUMN (Maroon Section) - Hidden on Mobile/Tablet ================== */}
-      <div
-        className="relative hidden w-[45%] flex-col items-center justify-center lg:flex"
-        style={{
-          backgroundImage: `url('${leftBg}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundColor: '#3b1220'
-        }}
-      >
+      <div className="relative hidden w-[45%] flex-col items-center justify-center lg:flex z-20">
+        {/* Background Layer at back of torn-edge */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none z-10"
+          style={{ backgroundImage: `url('${leftBg}')`, backgroundColor: '#590000' }}
+        />
+
         {/* Torn Edge Overlay */}
-        <div className="absolute inset-y-0 right-0 z-10 translate-x-[45%] h-full">
-          <img src={tornEdge} alt="Torn Edge" className="h-full w-auto object-cover" />
+        <div className="absolute inset-y-0 right-0 z-20 translate-x-[20%] h-full w-12 sm:w-14 lg:w-16 pointer-events-none">
+          <img src={tornEdge} alt="Torn Edge" className="h-full w-full object-fill" />
         </div>
 
         {/* Content */}
-        <div className="relative z-20 flex flex-col items-center text-center px-12">
+        <div className="relative z-30 flex flex-col items-center text-center px-12">
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white dark:bg-stone-800/10 p-2 shadow-inner border border-white/20">
             <img src={logo} alt="SWU Logo" className="h-full w-full object-contain" />
           </div>
@@ -289,7 +287,7 @@ export default function Login() {
           </p>
 
           {/* Stats Box */}
-          <div className="flex w-full max-w-sm divide-x divide-[#d4af37]/20 rounded-xl border border-[#d4af37]/20 bg-[#2a0b16]/40 py-4 backdrop-blur-sm">
+          <div className="flex w-full max-w-sm divide-x divide-[#d4af37]/20 rounded-xl border border-[#d4af37]/20 bg-[#590000]/40 py-4 backdrop-blur-sm">
             <div className="flex flex-1 flex-col items-center">
               <span className="font-serif text-2xl font-bold text-[#fae1a0]">24</span>
               <span className="text-[10px] text-stone-300">Submissions</span>
@@ -308,7 +306,7 @@ export default function Login() {
 
       {/* ================== RIGHT COLUMN (Paper Section) - Full width on Mobile ================== */}
       <div
-        className="relative flex w-full flex-col justify-center px-6 sm:px-16 lg:w-[55%] lg:px-24"
+        className="relative flex w-full h-full flex-col justify-center items-center px-6 sm:px-16 lg:w-[55%] lg:px-20 overflow-y-auto scrollbar-hide py-4"
         style={{
           backgroundImage: `url('${rightBg}')`,
           backgroundSize: 'cover',
@@ -316,40 +314,40 @@ export default function Login() {
           backgroundColor: '#f5f0e6'
         }}
       >
-        <div className="w-full max-w-md mx-auto lg:mx-0 lg:pl-12">
+        <div className="w-full max-w-md mx-auto lg:mx-0 lg:pl-8 my-auto">
 
           {/* ==================== LOGIN VIEW ==================== */}
           {view === 'login' && (
             <>
               {/* Welcome Text */}
-              <div className="mb-8">
+              <div className="mb-4 lg:mb-5">
                 <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-stone-100">Welcome Back!</h2>
-                <div className="mt-2 flex flex-col items-start gap-2">
-                  <p className="text-sm text-stone-600 dark:text-stone-400">Sign in to your ARCHIVIO account</p>
+                <div className="mt-1 flex flex-col items-start gap-1.5">
+                  <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400">Sign in to your ARCHIVIO account</p>
                   <div className="h-0.5 w-12 bg-[#d4af37]"></div>
                 </div>
               </div>
 
               {/* Login Form Card */}
-              <div className="rounded-2xl border border-white/50 bg-white dark:bg-stone-800/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
-                <div className="mb-6">
-                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Dean Portal Sign In</h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Enter your institutional email and password</p>
-                  <div className="mt-4 border-b border-stone-200 dark:border-stone-700"></div>
+              <div className="rounded-2xl border border-white/50 bg-white dark:bg-stone-800/90 p-6 sm:p-7 shadow-xl backdrop-blur-md">
+                <div className="mb-4">
+                  <h3 className="text-base sm:text-lg font-bold text-stone-900 dark:text-stone-100">Dean Portal Sign In</h3>
+                  <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5">Enter your institutional email and password</p>
+                  <div className="mt-3 border-b border-stone-200 dark:border-stone-700"></div>
                 </div>
 
                 {/* Error Message */}
                 {error && (
-                  <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                    <span className="text-red-500 text-sm">⚠️</span>
-                    <p className="text-sm text-red-700">{error}</p>
+                  <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5 flex items-start gap-2">
+                    <span className="text-red-500 text-xs">⚠️</span>
+                    <p className="text-xs text-red-700">{error}</p>
                   </div>
                 )}
 
-                <form className="space-y-5" onSubmit={handleLogin}>
+                <form className="space-y-3.5" onSubmit={handleLogin}>
 
                   {/* Email Input */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Email Address <span className="text-red-500">*</span>
                     </label>
@@ -366,14 +364,13 @@ export default function Login() {
                         placeholder="your.name@phinmaed.com"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-4 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-4 text-xs sm:text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                     </div>
-                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Use your @phinmaed.com email</p>
                   </div>
 
                   {/* Password Input */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Password <span className="text-red-500">*</span>
                     </label>
@@ -390,12 +387,12 @@ export default function Login() {
                         placeholder="Enter your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 pl-10 pr-16 text-xs sm:text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:text-[#590000]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -403,17 +400,17 @@ export default function Login() {
                   </div>
 
                   {/* Options Row */}
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between pt-0.5">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-stone-300 dark:border-stone-600 text-[#7a1f3d] dark:text-[#f8d070] focus:ring-[#7a1f3d]"
+                        className="h-3.5 w-3.5 rounded border-stone-300 dark:border-stone-600 text-[#770000] dark:text-[#f8d070] focus:ring-[#770000]"
                       />
                       <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Remember me</span>
                     </label>
-                    <Link to="/dean/forgot-password" className="text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:underline">
+                    <Link to="/dean/forgot-password" className="text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -422,7 +419,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="mt-4 w-full rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-3 w-full rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] py-2.5 lg:py-3 text-xs sm:text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#590000] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Signing In...' : 'Sign In'}
                   </button>
@@ -473,7 +470,7 @@ export default function Login() {
                       placeholder="your.name@phinmaed.com"
                       required
                       disabled={loading}
-                      className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                      className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                     />
                   </div>
 
@@ -490,12 +487,12 @@ export default function Login() {
                         placeholder="Create a strong password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:text-[#590000]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -515,12 +512,12 @@ export default function Login() {
                         placeholder="Confirm your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:text-[#590000]"
                       >
                         {showConfirmPassword ? "Hide" : "Show"}
                       </button>
@@ -571,7 +568,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || strengthCount < 4}
-                      className="flex-1 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#590000] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? 'Activating...' : 'Activate Account'}
                     </button>
@@ -626,12 +623,12 @@ export default function Login() {
                         placeholder="Create a strong password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:text-[#590000]"
                       >
                         {showPassword ? "Hide" : "Show"}
                       </button>
@@ -651,12 +648,12 @@ export default function Login() {
                         placeholder="Confirm your password"
                         required
                         disabled={loading}
-                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#7a1f3d] focus:ring-1 focus:ring-[#7a1f3d] disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-[#faf9f6] py-2.5 px-4 pr-16 text-sm text-stone-700 dark:text-stone-300 outline-none transition-colors focus:border-[#770000] focus:ring-1 focus:ring-[#770000] disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:text-[#5a162d]"
+                        className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:text-[#590000]"
                       >
                         {showConfirmPassword ? "Hide" : "Show"}
                       </button>
@@ -710,7 +707,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || strengthCount < 4}
-                      className="flex-1 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#5a162d] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#590000] dark:hover:bg-[#b09230] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? 'Updating...' : 'Set Permanent Password'}
                     </button>

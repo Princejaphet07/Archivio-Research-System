@@ -12,6 +12,7 @@ import CertificateModal from '../../components/CertificateModal';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { extractPdfText, generateAbstractWithAI, extractKeywordsWithAI } from '../../utils/aiManuscriptExtractor';
 import { saveDraft, getDraft, clearDraft } from '../../utils/draftStorage';
+import { logActivity } from '../../firebase/logActivity';
 
 // Resilient Client-Side NLP Keyword Extractor (Zero-Failure Fallback)
 function extractClientKeywords(text) {
@@ -557,12 +558,12 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         
         clearDraft(submissionId || 'manuscript', 'manuscript_details');
 
-        await addDoc(collection(db, 'notifications'), {
-          userId: auth.currentUser?.uid,
-          title: "Manuscript Updated",
-          message: "You successfully updated your manuscript details.",
-          isRead: false,
-          createdAt: serverTimestamp()
+        await logActivity({
+          user: studentName || auth.currentUser?.email || 'Student',
+          role: 'Student',
+          action: 'Updated manuscript details',
+          status: 'Success',
+          details: 'Saved manuscript abstract, keywords, and metadata'
         });
 
         Swal.fire({ icon: 'success', title: 'Saved!', text: 'Manuscript details updated.', confirmButtonColor: '#7B1F35' });

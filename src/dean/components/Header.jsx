@@ -105,7 +105,7 @@ export default function Header({ activePage, onMenuClick }) {
         icon: 'error',
         title: 'Error',
         text: 'Failed to switch school year.',
-        confirmButtonColor: '#7a1f3d'
+        confirmButtonColor: '#770000'
       });
     }
   };
@@ -158,7 +158,7 @@ export default function Header({ activePage, onMenuClick }) {
       text: 'Are you sure you want to log out?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#7a1f3d',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6B7280',
       confirmButtonText: 'Yes, log out'
     });
@@ -209,7 +209,7 @@ export default function Header({ activePage, onMenuClick }) {
           </button>
 
           <div className="hidden sm:block">
-            <h2 className="font-serif text-xl font-bold text-[#7a1f3d] dark:text-[#f8d070]">{currentView.title}</h2>
+            <h2 className="font-serif text-xl font-bold text-[#590000] dark:text-[#f8d070]">{currentView.title}</h2>
             {currentView.breadcrumb && (
               <p className="text-[10px] text-stone-400 -mt-1 font-medium">{currentView.breadcrumb}</p>
             )}
@@ -243,10 +243,10 @@ export default function Header({ activePage, onMenuClick }) {
             <button
               type="button"
               onClick={() => setSyDropdownOpen(prev => !prev)}
-              className="flex items-center gap-2 bg-pink-50 hover:bg-pink-100/80 dark:bg-[#7a1f3d]/20 dark:hover:bg-[#7a1f3d]/35 text-[#541b2f] dark:text-[#f8d070] border border-pink-100 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg transition-all cursor-pointer shadow-sm focus:outline-none"
+              className="flex items-center gap-2 bg-[#590000]/10 hover:bg-[#590000]/20 dark:bg-[#590000]/30 dark:hover:bg-[#590000]/45 text-[#590000] dark:text-[#f8d070] border border-[#590000]/20 dark:border-[#f8d070]/30 font-semibold text-xs py-1.5 px-3 rounded-lg transition-all cursor-pointer shadow-sm focus:outline-none"
               title="Click to view or switch School Year"
             >
-              <Calendar className="w-3.5 h-3.5 text-[#7a1f3d] dark:text-[#f8d070]" />
+              <Calendar className="w-3.5 h-3.5 text-[#770000] dark:text-[#f8d070]" />
               <span>{displaySY}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${syDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -273,16 +273,16 @@ export default function Header({ activePage, onMenuClick }) {
                         onClick={() => handleSelectSY(sy)}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
                           isActive
-                            ? 'bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/10 dark:text-[#f8d070] font-bold'
+                            ? 'bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/10 dark:text-[#f8d070] font-bold'
                             : 'text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800/60'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#7a1f3d] dark:bg-[#f8d070]' : 'bg-stone-300 dark:bg-stone-600'}`}></span>
+                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#590000] dark:bg-[#f8d070]' : 'bg-stone-300 dark:bg-stone-600'}`}></span>
                           <span>{labelFormatted}</span>
                         </div>
                         {isActive ? (
-                          <span className="text-[10px] bg-[#7a1f3d] text-white dark:bg-[#f8d070] dark:text-stone-900 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
+                          <span className="text-[10px] bg-[#770000] text-white dark:bg-[#f8d070] dark:text-stone-900 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
                             <Check className="w-2.5 h-2.5" /> Active
                           </span>
                         ) : (
@@ -302,7 +302,7 @@ export default function Header({ activePage, onMenuClick }) {
                       setSyDropdownOpen(false);
                       navigate('/dean/settings', { state: { tab: 'schoolyear' } });
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#7a1f3d] dark:text-[#f8d070] hover:bg-[#7a1f3d]/5 dark:hover:bg-[#f8d070]/10 rounded-lg transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#770000] dark:text-[#f8d070] hover:bg-[#770000]/5 dark:hover:bg-[#f8d070]/10 rounded-lg transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Manage / Add School Year</span>
@@ -315,7 +315,7 @@ export default function Header({ activePage, onMenuClick }) {
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleDarkMode}
-            className="relative text-gray-500 hover:text-[#541b2f] dark:text-stone-400 dark:hover:text-[#f8d070] transition-all p-2 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+            className="relative text-gray-500 hover:text-[#770000] dark:text-stone-400 dark:hover:text-[#f8d070] transition-all p-2 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             aria-label="Toggle Dark Mode"
           >
@@ -345,7 +345,7 @@ export default function Header({ activePage, onMenuClick }) {
             <button 
               type="button"
               onClick={() => setDropdownOpen(prev => !prev)}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-stone-200 dark:border-stone-700 overflow-hidden hover:ring-2 hover:ring-[#7a2e46] dark:hover:ring-[#f8d070] transition-all cursor-pointer shrink-0 focus:outline-none flex items-center justify-center"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-stone-200 dark:border-stone-700 overflow-hidden hover:ring-2 hover:ring-[#770000] dark:hover:ring-[#f8d070] transition-all cursor-pointer shrink-0 focus:outline-none flex items-center justify-center"
               aria-expanded={dropdownOpen}
               aria-haspopup="true"
               title={deanName || "Dean"}
@@ -353,7 +353,7 @@ export default function Header({ activePage, onMenuClick }) {
               {profilePhotoUrl ? (
                 <img src={profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-[#f4e6eb] dark:bg-[#7a1f3d] flex items-center justify-center text-[#7a2e46] dark:text-[#f8d070] font-bold text-xs tracking-tight select-none">
+                <div className="w-full h-full bg-[#590000]/10 dark:bg-[#590000] flex items-center justify-center text-[#590000] dark:text-[#f8d070] font-bold text-xs tracking-tight select-none">
                   {displayInitials}
                 </div>
               )}
@@ -372,7 +372,7 @@ export default function Header({ activePage, onMenuClick }) {
                       {email}
                     </p>
                   )}
-                  <span className="inline-block mt-1.5 text-[9px] font-semibold bg-[#7a1f3d]/10 text-[#7a1f3d] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
+                  <span className="inline-block mt-1.5 text-[9px] font-semibold bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/20 dark:text-[#f8d070] px-2 py-0.5 rounded-full capitalize">
                     👩‍🏫 {isDualRole ? 'Dean + Adviser' : 'College Dean'}
                   </span>
                 </div>

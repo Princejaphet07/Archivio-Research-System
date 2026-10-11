@@ -6,14 +6,15 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import Swal from 'sweetalert2';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
+import { Calendar, Users, CheckCircle2, Scale, Globe, Tag, Printer, Download, FileText } from 'lucide-react';
 
 const REPORT_TYPES = [
-  { id: 'research-by-year', title: 'Research by Year', desc: 'Uploads by academic year', icon: '📅' },
-  { id: 'adviser-performance', title: 'Adviser Performance', desc: 'Per adviser breakdown', icon: '🧑‍🏫' },
-  { id: 'completion-status', title: 'Completion Status', desc: 'Requirements per group', icon: '✅' },
-  { id: 'approved-vs-pending', title: 'Approved vs Pending', desc: 'Status comparison', icon: '⚖️' },
-  { id: 'published-archive', title: 'Published Archive', desc: 'All published research', icon: '🌐' },
-  { id: 'category-report', title: 'Category Report', desc: 'By field of study', icon: '🏷️' },
+  { id: 'research-by-year', title: 'Research by Year', desc: 'Uploads by academic year', icon: Calendar },
+  { id: 'adviser-performance', title: 'Adviser Performance', desc: 'Per adviser breakdown', icon: Users },
+  { id: 'completion-status', title: 'Completion Status', desc: 'Requirements per group', icon: CheckCircle2 },
+  { id: 'approved-vs-pending', title: 'Approved vs Pending', desc: 'Status comparison', icon: Scale },
+  { id: 'published-archive', title: 'Published Archive', desc: 'All published research', icon: Globe },
+  { id: 'category-report', title: 'Category Report', desc: 'By field of study', icon: Tag },
 ];
 
 export default function Reports() {
@@ -216,7 +217,7 @@ export default function Reports() {
         <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] w-full mx-auto space-y-6 print-container">
           
           <div className="hidden print-only print-header">
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#4a1024' }}>ARCHIVIO</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#590000' }}>ARCHIVIO</h1>
             <p>Dean's Report: {currentReportObj?.title}</p>
             <p style={{ fontSize: '12px', color: '#666' }}>Generated on: {new Date().toLocaleDateString()}</p>
             <hr style={{ margin: '15px 0' }} />
@@ -234,6 +235,7 @@ export default function Reports() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {REPORT_TYPES.map((type) => {
                   const isActive = selectedReport === type.id;
+                  const IconComp = type.icon;
                   return (
                     <div 
                       key={type.id} 
@@ -241,7 +243,9 @@ export default function Reports() {
                       className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${isActive ? 'border-emerald-500 bg-emerald-50/10 shadow-sm ring-1 ring-emerald-500/20' : 'border-stone-200 dark:border-stone-700/70 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
                     >
                       <div className="flex items-start justify-between">
-                        <span className="text-xl bg-stone-50 dark:bg-stone-800/50 p-1.5 rounded-lg border border-stone-100 dark:border-stone-700/80">{type.icon}</span>
+                        <span className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-100 dark:border-stone-700/80 flex items-center justify-center">
+                          <IconComp className="w-5 h-5 text-stone-700 dark:text-stone-300" />
+                        </span>
                         {isActive && <span className="text-emerald-600 bg-emerald-100/60 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✓</span>}
                       </div>
                       <h4 className="font-bold text-stone-800 dark:text-stone-200 text-xs mt-3">{type.title}</h4>
@@ -259,10 +263,10 @@ export default function Reports() {
                 <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">Filters & Export</h3>
                 <div className="flex items-center gap-2 font-bold text-[11px]">
                   <PremiumButton onClick={() => window.print()} variant="ghost" className="flex items-center gap-1.5">
-                    🖨️ Print / PDF
+                    <Printer className="w-4 h-4" /> Print / PDF
                   </PremiumButton>
                   <PremiumButton onClick={handleExportCSV} variant="primary" className="flex items-center gap-1.5">
-                    📊 Export Excel (CSV)
+                    <Download className="w-4 h-4" /> Export CSV (Excel)
                   </PremiumButton>
                 </div>
               </div>
@@ -292,7 +296,7 @@ export default function Reports() {
                 <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-700 print-container">
                   <table className="w-full text-left border-collapse text-xs print-table">
                     <thead>
-                      <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
+                      <tr className="bg-[#590000] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
                         {Object.keys(reportData[0]).map((header, idx) => (
                           <th key={idx} className="py-3 px-4">{header}</th>
                         ))}
@@ -311,7 +315,7 @@ export default function Reports() {
                 </div>
               ) : (
                 <div className="border border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50/60 dark:bg-stone-800/30 p-12 text-center flex flex-col items-center justify-center no-print">
-                  <span className="text-3xl mb-2">📄</span>
+                  <FileText className="w-10 h-10 text-stone-400 mb-2" />
                   <h4 className="font-bold text-stone-700 dark:text-stone-300 text-xs">No Data Found</h4>
                   <p className="text-[10px] text-stone-400 max-w-xs mt-1">Try adjusting your filters or select a different report type.</p>
                 </div>

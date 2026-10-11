@@ -39,7 +39,7 @@ export default function PublishConfirmationModal({
     >
       <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header with Academic Gradient */}
-        <div className="bg-gradient-to-r from-[#7B1F35] to-[#541B2F] px-6 py-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#590000] to-[#770000] px-6 py-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
               <Globe className="w-5 h-5 text-amber-300" />
@@ -61,7 +61,7 @@ export default function PublishConfirmationModal({
         {/* Body Content */}
         <div className="p-6 space-y-5">
           <div>
-            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#7B1F35]/10 text-[#7B1F35] dark:text-[#E06D85] mb-1.5">
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#590000]/10 text-[#590000] dark:text-[#f8d070] mb-1.5">
               {program}
             </span>
             <h3 className="font-serif text-base font-semibold text-stone-900 dark:text-stone-100 leading-snug">
@@ -117,7 +117,7 @@ export default function PublishConfirmationModal({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold text-white bg-[#7B1F35] hover:bg-[#63182a] shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
           >
             {isSubmitting ? (
               <>

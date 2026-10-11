@@ -9,6 +9,9 @@ import Swal from 'sweetalert2';
 import { useUser } from '../context/UserContext';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
+import { ClipboardList, Mail, User, Calendar, Bell, Lock, Plus, Globe, Check, X, Lightbulb, Sparkles, Pencil, Trash2 } from 'lucide-react';
+import RequirementIcon from '../../components/ui/RequirementIcon';
+
 
 export default function Settings({ activePage, onNavigate }) {
   const location = useLocation();
@@ -138,12 +141,12 @@ export default function Settings({ activePage, onNavigate }) {
   }, [deanSettings]);
 
   const settingsTabs = [
-    { id: 'completion', icon: '📋', label: 'Completion Requirements' },
-    { id: 'email', icon: '✉️', label: 'Email Templates' },
-    { id: 'profile', icon: '🏛️', label: 'My Profile' },
-    { id: 'schoolyear', icon: '📅', label: 'School Year' },
-    { id: 'notifications', icon: '🔔', label: 'Notifications' },
-    { id: 'security', icon: '🔒', label: 'Security' },
+    { id: 'completion', icon: ClipboardList, label: 'Completion Requirements' },
+    { id: 'email', icon: Mail, label: 'Email Templates' },
+    { id: 'profile', icon: User, label: 'My Profile' },
+    { id: 'schoolyear', icon: Calendar, label: 'School Year' },
+    { id: 'notifications', icon: Bell, label: 'Notifications' },
+    { id: 'security', icon: Lock, label: 'Security' },
   ];
 
   useEffect(() => {
@@ -360,7 +363,7 @@ export default function Settings({ activePage, onNavigate }) {
                   subject: `[ARCHIVIO] Proposed Requirement ${isApproved ? 'Approved' : 'Declined'}: ${reqTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                      <div style="background-color: #590000; padding: 20px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Dean Decision Notice</p>
                       </div>
@@ -394,7 +397,7 @@ export default function Settings({ activePage, onNavigate }) {
         text: asGlobal 
           ? 'This requirement is now active for ALL groups department-wide.' 
           : (newStatus === 'approved' ? 'The proposed requirement has been approved for the adviser\'s groups.' : 'The proposed requirement has been declined.'), 
-        confirmButtonColor: '#7a1f3d' 
+        confirmButtonColor: '#770000' 
       });
     } catch (error) {
       console.error(error);
@@ -473,7 +476,7 @@ export default function Settings({ activePage, onNavigate }) {
                   subject: `[ARCHIVIO] Requirement Promoted to Global: ${reqTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <div style="background-color: #541b2f; padding: 20px; text-align: center;">
+                      <div style="background-color: #590000; padding: 20px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Dean Decision Notice</p>
                       </div>
@@ -499,7 +502,7 @@ export default function Settings({ activePage, onNavigate }) {
         title: 'Promoted to Global!',
         text: 'This requirement is now a Global Completion Requirement for ALL research groups.',
         timer: 2000,
-        confirmButtonColor: '#7a1f3d'
+        confirmButtonColor: '#770000'
       });
     } catch (err) {
       console.error(err);
@@ -526,7 +529,7 @@ export default function Settings({ activePage, onNavigate }) {
       });
       setShowAddModal(false);
       setNewReq({ title: '', desc: '', type: 'file', icon: '📄' });
-      Swal.fire({ icon: 'success', title: 'Added', text: 'Global requirement has been added.', confirmButtonColor: '#7a1f3d' });
+      Swal.fire({ icon: 'success', title: 'Added', text: 'Global requirement has been added.', confirmButtonColor: '#770000' });
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Could not add requirement.' });
@@ -547,7 +550,7 @@ export default function Settings({ activePage, onNavigate }) {
     if (res.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'requirements', reqId));
-        Swal.fire({ icon: 'success', title: 'Deleted', text: 'The requirement has been deleted.', confirmButtonColor: '#7a1f3d' });
+        Swal.fire({ icon: 'success', title: 'Deleted', text: 'The requirement has been deleted.', confirmButtonColor: '#770000' });
       } catch (err) {
         console.error(err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete requirement.' });
@@ -566,7 +569,7 @@ export default function Settings({ activePage, onNavigate }) {
           }
         }
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Email template updated successfully.', confirmButtonColor: '#7a1f3d' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'Email template updated successfully.', confirmButtonColor: '#770000' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save template.' });
@@ -618,7 +621,7 @@ export default function Settings({ activePage, onNavigate }) {
       text: 'Are you sure you want to remove this organizational membership?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#7a1f3d',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, remove'
     });
@@ -673,7 +676,7 @@ export default function Settings({ activePage, onNavigate }) {
       text: 'Are you sure you want to remove this research publication?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#7a1f3d',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, remove'
     });
@@ -718,7 +721,7 @@ export default function Settings({ activePage, onNavigate }) {
         icon: 'success', 
         title: 'Saved', 
         text: 'Profile updated successfully.', 
-        confirmButtonColor: '#7a1f3d' 
+        confirmButtonColor: '#770000' 
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -732,7 +735,7 @@ export default function Settings({ activePage, onNavigate }) {
       await setDoc(doc(db, 'dean_settings', user.uid), {
         schoolYears: newYearsList
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'School Year updated successfully.', confirmButtonColor: '#7a1f3d' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'School Year updated successfully.', confirmButtonColor: '#770000' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update school year.' });
@@ -782,7 +785,7 @@ export default function Settings({ activePage, onNavigate }) {
       text: "Setting a new Active SY will archive the current one. This affects the dashboard and all submissions.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#7a1f3d',
+      confirmButtonColor: '#770000',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, set as active'
     }).then((result) => {
@@ -804,7 +807,7 @@ export default function Settings({ activePage, onNavigate }) {
       await setDoc(doc(db, 'dean_settings', user.uid), {
         notifications: notifications
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Notification preferences updated.', confirmButtonColor: '#7a1f3d' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'Notification preferences updated.', confirmButtonColor: '#770000' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update notifications.' });
@@ -825,7 +828,7 @@ export default function Settings({ activePage, onNavigate }) {
       await updatePassword(user, passwords.newPass);
       
       setPasswords({ current: '', newPass: '', confirm: '' });
-      Swal.fire({ icon: 'success', title: 'Success', text: 'Password updated successfully.', confirmButtonColor: '#7a1f3d' });
+      Swal.fire({ icon: 'success', title: 'Success', text: 'Password updated successfully.', confirmButtonColor: '#770000' });
     } catch (error) {
       console.error(error);
       let msg = 'Failed to update password. Please try again.';
@@ -862,21 +865,23 @@ export default function Settings({ activePage, onNavigate }) {
             {/* Left Column: Navigation Tabs */}
             <Card glass={true} className="w-full lg:w-[300px] shrink-0 py-2">
               <div className="space-y-0.5 px-2">
-                {settingsTabs.map((tab) => (
-                  <button 
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 text-left font-medium text-sm px-4 py-3 rounded-lg transition-all 
-                    ${activeTab === tab.id
-                      ? 'bg-[#f8ebef] dark:bg-[#f8d070]/10 text-[#7a1f3d] dark:text-[#f8d070] font-bold' 
-                      : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
-                  >
-                    <span className={`text-base ${activeTab === tab.id ? 'opacity-100' : 'opacity-60 grayscale'}`}>
-                      {tab.icon}
-                    </span>
-                    {tab.label}
-                  </button>
-                ))}
+                {settingsTabs.map((tab) => {
+                  const TabIcon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button 
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-center gap-3 text-left font-medium text-sm px-4 py-3 rounded-lg transition-all 
+                      ${isActive
+                        ? 'bg-[#590000]/10 dark:bg-[#f8d070]/10 text-[#590000] dark:text-[#f8d070] font-bold' 
+                        : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'}`}
+                    >
+                      <TabIcon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#590000] dark:text-[#f8d070]' : 'text-stone-400'}`} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </Card>
 
@@ -897,9 +902,9 @@ export default function Settings({ activePage, onNavigate }) {
                       <PremiumButton 
                         onClick={() => setShowAddModal(true)}
                         variant="primary"
-                        className="shrink-0"
+                        className="shrink-0 flex items-center gap-1.5"
                       >
-                        + Add Global Requirement
+                        <Plus className="w-4 h-4" /> Add Global Requirement
                       </PremiumButton>
                     </div>
 
@@ -914,7 +919,9 @@ export default function Settings({ activePage, onNavigate }) {
                           return (
                             <div key={item.id} className={`flex items-center justify-between p-4 border rounded-xl transition ${isSuspended ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20' : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 opacity-90'}`}>
                               <div className="flex items-center gap-4">
-                                <span className="text-xl">{item.icon}</span>
+                                <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+                                  <RequirementIcon icon={item.icon} type={item.type} title={item.title} className="w-5 h-5" />
+                                </div>
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
@@ -955,7 +962,7 @@ export default function Settings({ activePage, onNavigate }) {
                         <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                           <span>Pending Adviser Proposals</span>
                           {highlightedReqId && pendingProposals.some(p => p.id === highlightedReqId) && (
-                            <span className="bg-[#7a1f3d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                            <span className="bg-[#590000] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
                               Active Notice
                             </span>
                           )}
@@ -979,7 +986,7 @@ export default function Settings({ activePage, onNavigate }) {
                               id={`proposal-${item.id}`}
                               className={`flex flex-col md:flex-row md:items-center justify-between p-4 border-t border-b border-r rounded-r-xl shadow-sm gap-4 transition-all duration-300 ${
                                 isTargeted
-                                  ? 'border-l-4 border-l-[#7a1f3d] dark:border-l-[#d4af37] ring-2 ring-[#7a1f3d]/50 dark:ring-[#d4af37]/50 bg-rose-50/80 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 shadow-md scale-[1.01]'
+                                  ? 'border-l-4 border-l-[#590000] dark:border-l-[#d4af37] ring-2 ring-[#590000]/50 dark:ring-[#d4af37]/50 bg-rose-50/80 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 shadow-md scale-[1.01]'
                                   : 'border-l-4 border-l-yellow-400 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800'
                               }`}
                             >
@@ -989,8 +996,8 @@ export default function Settings({ activePage, onNavigate }) {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-sm text-stone-900 dark:text-stone-100 font-bold">{item.title}</span>
                                     {isTargeted && (
-                                      <span className="bg-[#7a1f3d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs">
-                                        ✨ Review Proposal
+                                      <span className="bg-[#590000] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 text-amber-300" /> Review Proposal
                                       </span>
                                     )}
                                   </div>
@@ -1014,14 +1021,14 @@ export default function Settings({ activePage, onNavigate }) {
                                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                                   title="Approve requirement proposal"
                                 >
-                                  <span>✓</span> Approve
+                                  <Check className="w-3.5 h-3.5" /> Approve
                                 </button>
                                 <button 
                                   onClick={() => handleUpdateStatus(item.id, 'declined')} 
                                   className="border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 hover:border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                                   title="Decline requirement proposal"
                                 >
-                                  <span>✕</span> Decline
+                                  <X className="w-3.5 h-3.5" /> Decline
                                 </button>
                               </div>
                             </div>
@@ -1047,7 +1054,9 @@ export default function Settings({ activePage, onNavigate }) {
                           return (
                             <div key={item.id} className={`border rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs transition ${isSuspended ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20' : 'border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:border-stone-300'}`}>
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-xl shrink-0">{item.icon}</span>
+                                <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+                                  <RequirementIcon icon={item.icon} type={item.type} title={item.title} className="w-4 h-4" />
+                                </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <p className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate">{item.title}</p>
@@ -1074,10 +1083,10 @@ export default function Settings({ activePage, onNavigate }) {
                                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded">ADVISER ONLY</span>
                                 <button
                                   onClick={() => handlePromoteToGlobal(item.id)}
-                                  className="bg-[#7a1f3d] hover:bg-[#5e182f] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs"
+                                  className="bg-[#770000] hover:bg-[#590000] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs"
                                   title="Promote to Global Completion Requirement for all students"
                                 >
-                                  <span>🌐</span> Make Global
+                                  <Globe className="w-3.5 h-3.5" /> Make Global
                                 </button>
                               </div>
                             </div>
@@ -1099,7 +1108,8 @@ export default function Settings({ activePage, onNavigate }) {
                     <p className="text-sm text-stone-600 dark:text-stone-400">You can edit it here — changes will apply to all future invitations.</p>
                   </div>
                   <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-lg mb-8 flex items-center gap-2 border border-blue-100">
-                    💡 Changes made here are automatically applied to the message box in Send Invitations.
+                    <Lightbulb className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Changes made here are automatically applied to the message box in Send Invitations.</span>
                   </div>
 
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4">TEMPLATE MESSAGE</p>
@@ -1111,7 +1121,7 @@ export default function Settings({ activePage, onNavigate }) {
                         type="text" 
                         value={emailTemplate.subject}
                         onChange={(e) => setEmailTemplate({ ...emailTemplate, subject: e.target.value })}
-                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                       />
                     </div>
                     <div>
@@ -1120,7 +1130,7 @@ export default function Settings({ activePage, onNavigate }) {
                         rows={12}
                         value={emailTemplate.body}
                         onChange={(e) => setEmailTemplate({ ...emailTemplate, body: e.target.value })}
-                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d] resize-none leading-relaxed"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000] resize-none leading-relaxed"
                       />
                     </div>
                   </div>
@@ -1134,7 +1144,7 @@ export default function Settings({ activePage, onNavigate }) {
                     </button>
                     <button 
                       onClick={handleSaveEmailTemplate}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm"
                     >
                       Save Template
                     </button>
@@ -1155,7 +1165,7 @@ export default function Settings({ activePage, onNavigate }) {
                           type="text" 
                           value={profile.firstName}
                           onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                         />
                       </div>
                       <div>
@@ -1164,7 +1174,7 @@ export default function Settings({ activePage, onNavigate }) {
                           type="text" 
                           value={profile.lastName}
                           onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                         />
                       </div>
                     </div>
@@ -1195,7 +1205,7 @@ export default function Settings({ activePage, onNavigate }) {
                       <select 
                         value={profile.title}
                         onChange={(e) => setProfile({ ...profile, title: e.target.value })}
-                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                        className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                       >
                         <option value="Dr.">Dr.</option>
                         <option value="Prof.">Prof.</option>
@@ -1215,7 +1225,7 @@ export default function Settings({ activePage, onNavigate }) {
                         <button 
                           type="button"
                           onClick={handleOpenMembershipModal}
-                          className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition shadow-sm"
+                          className="w-8 h-8 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white flex items-center justify-center font-bold hover:bg-[#590000] transition shadow-sm"
                           title="Add Organizational Membership"
                         >
                           +
@@ -1232,7 +1242,7 @@ export default function Settings({ activePage, onNavigate }) {
                           {profile.memberships.map((item) => (
                             <div 
                               key={item.id} 
-                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-center justify-between hover:border-[#7a1f3d]/30 transition group"
+                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-center justify-between hover:border-[#590000]/30 transition group"
                             >
                               <div className="space-y-1">
                                 <h5 className="text-sm font-bold text-stone-900 dark:text-stone-100">
@@ -1275,7 +1285,7 @@ export default function Settings({ activePage, onNavigate }) {
                         <button 
                           type="button"
                           onClick={handleOpenPublicationModal}
-                          className="w-8 h-8 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white flex items-center justify-center font-bold hover:bg-[#631932] transition shadow-sm"
+                          className="w-8 h-8 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white flex items-center justify-center font-bold hover:bg-[#590000] transition shadow-sm"
                           title="Add Research Publication"
                         >
                           +
@@ -1292,7 +1302,7 @@ export default function Settings({ activePage, onNavigate }) {
                           {profile.publications.map((item) => (
                             <div 
                               key={item.id} 
-                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-start justify-between hover:border-[#7a1f3d]/30 transition group"
+                              className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-4 flex items-start justify-between hover:border-[#590000]/30 transition group"
                             >
                               <div className="space-y-1.5 max-w-[85%]">
                                 <h5 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-snug">
@@ -1312,7 +1322,7 @@ export default function Settings({ activePage, onNavigate }) {
                                       href={item.link.startsWith('http') ? item.link : `https://${item.link}`} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-[#7a1f3d] dark:text-[#f8d070] font-medium hover:underline inline-flex items-center gap-1 break-all"
+                                      className="text-[#590000] dark:text-[#f8d070] font-medium hover:underline inline-flex items-center gap-1 break-all"
                                     >
                                       <span>Link</span>
                                       <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1343,7 +1353,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-stone-100 dark:border-stone-800">
                     <button 
                       onClick={handleSaveProfile}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm"
                     >
                       Save Profile
                     </button>
@@ -1361,7 +1371,7 @@ export default function Settings({ activePage, onNavigate }) {
                     </div>
                     <button 
                       onClick={() => setShowSYModal(true)}
-                      className="px-4 py-2 border border-[#7a1f3d] dark:border-[#d4af37] text-[#7a1f3d] dark:text-[#f8d070] rounded-lg text-sm font-bold hover:bg-[#7a1f3d] hover:text-white dark:hover:bg-[#d4af37] dark:hover:text-[#4a1024] transition"
+                      className="px-4 py-2 border border-[#590000] dark:border-[#d4af37] text-[#590000] dark:text-[#f8d070] rounded-lg text-sm font-bold hover:bg-[#590000] hover:text-white dark:hover:bg-[#d4af37] dark:hover:text-[#590000] transition"
                     >
                       + Add School Year
                     </button>
@@ -1373,7 +1383,7 @@ export default function Settings({ activePage, onNavigate }) {
 
                   <div className="border border-stone-200 dark:border-stone-700 rounded-xl overflow-hidden">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white">
+                      <thead className="bg-[#590000] dark:bg-stone-950 text-white">
                         <tr>
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">SCHOOL YEAR</th>
                           <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">STATUS</th>
@@ -1427,9 +1437,9 @@ export default function Settings({ activePage, onNavigate }) {
                                         setCurrentSY(sy);
                                         setShowEditSYModal(true);
                                       }}
-                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 transition flex items-center gap-1"
+                                      className="px-3 py-1.5 text-xs font-bold text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 rounded hover:bg-stone-50 dark:hover:bg-stone-700 transition flex items-center gap-1.5"
                                     >
-                                      ✏️ Edit
+                                      <Pencil className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" /> Edit
                                     </button>
                                   )}
                                   <button 
@@ -1437,9 +1447,7 @@ export default function Settings({ activePage, onNavigate }) {
                                     className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
                                     title="Delete"
                                   >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                               </td>
@@ -1470,7 +1478,7 @@ export default function Settings({ activePage, onNavigate }) {
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.researchUpdates} onChange={() => setNotifications({...notifications, researchUpdates: !notifications.researchUpdates})} />
-                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#590000] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
@@ -1481,7 +1489,7 @@ export default function Settings({ activePage, onNavigate }) {
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.adviserAlerts} onChange={() => setNotifications({...notifications, adviserAlerts: !notifications.adviserAlerts})} />
-                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#590000] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
@@ -1492,7 +1500,7 @@ export default function Settings({ activePage, onNavigate }) {
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.publicationNotifs} onChange={() => setNotifications({...notifications, publicationNotifs: !notifications.publicationNotifs})} />
-                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:after:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#590000] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
@@ -1503,7 +1511,7 @@ export default function Settings({ activePage, onNavigate }) {
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.systemAnnouncements} onChange={() => setNotifications({...notifications, systemAnnouncements: !notifications.systemAnnouncements})} />
-                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] peer-checked:dark:bg-[#d4af37]"></div>
+                        <div className="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-stone-200 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#590000] peer-checked:dark:bg-[#d4af37]"></div>
                       </label>
                     </div>
 
@@ -1514,7 +1522,7 @@ export default function Settings({ activePage, onNavigate }) {
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={notifications.emailNotifs} onChange={() => setNotifications({...notifications, emailNotifs: !notifications.emailNotifs})} />
-                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024]"></div>
+                        <div className="w-11 h-6 bg-stone-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-stone-800 after:border-stone-300 dark:border-stone-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#590000] dark:bg-[#d4af37] dark:text-[#590000]"></div>
                       </label>
                     </div>
                   </div>
@@ -1522,7 +1530,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8">
                     <button 
                       onClick={handleSaveNotifications}
-                      className="px-6 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm"
                     >
                       Save Changes
                     </button>
@@ -1545,7 +1553,7 @@ export default function Settings({ activePage, onNavigate }) {
                           required
                           value={passwords.current}
                           onChange={(e) => setPasswords({...passwords, current: e.target.value})}
-                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#590000]"
                         />
                         <button 
                           type="button"
@@ -1578,7 +1586,7 @@ export default function Settings({ activePage, onNavigate }) {
                           minLength={6}
                           value={passwords.newPass}
                           onChange={(e) => setPasswords({...passwords, newPass: e.target.value})}
-                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#590000]"
                         />
                         <button 
                           type="button"
@@ -1611,7 +1619,7 @@ export default function Settings({ activePage, onNavigate }) {
                           minLength={6}
                           value={passwords.confirm}
                           onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
-                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                          className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 pr-12 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#590000]"
                         />
                         <button 
                           type="button"
@@ -1639,7 +1647,7 @@ export default function Settings({ activePage, onNavigate }) {
                       <button 
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-bold hover:bg-[#631932] transition shadow-sm disabled:opacity-50"
+                        className="w-full py-3 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm disabled:opacity-50"
                       >
                         {loading ? 'Updating Password...' : 'Update Password'}
                       </button>
@@ -1663,7 +1671,7 @@ export default function Settings({ activePage, onNavigate }) {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-stone-800 rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
-            <div className="bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] p-4 text-white">
+            <div className="bg-[#590000] dark:bg-[#d4af37] dark:text-[#590000] p-4 text-white">
               <h2 className="font-bold text-lg">Add Global Requirement</h2>
             </div>
             <form onSubmit={handleAddGlobalRequirement} className="p-5 space-y-4">
@@ -1674,7 +1682,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={newReq.title}
                   onChange={e => setNewReq({...newReq, title: e.target.value})}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#590000] dark:focus:border-[#d4af37]" 
                   placeholder="e.g. Clearance Form"
                 />
               </div>
@@ -1685,7 +1693,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={newReq.desc}
                   onChange={e => setNewReq({...newReq, desc: e.target.value})}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#590000] dark:focus:border-[#d4af37]" 
                   placeholder="e.g. Required clearance from accounting"
                 />
               </div>
@@ -1695,7 +1703,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <select 
                     value={newReq.type}
                     onChange={e => setNewReq({...newReq, type: e.target.value, icon: e.target.value === 'url' ? '🔗' : '📄'})}
-                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]"
+                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#590000] dark:focus:border-[#d4af37]"
                   >
                     <option value="file">File Upload</option>
                     <option value="url">URL / Link</option>
@@ -1707,13 +1715,13 @@ export default function Settings({ activePage, onNavigate }) {
                     type="text" 
                     value={newReq.icon}
                     onChange={e => setNewReq({...newReq, icon: e.target.value})}
-                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#7a1f3d] dark:focus:border-[#d4af37]" 
+                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg p-2 text-sm focus:outline-none focus:border-[#590000] dark:focus:border-[#d4af37]" 
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t border-stone-100 dark:border-stone-700">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700">Cancel</button>
-                <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2 text-sm font-bold hover:bg-[#631932]">Add Requirement</button>
+                <button type="submit" className="flex-1 bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white rounded-lg py-2 text-sm font-bold hover:bg-[#590000]">Add Requirement</button>
               </div>
             </form>
           </div>
@@ -1738,7 +1746,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={currentSY.label}
                   onChange={e => setCurrentSY({...currentSY, label: e.target.value})}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm focus:outline-none focus:border-[#7a1f3d]" 
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm focus:outline-none focus:border-[#590000]" 
                   placeholder="e.g. 2026-2027"
                 />
               </div>
@@ -1761,7 +1769,7 @@ export default function Settings({ activePage, onNavigate }) {
 
               <div className="flex gap-3 pt-6">
                 <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition">Cancel</button>
-                <button type="submit" className="flex-1 bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#631932] transition">Save Changes</button>
+                <button type="submit" className="flex-1 bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#590000] transition">Save Changes</button>
               </div>
             </form>
           </div>
@@ -1785,7 +1793,7 @@ export default function Settings({ activePage, onNavigate }) {
                     setMembershipForm({ ...membershipForm, organizationName: e.target.value });
                     if (membershipErrors.organizationName) setMembershipErrors({ ...membershipErrors, organizationName: null });
                   }}
-                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${membershipErrors.organizationName ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]`}
                   placeholder="e.g. Philippine Computer Society"
                 />
                 {membershipErrors.organizationName && (
@@ -1799,7 +1807,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={membershipForm.role}
                   onChange={e => setMembershipForm({ ...membershipForm, role: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                   placeholder="e.g. Member, Chairperson"
                 />
               </div>
@@ -1810,7 +1818,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={membershipForm.yearJoined}
                   onChange={e => setMembershipForm({ ...membershipForm, yearJoined: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                   placeholder="e.g. 2021"
                 />
               </div>
@@ -1825,7 +1833,7 @@ export default function Settings({ activePage, onNavigate }) {
                 </button>
                 <button 
                   type="submit" 
-                  className="px-5 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-semibold hover:bg-[#631932] transition shadow-sm"
+                  className="px-5 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-semibold hover:bg-[#590000] transition shadow-sm"
                 >
                   Add Membership
                 </button>
@@ -1852,7 +1860,7 @@ export default function Settings({ activePage, onNavigate }) {
                     setPublicationForm({ ...publicationForm, title: e.target.value });
                     if (publicationErrors.title) setPublicationErrors({ ...publicationErrors, title: null });
                   }}
-                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.title ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.title ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]`}
                   placeholder="e.g. AI-Driven Health Monitoring System"
                 />
                 {publicationErrors.title && (
@@ -1869,7 +1877,7 @@ export default function Settings({ activePage, onNavigate }) {
                     setPublicationForm({ ...publicationForm, link: e.target.value });
                     if (publicationErrors.link) setPublicationErrors({ ...publicationErrors, link: null });
                   }}
-                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.link ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]`}
+                  className={`w-full bg-stone-50 dark:bg-stone-800/50 border ${publicationErrors.link ? 'border-red-500' : 'border-stone-200 dark:border-stone-700'} rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]`}
                   placeholder="e.g. https://doi.org/10.xxxx/xxxxx"
                 />
                 {publicationErrors.link && (
@@ -1883,7 +1891,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={publicationForm.year}
                   onChange={e => setPublicationForm({ ...publicationForm, year: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                   placeholder="e.g. 2024"
                 />
               </div>
@@ -1894,7 +1902,7 @@ export default function Settings({ activePage, onNavigate }) {
                   type="text" 
                   value={publicationForm.publisher}
                   onChange={e => setPublicationForm({ ...publicationForm, publisher: e.target.value })}
-                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#7a1f3d]"
+                  className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-[#770000]"
                   placeholder="e.g. IEEE Access, ResearchGate"
                 />
               </div>
@@ -1909,7 +1917,7 @@ export default function Settings({ activePage, onNavigate }) {
                 </button>
                 <button 
                   type="submit" 
-                  className="px-5 py-2.5 rounded-lg bg-[#7a1f3d] dark:bg-[#d4af37] dark:text-[#4a1024] text-white text-sm font-semibold hover:bg-[#631932] transition shadow-sm"
+                  className="px-5 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-semibold hover:bg-[#590000] transition shadow-sm"
                 >
                   Add Publication
                 </button>

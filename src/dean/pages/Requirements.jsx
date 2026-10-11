@@ -388,7 +388,7 @@ export default function Requirements({ activePage, onNavigate }) {
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                     placeholder="Search group, title, adviser..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-400 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-400 outline-none focus:ring-1 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-[#770000] dark:focus:border-[#f8d070]"
                   />
                 </div>
 
@@ -397,7 +397,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   <select
                     value={filterAdviser}
                     onChange={(e) => { setFilterAdviser(e.target.value); setCurrentPage(1); }}
-                    className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] cursor-pointer"
+                    className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-[#770000] dark:focus:border-[#f8d070] cursor-pointer"
                   >
                     {allAdvisers.map(adv => (
                       <option key={adv} value={adv}>{adv}</option>
@@ -411,7 +411,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   <select
                     value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-                    className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#7a1f3d] dark:focus:ring-[#f8d070] focus:border-[#7a1f3d] dark:focus:border-[#f8d070] cursor-pointer"
+                    className="appearance-none bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg pl-3 pr-7 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 outline-none focus:ring-1 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-[#770000] dark:focus:border-[#f8d070] cursor-pointer"
                   >
                     {allStatuses.map(st => (
                       <option key={st} value={st}>{st}</option>
@@ -430,7 +430,7 @@ export default function Requirements({ activePage, onNavigate }) {
               ) : (
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[#4a1024] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
+                  <tr className="bg-[#590000] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 px-4 text-center w-12">No.</th>
                     <th className="py-3.5 px-4">Group</th>
                     <th className="py-3.5 px-4">Research Title</th>
@@ -508,7 +508,7 @@ export default function Requirements({ activePage, onNavigate }) {
                       setItemsPerPage(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-sm rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#7a1f3d]"
+                    className="bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-sm rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#770000]"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -529,7 +529,7 @@ export default function Requirements({ activePage, onNavigate }) {
                   <button 
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-2.5 py-1 rounded font-bold ${currentPage === page ? 'bg-[#4a1024] dark:bg-stone-950 text-white' : 'border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300'}`}
+                    className={`px-2.5 py-1 rounded font-bold ${currentPage === page ? 'bg-[#770000] text-white' : 'border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300'}`}
                   >
                     {page}
                   </button>
@@ -647,7 +647,7 @@ export default function Requirements({ activePage, onNavigate }) {
 
             {/* Requirements Checklist */}
             <div>
-              <p className="text-[11px] font-bold tracking-wider text-[#7a1f3d] dark:text-[#f8d070] uppercase mb-3">
+              <p className="text-[11px] font-bold tracking-wider text-[#590000] dark:text-[#f8d070] uppercase mb-3">
                 REQUIREMENTS CHECKLIST
               </p>
 
@@ -697,7 +697,7 @@ export default function Requirements({ activePage, onNavigate }) {
                                   icon: 'info',
                                   title: req.title,
                                   text: 'No preview document available for this requirement.',
-                                  confirmButtonColor: '#7a1f3d'
+                                  confirmButtonColor: '#770000'
                                 });
                               }
                             }}

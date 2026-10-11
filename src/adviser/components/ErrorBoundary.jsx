@@ -67,7 +67,7 @@ class ErrorBoundary extends React.Component {
           }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
               {isChunkError ? (
-                <RefreshCw className="w-12 h-12 text-[#7a2e46] animate-spin" />
+                <RefreshCw className="w-12 h-12 text-[#590000] animate-spin" />
               ) : (
                 <AlertTriangle className="w-12 h-12 text-amber-500" />
               )}
@@ -83,7 +83,7 @@ class ErrorBoundary extends React.Component {
             <button 
               onClick={this.handleReload}
               style={{
-                backgroundColor: '#7a2e46',
+                backgroundColor: '#770000',
                 color: 'white',
                 border: 'none',
                 padding: '10px 24px',
@@ -93,8 +93,8 @@ class ErrorBoundary extends React.Component {
                 cursor: 'pointer',
                 transition: 'background-color 0.2s'
               }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#5c2234'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#7a2e46'}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#590000'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#770000'}
             >
               {isChunkError ? 'Update & Refresh Page' : 'Refresh Page'}
             </button>

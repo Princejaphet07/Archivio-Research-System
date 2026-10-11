@@ -535,51 +535,72 @@ function ArchiveBrowse() {
           </div>
 
           <div className="p-6 space-y-8">
+            {/* YEAR PUBLISHED */}
             <div>
-              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Access Type</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">YEAR PUBLISHED</h3>
+                <button onClick={() => setSelectedYears([])} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
+              </div>
               <div className="space-y-2">
-                <label className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
-                  <span className="group-hover:text-[#7a2039] transition">Open Access</span>
-                </label>
-                <label className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 accent-[#7a2039] cursor-pointer" />
-                  <span className="group-hover:text-[#7a2039] transition">Restricted (SWU Only)</span>
-                </label>
+                {['2030', '2029', '2028', '2027', '2026', '2025'].map(year => {
+                  const count = publishedPapers.filter(p => new Date(p.publishedAt || p.createdAt || currentDate).getFullYear().toString() === year).length;
+                  const isChecked = selectedYears.includes(year);
+                  return (
+                    <label key={year} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                        checked={isChecked}
+                        onChange={() => toggleYear(year)}
+                      />
+                      <span className={`group-hover:text-[#7a2039] transition ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
+                        {year} <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
+            {/* CATEGORIES */}
             <div>
-              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Publication Year</h3>
-              <div className="space-y-2">
-                {['2026', '2025', '2024', '2023', '2022'].map(year => (
-                  <label key={year} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 accent-[#7a2039] cursor-pointer"
-                      checked={selectedYears.includes(year)}
-                      onChange={() => toggleYear(year)}
-                    />
-                    <span className="group-hover:text-[#7a2039] transition">{year}</span>
-                  </label>
-                ))}
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">CATEGORIES</h3>
+                <button onClick={() => setSelectedDepartments([])} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
               </div>
-            </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                    checked={selectedDepartments.length === 0}
+                    onChange={() => setSelectedDepartments([])}
+                  />
+                  <span className={`group-hover:text-[#7a2039] transition ${selectedDepartments.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
+                    All Categories <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
+                  </span>
+                </label>
 
-            <div>
-              <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm mb-3 uppercase tracking-wider">Department</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
-                {['Information Technology', 'Computer Science', 'Information Systems', 'Nursing', 'Business Administration', 'Education', 'Engineering', 'Architecture', 'Pharmacy', 'Criminology'].map(dept => (
-                  <label key={dept} className="flex items-center gap-3 text-sm text-stone-700 dark:text-gray-300 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 accent-[#7a2039] cursor-pointer"
-                      checked={selectedDepartments.some(d => normalizeDepartment(d) === dept)}
-                      onChange={() => toggleDepartment(dept)}
-                    />
-                    <span className="group-hover:text-[#7a2039] transition">{dept}</span>
-                  </label>
-                ))}
+                {['Health', 'Educational', 'Web Development', 'Artificial Intelligence', 'History', 'Information Technology', 'Computer Science', 'Information Systems', 'Business Administration'].map(dept => {
+                  const count = publishedPapers.filter(p => {
+                    const paperDept = p.category || p.researchCategory || normalizeDepartment(p.program || p.department);
+                    return paperDept?.toLowerCase() === dept.toLowerCase() || normalizeDepartment(paperDept)?.toLowerCase() === normalizeDepartment(dept)?.toLowerCase();
+                  }).length;
+                  const isChecked = selectedDepartments.some(d => normalizeDepartment(d).toLowerCase() === normalizeDepartment(dept).toLowerCase());
+                  return (
+                    <label key={dept} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                        checked={isChecked}
+                        onChange={() => toggleDepartment(dept)}
+                      />
+                      <span className={`group-hover:text-[#7a2039] transition ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
+                        {dept} <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
@@ -713,97 +734,86 @@ function ArchiveBrowse() {
                   key={paper.id}
                   onMouseEnter={preloadViewer}
                   onTouchStart={preloadViewer}
-                  className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 rounded-xl p-6 sm:p-8 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_20px_40px_rgba(122,32,57,0.15)] dark:hover:shadow-[0_20px_40px_rgba(243,229,171,0.1)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.01] border-l-4 border-l-[#7a2039] dark:border-l-[#f3e5ab] group overflow-hidden"
+                  className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-[#7A1F35] flex flex-col md:flex-row gap-6 justify-between items-start"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#7a2039]/5 to-transparent dark:from-[#f3e5ab]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-600 dark:text-gray-300 rounded text-xs font-medium">
-                        {normalizeDepartment(paper.program || paper.department || paper.category) || 'Research'}
+                  {/* Left Content Area */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2.5 flex-wrap">
+                      <span className="bg-[#f4e4e5] dark:bg-[#3d1822] text-[#6b142c] dark:text-[#f8a8b8] px-3 py-0.5 rounded-md text-xs font-semibold">
+                        {paper.category || paper.researchCategory || normalizeDepartment(paper.program || paper.department) || 'General'}
                       </span>
-                      <span className="text-xs text-stone-400 dark:text-gray-500 font-medium">
-                        Published: {new Date(paper.publishedAt || currentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      {new Date(paper.publishedAt || paper.createdAt || 0) > new Date(currentDate - 30*24*60*60*1000) && (
+                        <span className="bg-[#107c41] text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                          NEW
+                        </span>
+                      )}
+                      <span className="text-xs text-stone-400 font-medium">
+                        {new Date(paper.publishedAt || paper.createdAt || currentDate).getFullYear()}
                       </span>
                     </div>
-                  </div>
 
-                  <h3 className="font-bold text-xl text-stone-900 dark:text-gray-100 mb-2 leading-tight">
-                    <HighlightedText text={paper.researchTitle || 'Untitled Research'} highlight={searchQuery} />
-                  </h3>
+                    <h3 
+                      onClick={(e) => handleViewPaper(e, paper.id)}
+                      className="font-serif font-bold text-xl md:text-2xl text-stone-900 dark:text-gray-100 hover:text-[#6b142c] dark:hover:text-[#f3e5ab] cursor-pointer transition leading-snug mb-2"
+                    >
+                      <HighlightedText text={paper.researchTitle || 'Untitled Research'} highlight={searchQuery} />
+                    </h3>
 
-                  <p className="text-sm text-[#7a2039] dark:text-[#f3e5ab] font-medium mb-3">
-                    {paper.authorDisplay} • Adviser: {paper.adviserName || 'Unknown'}
-                  </p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 font-sans mb-3">
+                      {paper.authorDisplay} {paper.adviserName && `· Adviser: ${paper.adviserName}`}
+                    </p>
 
-                  <div className="mb-4">
-                    <p className={`text-sm text-stone-600 dark:text-gray-400 leading-relaxed ${expandedAbstracts[paper.id] ? '' : 'line-clamp-3'}`}>
+                    <p className="text-sm text-stone-600 dark:text-gray-300 font-sans leading-relaxed line-clamp-2 mb-4">
                       <HighlightedText text={paper.abstract || 'No abstract provided.'} highlight={searchQuery} />
                     </p>
-                    {(paper.abstract || '').length > 180 && (
-                      <button
-                        onClick={() => toggleAbstract(paper.id)}
-                        className="text-[11px] font-bold text-[#7a2039] dark:text-[#f3e5ab] hover:underline mt-1 focus:outline-none uppercase tracking-wide"
-                      >
-                        {expandedAbstracts[paper.id] ? 'View Less' : 'View More'}
-                      </button>
-                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      {paper.keywords?.slice(0, 5).map((tag, i) => (
+                        <span key={i} className="px-3 py-1 bg-[#f7eedc] dark:bg-gray-700 text-stone-700 dark:text-gray-300 rounded-full text-xs font-medium hover:bg-[#ede0c8] cursor-pointer transition">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {paper.keywords?.slice(0, 4).map((tag, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-[#fcfbf7] dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-500 dark:text-gray-300 rounded-full text-xs hover:bg-stone-100 dark:hover:bg-gray-600 cursor-pointer transition">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Right Action Column */}
+                  <div className="w-full md:w-36 shrink-0 flex flex-col items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={(e) => handleViewPaper(e, paper.id)}
+                      className="w-full py-2 bg-[#6b142c] hover:bg-[#520f21] text-white text-xs font-semibold rounded-lg shadow-sm transition active:scale-95 cursor-pointer text-center"
+                    >
+                      View Paper
+                    </button>
 
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center border-t border-stone-100 dark:border-gray-700 pt-4 gap-4 sm:gap-0">
-                    <div className="flex gap-4 text-xs font-medium text-stone-500 dark:text-gray-400">
-                      <span
+                    <button
+                      type="button"
+                      onClick={(e) => handleBookmarkToggle(e, paper)}
+                      className={`w-full py-1.5 bg-white dark:bg-gray-700 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-200 text-xs font-medium rounded-lg hover:bg-stone-50 dark:hover:bg-gray-600 transition flex items-center justify-center gap-1.5 cursor-pointer ${userBookmarks.includes(paper.id) ? 'text-[#6b142c] border-[#6b142c] font-semibold' : ''}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill={userBookmarks.includes(paper.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                      </svg>
+                      {userBookmarks.includes(paper.id) ? 'Bookmarked' : 'Bookmark'}
+                    </button>
+
+                    <div className="flex items-center gap-3 text-xs text-stone-400 dark:text-stone-500 font-sans mt-1">
+                      <span 
                         onClick={(e) => handleLike(e, paper)}
-                        className="flex items-center gap-1.5 text-stone-500 hover:text-rose-500 cursor-pointer transition-transform"
+                        className="flex items-center gap-1 hover:text-[#6b142c] cursor-pointer transition"
                       >
-                        {paper.likes?.includes(currentUser?.uid) ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-rose-500"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-                        )}
+                        <svg className={`w-3.5 h-3.5 ${paper.likes?.includes(currentUser?.uid) ? 'text-[#6b142c] fill-current' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.7 0-1.357-.315-1.792-.861l-2.012-2.515a4.5 4.5 0 00-3.513-1.69h-.28c-.414 0-.75-.336-.75-.75V11.25c0-.414.336-.75.75-.75h.28z" />
+                        </svg>
                         {paper.likes?.length || 0}
                       </span>
-                      <span className="flex items-center gap-1.5 cursor-default">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-stone-400 dark:text-gray-500"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12c.077-.133.152-.27.228-.404a10.697 10.697 0 0117.472 0c.076.134.151.27.228.404a10.697 10.697 0 01-17.472 0z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                         {paper.views || 0}
                       </span>
-                      <span onClick={() => handleShare(paper)} className="flex items-center gap-1.5 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] cursor-pointer transition"><span className="text-stone-400 dark:text-gray-500">↗</span> Share</span>
-                      <span
-                        onClick={(e) => handleBookmarkToggle(e, paper)}
-                        className={`flex items-center gap-1.5 cursor-pointer transition ${userBookmarks.includes(paper.id) ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'hover:text-[#7a2039] dark:hover:text-[#f3e5ab] text-stone-500 dark:text-gray-400'}`}
-                      >
-                        {userBookmarks.includes(paper.id) ? (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>
-                        )}
-                        Save
-                      </span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewPaper(paper)}
-                        className="px-5 py-2.5 bg-stone-100 dark:bg-gray-700 border border-stone-200 dark:border-gray-600 text-stone-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-gray-600 transition active:scale-95 cursor-pointer text-center w-full sm:w-auto"
-                        style={{ touchAction: 'manipulation' }}
-                      >
-                        Quick Preview
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleViewPaper(e, paper.id)}
-                        className="px-5 py-2.5 bg-white dark:bg-gray-800 border border-[#7a2039] dark:border-[#f3e5ab] text-[#7a2039] dark:text-[#f3e5ab] text-sm font-semibold rounded-lg hover:bg-[#7a2039] hover:text-white dark:hover:bg-[#f3e5ab] dark:hover:text-gray-900 transition active:scale-95 cursor-pointer text-center w-full sm:w-auto"
-                        style={{ touchAction: 'manipulation' }}
-                      >
-                        Read Full Text
-                      </button>
                     </div>
                   </div>
                 </div>

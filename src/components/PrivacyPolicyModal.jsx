@@ -298,6 +298,12 @@ export default function PrivacyPolicyModal({ isOpen, onClose, onAccept, initialT
                 <p>College of Information Technology</p>
                 <p>Southwestern University PHINMA</p>
                 <p>Cebu City, Philippines</p>
+                <p className="mt-1.5 pt-1.5 border-t border-stone-200/60 font-medium text-stone-700">
+                  <strong className="text-[#670319]">Contact Email:</strong>{' '}
+                  <a href="mailto:archivio.admin@gmail.com" className="text-[#670319] underline hover:text-[#520214] font-semibold">
+                    archivio.admin@gmail.com
+                  </a>
+                </p>
               </div>
 
               {/* Agreement Action for Tab 1 */}
@@ -413,6 +419,12 @@ export default function PrivacyPolicyModal({ isOpen, onClose, onAccept, initialT
                 <p>College of Information Technology</p>
                 <p>Southwestern University PHINMA</p>
                 <p>Cebu City, Philippines</p>
+                <p className="mt-1.5 pt-1.5 border-t border-stone-200/60 font-medium text-stone-700">
+                  <strong className="text-[#670319]">Contact Email:</strong>{' '}
+                  <a href="mailto:archivio.admin@gmail.com" className="text-[#670319] underline hover:text-[#520214] font-semibold">
+                    archivio.admin@gmail.com
+                  </a>
+                </p>
               </div>
 
               {/* Agreement Action for Tab 2 */}

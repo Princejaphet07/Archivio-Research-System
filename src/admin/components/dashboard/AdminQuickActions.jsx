@@ -54,7 +54,7 @@ export default function AdminQuickActions({
           className="relative w-full sm:w-80 lg:w-96 group"
         >
           <div className="relative flex items-center">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400 dark:text-stone-500 group-focus-within:text-[#801e38] dark:group-focus-within:text-[#ff8ca3] transition-colors">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400 dark:text-stone-500 group-focus-within:text-[#770000] dark:group-focus-within:text-[#ff8ca3] transition-colors">
               <Search className="w-4 h-4" aria-hidden="true" />
             </div>
             
@@ -63,7 +63,7 @@ export default function AdminQuickActions({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={placeholder}
-              className="w-full pl-10 pr-22 py-2 sm:py-2.5 bg-stone-50/90 dark:bg-[#252525] hover:bg-stone-100/80 dark:hover:bg-[#2a2a2a] focus:bg-white dark:focus:bg-[#1a1a1a] border border-stone-200 dark:border-stone-700/80 rounded-xl text-xs sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 outline-none focus:border-[#801e38] dark:focus:border-[#801e38] focus:ring-2 focus:ring-[#801e38]/15 transition-all shadow-2xs"
+              className="w-full pl-10 pr-22 py-2 sm:py-2.5 bg-stone-50/90 dark:bg-[#252525] hover:bg-stone-100/80 dark:hover:bg-[#2a2a2a] focus:bg-white dark:focus:bg-[#1a1a1a] border border-stone-200 dark:border-stone-700/80 rounded-xl text-xs sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 outline-none focus:border-[#770000] dark:focus:border-[#770000] focus:ring-2 focus:ring-[#770000]/15 transition-all shadow-2xs"
               aria-label="Search users and records"
             />
 
@@ -83,7 +83,7 @@ export default function AdminQuickActions({
               <button
                 type="submit"
                 disabled={!query.trim()}
-                className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-200/70 dark:bg-stone-700/70 hover:bg-[#801e38] hover:text-white dark:hover:bg-[#801e38] dark:hover:text-white transition disabled:opacity-40 disabled:hover:bg-stone-200/70 disabled:hover:text-stone-500 cursor-pointer disabled:cursor-default"
+                className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-200/70 dark:bg-stone-700/70 hover:bg-[#770000] hover:text-white dark:hover:bg-[#770000] dark:hover:text-white transition disabled:opacity-40 disabled:hover:bg-stone-200/70 disabled:hover:text-stone-500 cursor-pointer disabled:cursor-default"
                 title="Press Enter to search directory"
               >
                 Search ↵

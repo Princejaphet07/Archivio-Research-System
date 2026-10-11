@@ -223,10 +223,10 @@ function DeanActivate() {
 
   return (
     <div 
-      className="min-h-screen w-full flex items-center justify-center font-sans p-6 bg-cover bg-center"
+      className="h-screen max-h-screen overflow-hidden w-full flex items-center justify-center font-sans p-4 sm:p-6 bg-cover bg-center"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+      <div className="max-w-md w-full rounded-2xl border border-white/50 bg-white/95 p-6 sm:p-8 shadow-2xl backdrop-blur-md relative max-h-[94vh] overflow-y-auto scrollbar-hide my-auto">
         
         {/* Top Accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7a1f3d]"></div>
