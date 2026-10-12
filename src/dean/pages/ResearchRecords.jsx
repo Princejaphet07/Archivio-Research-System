@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
-import { Download, Search, Eye, Sparkles, FolderArchive } from 'lucide-react';
+import { Download, Search, Eye, Sparkles, FolderArchive, Printer } from 'lucide-react';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -246,31 +246,77 @@ export default function ResearchRecords() {
     }
   };
 
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const getDeanInfo = () => {
+    const rawDeanName = deanData?.displayName || (deanData?.firstName ? `${deanData.firstName} ${deanData.lastName || ''}`.trim() : '') || 'Dean';
+    const deanTitle = deanData?.title ? `${deanData.title} ` : '';
+    const fullName = `${deanTitle}${rawDeanName}`.trim();
+    const department = deanData?.department || 'College of Information Technology';
+    const dateFormatted = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return { fullName, department, dateFormatted };
+  };
+
   const handleExportCSV = () => {
     if (filtered.length === 0) {
       Swal.fire('No Data', 'There are no research records to export with the current filter.', 'info');
       return;
     }
-    const headers = ['Record ID', 'Research Title', 'Group Name', 'Adviser', 'Category', 'Year', 'Status', 'Progress (%)'];
-    const rows = filtered.map(r => [
+
+    const { fullName, department, dateFormatted } = getDeanInfo();
+
+    // 1. Institutional Header Metadata
+    const metaHeader = [
+      ['ARCHIVIO RESEARCH ARCHIVE SYSTEM'],
+      ['OFFICIAL RESEARCH RECORDS INVENTORY REPORT'],
+      ['Department / College:', department],
+      ['Date Generated:', dateFormatted],
+      ['Active Filters:', `Year: ${filterYear} | Category: ${filterCategory} | Adviser: ${filterAdviser} | Status: ${filterStatus} | Search: ${search || 'None'}`],
+      ['Total Records:', `${filtered.length}`],
+      [] // Blank separator
+    ];
+
+    // 2. Table Headers & Rows
+    const tableHeaders = ['No.', 'Record ID', 'Research Title', 'Group Name', 'Adviser', 'Category', 'Year', 'Status', 'Progress (%)'];
+    const tableRows = filtered.map((r, index) => [
+      index + 1,
       r.id || '',
       r.title || '',
       r.group || '',
       r.adviser || '',
       r.category || '',
       r.year || '',
-      r.status || '',
-      r.progress || 0
+      formatStatus(r.status),
+      `${r.progress || 0}%`
     ]);
-    const csvContent = [headers, ...rows]
-      .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+
+    // 3. Official Prepared By Signature Block
+    const metaFooter = [
+      [],
+      ['Prepared by:', fullName],
+      ['Designation:', `Dean, ${department}`],
+      ['Date:', dateFormatted]
+    ];
+
+    const allRows = [...metaHeader, tableHeaders, ...tableRows, ...metaFooter];
+    const csvContent = allRows
+      .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `archivio_research_records_${new Date().toISOString().split('T')[0]}.csv`);
+    const deptSlug = department.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    link.setAttribute('download', `archivio_research_records_${deptSlug}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -278,11 +324,251 @@ export default function ResearchRecords() {
 
     Swal.fire({
       icon: 'success',
-      title: 'Export Complete',
-      text: `Successfully exported ${filtered.length} research record(s) to CSV.`,
+      title: 'CSV Export Complete',
+      text: `Successfully exported ${filtered.length} research record(s) to CSV with header and prepared by block.`,
       timer: 2000,
       showConfirmButton: false
     });
+  };
+
+  const handleExportPDF = () => {
+    if (filtered.length === 0) {
+      Swal.fire('No Data', 'There are no research records to export with the current filter.', 'info');
+      return;
+    }
+
+    const { fullName, department, dateFormatted } = getDeanInfo();
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      Swal.fire('Pop-up Blocked', 'Please allow pop-ups for this site to generate and print/export the PDF report.', 'warning');
+      return;
+    }
+
+    const rowsHtml = filtered.map((r, index) => {
+      const statusLabel = formatStatus(r.status);
+      const bg = index % 2 === 0 ? '#ffffff' : '#fcfbf9';
+      const statusColor = statusLabel === 'Published' ? '#047857' : statusLabel === 'Approved' ? '#1d4ed8' : '#b45309';
+      return `
+        <tr style="background-color: ${bg};">
+          <td style="padding: 8px 8px; border: 1px solid #e7e5e4; text-align: center; font-size: 11px; color: #78716c;">${String(index + 1).padStart(2, '0')}</td>
+          <td style="padding: 8px 10px; border: 1px solid #e7e5e4; font-size: 11px; font-weight: 700; color: #1c1917; line-height: 1.35;">${escapeHtml(r.title || '')}</td>
+          <td style="padding: 8px 8px; border: 1px solid #e7e5e4; font-size: 11px; color: #44403c;">${escapeHtml(r.group || '')}</td>
+          <td style="padding: 8px 8px; border: 1px solid #e7e5e4; font-size: 11px; color: #44403c;">${escapeHtml(r.adviser || '')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; font-size: 10px; text-align: center; color: #44403c; font-weight: 600;">${escapeHtml(r.category || 'N/A')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; font-size: 11px; text-align: center; color: #44403c; font-weight: 600;">${escapeHtml(r.year || '')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; font-size: 10px; text-align: center; font-weight: 700; color: ${statusColor};">${escapeHtml(statusLabel)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Archivio - Research Records Report</title>
+        <meta charset="utf-8" />
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 12mm 10mm 14mm 10mm;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1c1917;
+            background: #ffffff;
+            margin: 0;
+            padding: 10px 14px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2.5px solid #590000;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+          }
+          .brand-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #590000;
+            letter-spacing: 0.5px;
+            margin: 0;
+          }
+          .brand-subtitle {
+            font-size: 11px;
+            font-weight: 600;
+            color: #78716c;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+          .dept-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #292524;
+            margin: 5px 0 0 0;
+          }
+          .report-badge-container {
+            text-align: right;
+          }
+          .report-tag {
+            display: inline-block;
+            background: #590000;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+          }
+          .report-date {
+            font-size: 11px;
+            color: #78716c;
+            margin-top: 5px;
+            font-weight: 500;
+          }
+          .meta-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 24px;
+            background: #faf8f5;
+            border: 1px solid #e7e0d8;
+            border-radius: 6px;
+            padding: 9px 14px;
+            margin-bottom: 14px;
+            font-size: 11px;
+          }
+          .meta-item {
+            color: #57534e;
+          }
+          .meta-item strong {
+            color: #1c1917;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+          }
+          th {
+            background-color: #590000;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 8px;
+            border: 1px solid #590000;
+          }
+          .signatures-container {
+            margin-top: 36px;
+            display: flex;
+            justify-content: flex-end;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            width: 280px;
+            text-align: left;
+          }
+          .sig-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #57534e;
+            margin-bottom: 45px;
+          }
+          .sig-line {
+            border-bottom: 1.5px solid #1c1917;
+            margin-bottom: 6px;
+          }
+          .sig-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1c1917;
+            margin: 0;
+          }
+          .sig-role {
+            font-size: 11px;
+            font-weight: 600;
+            color: #44403c;
+            margin: 2px 0 0 0;
+          }
+          .sig-date {
+            font-size: 10px;
+            color: #78716c;
+            margin: 3px 0 0 0;
+          }
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <div>
+            <h1 class="brand-title">ARCHIVIO</h1>
+            <p class="brand-subtitle">Research Repository & Archiving System</p>
+            <p class="dept-title">${escapeHtml(department)}</p>
+          </div>
+          <div class="report-badge-container">
+            <span class="report-tag">Research Records Report</span>
+            <div class="report-date">Date Generated: ${dateFormatted}</div>
+          </div>
+        </div>
+
+        <div class="meta-box">
+          <div class="meta-item"><strong>Academic Year:</strong> ${escapeHtml(filterYear)}</div>
+          <div class="meta-item"><strong>Category:</strong> ${escapeHtml(filterCategory)}</div>
+          <div class="meta-item"><strong>Adviser:</strong> ${escapeHtml(filterAdviser)}</div>
+          <div class="meta-item"><strong>Status:</strong> ${escapeHtml(filterStatus)}</div>
+          <div class="meta-item"><strong>Total Records:</strong> ${filtered.length}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 32px; text-align: center;">No.</th>
+              <th style="text-align: left;">Research Title</th>
+              <th style="text-align: left; width: 120px;">Group Name</th>
+              <th style="text-align: left; width: 110px;">Adviser</th>
+              <th style="width: 70px; text-align: center;">Category</th>
+              <th style="width: 50px; text-align: center;">Year</th>
+              <th style="width: 75px; text-align: center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="signatures-container">
+          <div class="sig-box">
+            <div class="sig-label">Prepared by:</div>
+            <div class="sig-line"></div>
+            <div class="sig-name">${escapeHtml(fullName)}</div>
+            <div class="sig-role">Dean, ${escapeHtml(department)}</div>
+            <div class="sig-date">Date: ${dateFormatted}</div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
@@ -297,18 +583,30 @@ export default function ResearchRecords() {
         <main className="flex-1 overflow-y-auto p-8 bg-[#f5f0e6] dark:bg-stone-900 transition-colors">
 
           {/* ===== PAGE TITLE ===== */}
-          <div className="flex justify-between items-start mb-6">
-            <SectionTitle sub={`All uploaded research within the College of IT · ${records.length} total records`}>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+            <SectionTitle sub={`All uploaded research within ${deanData?.department || 'the College'} · ${records.length} total records`}>
               Research Records
             </SectionTitle>
-            <PremiumButton 
-              variant="ghost" 
-              className="flex items-center gap-2"
-              onClick={handleExportCSV}
-            >
-              <Download className="w-4 h-4 text-stone-600 dark:text-stone-300" />
-              <span>Export CSV</span>
-            </PremiumButton>
+            <div className="flex items-center gap-2 shrink-0">
+              <PremiumButton 
+                variant="ghost" 
+                className="flex items-center gap-2"
+                onClick={handleExportCSV}
+                title="Export filtered research records to CSV with institutional header and signature"
+              >
+                <Download className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+                <span>Export CSV</span>
+              </PremiumButton>
+              <PremiumButton 
+                variant="primary" 
+                className="flex items-center gap-2 bg-[#590000] hover:bg-[#770000] text-white dark:bg-[#d4af37] dark:text-[#590000] dark:hover:bg-[#b09230]"
+                onClick={handleExportPDF}
+                title="Print or export filtered research records to PDF with header, table, and prepared by signature"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Export PDF</span>
+              </PremiumButton>
+            </div>
           </div>
 
           {/* ===== TABLE CARD ===== */}
