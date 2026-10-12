@@ -6,8 +6,26 @@ import { useAdviser } from '../context/AdviserContext';
 import Swal from 'sweetalert2';
 import ListSkeleton from '../components/skeletons/ListSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
+import TableSkeleton from '../components/skeletons/TableSkeleton';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
-import { ClipboardList, GraduationCap, Tag, Calendar, Lightbulb, X, Check } from 'lucide-react';
+import { 
+  ClipboardList, 
+  GraduationCap, 
+  Tag, 
+  Calendar, 
+  Lightbulb, 
+  X, 
+  Check,
+  Search,
+  Filter,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  User,
+  FolderKanban,
+  Users
+} from 'lucide-react';
 
 function GroupRegistrations() {
   const { adviserData, user } = useAdviser();
@@ -16,20 +34,14 @@ function GroupRegistrations() {
   const [categories, setCategories] = useState([]);
   const [assignedCategory, setAssignedCategory] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Tabs and Filters
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'approved' | 'declined'
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  const filterGroup = (group) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return group.groupName?.toLowerCase().includes(q) ||
-      group.researchTitle?.toLowerCase().includes(q) ||
-      group.leaderName?.toLowerCase().includes(q) ||
-      group.program?.toLowerCase().includes(q) ||
-      group.category?.toLowerCase().includes(q);
-  };
+  const itemsPerPage = 6;
 
   useEffect(() => {
     const email = user?.email || adviserData?.email;
@@ -282,224 +294,463 @@ function GroupRegistrations() {
       console.error(`Error ${decision} group:`, err);
       Swal.fire('Error', `Failed to ${decision}. Please try again.`, 'error');
     }
+  };  // Separate groups by status
+  const pendingList = pendingGroups;
+  const approvedList = historyGroups.filter(g => g.status === 'approved');
+  const declinedList = historyGroups.filter(g => g.status === 'declined');
+
+  const pendingCount = pendingList.length;
+  const approvedCount = approvedList.length;
+  const declinedCount = declinedList.length;
+
+  // Available unique categories
+  const availableCategoryNames = [...new Set([
+    ...categories.map(c => c.name),
+    ...historyGroups.map(g => g.category).filter(Boolean),
+    ...pendingGroups.map(g => g.category).filter(Boolean)
+  ])].sort((a, b) => a.localeCompare(b));
+
+  // Current list based on active tab
+  const currentList = activeTab === 'pending'
+    ? pendingList
+    : activeTab === 'approved'
+    ? approvedList
+    : declinedList;
+
+  // Filter function by category and search (including Leader's Name)
+  const filterGroup = (group) => {
+    // 1. Category Filter
+    if (selectedCategory && selectedCategory !== 'all') {
+      if (selectedCategory === 'uncategorized') {
+        if (group.category) return false;
+      } else {
+        if ((group.category || '').toLowerCase() !== selectedCategory.toLowerCase()) {
+          return false;
+        }
+      }
+    }
+
+    // 2. Search Query (searches leaderName, groupName, researchTitle, program, email)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchLeader = (group.leaderName || '').toLowerCase().includes(q);
+      const matchGroup = (group.groupName || '').toLowerCase().includes(q);
+      const matchTitle = (group.researchTitle || '').toLowerCase().includes(q);
+      const matchProgram = (group.department || group.program || '').toLowerCase().includes(q);
+      const matchEmail = (group.leaderEmail || '').toLowerCase().includes(q);
+      if (!matchLeader && !matchGroup && !matchTitle && !matchProgram && !matchEmail) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
-  // Pagination calculations
-  const filteredHistory = historyGroups.filter(filterGroup);
-  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
-  const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredGroups = currentList.filter(filterGroup);
+  const totalPages = Math.ceil(filteredGroups.length / itemsPerPage);
+  const paginatedGroups = filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Reset to page 1 if search changes
+  // Reset page when tab, category, or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [activeTab, selectedCategory, searchQuery]);
 
   return (
     <Layout title="Group Registrations" breadcrumb="ARCHIVIO › Group Registrations" showSearch={false}>
       <div className="max-w-6xl mx-auto space-y-6">
         <SectionTitle 
-          sub="Approve or decline student group registration requests"
-          action={
-            <div className="relative w-full sm:w-80">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-stone-400 dark:text-stone-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search groups..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#770000] focus:border-[#770000] dark:focus:border-[#f8d070] w-full text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 outline-none transition-all shadow-sm"
-              />
-            </div>
-          }
+          sub="Review, approve, and manage advisee student research groups"
         >
           Group Registrations
         </SectionTitle>
 
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 sm:gap-4 border-b border-gray-200 dark:border-stone-800 overflow-x-auto pb-px">
+          <button
+            role="tab"
+            aria-selected={activeTab === 'pending'}
+            onClick={() => setActiveTab('pending')}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${
+              activeTab === 'pending'
+                ? 'border-b-2 border-orange-600 text-orange-700 dark:text-orange-400'
+                : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'
+            }`}
+          >
+            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+            <span>Pending Requests</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${
+              activeTab === 'pending'
+                ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 font-bold'
+                : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'
+            }`}>
+              {pendingCount}
+            </span>
+          </button>
 
-        {/* Pending Requests */}
-        <div className="space-y-4">
-          {loading ? (
+          <button
+            role="tab"
+            aria-selected={activeTab === 'approved'}
+            onClick={() => setActiveTab('approved')}
+            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${
+              activeTab === 'approved'
+                ? 'border-b-2 border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Approved Groups</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${
+              activeTab === 'approved'
+                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold'
+                : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'
+            }`}>
+              {approvedCount}
+            </span>
+          </button>
+
+          {declinedCount > 0 && (
+            <button
+              role="tab"
+              aria-selected={activeTab === 'declined'}
+              onClick={() => setActiveTab('declined')}
+              className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'declined'
+                  ? 'border-b-2 border-red-600 text-red-700 dark:text-red-400'
+                  : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'
+              }`}
+            >
+              <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+              <span>Declined</span>
+              <span className={`text-[11px] px-2 py-0.5 rounded-full ${
+                activeTab === 'declined'
+                  ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-bold'
+                  : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'
+              }`}>
+                {declinedCount}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Filter and Search Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white dark:bg-stone-900/70 p-3 rounded-xl border border-gray-200 dark:border-stone-800 shadow-sm">
+          {/* Search by Leader's Name / Group / Title */}
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by leader's name, group, or research title..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 py-2 bg-gray-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#770000] focus:border-[#770000] dark:focus:border-[#f8d070] w-full text-xs sm:text-sm text-gray-900 dark:text-stone-100 placeholder-gray-400 dark:placeholder-stone-400 outline-none transition shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-stone-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter Dropdown */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#770000] dark:text-[#f8d070]">
+              <Tag className="w-4 h-4" />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="pl-9 pr-8 py-2 bg-gray-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-lg focus:ring-1 focus:ring-[#770000] focus:border-[#770000] dark:focus:border-[#f8d070] w-full text-xs sm:text-sm text-gray-900 dark:text-stone-100 outline-none transition appearance-none cursor-pointer shadow-sm"
+            >
+              <option value="all">All Categories</option>
+              <option value="uncategorized">No Category Assigned</option>
+              {availableCategoryNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {(searchQuery || selectedCategory !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('all');
+              }}
+              className="px-3 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition shrink-0 cursor-pointer"
+              title="Reset search and filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+
+        {/* Tab Content Display */}
+        {loading ? (
+          <div className="space-y-4">
             <HorizontalCardSkeleton count={3} />
-          ) : pendingGroups.filter(filterGroup).length === 0 ? (
-            <Card glass={true} className="p-8 text-center text-gray-500 dark:text-stone-400">
-              No pending group registrations found.
-            </Card>
-          ) : (
-            pendingGroups.filter(filterGroup).map((req) => (
-              <Card key={req.id} glass={true} hover={true} className="p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-orange-200 dark:border-orange-800/50">
+          </div>
+        ) : filteredGroups.length === 0 ? (
+          <Card glass={true} className="p-10 text-center text-gray-500 dark:text-stone-400">
+            <FolderKanban className="w-12 h-12 text-stone-300 dark:text-stone-600 mx-auto mb-3" />
+            <p className="font-bold text-sm text-gray-700 dark:text-stone-200">
+              {activeTab === 'pending' && 'No pending group registrations found.'}
+              {activeTab === 'approved' && 'No approved groups found.'}
+              {activeTab === 'declined' && 'No declined group registrations found.'}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">
+              {(searchQuery || selectedCategory !== 'all')
+                ? 'Try adjusting your search query or category filter.'
+                : activeTab === 'pending'
+                ? 'Student groups registering with you as adviser will appear here.'
+                : 'Approved research groups will be listed here.'}
+            </p>
+          </Card>
+        ) : activeTab === 'pending' ? (
+          /* PENDING GROUPS VIEW (Cards) */
+          <div className="space-y-4">
+            {paginatedGroups.map((req) => (
+              <Card 
+                key={req.id} 
+                glass={true} 
+                hover={true} 
+                className="p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-orange-200 dark:border-orange-800/50"
+              >
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 bg-orange-100 dark:bg-stone-800 rounded-lg border border-orange-200 dark:border-stone-700 flex items-center justify-center shrink-0 text-orange-600 dark:text-orange-400">
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-stone-800 rounded-xl border border-orange-200 dark:border-stone-700 flex items-center justify-center shrink-0 text-orange-600 dark:text-orange-400">
                     <ClipboardList className="w-6 h-6" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg flex items-center gap-2">
-                      {req.groupName} <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800/50 uppercase tracking-wider font-bold">• Pending Approval</span>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg flex items-center gap-2 flex-wrap">
+                      <span>{req.groupName}</span>
+                      <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800/50 uppercase tracking-wider font-bold">
+                        • Pending Approval
+                      </span>
                     </h3>
-                    <p className="text-sm text-gray-800 dark:text-stone-300 mt-1">Research Title: <strong>{req.researchTitle}</strong></p>
+                    <p className="text-sm text-gray-800 dark:text-stone-300">
+                      Research Title: <strong className="font-semibold text-gray-900 dark:text-stone-100">{req.researchTitle}</strong>
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-stone-400 pt-1">
+                      <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-stone-300">
+                        <User className="w-3.5 h-3.5 text-stone-400" /> Leader: <strong>{req.leaderName}</strong>
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <GraduationCap className="w-3.5 h-3.5 text-stone-400" /> {req.department || req.program || 'N/A'}
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-stone-400" /> {1 + (req.members?.length || 0)} Members
+                      </span>
+                      {req.category && (
+                        <>
+                          <span>·</span>
+                          <span className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-[11px] font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1">
+                            <Tag className="w-3 h-3" /> {req.category}
+                          </span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-stone-400" /> {new Date(req.createdAt || req.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex lg:flex-col gap-2 w-full lg:w-32">
+                <div className="flex lg:flex-col gap-2 w-full lg:w-44 shrink-0">
                   <PremiumButton
                     onClick={() => handleOpenGroupModal(req)}
                     variant="primary"
                     size="sm"
-                    className="w-full justify-center"
-                    icon={
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                      </svg>
-                    }
+                    className="w-full justify-center bg-orange-600 hover:bg-orange-700 text-white font-bold"
                   >
-                    View
+                    Review & Assign
                   </PremiumButton>
                 </div>
               </Card>
-            ))
-          )}
-        </div>
-
-        {/* History: Mobile Cards for Phones */}
-        <div className="md:hidden space-y-3 mt-8">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-base">Registration History</h3>
-            <span className="text-xs text-gray-500 dark:text-stone-400">{filteredHistory.length} records</span>
+            ))}
           </div>
-
-          {paginatedHistory.length === 0 ? (
-            <Card glass={true} className="p-6 text-center text-gray-500 dark:text-stone-400 text-sm">
-              No registration history yet.
-            </Card>
-          ) : (
-            paginatedHistory.map((item) => (
-              <Card key={item.id} glass={true} className="p-4 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 truncate">
-                      {item.groupName}
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-stone-400">Leader: {item.leaderName}</p>
+        ) : (
+          /* APPROVED & DECLINED GROUPS VIEW (Table on Desktop, Cards on Mobile) */
+          <>
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {paginatedGroups.map((item) => (
+                <Card key={item.id} glass={true} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-sm text-gray-900 dark:text-stone-100 truncate">
+                        {item.groupName}
+                      </h4>
+                      <p className="text-xs text-gray-500 dark:text-stone-400 flex items-center gap-1 mt-0.5">
+                        <User className="w-3 h-3" /> Leader: <strong className="font-semibold text-gray-700 dark:text-stone-300">{item.leaderName}</strong>
+                      </p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold shrink-0 ${
+                      item.status === 'approved' 
+                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40' 
+                        : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40'
+                    }`}>
+                      • {item.status === 'approved' ? 'Approved' : 'Declined'}
+                    </span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold shrink-0 ${
-                    item.status === 'approved' 
-                      ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
-                      : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
-                  }`}>
-                    • {item.status === 'approved' ? 'Approved' : 'Declined'}
-                  </span>
-                </div>
 
-                <p className="text-xs text-gray-700 dark:text-stone-300 line-clamp-2">
-                  <span className="font-semibold text-gray-500 dark:text-stone-400">Title: </span>
-                  {item.researchTitle}
-                </p>
+                  <p className="text-xs text-gray-700 dark:text-stone-300 line-clamp-2">
+                    <span className="font-semibold text-gray-500 dark:text-stone-400">Title: </span>
+                    {item.researchTitle}
+                  </p>
 
-                <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-1.5 border-t border-gray-100 dark:border-stone-800 gap-1">
-                  <span className="flex items-center gap-1"><GraduationCap className="w-3.5 h-3.5" /> {item.department || item.program || 'N/A'}</span>
-                  {item.category && <span className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-[10px] font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1"><Tag className="w-3 h-3" /> {item.category}</span>}
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-2 border-t border-gray-100 dark:border-stone-800 gap-1">
+                    <span className="flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5" /> {item.department || item.program || 'N/A'}
+                    </span>
+                    {item.category && (
+                      <span className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-[10px] font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1">
+                        <Tag className="w-3 h-3" /> {item.category}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" /> {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
 
-        {/* History Table (Desktop Only) */}
-        <Card glass={true} className="hidden md:block mt-8">
-          <div className="p-5 border-b border-gray-200 dark:border-stone-800">
-            <h3 className="font-bold text-gray-900 dark:text-stone-100 text-lg">Registration History</h3>
-            <p className="text-xs text-gray-500 dark:text-stone-400">Previously processed</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-stone-400 text-xs uppercase tracking-wider font-bold">
-                <tr>
-                  <th className="py-3 px-5">Group</th>
-                  <th className="py-3 px-5">Leader</th>
-                  <th className="py-3 px-5">Research Title</th>
-                  <th className="py-3 px-5">Category</th>
-                  <th className="py-3 px-5">Program</th>
-                  <th className="py-3 px-5">Decision</th>
-                  <th className="py-3 px-5">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
-                {paginatedHistory.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="py-6 text-center text-gray-500 dark:text-stone-400">No registration history yet.</td>
-                  </tr>
-                ) : (
-                  paginatedHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50">
-                      <td className="py-3 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
-                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.leaderName}</td>
-                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.researchTitle}</td>
-                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">
-                        {item.category ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
-                            {item.category}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="py-3 px-5 text-gray-600 dark:text-stone-400">{item.department || item.program}</td>
-                      <td className="py-3 px-5">
-                        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === 'approved' ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
-                          }`}>
-                          • {item.status === 'approved' ? 'Approved' : 'Declined'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-5 text-gray-500 dark:text-stone-400">{new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-gray-200 dark:border-stone-800 flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-stone-400">
-                Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredHistory.length)} of {filteredHistory.length} records
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  &lt;
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition ${
-                      currentPage === page
-                        ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900'
-                        : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  &gt;
-                </button>
-              </div>
+                  <div className="pt-1">
+                    <PremiumButton
+                      onClick={() => handleOpenGroupModal(item)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center text-xs"
+                    >
+                      View Details →
+                    </PremiumButton>
+                  </div>
+                </Card>
+              ))}
             </div>
-          )}
-        </Card>
+
+            {/* Desktop Table */}
+            <Card glass={true} className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#faf5f6] dark:bg-stone-950 text-[#590000] dark:text-stone-400 uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="py-3.5 px-5">Group Name</th>
+                      <th className="py-3.5 px-5">Leader</th>
+                      <th className="py-3.5 px-5">Research Title</th>
+                      <th className="py-3.5 px-5">Category</th>
+                      <th className="py-3.5 px-5">Program</th>
+                      <th className="py-3.5 px-5">Status</th>
+                      <th className="py-3.5 px-5">Date</th>
+                      <th className="py-3.5 px-5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-stone-800 font-medium">
+                    {paginatedGroups.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-stone-800/50 transition-colors">
+                        <td className="py-3.5 px-5 font-bold text-gray-900 dark:text-stone-100">{item.groupName}</td>
+                        <td className="py-3.5 px-5 text-gray-700 dark:text-stone-300">
+                          <div className="flex items-center gap-1.5 font-semibold">
+                            <User className="w-3.5 h-3.5 text-stone-400" />
+                            <span>{item.leaderName}</span>
+                          </div>
+                          {item.leaderEmail && (
+                            <span className="text-[10px] text-gray-400 dark:text-stone-500 block">{item.leaderEmail}</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-5 text-gray-600 dark:text-stone-400 max-w-xs truncate" title={item.researchTitle}>
+                          {item.researchTitle}
+                        </td>
+                        <td className="py-3.5 px-5 text-gray-600 dark:text-stone-400">
+                          {item.category ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 inline-flex items-center gap-1">
+                              <Tag className="w-3 h-3 text-[#770000] dark:text-[#f8d070]" /> {item.category}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-stone-500 italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-5 text-gray-600 dark:text-stone-400">{item.department || item.program || 'N/A'}</td>
+                        <td className="py-3.5 px-5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
+                            item.status === 'approved' 
+                              ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40' 
+                              : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40'
+                          }`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${item.status === 'approved' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                            {item.status === 'approved' ? 'Approved' : 'Declined'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-5 text-gray-500 dark:text-stone-400 text-xs">
+                          {new Date(item.updatedAt || item.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3.5 px-5 text-center">
+                          <PremiumButton
+                            onClick={() => handleOpenGroupModal(item)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            Details
+                          </PremiumButton>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="p-4 bg-white dark:bg-stone-900 rounded-xl border border-gray-200 dark:border-stone-800 flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-gray-500 dark:text-stone-400">
+              Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredGroups.length)} of {filteredGroups.length} {activeTab} groups
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition ${
+                    currentPage === page
+                      ? 'bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900'
+                      : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-50 dark:hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Modal */}
@@ -577,55 +828,70 @@ function GroupRegistrations() {
                 </ul>
               </div>
 
-              {/* Assign Research Category */}
+              {/* Research Category */}
               <div>
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-2 block">
-                  Assign Research Category <span className="text-red-500">*</span>
+                  {selectedGroup.status === 'pending' ? (
+                    <>Assign Research Category <span className="text-red-500">*</span></>
+                  ) : (
+                    'Assigned Research Category'
+                  )}
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <select
-                      value={assignedCategory}
-                      onChange={(e) => setAssignedCategory(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-xl text-sm text-gray-900 dark:text-stone-100 focus:ring-2 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-transparent outline-none transition appearance-none cursor-pointer pr-10 shadow-sm"
-                    >
-                      <option value="">
-                        {categories.length === 0 ? '-- No categories yet --' : 'Select a Category...'}
-                      </option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.name}>
-                          {cat.icon ? `${cat.icon} ` : ''}{cat.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-stone-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
+                {selectedGroup.status === 'pending' ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={assignedCategory}
+                          onChange={(e) => setAssignedCategory(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-xl text-sm text-gray-900 dark:text-stone-100 focus:ring-2 focus:ring-[#770000] dark:focus:ring-[#f8d070] focus:border-transparent outline-none transition appearance-none cursor-pointer pr-10 shadow-sm"
+                        >
+                          <option value="">
+                            {categories.length === 0 ? '-- No categories yet --' : 'Select a Category...'}
+                          </option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.name}>
+                              {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-stone-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleQuickAddCategory}
+                        title="Add Research Category"
+                        className="h-[42px] px-3.5 bg-[#770000] hover:bg-[#590000] dark:bg-[#f8d070] dark:hover:bg-[#e6be5e] text-white dark:text-stone-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs font-bold">Add</span>
+                      </button>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleQuickAddCategory}
-                    title="Add Research Category"
-                    className="h-[42px] px-3.5 bg-[#770000] hover:bg-[#590000] dark:bg-[#f8d070] dark:hover:bg-[#e6be5e] text-white dark:text-stone-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span className="text-xs font-bold">Add</span>
-                  </button>
-                </div>
-                {categories.length === 0 ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1.5">
-                    <Lightbulb className="w-3.5 h-3.5 shrink-0" /> No categories added yet. Click <strong>+ Add</strong> to create one for this group.
-                  </p>
+                    {categories.length === 0 ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1.5">
+                        <Lightbulb className="w-3.5 h-3.5 shrink-0" /> No categories added yet. Click <strong>+ Add</strong> to create one for this group.
+                      </p>
+                    ) : (
+                      !assignedCategory && (
+                        <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">
+                          Please select a category or add a new one before approving.
+                        </p>
+                      )
+                    )}
+                  </>
                 ) : (
-                  !assignedCategory && (
-                    <p className="text-xs text-gray-400 dark:text-stone-500 mt-1">
-                      Please select a category or add a new one before approving.
-                    </p>
-                  )
+                  <div className="p-3 bg-gray-50 dark:bg-stone-900 border border-gray-200 dark:border-stone-800 rounded-xl flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-[#770000] dark:text-[#f8d070]" />
+                    <span className="font-semibold text-sm text-gray-900 dark:text-stone-100">
+                      {selectedGroup.category || 'No Category Assigned'}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -635,20 +901,24 @@ function GroupRegistrations() {
                 onClick={handleCloseModal}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-gray-700 dark:text-stone-300 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 hover:bg-gray-100 dark:hover:bg-stone-800 transition text-sm text-center cursor-pointer"
               >
-                Cancel
+                {selectedGroup.status === 'pending' ? 'Cancel' : 'Close'}
               </button>
-              <button
-                onClick={() => handleDecision(selectedGroup, 'decline')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
-              >
-                <X className="w-4 h-4" /> Decline
-              </button>
-              <button
-                onClick={() => handleDecision(selectedGroup, 'approve')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
-              >
-                <Check className="w-4 h-4" /> Approve
-              </button>
+              {selectedGroup.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => handleDecision(selectedGroup, 'decline')}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-red-700 hover:bg-red-800 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
+                  >
+                    <X className="w-4 h-4" /> Decline
+                  </button>
+                  <button
+                    onClick={() => handleDecision(selectedGroup, 'approve')}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2 text-sm cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" /> Approve
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

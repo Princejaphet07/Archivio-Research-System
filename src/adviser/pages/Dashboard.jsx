@@ -292,7 +292,7 @@ function Dashboard() {
                               </div>
                               <button 
                                 onClick={() => {
-                                  const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : pct === 100 ? 'needs_review' : 'drafting';
+                                  const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : 'needs_review';
                                   navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: targetTab } });
                                 }}
                                 className="sm:hidden border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0"
@@ -315,7 +315,7 @@ function Dashboard() {
                                 </div>
                                 <button 
                                   onClick={() => {
-                                    const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : pct === 100 ? 'needs_review' : 'drafting';
+                                    const targetTab = isApproved ? 'approved' : (sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision') ? 'revisions' : 'needs_review';
                                     navigate('/adviser/review-submissions', { state: { filterGroup: sub.groupName, activeTab: targetTab } });
                                   }}
                                   className="border border-gray-200 dark:border-stone-700 text-xs font-semibold text-gray-600 dark:text-stone-300 px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-stone-800 transition shrink-0 ml-2"

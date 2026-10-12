@@ -16,7 +16,6 @@ import RequirementIcon from '../components/RequirementIcon';
 import { 
   Clock, 
   AlertCircle, 
-  FileEdit, 
   Award, 
   Landmark, 
   FolderKanban, 
@@ -51,7 +50,6 @@ function ReviewSubmissions() {
     const raw = location.state?.activeTab;
     if (raw === 'approved' || raw === 'published') return 'approved';
     if (raw === 'dean_revision' || raw === 'revision' || raw === 'revisions') return 'revisions';
-    if (raw === 'drafting' || raw === 'in_progress') return 'drafting';
     return 'needs_review';
   };
 
@@ -122,13 +120,12 @@ function ReviewSubmissions() {
       const raw = location.state.activeTab;
       if (raw === 'approved' || raw === 'published') setActiveTab('approved');
       else if (raw === 'dean_revision' || raw === 'revision' || raw === 'revisions') setActiveTab('revisions');
-      else if (raw === 'drafting' || raw === 'in_progress') setActiveTab('drafting');
       else setActiveTab('needs_review');
     }
   }, [location.state]);
 
   // Enrich submissions with group data (only include groups that have actually uploaded files or requirements)
-  // If a student group hasn't uploaded any files or requirements (uploadedCount === 0), do not add them here.
+  // When students upload requirements, they will appear here and route directly to needs_review tab
   const enrichedSubmissions = groups.map(group => {
     const sub = submissions.find(s => s.studentUid === group.leaderUid && (s.groupName === group.groupName || s.title === group.researchTitle || s.researchTitle === group.researchTitle)) || {};
     const uploadedDocs = Array.isArray(sub.uploadedDocs) ? sub.uploadedDocs : [];
@@ -151,30 +148,36 @@ function ReviewSubmissions() {
       completionPercent,
       uploadedCount,
       requiredCount,
-      reviewStatus: sub.reviewStatus || (completionPercent === 100 ? 'pending' : 'in_progress'),
+      reviewStatus: sub.reviewStatus || 'pending',
     };
   }).filter(sub => sub.uploadedCount > 0);
 
   // Tab counts based on academic lifecycle
-  const needsReviewCount = enrichedSubmissions.filter(s => (s.reviewStatus === 'pending' || s.reviewStatus === 'reviewed') && s.completionPercent === 100).length;
+  const needsReviewCount = enrichedSubmissions.filter(s => 
+    s.reviewStatus !== 'approved' && 
+    s.reviewStatus !== 'published' && 
+    s.reviewStatus !== 'revision' && 
+    s.reviewStatus !== 'dean_revision'
+  ).length;
   const revisionsCount = enrichedSubmissions.filter(s => s.reviewStatus === 'revision' || s.reviewStatus === 'dean_revision').length;
   const deanRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
   const adviserRevisionCount = enrichedSubmissions.filter(s => s.reviewStatus === 'revision').length;
-  const draftingCount = enrichedSubmissions.filter(s => s.completionPercent < 100 || (s.reviewStatus === 'in_progress' && s.completionPercent < 100)).length;
   const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'published').length;
 
   // Filter by tab
   const filteredByTab = enrichedSubmissions.filter(sub => {
     if (activeTab === 'needs_review') {
-      return (sub.reviewStatus === 'pending' || sub.reviewStatus === 'reviewed') && sub.completionPercent === 100;
+      return (
+        sub.reviewStatus !== 'approved' && 
+        sub.reviewStatus !== 'published' && 
+        sub.reviewStatus !== 'revision' && 
+        sub.reviewStatus !== 'dean_revision'
+      );
     }
     if (activeTab === 'revisions') {
       if (revisionFilter === 'dean') return sub.reviewStatus === 'dean_revision';
       if (revisionFilter === 'adviser') return sub.reviewStatus === 'revision';
       return sub.reviewStatus === 'revision' || sub.reviewStatus === 'dean_revision';
-    }
-    if (activeTab === 'drafting') {
-      return sub.completionPercent < 100 || (sub.reviewStatus === 'in_progress' && sub.completionPercent < 100);
     }
     if (activeTab === 'approved') {
       return sub.reviewStatus === 'approved' || sub.reviewStatus === 'published';
@@ -812,16 +815,6 @@ function ReviewSubmissions() {
           </button>
           <button
             role="tab"
-            aria-selected={activeTab === 'drafting'}
-            onClick={() => setActiveTab('drafting')}
-            className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'drafting' ? 'border-b-2 border-blue-600 text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
-          >
-            <FileEdit className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>Student Drafting</span>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'drafting' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{draftingCount}</span>
-          </button>
-          <button
-            role="tab"
             aria-selected={activeTab === 'approved'}
             onClick={() => setActiveTab('approved')}
             className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
@@ -867,13 +860,11 @@ function ReviewSubmissions() {
               <p className="text-gray-700 dark:text-stone-200 font-bold text-sm">
                 {activeTab === 'needs_review' && 'No submissions currently waiting for review.'}
                 {activeTab === 'revisions' && 'No active revision requests found.'}
-                {activeTab === 'drafting' && 'No advisee groups currently in drafting stage.'}
                 {activeTab === 'approved' && 'No endorsed or published research records found.'}
               </p>
               <p className="text-gray-500 dark:text-stone-400 text-xs mt-1">
-                {activeTab === 'needs_review' && 'When student groups upload 100% of requirements, they will appear here.'}
+                {activeTab === 'needs_review' && 'When student groups upload requirements, they will appear here.'}
                 {activeTab === 'revisions' && 'Manuscripts with revision requests will be tracked here.'}
-                {activeTab === 'drafting' && 'Student groups preparing their initial documents will be listed here.'}
                 {activeTab === 'approved' && 'Manuscripts endorsed for the Dean or published appear in this archive.'}
               </p>
             </Card>
@@ -945,14 +936,6 @@ function ReviewSubmissions() {
                     </div>
                   )}
 
-                  {activeTab === 'drafting' && (
-                    <div className="bg-blue-50 dark:bg-blue-950/30 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-                      <FileEdit className="w-3.5 h-3.5 shrink-0" />
-                      <span className="font-bold">Upload Progress: </span>
-                      <span>{item.uploadedCount} of {item.requiredCount} files submitted by group</span>
-                    </div>
-                  )}
-
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-stone-400 pt-1 border-t border-gray-100 dark:border-stone-800">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
@@ -1005,21 +988,6 @@ function ReviewSubmissions() {
                       </div>
                     )}
 
-                    {activeTab === 'drafting' && (
-                      <PremiumButton 
-                        onClick={() => {
-                          setSelectedSubmission(item);
-                          setShowMsgModal(true);
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-center text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 text-xs py-2 flex items-center gap-1.5"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Message Student
-                      </PremiumButton>
-                    )}
-
                     {activeTab === 'approved' && (
                       <PremiumButton 
                         onClick={() => setCertModalItem(item)}
@@ -1057,11 +1025,6 @@ function ReviewSubmissions() {
                       <th className="py-3.5 px-4">Directive Date</th>
                       <th className="py-3.5 px-4 text-center">Revision Source</th>
                     </>
-                  ) : activeTab === 'drafting' ? (
-                    <>
-                      <th className="py-3.5 px-4">Last Activity</th>
-                      <th className="py-3.5 px-4 text-center">Upload Progress</th>
-                    </>
                   ) : (
                     <>
                       <th className="py-3.5 px-4">Submitted Date</th>
@@ -1081,13 +1044,11 @@ function ReviewSubmissions() {
                       <p className="font-bold text-sm text-gray-700 dark:text-stone-300">
                         {activeTab === 'needs_review' && 'No submissions currently waiting for review.'}
                         {activeTab === 'revisions' && 'No active revision requests found.'}
-                        {activeTab === 'drafting' && 'No advisee groups currently in drafting stage.'}
                         {activeTab === 'approved' && 'No endorsed or published research records found.'}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-stone-500 mt-0.5">
-                        {activeTab === 'needs_review' && 'Completed student manuscripts will populate here for faculty endorsement.'}
+                        {activeTab === 'needs_review' && 'When student groups upload requirements, they will appear here.'}
                         {activeTab === 'revisions' && 'Items requiring manuscript revisions will appear here.'}
-                        {activeTab === 'drafting' && 'Incomplete groups uploading files will be tracked here.'}
                         {activeTab === 'approved' && 'Endorsed and published archival records will appear here.'}
                       </p>
                     </td>
@@ -1143,17 +1104,6 @@ function ReviewSubmissions() {
                               )}
                             </td>
                           </>
-                        ) : activeTab === 'drafting' ? (
-                          <>
-                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
-                              {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-200 dark:border-blue-800">
-                                {item.uploadedCount}/{item.requiredCount} files ({item.completionPercent}%)
-                              </span>
-                            </td>
-                          </>
                         ) : (
                           <>
                             <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
@@ -1162,11 +1112,11 @@ function ReviewSubmissions() {
                             <td className="py-4 px-4 text-center">
                               {isAllVerified ? (
                                 <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1 w-max mx-auto">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Verified & Ready
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Verified & Ready
                                 </span>
                               ) : (
                                 <span className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-200 dark:border-amber-800 flex items-center justify-center gap-1 w-max mx-auto">
-                                  <ShieldCheck className="w-3 h-3 text-amber-600" /> {verifiedDocsCount}/${item.requiredCount} Verified
+                                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> {verifiedDocsCount}/${item.requiredCount} Verified
                                 </span>
                               )}
                             </td>
@@ -1215,20 +1165,6 @@ function ReviewSubmissions() {
                                   Re-Approve to Dean
                                 </PremiumButton>
                               </>
-                            )}
-                            {activeTab === 'drafting' && (
-                              <PremiumButton 
-                                onClick={() => {
-                                  setSelectedSubmission(item);
-                                  setShowMsgModal(true);
-                                }}
-                                variant="outline"
-                                size="sm"
-                                className="text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-xs flex items-center gap-1.5"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                Message
-                              </PremiumButton>
                             )}
                             {activeTab === 'approved' && (
                               <PremiumButton 
