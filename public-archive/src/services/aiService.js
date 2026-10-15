@@ -7,9 +7,8 @@
 import app from '../firebase/config';
 import { getBackendUrl } from '../utils/backendUrl';
 
-// Note: Client-side firebase/ai requires App Check attestation tokens (otherwise returns 401).
-// Firebase AI Logic starts enabled, and automatically falls back to Backend SSE Stream if App Check is not yet configured.
-let isAiLogicDisabled = false;
+// Firebase AI Logic on the client requires App Check. We default to true to route cleanly to Backend SSE Stream without 401 console errors.
+let isAiLogicDisabled = true;
 
 /**
  * Streams AI chat response using dual-engine approach
@@ -83,7 +82,9 @@ export async function streamAIChat({
         aiErr.message?.includes('api-not-enabled') ||
         aiErr.message?.includes('prepayment') ||
         aiErr.message?.includes('429') ||
-        aiErr.message?.includes('quota')
+        aiErr.message?.includes('quota') ||
+        aiErr.message?.includes('App Check') ||
+        aiErr.message?.includes('401')
       ) {
         isAiLogicDisabled = true;
       }
