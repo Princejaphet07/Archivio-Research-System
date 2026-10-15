@@ -204,7 +204,8 @@
 ---
 
 ## 9. 🛡️ System Security & Data Privacy Architecture (The 7 Pillars)
-> **Tumong:** Pamatud-an sa Panel nga ang sistema kay enterprise-grade, dili ma-hack, ug mosunod sa Balaod sa Pilipinas (Data Privacy Act of 2012).
+> **Tumong:** Pamatud-an sa Panel nga ang sistema kay enterprise-grade, dili ma-hack, ug mosunod sa Balaod sa Pilipinas (Data Privacy Act of 2012).  
+> 📖 *Para sa complete technical breakdown, code snippets, ug 10 tough panel questions, tan-awa ang: [SECURITY_DEFENSE_MANUAL.md](./SECURITY_DEFENSE_MANUAL.md)*
 
 ### 🎙️ Unsay Isulti (Script):
 > *"Kon hisgotan ang Security, ang ARCHIVIO gitukod subay sa **Pito ka Haligi sa Enterprise Security (The 7 Pillars)**:*
