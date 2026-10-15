@@ -442,7 +442,13 @@ function ArchivePaperViewer() {
   // Cleanup speech synthesis on unmount
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (chatSpeechResumeTimerRef.current) {
+        clearInterval(chatSpeechResumeTimerRef.current);
+        chatSpeechResumeTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -451,7 +457,154 @@ function ArchivePaperViewer() {
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMsgIndex, setCopiedMsgIndex] = useState(null);
+  const [speakingChatIndex, setSpeakingChatIndex] = useState(null);
+  const activeChatUtterancesRef = useRef([]);
+  const chatSpeechResumeTimerRef = useRef(null);
   const chatEndRef = useRef(null);
+
+  // Helper: Strip markdown for clean natural speech
+  const cleanMarkdownForSpeech = (markdownText) => {
+    if (!markdownText) return '';
+    return markdownText
+      .replace(/```[\s\S]*?```/g, '') // code blocks
+      .replace(/`([^`]+)`/g, '$1') // inline code
+      .replace(/^#{1,6}\s+/gm, '') // markdown headers
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // bold
+      .replace(/\*([^*]+)\*/g, '$1') // italics
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
+      .replace(/^\s*[-*+]\s+/gm, '') // bullet points
+      .replace(/^\s*(\d+)\.\s+/gm, '$1. ') // numbered items
+      .replace(/[><]/g, '') // xml/html tags
+      .replace(/\n+/g, '. ') // line breaks to pauses
+      .replace(/\s+/g, ' ') // collapse spacing
+      .trim();
+  };
+
+  // Helper: Split long text into manageable chunks (< 160 chars) to bypass Chrome 15s freeze bug
+  const splitIntoSpeechChunks = (text, maxLength = 160) => {
+    if (!text) return [];
+    const rawSentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+    const chunks = [];
+    let current = '';
+
+    for (const raw of rawSentences) {
+      const sentence = raw.trim();
+      if (!sentence) continue;
+
+      if ((current + ' ' + sentence).trim().length <= maxLength) {
+        current = (current + ' ' + sentence).trim();
+      } else {
+        if (current) chunks.push(current);
+        if (sentence.length > maxLength) {
+          const words = sentence.split(' ');
+          let subChunk = '';
+          for (const word of words) {
+            if ((subChunk + ' ' + word).trim().length <= maxLength) {
+              subChunk = (subChunk + ' ' + word).trim();
+            } else {
+              if (subChunk) chunks.push(subChunk);
+              subChunk = word;
+            }
+          }
+          current = subChunk;
+        } else {
+          current = sentence;
+        }
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  };
+
+  const stopChatSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    if (chatSpeechResumeTimerRef.current) {
+      clearInterval(chatSpeechResumeTimerRef.current);
+      chatSpeechResumeTimerRef.current = null;
+    }
+    activeChatUtterancesRef.current = [];
+    setSpeakingChatIndex(null);
+  }, []);
+
+  const handleListenChatMessage = useCallback((content, idx) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      Swal.fire('Speech Unavailable', 'Text-to-speech is not supported on this browser.', 'info');
+      return;
+    }
+
+    // If user clicks on the currently speaking message, toggle STOP
+    if (speakingChatIndex === idx) {
+      stopChatSpeech();
+      return;
+    }
+
+    // Stop abstract audio or any active speech
+    if (isSpeaking) {
+      setIsSpeaking(false);
+    }
+    stopChatSpeech();
+
+    const cleanedText = cleanMarkdownForSpeech(content);
+    if (!cleanedText) return;
+
+    const chunks = splitIntoSpeechChunks(cleanedText, 160);
+    if (chunks.length === 0) return;
+
+    setSpeakingChatIndex(idx);
+
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang.includes('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Female')))
+      || voices.find(v => v.lang.startsWith('en'))
+      || voices[0];
+
+    let chunkIndex = 0;
+
+    const speakChunk = () => {
+      if (chunkIndex >= chunks.length) {
+        stopChatSpeech();
+        return;
+      }
+
+      const chunkText = chunks[chunkIndex];
+      const utterance = new SpeechSynthesisUtterance(chunkText);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+      if (voice) utterance.voice = voice;
+
+      // Keep strong reference in ref to prevent V8 garbage collection
+      activeChatUtterancesRef.current = [utterance];
+
+      utterance.onend = () => {
+        chunkIndex++;
+        speakChunk();
+      };
+
+      utterance.onerror = (e) => {
+        if (e.error !== 'canceled' && chunkIndex < chunks.length - 1) {
+          chunkIndex++;
+          speakChunk();
+        } else {
+          stopChatSpeech();
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Chrome 15s freeze fix: resume every 8 seconds if paused
+    if (chatSpeechResumeTimerRef.current) clearInterval(chatSpeechResumeTimerRef.current);
+    chatSpeechResumeTimerRef.current = setInterval(() => {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 8000);
+
+    speakChunk();
+  }, [speakingChatIndex, isSpeaking, stopChatSpeech]);
 
   const AI_SUGGESTIONS = [
     {
@@ -807,6 +960,8 @@ function ArchivePaperViewer() {
 
   const handleToggleAudio = () => {
     if (!paper || !paper.abstract) return;
+
+    stopChatSpeech();
 
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -1926,7 +2081,7 @@ function ArchivePaperViewer() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <button
                   type="button"
-                  onClick={() => setIsAiOpen(false)}
+                  onClick={() => { stopChatSpeech(); setIsAiOpen(false); }}
                   className="sm:hidden text-white/80 hover:text-white p-1 -ml-1 text-lg cursor-pointer transition active:scale-95"
                   aria-label="Back to document"
                   title="Back to Document"
@@ -1943,7 +2098,7 @@ function ArchivePaperViewer() {
               </div>
               <button 
                 type="button"
-                onClick={() => setIsAiOpen(false)} 
+                onClick={() => { stopChatSpeech(); setIsAiOpen(false); }} 
                 className="text-white/80 hover:text-white hover:bg-white/10 w-8 h-8 rounded-full flex items-center justify-center font-bold cursor-pointer text-base transition shrink-0"
                 title="Close AI Assistant"
               >
@@ -2034,29 +2189,31 @@ function ArchivePaperViewer() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (window.speechSynthesis.speaking) {
-                              window.speechSynthesis.cancel();
-                              return;
-                            }
-                            const cleanText = msg.content.replace(/[*#_`]/g, '');
-                            const utterance = new SpeechSynthesisUtterance(cleanText);
-                            utterance.rate = 0.95;
-                            utterance.pitch = 1.0;
-                            const voices = window.speechSynthesis.getVoices();
-                            const voice = voices.find(v => v.lang.includes('en') && v.name.includes('Female')) || voices.find(v => v.lang.includes('en')) || voices[0];
-                            if (voice) utterance.voice = voice;
-                            window.speechSynthesis.speak(utterance);
-                          }}
-                          className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-stone-100 dark:bg-gray-800/80 text-stone-500 dark:text-gray-400 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] hover:bg-stone-200 dark:hover:bg-gray-700 transition cursor-pointer active:scale-95"
-                          title="Listen to this response"
+                          onClick={() => handleListenChatMessage(msg.content, idx)}
+                          className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded transition cursor-pointer active:scale-95 shadow-2xs ${
+                            speakingChatIndex === idx
+                              ? 'bg-rose-600 text-white hover:bg-rose-700 animate-pulse font-semibold'
+                              : 'bg-stone-100 dark:bg-gray-800/80 text-stone-600 dark:text-gray-300 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] hover:bg-stone-200 dark:hover:bg-gray-700'
+                          }`}
+                          title={speakingChatIndex === idx ? "Stop speech playback" : "Listen to this response"}
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                            <path d="M15.54 8.46a5 5 0 010 7.07" />
-                            <path d="M19.07 4.93a10 10 0 010 14.14" />
-                          </svg>
-                          Listen
+                          {speakingChatIndex === idx ? (
+                            <>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                <rect x="4" y="4" width="16" height="16" rx="2" />
+                              </svg>
+                              <span>Stop</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <path d="M15.54 8.46a5 5 0 010 7.07" />
+                                <path d="M19.07 4.93a10 10 0 010 14.14" />
+                              </svg>
+                              <span>Listen</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     )}

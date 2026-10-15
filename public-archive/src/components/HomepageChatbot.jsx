@@ -153,26 +153,67 @@ export default function HomepageChatbot() {
     recognition.start();
   };
 
+  const activeUtterancesRef = useRef([]);
+  const speechResumeTimerRef = useRef(null);
+
+  const stopSpeech = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    if (speechResumeTimerRef.current) {
+      clearInterval(speechResumeTimerRef.current);
+      speechResumeTimerRef.current = null;
+    }
+    activeUtterancesRef.current = [];
+  };
+
   const speakText = (text) => {
     if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
+    stopSpeech();
     
-    // Clean text from markdown bold/italics
-    const cleanText = text.replace(/[*#_`]/g, '');
-    
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    // Clean text from markdown bold/italics, headers, links, bullets
+    const cleanText = text
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*(\d+)\.\s+/gm, '$1. ')
+      .replace(/\n+/g, '. ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanText) return;
+
+    // Sentence chunking to prevent Chrome 15s freeze bug
+    const rawSentences = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
+    const chunks = [];
+    let current = '';
+
+    for (const raw of rawSentences) {
+      const sentence = raw.trim();
+      if (!sentence) continue;
+      if ((current + ' ' + sentence).trim().length <= 160) {
+        current = (current + ' ' + sentence).trim();
+      } else {
+        if (current) chunks.push(current);
+        current = sentence;
+      }
+    }
+    if (current) chunks.push(current);
+    if (chunks.length === 0) return;
     
     const voices = window.speechSynthesis.getVoices();
     const isLocalLang = /\b(ang|mga|sa|og|ug|nga|kanang|kani|mao|dili|wala|apan|dinhi|inyong|kami|kita)\b/i.test(cleanText);
 
     let voice = null;
     if (isLocalLang) {
-      voice = voices.find(v => v.lang.includes('fil') || v.lang.includes('tl') || v.name.includes('Tagalog') || v.name.includes('Filipino'));
-      if (!voice) {
-        voice = voices.find(v => v.lang.includes('id') || v.name.includes('Indonesian'));
-      }
+      voice = voices.find(v => v.lang.includes('fil') || v.lang.includes('tl') || v.name.includes('Tagalog') || v.name.includes('Filipino'))
+        || voices.find(v => v.lang.includes('id') || v.name.includes('Indonesian'));
     } else {
       voice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Female')))
         || voices.find(v => v.lang.startsWith('en'));
@@ -182,10 +223,43 @@ export default function HomepageChatbot() {
     if (!voice) {
       voice = voices[0];
     }
-    
-    if (voice) utterance.voice = voice;
-    
-    window.speechSynthesis.speak(utterance);
+
+    let chunkIndex = 0;
+    const speakChunk = () => {
+      if (chunkIndex >= chunks.length) {
+        stopSpeech();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      if (voice) utterance.voice = voice;
+      activeUtterancesRef.current = [utterance];
+
+      utterance.onend = () => {
+        chunkIndex++;
+        speakChunk();
+      };
+      utterance.onerror = (e) => {
+        if (e.error !== 'canceled' && chunkIndex < chunks.length - 1) {
+          chunkIndex++;
+          speakChunk();
+        } else {
+          stopSpeech();
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    if (speechResumeTimerRef.current) clearInterval(speechResumeTimerRef.current);
+    speechResumeTimerRef.current = setInterval(() => {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 8000);
+
+    speakChunk();
   };
 
   const userName = currentUser?.displayName || currentUser?.email?.split('@')[0];
