@@ -51,6 +51,8 @@ function ArchiveBrowse() {
   const [sortOption, setSortOption] = useState(location.state?.sort || 'Newest First');
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedDepartments, setSelectedDepartments] = useState(location.state?.dept ? [normalizeDepartment(location.state.dept)] : []);
+  const [selectedCategories, setSelectedCategories] = useState(location.state?.category ? [location.state.category] : []);
+  const [dbCategories, setDbCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(5);
   const lastTrackedQueryRef = useRef('');
@@ -85,15 +87,31 @@ function ArchiveBrowse() {
     setDisplayLimit(5);
   };
 
+  const toggleCategory = (cat) => {
+    setSelectedCategories(prev => {
+      const isAlready = prev.some(c => c.toLowerCase().trim() === cat.toLowerCase().trim());
+      return isAlready
+        ? prev.filter(c => c.toLowerCase().trim() !== cat.toLowerCase().trim())
+        : [...prev, cat];
+    });
+    setDisplayLimit(5);
+  };
+
   const clearAll = () => {
     setSearchQuery('');
     setSortOption('Newest First');
     setSelectedYears([]);
     setSelectedDepartments([]);
+    setSelectedCategories([]);
     setDisplayLimit(5);
   };
 
   useEffect(() => {
+    if (location.state?.category) {
+      setSelectedCategories([location.state.category]);
+      setDisplayLimit(5);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     if (location.state?.dept) {
       setSelectedDepartments([location.state.dept]);
       setDisplayLimit(5);
@@ -108,7 +126,7 @@ function ArchiveBrowse() {
       setDisplayLimit(5);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [location.state?.dept, location.state?.sort, location.state?.q]);
+  }, [location.state?.category, location.state?.dept, location.state?.sort, location.state?.q]);
 
   const { currentUser } = useAuth();
 
@@ -298,7 +316,11 @@ function ArchiveBrowse() {
       }
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
+        const group = groupsList.find(g => 
+          (g.id && (g.id === sub.groupId || g.id === sub.id)) ||
+          (g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle))) ||
+          (sub.groupName && g.groupName === sub.groupName)
+        );
         const manuscriptName = sub.documents?.['Final Manuscript']?.name?.replace('.pdf', '');
 
         return {
@@ -308,6 +330,7 @@ function ArchiveBrowse() {
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
           department: group?.department || sub.department,
+          category: group?.category || sub.category || 'General',
           authorDisplay: group
             ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
@@ -344,11 +367,51 @@ function ArchiveBrowse() {
       computeData();
     }, handleOfflineFallback);
 
+    // Fetch categories created by advisers in real-time
+    const unsubCats = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      const cats = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(c => c.name);
+      setDbCategories(cats);
+    }, (err) => {
+      console.warn("Categories fetch error in Browse:", err);
+    });
+
     return () => {
       unsubSubs();
       unsubGroups();
+      unsubCats();
     };
   }, []);
+
+  // Dynamic categories aggregated from adviser configurations in DB and published papers
+  const availableCategories = useMemo(() => {
+    const catMap = new Map();
+
+    // 1. Categories created in DB by advisers
+    dbCategories.forEach(c => {
+      const name = (c.name || '').trim();
+      if (name && !catMap.has(name.toLowerCase())) {
+        catMap.set(name.toLowerCase(), {
+          name,
+          icon: c.icon || '🏷️'
+        });
+      }
+    });
+
+    // 2. Add categories found in published papers
+    publishedPapers.forEach(p => {
+      const cat = (p.category || '').trim();
+      if (cat && !catMap.has(cat.toLowerCase())) {
+        catMap.set(cat.toLowerCase(), {
+          name: cat,
+          icon: '🏷️'
+        });
+      }
+    });
+
+    return Array.from(catMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [dbCategories, publishedPapers]);
 
   // Filter & Sort
   const filteredPapers = publishedPapers.filter(paper => {
@@ -366,11 +429,17 @@ function ArchiveBrowse() {
     // Department filter logic
     const matchesDept = selectedDepartments.length === 0 || selectedDepartments.some(dept => {
       const targetDept = normalizeDepartment(dept).toLowerCase();
-      const normPaperDept = normalizeDepartment(paper.program || paper.department || paper.category).toLowerCase();
+      const normPaperDept = normalizeDepartment(paper.program || paper.department).toLowerCase();
       return normPaperDept === targetDept;
     });
 
-    return matchesSearch && matchesYear && matchesDept;
+    // Category filter logic (Adviser Research Category)
+    const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(cat => {
+      const paperCat = (paper.category || '').toLowerCase().trim();
+      return paperCat === cat.toLowerCase().trim();
+    });
+
+    return matchesSearch && matchesYear && matchesDept && matchesCategory;
   }).sort((a, b) => {
     if (sortOption === 'Newest First') {
       return new Date(b.publishedAt || b.createdAt || 0) - new Date(a.publishedAt || a.createdAt || 0);
@@ -562,11 +631,52 @@ function ArchiveBrowse() {
               </div>
             </div>
 
-            {/* CATEGORIES */}
+            {/* RESEARCH CATEGORIES (Set by Adviser) */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">CATEGORIES</h3>
-                <button onClick={() => setSelectedDepartments([])} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
+                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">RESEARCH CATEGORIES</h3>
+                <button onClick={() => { setSelectedCategories([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                    checked={selectedCategories.length === 0}
+                    onChange={() => { setSelectedCategories([]); setDisplayLimit(5); }}
+                  />
+                  <span className={`group-hover:text-[#7a2039] transition ${selectedCategories.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
+                    All Categories <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
+                  </span>
+                </label>
+
+                {availableCategories.map(catItem => {
+                  const count = publishedPapers.filter(p => (p.category || '').toLowerCase().trim() === catItem.name.toLowerCase().trim()).length;
+                  const isChecked = selectedCategories.some(c => c.toLowerCase().trim() === catItem.name.toLowerCase().trim());
+                  return (
+                    <label key={catItem.name} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                        checked={isChecked}
+                        onChange={() => toggleCategory(catItem.name)}
+                      />
+                      <span className={`group-hover:text-[#7a2039] transition flex items-center gap-1.5 truncate ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
+                        <span>{catItem.icon || '🏷️'}</span>
+                        <span className="truncate">{catItem.name}</span>
+                        <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* DEPARTMENTS */}
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">DEPARTMENTS</h3>
+                <button onClick={() => { setSelectedDepartments([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
                 <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
@@ -574,18 +684,15 @@ function ArchiveBrowse() {
                     type="checkbox"
                     className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
                     checked={selectedDepartments.length === 0}
-                    onChange={() => setSelectedDepartments([])}
+                    onChange={() => { setSelectedDepartments([]); setDisplayLimit(5); }}
                   />
                   <span className={`group-hover:text-[#7a2039] transition ${selectedDepartments.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
-                    All Categories <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
+                    All Departments <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
                   </span>
                 </label>
 
-                {['Health', 'Educational', 'Web Development', 'Artificial Intelligence', 'History', 'Information Technology', 'Computer Science', 'Information Systems', 'Business Administration'].map(dept => {
-                  const count = publishedPapers.filter(p => {
-                    const paperDept = p.category || p.researchCategory || normalizeDepartment(p.program || p.department);
-                    return paperDept?.toLowerCase() === dept.toLowerCase() || normalizeDepartment(paperDept)?.toLowerCase() === normalizeDepartment(dept)?.toLowerCase();
-                  }).length;
+                {['College of Information Technology', 'College of Management', 'College of Engineering'].map(dept => {
+                  const count = publishedPapers.filter(p => normalizeDepartment(p.department || p.program).toLowerCase() === normalizeDepartment(dept).toLowerCase()).length;
                   const isChecked = selectedDepartments.some(d => normalizeDepartment(d).toLowerCase() === normalizeDepartment(dept).toLowerCase());
                   return (
                     <label key={dept} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
@@ -739,9 +846,15 @@ function ArchiveBrowse() {
                   {/* Left Content Area */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-2.5 flex-wrap">
-                      <span className="bg-[#f4e4e5] dark:bg-[#3d1822] text-[#6b142c] dark:text-[#f8a8b8] px-3 py-0.5 rounded-md text-xs font-semibold">
-                        {paper.category || paper.researchCategory || normalizeDepartment(paper.program || paper.department) || 'General'}
+                      <span className="bg-[#f4e4e5] dark:bg-[#3d1822] text-[#6b142c] dark:text-[#f8a8b8] px-3 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                        <span className="text-[11px]">🏷️</span>
+                        {paper.category || 'General'}
                       </span>
+                      {paper.department && (
+                        <span className="bg-stone-100 dark:bg-gray-700 text-stone-600 dark:text-gray-300 px-2.5 py-0.5 rounded-md text-xs font-medium">
+                          {normalizeDepartment(paper.department)}
+                        </span>
+                      )}
                       {new Date(paper.publishedAt || paper.createdAt || 0) > new Date(currentDate - 30*24*60*60*1000) && (
                         <span className="bg-[#107c41] text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
                           NEW
@@ -846,9 +959,17 @@ function ArchiveBrowse() {
             {/* Modal Header */}
             <div className="p-6 border-b border-stone-200 dark:border-gray-800 flex justify-between items-start bg-white/50 dark:bg-gray-800/50">
               <div>
-                <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-600 dark:text-gray-300 rounded text-[10px] font-bold uppercase tracking-wider mb-3 inline-block">
-                  {normalizeDepartment(previewPaper.program || previewPaper.department || previewPaper.category) || 'Research'}
-                </span>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="px-2.5 py-1 bg-[#f4e4e5] dark:bg-[#3d1822] border border-[#a86576]/30 text-[#6b142c] dark:text-[#f8a8b8] rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">
+                    <span>🏷️</span>
+                    {previewPaper.category || 'General'}
+                  </span>
+                  {previewPaper.department && (
+                    <span className="px-2.5 py-1 bg-stone-100 dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-stone-600 dark:text-gray-300 rounded text-[10px] font-bold uppercase tracking-wider inline-block">
+                      {normalizeDepartment(previewPaper.department)}
+                    </span>
+                  )}
+                </div>
                 <h2 className="text-2xl font-bold text-stone-900 dark:text-white font-serif leading-tight">
                   <HighlightedText text={previewPaper.researchTitle || 'Untitled Research'} highlight={searchQuery} />
                 </h2>

@@ -19,6 +19,7 @@ const preloadViewer = () => {
 
 function ArchiveHome() {
   const [publishedPapers, setPublishedPapers] = useState([]);
+  const [dbCategories, setDbCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [placeholderText, setPlaceholderText] = useState('');
@@ -145,13 +146,13 @@ function ArchiveHome() {
   };
 
   useEffect(() => {
-    // Fetch published submissions
+    // 1. Fetch published submissions
     const qSubs = query(
       collection(db, 'submissions'),
       where('reviewStatus', '==', 'published')
     );
 
-    // Fetch groups
+    // 2. Fetch groups
     const qGroups = query(collection(db, 'groups'));
 
     let subsList = [];
@@ -167,7 +168,11 @@ function ArchiveHome() {
       }
 
       const enrichedPapers = subsList.map(sub => {
-        const group = groupsList.find(g => g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle)));
+        const group = groupsList.find(g => 
+          (g.id && (g.id === sub.groupId || g.id === sub.id)) ||
+          (g.leaderUid === sub.studentUid && (g.groupName === sub.groupName || g.researchTitle === (sub.title || sub.researchTitle))) ||
+          (sub.groupName && g.groupName === sub.groupName)
+        );
         const manuscriptName = sub.documents?.['Final Manuscript']?.name?.replace('.pdf', '');
 
         return {
@@ -177,6 +182,7 @@ function ArchiveHome() {
           adviserName: group?.adviserName || sub.adviserName,
           program: group?.program || sub.program,
           department: group?.department || sub.department,
+          category: group?.category || sub.category || 'General',
           authorDisplay: group
             ? [group.leaderName, ...(group.members || []).map(m => typeof m === 'object' ? m.name : m.split('@')[0])].filter(Boolean).join(', ')
             : sub.studentName || 'Unknown Author'
@@ -235,27 +241,64 @@ function ArchiveHome() {
       computeData();
     });
 
+    // 3. Fetch categories created by advisers in real-time
+    const unsubCats = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      const cats = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(c => c.name);
+      setDbCategories(cats);
+    }, (err) => {
+      console.warn('Error fetching categories in Home:', err);
+    });
+
     return () => {
       unsubSubs();
       unsubGroups();
+      unsubCats();
     };
   }, []);
 
   const categories = React.useMemo(() => {
-    if (!publishedPapers.length) return [];
+    const catMap = new Map();
 
-    const counts = {};
-    publishedPapers.forEach(p => {
-      const rawCat = p.category || p.department || p.program;
-      const cat = normalizeDepartment(rawCat);
-      counts[cat] = (counts[cat] || 0) + 1;
+    // 1. Seed categories configured by advisers in the database
+    dbCategories.forEach(c => {
+      const name = (c.name || '').trim();
+      if (name && !catMap.has(name.toLowerCase())) {
+        catMap.set(name.toLowerCase(), {
+          name,
+          icon: c.icon || '🏷️',
+          count: 0
+        });
+      }
     });
 
-    return Object.entries(counts).map(([name, count]) => ({
-      name,
-      papers: `${count} paper${count === 1 ? '' : 's'}`
-    })).sort((a, b) => parseInt(b.papers) - parseInt(a.papers));
-  }, [publishedPapers]);
+    // 2. Count published papers per category & incorporate any assigned category
+    publishedPapers.forEach(p => {
+      const rawCat = (p.category || '').trim();
+      if (rawCat) {
+        const key = rawCat.toLowerCase();
+        if (catMap.has(key)) {
+          catMap.get(key).count += 1;
+        } else {
+          catMap.set(key, {
+            name: rawCat,
+            icon: '🏷️',
+            count: 1
+          });
+        }
+      }
+    });
+
+    return Array.from(catMap.values())
+      .map(item => ({
+        name: item.name,
+        icon: item.icon,
+        count: item.count,
+        papers: `${item.count} paper${item.count === 1 ? '' : 's'}`
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [dbCategories, publishedPapers]);
 
   return (
     <div className="font-serif min-h-screen bg-[#faf7f0] dark:bg-gray-900 transition-colors">
@@ -469,11 +512,19 @@ function ArchiveHome() {
 
           <div className="flex gap-4 overflow-x-auto pb-6 pt-2 font-sans snap-x">
             {categories.map((cat, index) => (
-              <Link to="/browse" state={{ dept: cat.name }} key={index} className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block">
-                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm">{cat.name}</h3>
+              <Link 
+                to="/browse" 
+                state={{ category: cat.name }} 
+                key={index} 
+                className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block hover:border-[#6b142c] group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{cat.icon || '🏷️'}</span>
+                  <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors truncate">{cat.name}</h3>
+                </div>
                 <div className="flex justify-between items-center text-xs text-stone-500 dark:text-gray-400">
                   <span>{cat.papers}</span>
-                  <span className="text-[#8c7435]">→</span>
+                  <span className="text-[#8c7435] group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
               </Link>
             ))}

@@ -40,6 +40,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '💻',
     badgeStyle: 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/60',
     accentGradient: 'bg-gradient-to-r from-[#8c1c38] via-[#a82446] to-[#d6ad60]',
+    linkedin: 'https://www.linkedin.com/in/prince-japhet-vender',
     github: 'https://github.com/Princejaphet07',
     email: 'mailto:japhetvender00@gmail.com',
     portfolio: 'https://prince-japhet-portfolio.web.app/'
@@ -54,6 +55,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '🎨',
     badgeStyle: 'bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/60',
     accentGradient: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400',
+    linkedin: 'https://www.linkedin.com/in/jerika-zamoras',
     github: 'https://github.com/jezamorasxv',
     email: 'mailto:jerikazamoras4@gmail.com'
   },
@@ -67,6 +69,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '📋',
     badgeStyle: 'bg-purple-100 text-purple-900 dark:bg-purple-950/70 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/60',
     accentGradient: 'bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-400',
+    linkedin: 'https://www.linkedin.com/in/hylla-mae-tejada',
     github: 'https://github.com/tejadahyllamae',
     email: 'mailto:tejadahyllamae@gmail.com'
   },
@@ -80,6 +83,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '🚀',
     badgeStyle: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/60',
     accentGradient: 'bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400',
+    linkedin: 'https://www.linkedin.com/in/andrea-canete-perote',
     github: 'https://github.com/andreavgdeywajk',
     email: 'mailto:andreaperote04@gmail.com'
   }
@@ -427,6 +431,21 @@ function ArchiveAbout() {
                     >
                       <svg className="w-5 h-5 transition-transform group-hover/port:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                      </svg>
+                    </a>
+                  )}
+
+                  {/* LinkedIn Button - Official Color */}
+                  {member.linkedin && (
+                    <a 
+                      href={member.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 text-[#0a66c2] dark:text-[#0a66c2] shadow-sm border border-stone-200 dark:border-gray-600 hover:border-[#0a66c2] hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-200"
+                      title={`Visit LinkedIn for ${member.name}`}
+                    >
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
                       </svg>
                     </a>
                   )}
