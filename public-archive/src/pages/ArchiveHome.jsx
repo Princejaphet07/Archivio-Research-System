@@ -113,10 +113,25 @@ function ArchiveHome() {
     trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
     const likes = paper.likes || [];
+    const userInfo = {
+      uid: currentUser.uid,
+      name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+      email: currentUser.email || ''
+    };
     if (likes.includes(currentUser.uid)) {
-      await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+      const existingLikedUser = (paper.likedUsers || []).find(u => u.uid === currentUser.uid);
+      const updates = { likes: arrayRemove(currentUser.uid) };
+      if (existingLikedUser) {
+        updates.likedUsers = arrayRemove(existingLikedUser);
+      } else {
+        updates.likedUsers = arrayRemove(userInfo);
+      }
+      await updateDoc(paperRef, updates);
     } else {
-      await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+      await updateDoc(paperRef, { 
+        likes: arrayUnion(currentUser.uid),
+        likedUsers: arrayUnion(userInfo)
+      });
     }
   };
 

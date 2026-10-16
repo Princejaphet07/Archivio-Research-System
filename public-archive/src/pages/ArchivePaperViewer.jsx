@@ -826,6 +826,7 @@ function ArchivePaperViewer() {
 
   const hasIncremented = useRef(false);
   const hasTrackedAnalytics = useRef(false);
+  const hasRecordedUserView = useRef(false);
 
   // Increment view count when paper viewer opens (session-deduplicated)
   useEffect(() => {
@@ -840,16 +841,47 @@ function ArchivePaperViewer() {
       sessionStorage.setItem(viewedKey, '1');
 
       const docRef = doc(db, 'submissions', id);
-      updateDoc(docRef, { views: increment(1) })
+      const updateData = { views: increment(1) };
+      if (currentUser) {
+        const viewerInfo = {
+          uid: currentUser.uid,
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || ''
+        };
+        updateData.viewedUsers = arrayUnion(viewerInfo);
+        updateData.viewedBy = arrayUnion(currentUser.uid);
+      }
+      updateDoc(docRef, updateData)
         .catch(err => {
           console.warn("View increment failed, retrying once:", err.message);
           setTimeout(() => {
-            updateDoc(docRef, { views: increment(1) })
+            updateDoc(docRef, updateData)
               .catch(retryErr => console.error("View increment retry failed:", retryErr.message));
           }, 1500);
         });
     }
-  }, [id]);
+  }, [id, currentUser]);
+
+  // Record user view when user state resolves
+  useEffect(() => {
+    if (id && currentUser && !hasRecordedUserView.current) {
+      const userViewKey = `archivio_user_viewed_${id}_${currentUser.uid}`;
+      if (!sessionStorage.getItem(userViewKey)) {
+        hasRecordedUserView.current = true;
+        sessionStorage.setItem(userViewKey, '1');
+        const docRef = doc(db, 'submissions', id);
+        const viewerInfo = {
+          uid: currentUser.uid,
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || ''
+        };
+        updateDoc(docRef, {
+          viewedUsers: arrayUnion(viewerInfo),
+          viewedBy: arrayUnion(currentUser.uid)
+        }).catch(err => console.warn("User view record notice:", err.message));
+      }
+    }
+  }, [id, currentUser]);
 
   // Track paper readership in Google Analytics
   useEffect(() => {
@@ -1117,10 +1149,25 @@ function ArchivePaperViewer() {
     trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
     const likes = paper.likes || [];
+    const userInfo = {
+      uid: currentUser.uid,
+      name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+      email: currentUser.email || ''
+    };
     if (likes.includes(currentUser.uid)) {
-      await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+      const existingLikedUser = (paper.likedUsers || []).find(u => u.uid === currentUser.uid);
+      const updates = { likes: arrayRemove(currentUser.uid) };
+      if (existingLikedUser) {
+        updates.likedUsers = arrayRemove(existingLikedUser);
+      } else {
+        updates.likedUsers = arrayRemove(userInfo);
+      }
+      await updateDoc(paperRef, updates);
     } else {
-      await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+      await updateDoc(paperRef, { 
+        likes: arrayUnion(currentUser.uid),
+        likedUsers: arrayUnion(userInfo)
+      });
     }
   };
 

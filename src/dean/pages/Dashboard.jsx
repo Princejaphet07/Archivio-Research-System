@@ -22,7 +22,16 @@ import {
   TrendingUp, 
   ThumbsUp, 
   Eye, 
-  ArrowUpDown 
+  ArrowUpDown,
+  X,
+  FileText,
+  Calendar,
+  User,
+  GraduationCap,
+  Tag,
+  ExternalLink,
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 
 const parseDate = (val) => {
@@ -63,6 +72,9 @@ export default function Dashboard({ activePage }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedPaperForModal, setSelectedPaperForModal] = useState(null);
+  const [modalActiveTab, setModalActiveTab] = useState('liked'); // 'liked' | 'viewed'
+  const [usersMap, setUsersMap] = useState({});
 
   // Derive available years from data
   const availableYears = [
@@ -126,7 +138,49 @@ export default function Dashboard({ activePage }) {
        console.warn("Advisers listener notice:", err.message);
     });
 
-    return () => { unsubSubmissions(); unsubGroups(); unsubAdvisers(); }
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const uid = data.uid || d.id;
+        const email = data.email?.toLowerCase().trim();
+        const name = data.name || data.displayName || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || 'Archivio User';
+        const role = data.role || 'user';
+        const department = data.department || '';
+        const userObj = { uid, email, name, role, department };
+        if (uid) map[uid] = userObj;
+        if (email) map[email] = userObj;
+      });
+      setUsersMap(prev => ({ ...prev, ...map }));
+    }, (err) => {
+      console.warn("Users listener notice:", err.message);
+    });
+
+    const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const uid = data.uid || d.id;
+        const email = data.email?.toLowerCase().trim();
+        const name = data.name || data.studentName || data.displayName || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || 'Student';
+        const role = 'student';
+        const department = data.department || data.program || '';
+        const userObj = { uid, email, name, role, department };
+        if (uid) map[uid] = userObj;
+        if (email) map[email] = userObj;
+      });
+      setUsersMap(prev => ({ ...prev, ...map }));
+    }, (err) => {
+      console.warn("Students listener notice:", err.message);
+    });
+
+    return () => { 
+      unsubSubmissions(); 
+      unsubGroups(); 
+      unsubAdvisers(); 
+      unsubUsers(); 
+      unsubStudents(); 
+    };
   }, [deanData]);
 
   // Process stats safely once both groups and submissions are loaded
@@ -612,7 +666,10 @@ export default function Dashboard({ activePage }) {
             {/* Top Research Papers */}
             <Card glass={true} className="p-6 flex flex-col">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Top Research Papers</h3>
+                <div>
+                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Top Research Papers</h3>
+                  <p className="text-[10px] text-stone-400 font-medium mt-0.5">Click any study to view reader & liker info</p>
+                </div>
                 <div className="flex bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[10px] font-bold">
                   <button 
                     onClick={() => setTopPapersSort('likes')}
@@ -646,7 +703,25 @@ export default function Dashboard({ activePage }) {
                   const displayAdviser = group?.adviserName || paper.adviserName || 'Unknown Adviser';
                   
                   return (
-                    <PaperRow key={paper.id} rank={i + 1} title={displayTitle} author={`${displayAuthor} - ${displayAdviser}`} count={score} icon={icon} highlight={highlight} />
+                    <PaperRow 
+                      key={paper.id || `paper-${i}`} 
+                      rank={i + 1} 
+                      title={displayTitle} 
+                      author={`${displayAuthor} - ${displayAdviser}`} 
+                      count={score} 
+                      icon={icon} 
+                      highlight={highlight} 
+                      onClick={() => {
+                        setSelectedPaperForModal({
+                          ...paper,
+                          group,
+                          displayTitle,
+                          displayAuthor,
+                          displayAdviser
+                        });
+                        setModalActiveTab(topPapersSort === 'likes' ? 'liked' : 'viewed');
+                      }}
+                    />
                   );
                 }) : (
                   <p className="text-xs text-stone-400 text-center py-4">No published papers yet.</p>
@@ -740,6 +815,17 @@ export default function Dashboard({ activePage }) {
 
         </main>
       </div>
+
+      {/* Research Paper Engagement Modal */}
+      {selectedPaperForModal && (
+        <PaperEngagementModal
+          paper={selectedPaperForModal}
+          activeTab={modalActiveTab}
+          onTabChange={setModalActiveTab}
+          onClose={() => setSelectedPaperForModal(null)}
+          usersMap={usersMap}
+        />
+      )}
     </div>
   );
 }
@@ -778,23 +864,422 @@ function YearMetricBox({ year, count, badge, growth, textGreen, active }) {
   );
 }
 
-
-
-function PaperRow({ rank, title, author, count, icon, highlight }) {
+function PaperRow({ rank, title, author, count, icon, highlight, onClick }) {
   return (
-    <div className={`p-3 rounded-xl border flex items-center justify-between gap-4 transition-all hover:-translate-y-[1px] shadow-sm ${highlight ? 'border-[#590000]/40 bg-[#590000]/10 dark:bg-[#d4af37]/10' : 'border-stone-200/50 dark:border-stone-700/50 bg-white/40 dark:bg-stone-800/40 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-stone-800/60'}`}>
-      <div className="flex items-center gap-3 min-w-0">
+    <div 
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+      className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all hover:-translate-y-[2px] hover:shadow-md cursor-pointer select-none group ${highlight ? 'border-[#590000]/40 bg-[#590000]/10 dark:bg-[#d4af37]/10 hover:border-[#590000]' : 'border-stone-200/50 dark:border-stone-700/50 bg-white/40 dark:bg-stone-800/40 backdrop-blur-sm hover:bg-white dark:hover:bg-stone-800 hover:border-[#770000]/30 dark:hover:border-[#f8d070]/30'}`}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ${rank === 1 ? 'bg-amber-100 text-amber-700' : rank === 2 ? 'bg-stone-200 text-stone-700 dark:text-stone-300' : 'bg-stone-100 dark:bg-stone-800/80 text-stone-500 dark:text-stone-400'}`}>
           {rank}
         </div>
-        <div className="min-w-0">
-          <h4 className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate">{title}</h4>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-xs font-bold text-stone-800 dark:text-stone-200 truncate group-hover:text-[#590000] dark:group-hover:text-[#f8d070] transition-colors">{title}</h4>
           <p className="text-[10px] text-stone-400 font-medium truncate mt-0.5">{author}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 dark:border-stone-700/80 shadow-sm">
-        <span className="flex items-center justify-center">{icon}</span>
-        <span>{count}</span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 font-bold text-stone-600 dark:text-stone-400 text-xs shrink-0 bg-white dark:bg-stone-800 px-2 py-1 rounded-md border border-stone-100 dark:border-stone-700/80 shadow-sm">
+          <span className="flex items-center justify-center">{icon}</span>
+          <span>{count}</span>
+        </div>
+        <span className="text-[10px] text-stone-300 dark:text-stone-600 group-hover:text-[#590000] dark:group-hover:text-[#f8d070] group-hover:translate-x-0.5 transition-all">
+          ➔
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PaperEngagementModal({ paper, activeTab, onTabChange, onClose, usersMap }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  if (!paper) return null;
+
+  const group = paper.group;
+  const title = paper.displayTitle || paper.title || paper.researchTitle || 'Untitled Research Study';
+  const groupName = group?.groupName || paper.groupName || 'Unknown Group';
+  const leaderName = group?.leaderName || paper.studentName || 'Unknown Leader';
+  const members = Array.isArray(group?.members) ? group.members : [];
+  const adviser = paper.displayAdviser || group?.adviserName || paper.adviserName || 'Not Assigned';
+  const department = group?.department || paper.department || 'College of Information Technology';
+  const program = group?.program || paper.program || 'BSIT';
+  const category = group?.category || paper.category || (Array.isArray(paper.tags) && paper.tags[0]) || 'General Research';
+  const abstractText = paper.abstract || group?.abstract || 'No abstract text available for this research study.';
+  
+  // Publication Year
+  const pubDate = parseDate(paper.createdAt) || parseDate(group?.createdAt) || parseDate(paper.submittedDate);
+  const publishYear = pubDate ? pubDate.getFullYear().toString() : '2026';
+
+  // Resolve Liked Users
+  const resolveLikedUsers = () => {
+    const list = [];
+    const seen = new Set();
+
+    if (Array.isArray(paper.likedUsers)) {
+      paper.likedUsers.forEach(u => {
+        if (!u) return;
+        const key = u.uid || u.email?.toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          const mapped = usersMap[u.uid] || usersMap[u.email?.toLowerCase()];
+          list.push({
+            uid: u.uid || key,
+            name: mapped?.name || u.name || u.displayName || u.email?.split('@')[0] || 'User',
+            email: mapped?.email || u.email || '',
+            role: mapped?.role || 'User',
+            department: mapped?.department || ''
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(paper.likes)) {
+      paper.likes.forEach(uid => {
+        if (!uid || seen.has(uid)) return;
+        seen.add(uid);
+        const mapped = usersMap[uid];
+        list.push({
+          uid,
+          name: mapped?.name || 'Archivio User',
+          email: mapped?.email || '',
+          role: mapped?.role || 'User',
+          department: mapped?.department || ''
+        });
+      });
+    }
+
+    return list;
+  };
+
+  // Resolve Viewed Users
+  const resolveViewedUsers = () => {
+    const list = [];
+    const seen = new Set();
+
+    if (Array.isArray(paper.viewedUsers)) {
+      paper.viewedUsers.forEach(u => {
+        if (!u) return;
+        const key = u.uid || u.email?.toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          const mapped = usersMap[u.uid] || usersMap[u.email?.toLowerCase()];
+          list.push({
+            uid: u.uid || key,
+            name: mapped?.name || u.name || u.displayName || u.email?.split('@')[0] || 'User',
+            email: mapped?.email || u.email || '',
+            role: mapped?.role || 'User',
+            department: mapped?.department || '',
+            viewedAt: u.viewedAt || null
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(paper.viewedBy)) {
+      paper.viewedBy.forEach(uid => {
+        if (!uid || seen.has(uid)) return;
+        seen.add(uid);
+        const mapped = usersMap[uid];
+        list.push({
+          uid,
+          name: mapped?.name || 'Archivio User',
+          email: mapped?.email || '',
+          role: mapped?.role || 'User',
+          department: mapped?.department || ''
+        });
+      });
+    }
+
+    return list;
+  };
+
+  const likedUsers = resolveLikedUsers();
+  const viewedUsers = resolveViewedUsers();
+  const totalLikesCount = paper.likes?.length || likedUsers.length || 0;
+  const totalViewsCount = paper.views || viewedUsers.length || 0;
+
+  const manuscriptUrl = paper.documents?.['Final Manuscript']?.url || paper.manuscriptUrl;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh] my-auto relative animate-scale-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Accent Gradient Line */}
+        <div className="h-2 w-full bg-gradient-to-r from-[#590000] via-[#8c1c38] to-[#d4af37]"></div>
+
+        {/* Header Bar */}
+        <div className="p-6 pb-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-100 dark:bg-stone-800 text-[#590000] dark:text-[#f8d070] border border-stone-200/80 dark:border-stone-700">
+                <Tag className="w-3 h-3" />
+                {category}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="w-3 h-3" />
+                Published
+              </span>
+              <span className="text-xs font-semibold text-stone-400">
+                • Published {publishYear}
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight leading-snug">
+              {title}
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
+            title="Close modal (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Content Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm font-sans">
+          
+          {/* Metadata Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Proponents Card */}
+            <div className="p-3.5 rounded-2xl bg-stone-50/80 dark:bg-stone-800/50 border border-stone-200/70 dark:border-stone-700/60">
+              <div className="flex items-center gap-2 text-stone-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+                <Users className="w-3.5 h-3.5 text-[#590000] dark:text-[#f8d070]" />
+                <span>Authors & Group</span>
+              </div>
+              <p className="font-bold text-stone-900 dark:text-stone-100 text-sm">
+                {groupName}
+              </p>
+              <div className="mt-1 text-xs text-stone-600 dark:text-stone-300 space-y-0.5">
+                <p><span className="font-semibold text-stone-400">Leader:</span> {leaderName}</p>
+                {members.length > 0 && (
+                  <p>
+                    <span className="font-semibold text-stone-400">Members:</span>{' '}
+                    {members.map(m => typeof m === 'object' ? (m.name || m.email) : m).join(', ')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Adviser Card */}
+            <div className="p-3.5 rounded-2xl bg-stone-50/80 dark:bg-stone-800/50 border border-stone-200/70 dark:border-stone-700/60">
+              <div className="flex items-center gap-2 text-stone-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Research Adviser</span>
+              </div>
+              <p className="font-bold text-stone-900 dark:text-stone-100 text-sm">
+                {adviser}
+              </p>
+              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                {department} {program ? `(${program})` : ''}
+              </p>
+            </div>
+          </div>
+
+          {/* Abstract Section */}
+          <div className="p-4 rounded-2xl bg-[#faf7f2] dark:bg-stone-800/40 border border-stone-200 dark:border-stone-700">
+            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300 font-bold text-xs uppercase tracking-wider mb-2">
+              <FileText className="w-4 h-4 text-[#590000] dark:text-[#f8d070]" />
+              <span>Abstract</span>
+            </div>
+            <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-light leading-relaxed max-h-36 overflow-y-auto pr-2 whitespace-pre-line">
+              {abstractText}
+            </p>
+          </div>
+
+          {/* User Engagement Analytics (Likes & Views List) */}
+          <div className="pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-stone-200 dark:border-stone-700 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+                  <span>User Engagement Log</span>
+                  <span className="text-[10px] font-normal text-stone-400">Accounts recorded interacting with this paper</span>
+                </h4>
+              </div>
+
+              {/* Engagement Tab Switcher */}
+              <div className="flex bg-stone-100 dark:bg-stone-800 rounded-xl p-1 border border-stone-200 dark:border-stone-700 text-xs font-bold self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => onTabChange('liked')}
+                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'liked'
+                      ? 'bg-white dark:bg-stone-700 text-[#590000] dark:text-[#f8d070] shadow-sm'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  <span>Liked By</span>
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#590000]/10 dark:bg-[#f8d070]/20 text-[#590000] dark:text-[#f8d070]">
+                    {likedUsers.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onTabChange('viewed')}
+                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'viewed'
+                      ? 'bg-white dark:bg-stone-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Viewed By</span>
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    {viewedUsers.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Total count sub-banner */}
+            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-3 px-1">
+              <span>
+                {activeTab === 'liked' ? (
+                  <>Total Likes on Paper: <strong className="text-stone-800 dark:text-stone-200">{totalLikesCount}</strong></>
+                ) : (
+                  <>Total Archive Reads: <strong className="text-stone-800 dark:text-stone-200">{totalViewsCount}</strong> (including guests)</>
+                )}
+              </span>
+              <span className="text-[11px] text-stone-400">
+                {activeTab === 'liked' ? `${likedUsers.length} logged-in users` : `${viewedUsers.length} logged-in readers`}
+              </span>
+            </div>
+
+            {/* User List Panel */}
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {activeTab === 'liked' ? (
+                likedUsers.length > 0 ? (
+                  likedUsers.map((u, idx) => (
+                    <UserEngagementRow key={u.uid || `like-${idx}`} user={u} type="like" />
+                  ))
+                ) : (
+                  <div className="p-6 text-center rounded-2xl border border-dashed border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/20">
+                    <ThumbsUp className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">No users have liked this study yet.</p>
+                  </div>
+                )
+              ) : (
+                viewedUsers.length > 0 ? (
+                  viewedUsers.map((u, idx) => (
+                    <UserEngagementRow key={u.uid || `view-${idx}`} user={u} type="view" />
+                  ))
+                ) : (
+                  <div className="p-6 text-center rounded-2xl border border-dashed border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/20">
+                    <Eye className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">
+                      No logged-in user views recorded yet.
+                    </p>
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      (Total general views count: {totalViewsCount})
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Modal Action Footer */}
+        <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/60 dark:bg-stone-800/40 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-stone-400">
+            Dean Management System • Top Research Analytics
+          </div>
+          <div className="flex items-center gap-2">
+            {manuscriptUrl && (
+              <a
+                href={manuscriptUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#590000] hover:bg-[#770000] active:scale-95 shadow-sm transition-all"
+              >
+                <span>Read Manuscript</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-all cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function UserEngagementRow({ user, type }) {
+  const initials = (user.name || 'User')
+    .split(' ')
+    .filter(Boolean)
+    .map(p => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const roleLabel = (user.role || 'User').toUpperCase();
+  const isStudent = roleLabel.includes('STUDENT');
+  const isAdviser = roleLabel.includes('ADVISER');
+  const isDean = roleLabel.includes('DEAN');
+
+  const roleBadgeStyle = isDean
+    ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+    : isAdviser
+    ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+    : isStudent
+    ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+    : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-300 dark:border-stone-600';
+
+  return (
+    <div className="p-3 rounded-xl border border-stone-200/70 dark:border-stone-700/60 bg-white dark:bg-stone-800/70 flex items-center justify-between gap-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`w-8 h-8 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-xs ${
+          type === 'like' ? 'bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/20 dark:text-[#f8d070]' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+        }`}>
+          {initials || 'U'}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-stone-900 dark:text-stone-100 truncate">
+            {user.name}
+          </p>
+          <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate font-mono">
+            {user.email || 'No email attached'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        {user.department && (
+          <span className="hidden sm:inline-block text-[10px] text-stone-400 font-medium truncate max-w-[120px]">
+            {user.department}
+          </span>
+        )}
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${roleBadgeStyle}`}>
+          {roleLabel}
+        </span>
       </div>
     </div>
   );
