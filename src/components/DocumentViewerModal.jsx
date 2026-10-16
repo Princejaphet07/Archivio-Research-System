@@ -947,7 +947,7 @@ const DocumentViewerModal = ({
                     ) : (
                       <>
                         <span>{isResubmitted ? '🔄' : '📝'}</span>
-                        <span>{isResubmitted ? 'Request Follow-up Revisions' : 'Request Manuscript Revisions'}</span>
+                        <span>{isResubmitted ? 'Request Follow-up Revision' : 'Request Revision'}</span>
                       </>
                     )}
                   </button>

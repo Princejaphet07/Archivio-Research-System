@@ -520,7 +520,7 @@ function ReviewSubmissions() {
       : '';
 
     const res = await Swal.fire({
-      title: isDeanRev ? 'Forward Dean Revision to Students?' : 'Request Manuscript Revisions?',
+      title: isDeanRev ? 'Forward Dean Revision to Students?' : 'Request Revision?',
       text: isDeanRev 
         ? `Forward Dean's revision directive to ${sub.groupName}:` 
         : "The student research group will be notified to revise their manuscript.",
@@ -537,7 +537,7 @@ function ReviewSubmissions() {
       showCancelButton: true,
       confirmButtonColor: '#ca8a04',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: isDeanRev ? 'Forward to Students' : 'Request Manuscript Revisions'
+      confirmButtonText: isDeanRev ? 'Forward to Students' : 'Request Revision'
     });
 
     if (res.isConfirmed) {
@@ -613,11 +613,17 @@ function ReviewSubmissions() {
           }
         }
 
-        Swal.fire({
+        await Swal.fire({
           icon: 'success',
-          title: 'Revision Requested!',
-          text: `The students have been notified of your feedback.`,
-          confirmButtonColor: '#ca8a04',
+          title: 'Revision Request Sent!',
+          html: `
+            <div style="font-size: 14px; color: #4b5563; line-height: 1.5; text-align: left;">
+              <p style="margin-bottom: 8px;">Your revision directives have been successfully recorded and sent to <strong>${sub.groupName}</strong>.</p>
+              <p style="margin: 0; font-size: 13px; color: #6b7280;">The manuscript status is updated to <em>Revision Required</em> and the student research team has been notified via email and in their portal.</p>
+            </div>
+          `,
+          confirmButtonText: 'Done',
+          confirmButtonColor: '#10b981'
         });
       } catch (err) {
         console.error('Error rejecting:', err);
@@ -1457,9 +1463,9 @@ function ReviewSubmissions() {
                                     title: `${selectedSubmission.groupName} - ${req.title || req.id}`,
                                     reqId: req.id
                                   })}
-                                  className="bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm cursor-pointer"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
                                 >
-                                  Review Document
+                                  Review Submission
                                 </button>
                               )}
                             </>
@@ -1738,14 +1744,30 @@ function ReviewSubmissions() {
                 selectedSubmission.documentResubmissions = newResubmissions;
                 selectedSubmission.reviewStatus = newStatus;
                 
-                Swal.fire({
-                  toast: true,
-                  position: 'bottom-end',
-                  icon: 'success',
-                  title: actionType === 'revision' ? 'Revision note saved & notified' : 'Document marked as checked.' + statusChangedMsg,
-                  showConfirmButton: false,
-                  timer: 4000
-                });
+                if (actionType === 'revision') {
+                  const reqDocTitle = viewerState.title?.split(' - ')[1] || 'the selected document';
+                  await Swal.fire({
+                    icon: 'success',
+                    title: 'Revision Request Sent!',
+                    html: `
+                      <div style="font-size: 14px; color: #4b5563; line-height: 1.5; text-align: left;">
+                        <p style="margin-bottom: 8px;">Your revision directives have been successfully recorded for <strong>${reqDocTitle}</strong>.</p>
+                        <p style="margin: 0; font-size: 13px; color: #6b7280;">The submission is now marked as <em>Revision Required</em> and the students have been notified via email and in-portal alert.</p>
+                      </div>
+                    `,
+                    confirmButtonText: 'Done',
+                    confirmButtonColor: '#10b981'
+                  });
+                } else {
+                  Swal.fire({
+                    toast: true,
+                    position: 'bottom-end',
+                    icon: 'success',
+                    title: 'Document marked as checked.' + statusChangedMsg,
+                    showConfirmButton: false,
+                    timer: 4000
+                  });
+                }
               } catch (error) {
                 console.error("Error saving document review state:", error);
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save review action.' });
