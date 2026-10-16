@@ -4,6 +4,10 @@ import Footer from '../components/Footer';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
+import princePhoto from '../assets/team/prince.jpg';
+import jerikaPhoto from '../assets/team/jerika.jpg';
+import hyllaPhoto from '../assets/team/hylla.jpg';
+
 const AnimatedCounter = ({ target }) => {
   const [count, setCount] = useState(0);
 
@@ -40,6 +44,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '💻',
     badgeStyle: 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/60',
     accentGradient: 'bg-gradient-to-r from-[#8c1c38] via-[#a82446] to-[#d6ad60]',
+    image: princePhoto,
     linkedin: 'https://www.linkedin.com/in/prince-japhet-vender',
     github: 'https://github.com/Princejaphet07',
     email: 'mailto:japhetvender00@gmail.com',
@@ -55,6 +60,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '🎨',
     badgeStyle: 'bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/60',
     accentGradient: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400',
+    image: jerikaPhoto,
     linkedin: 'https://www.linkedin.com/in/jerika-zamoras',
     github: 'https://github.com/jezamorasxv',
     email: 'mailto:jerikazamoras4@gmail.com'
@@ -69,6 +75,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '📋',
     badgeStyle: 'bg-purple-100 text-purple-900 dark:bg-purple-950/70 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/60',
     accentGradient: 'bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-400',
+    image: hyllaPhoto,
     linkedin: 'https://www.linkedin.com/in/hylla-mae-tejada',
     github: 'https://github.com/tejadahyllamae',
     email: 'mailto:tejadahyllamae@gmail.com'
@@ -83,6 +90,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '🚀',
     badgeStyle: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/60',
     accentGradient: 'bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400',
+    image: null,
     linkedin: 'https://www.linkedin.com/in/andrea-canete-perote',
     github: 'https://github.com/andreavgdeywajk',
     email: 'mailto:andreaperote04@gmail.com'
@@ -379,13 +387,22 @@ function ArchiveAbout() {
                 {/* Top Accent Gradient Bar */}
                 <div className={`absolute top-0 inset-x-0 h-1.5 ${member.accentGradient}`}></div>
 
-                {/* Crisp Vector Profile Avatar */}
-                <div className={`w-24 h-24 mb-5 rounded-full p-1 bg-gradient-to-br ${member.avatarGradient} flex items-center justify-center shadow-lg relative group-hover:scale-105 transition-all duration-300 ring-4 ${member.ringColor}`}>
-                  <div className="w-full h-full rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xs flex items-center justify-center border border-white/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12 text-white/95 drop-shadow-sm">
-                      <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+                {/* Profile Photo / Avatar */}
+                <div className={`w-28 h-28 mb-5 rounded-full p-1 bg-gradient-to-br ${member.avatarGradient} flex items-center justify-center shadow-lg relative group-hover:scale-105 transition-all duration-300 ring-4 ${member.ringColor}`}>
+                  {member.image ? (
+                    <img 
+                      src={member.image} 
+                      alt={member.name} 
+                      className="w-full h-full rounded-full object-cover shadow-inner"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xs flex items-center justify-center border border-white/25">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-white/95 drop-shadow-sm">
+                        <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
                   {/* Role Icon Badge */}
                   <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-stone-200 dark:border-gray-700 shadow-md flex items-center justify-center text-sm" title={member.role}>
                     {member.iconEmoji}
