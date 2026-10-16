@@ -196,10 +196,39 @@ const ReadOnlyPageWithAnnotations = ({
   );
 };
 
-const AnnotatablePDFViewer = ({ documentUrl, initialAnnotations = {}, onSaveAnnotations, readOnly = false }) => {
+const AnnotatablePDFViewer = ({ 
+  documentUrl, 
+  initialAnnotations = {}, 
+  onSaveAnnotations, 
+  readOnly = false,
+  onPageChange,
+  jumpPage
+}) => {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
+
+  // Notify parent component of current page accurately
+  useEffect(() => {
+    if (onPageChange && pageNumber) {
+      onPageChange(pageNumber, numPages || 1);
+    }
+  }, [pageNumber, numPages, onPageChange]);
+
+  // Jump to specific page requested externally (e.g. clicking directive chip)
+  useEffect(() => {
+    if (jumpPage && jumpPage >= 1 && (!numPages || jumpPage <= numPages)) {
+      if (readOnly) {
+        const el = pageRefsMap.current[jumpPage];
+        if (el && scrollContainerRef.current) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setPageNumber(jumpPage);
+        }
+      } else {
+        setPageNumber(jumpPage);
+      }
+    }
+  }, [jumpPage, numPages, readOnly]);
 
   // annotations = { [pageNumber]: [ { type, points, color, size } ] }
   const [annotations, setAnnotations] = useState(() => normalizeAnnotations(initialAnnotations));

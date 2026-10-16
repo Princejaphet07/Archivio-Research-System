@@ -91,6 +91,11 @@ function ReviewSubmissions() {
     const unsubSubs = onSnapshot(submissionsQuery, (snapshot) => {
       const allSubs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setSubmissions(allSubs);
+      setSelectedSubmission(curr => {
+        if (!curr) return null;
+        const found = allSubs.find(s => s.id === curr.id);
+        return found ? { ...curr, ...found } : curr;
+      });
     });
 
     // 3. Listen to requirements
@@ -551,11 +556,15 @@ function ReviewSubmissions() {
       });
 
       try {
+        const combinedComments = sub.adviserComments && !comments.includes(sub.adviserComments)
+          ? `${sub.adviserComments}\n---\n${comments}`
+          : comments;
+
         await updateDoc(doc(db, 'submissions', sub.id), {
           reviewStatus: 'revision',
           reviewedAt: new Date().toISOString(),
           reviewedBy: auth.currentUser?.email,
-          adviserComments: comments
+          adviserComments: combinedComments
         });
 
         await logActivity({
@@ -1630,6 +1639,7 @@ function ReviewSubmissions() {
               if (!selectedSubmission || !viewerState.reqId) return;
               try {
                 const reqKey = activeReqKey || viewerState.reqId;
+                const cleanDocTitle = viewerState.title?.split(' - ')[1]?.trim();
                 const currentRevisions = selectedSubmission.documentRevisions || {};
                 const newRevisions = { ...currentRevisions };
 
@@ -1641,8 +1651,22 @@ function ReviewSubmissions() {
 
                 if (actionType === 'revision') {
                   newRevisions[reqKey] = note;
+                  if (cleanDocTitle && cleanDocTitle !== reqKey) {
+                    newRevisions[cleanDocTitle] = note;
+                  }
+                } else if (actionType === 'clear') {
+                  if (note && note.trim()) {
+                    newRevisions[reqKey] = note;
+                    if (cleanDocTitle && cleanDocTitle !== reqKey) {
+                      newRevisions[cleanDocTitle] = note;
+                    }
+                  } else {
+                    delete newRevisions[reqKey];
+                    if (cleanDocTitle) delete newRevisions[cleanDocTitle];
+                  }
                 } else {
                   delete newRevisions[reqKey];
+                  if (cleanDocTitle) delete newRevisions[cleanDocTitle];
                 }
 
                 const currentApprovals = selectedSubmission.documentApprovals || {};
@@ -1737,12 +1761,17 @@ function ReviewSubmissions() {
                   }
                 }
 
-                // Update local state to reflect change immediately
-                selectedSubmission.documentRevisions = newRevisions;
-                selectedSubmission.previousRevisions = newPrevRevisions;
-                selectedSubmission.documentApprovals = newApprovals;
-                selectedSubmission.documentResubmissions = newResubmissions;
-                selectedSubmission.reviewStatus = newStatus;
+                // Update local state to reflect change immediately in React state
+                const updatedSub = {
+                  ...selectedSubmission,
+                  documentRevisions: newRevisions,
+                  previousRevisions: newPrevRevisions,
+                  documentApprovals: newApprovals,
+                  documentResubmissions: newResubmissions,
+                  reviewStatus: newStatus
+                };
+                setSelectedSubmission(updatedSub);
+                setSubmissions(prev => prev.map(s => s.id === selectedSubmission.id ? { ...s, ...updatedSub } : s));
                 
                 if (actionType === 'revision') {
                   const reqDocTitle = viewerState.title?.split(' - ')[1] || 'the selected document';

@@ -83,6 +83,17 @@ const parseRevisionNote = (rawNote) => {
       continue;
     }
 
+    // Pattern 5: Non-document feedback or general directive: [Feedback: ...] or [Directive: ...] or [Part: ...]
+    const p5 = trimmed.match(/^\[(?:Feedback|Directive|Section|Part):\s*([^\]]+)\]\s*(?::|-)?\s*(.*)$/i);
+    if (p5) {
+      pageNotes.push({
+        page: '',
+        part: p5[1].trim(),
+        comment: p5[2]?.trim() || ''
+      });
+      continue;
+    }
+
     generalLines.push(trimmed);
   }
 
@@ -111,11 +122,44 @@ const DocumentViewerModal = ({
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [note, setNote] = useState(initialNote || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [quickPage, setQuickPage] = useState('');
+  const [quickPage, setQuickPage] = useState('1');
   const [quickComment, setQuickComment] = useState('');
   const [resolvedUrl, setResolvedUrl] = useState('');
   const [showPreviousOverlay, setShowPreviousOverlay] = useState(false);
   const [noteDraftInfo, setNoteDraftInfo] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [jumpPage, setJumpPage] = useState(null);
+
+  // Determine file type
+  const lowerUrl = (resolvedUrl || documentUrl || '').toLowerCase();
+  const lowerTitle = (documentTitle || '').toLowerCase();
+  const isVideo = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi') || lowerUrl.includes('.mkv') || lowerTitle.includes('video');
+  const isPdf = lowerUrl.includes('.pdf');
+  const isDocx = lowerUrl.includes('.docx') || lowerUrl.includes('.doc');
+  const isDocument = (isPdf || isDocx || lowerUrl.includes('.pptx') || lowerUrl.includes('.ppt') || lowerUrl.includes('.xlsx') || lowerUrl.includes('.xls') || lowerUrl.includes('.txt') || lowerTitle.includes('manuscript') || lowerTitle.includes('document')) && !isVideo && !lowerUrl.includes('youtube') && !lowerUrl.includes('vimeo') && !lowerUrl.includes('github') && !lowerUrl.includes('figma');
+
+  const handleViewerPageChange = useCallback((pageNum, total) => {
+    if (pageNum) {
+      setCurrentPage(pageNum);
+      if (total) setTotalPages(total);
+      if (isDocument) {
+        setQuickPage(String(pageNum));
+      }
+    }
+  }, [isDocument]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentPage(1);
+      setJumpPage(null);
+      if (isDocument) {
+        setQuickPage('1');
+      } else {
+        setQuickPage('');
+      }
+    }
+  }, [isOpen, documentUrl, isDocument]);
 
   // Sync initial note and check for unsaved local draft
   useEffect(() => {
@@ -270,6 +314,7 @@ const DocumentViewerModal = ({
     if (!pageNum) return;
     const num = parseInt(pageNum, 10);
     if (isNaN(num)) return;
+    setJumpPage(num);
     const pageEl = document.querySelector(`[data-page="${num}"]`);
     if (pageEl) {
       pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -282,28 +327,93 @@ const DocumentViewerModal = ({
 
   // Add quick page note to adviser's note text
   const handleAddQuickNote = () => {
-    if (!quickPage.trim() && !quickComment.trim()) return;
-    const p = quickPage.trim();
     const c = quickComment.trim();
-    const tag = p && c 
-      ? `[Page ${p} - Part: ${c}]` 
-      : p 
-        ? `[Page ${p}]` 
-        : `[Part: ${c}]`;
-    setNote(prev => (prev && prev.trim()) ? `${prev.trim()}\n${tag}` : tag);
-    setQuickPage('');
+    if (!c) return;
+
+    let tag = '';
+    if (isDocument) {
+      const p = quickPage.trim() || String(currentPage || 1);
+      tag = `[Page ${p}]: ${c}`;
+    } else {
+      tag = `[Directive]: ${c}`;
+    }
+
+    const updated = (note && note.trim()) ? `${note.trim()}\n${tag}` : tag;
+    setNote(updated);
+    if (role === 'adviser' && documentUrl) {
+      saveDraft(documentUrl, 'review_note', updated);
+    }
     setQuickComment('');
+    if (isDocument) setQuickPage(String(currentPage || 1));
   };
 
   // Remove a specific page note chip from adviser's note text
-  const handleRemovePageNote = (targetPn) => {
+  const handleRemovePageNote = async (targetPn) => {
     if (!note) return;
     const lines = note.split('\n');
+    let removed = false;
     const remaining = lines.filter(l => {
+      if (removed) return true;
       const parsed = parseRevisionNote(l);
-      return !parsed.pageNotes.some(pn => pn.page === targetPn.page && pn.part === targetPn.part);
+      const isMatch = parsed.pageNotes.some(pn => 
+        String(pn.page) === String(targetPn.page) && 
+        (pn.part === targetPn.part || pn.comment === targetPn.comment)
+      );
+      if (isMatch) {
+        removed = true;
+        return false;
+      }
+      return true;
     });
-    setNote(remaining.join('\n'));
+    const updated = remaining.join('\n');
+    setNote(updated);
+    if (role === 'adviser' && documentUrl) {
+      saveDraft(documentUrl, 'review_note', updated);
+    }
+    if (onSaveNote) {
+      await onSaveNote(updated, updated.trim() ? 'revision' : 'clear');
+    }
+  };
+
+  // Save revision directives and notify
+  const handleRequestRevision = async () => {
+    let noteToSave = note.trim();
+
+    // If adviser has an un-added comment in the input box, bundle it in!
+    if (quickComment.trim()) {
+      const c = quickComment.trim();
+      let tag = '';
+      if (isDocument) {
+        const p = quickPage.trim() || String(currentPage || 1);
+        tag = `[Page ${p}]: ${c}`;
+      } else {
+        tag = `[Directive]: ${c}`;
+      }
+
+      if (!noteToSave.includes(tag)) {
+        noteToSave = noteToSave ? `${noteToSave}\n${tag}` : tag;
+      }
+      setNote(noteToSave);
+      setQuickComment('');
+      if (isDocument) setQuickPage(String(currentPage || 1));
+    }
+
+    if (!noteToSave.trim()) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Revision Directives Required',
+        text: 'Please type what needs revision before issuing a revision request.',
+        confirmButtonColor: '#7a2e46'
+      });
+      return;
+    }
+
+    if (!onSaveNote) return;
+    setIsSaving(true);
+    await onSaveNote(noteToSave, 'revision');
+    if (documentUrl) clearDraft(documentUrl, 'review_note');
+    setNoteDraftInfo(null);
+    setIsSaving(false);
   };
 
   // Automatically resolve Firebase Storage relative paths to full download URLs
@@ -335,11 +445,6 @@ const DocumentViewerModal = ({
                          (previousAnnotations && Object.keys(previousAnnotations).length > 0);
   const showNotesPanel = role === 'adviser' || (role === 'student' && (initialNote || previousNote || isResubmitted || hasAnnotations));
 
-  // Determine file type
-  const lowerUrl = resolvedUrl?.toLowerCase() || '';
-  const isDocx = lowerUrl.includes('.docx') || lowerUrl.includes('.doc');
-  const isPdf = lowerUrl.includes('.pdf');
-  const isVideo = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi') || lowerUrl.includes('.mkv') || (documentTitle || '').toLowerCase().includes('video');
 
   // Build the viewer URL
   const getViewerUrl = () => {
@@ -504,6 +609,8 @@ const DocumentViewerModal = ({
                 initialAnnotations={showPreviousOverlay ? previousAnnotations : initialAnnotations}
                 onSaveAnnotations={showPreviousOverlay ? undefined : onSaveAnnotations}
                 readOnly={role !== 'adviser' || showPreviousOverlay}
+                onPageChange={handleViewerPageChange}
+                jumpPage={jumpPage}
               />
             </div>
           ) : (
@@ -619,32 +726,113 @@ const DocumentViewerModal = ({
                   <div className="flex flex-col gap-3">
                     <div>
                       <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 mb-0.5">
-                        {isResubmitted ? 'New Evaluation' : 'Revision Notes'}
+                        {isResubmitted ? 'New Evaluation' : 'Revision Directives & Notes'}
                       </h4>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400">
                         {isResubmitted 
-                          ? 'If the student still needs changes, add notes below. Otherwise, mark as checked.' 
-                          : 'Add specific feedback for this document (e.g. "Page 5 needs formatting").'}
+                          ? 'If the student still needs changes, add directives below. Every directive is saved.' 
+                          : 'Add specific revision directives. Each comment saves and remains visible to students.'}
                       </p>
                     </div>
+
+                    {/* Saved Revision Directives for this document */}
+                    {adviserPageNotes.length > 0 && (
+                      <div className="flex flex-col gap-2 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/70 rounded-xl shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📋</span>
+                            <span>Saved Directives ({adviserPageNotes.length})</span>
+                          </p>
+                          <span className="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">
+                            Visible to students
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+                          {adviserPageNotes.map((pn, idx) => (
+                            <div 
+                              key={idx}
+                              className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg shadow-2xs hover:border-amber-400 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {pn.page && isDocument ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => scrollToPage(pn.page)}
+                                    className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-[#7a2e46] hover:text-white dark:hover:bg-[#f8d070] dark:hover:text-stone-950 rounded text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                                    title={`Jump to Page ${pn.page}`}
+                                  >
+                                    Pg {pn.page}
+                                  </button>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-bold rounded shrink-0">
+                                    📌
+                                  </span>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  {pn.part && pn.part !== 'Entire Page' && pn.comment && (
+                                    <span className="text-[11px] font-bold text-stone-800 dark:text-stone-200 mr-1.5">
+                                      {pn.part}:
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-stone-600 dark:text-stone-300 font-medium">
+                                    {pn.comment || pn.part || 'Specific Directive'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {pn.page && isDocument && (
+                                  <button
+                                    type="button"
+                                    onClick={() => scrollToPage(pn.page)}
+                                    className="text-[10px] font-bold text-stone-400 hover:text-[#7a2e46] dark:hover:text-[#f8d070] px-1 py-0.5 cursor-pointer"
+                                    title={`Jump to Page ${pn.page}`}
+                                  >
+                                    Jump →
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePageNote(pn)}
+                                  className="text-stone-400 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-bold cursor-pointer"
+                                  title="Remove this directive"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Quick Add Page Note Widget */}
                     <div className="flex flex-col gap-2 p-3 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700">
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Quick Page Note</p>
-                        <span className="text-[9px] text-stone-400">Specify page & part</span>
+                        <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
+                          {isDocument ? 'Add Page Directive' : 'Add Directive'}
+                        </p>
+                        <span className="text-[9px] text-stone-400">
+                          {isDocument ? `Current: Page ${currentPage} of ${totalPages || 1}` : 'Document Feedback'}
+                        </span>
                       </div>
                       <div className="flex gap-2">
+                        {isDocument && (
+                          <div className="relative flex items-center">
+                            <span className="absolute left-2 text-[10px] text-stone-400 pointer-events-none font-bold">Pg</span>
+                            <input 
+                              type="text" 
+                              placeholder="Pg #"
+                              value={quickPage}
+                              onChange={e => setQuickPage(e.target.value)}
+                              className="w-16 p-2 pl-6 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400 font-bold"
+                              title="Page number (auto-detected, editable)"
+                            />
+                          </div>
+                        )}
                         <input 
                           type="text" 
-                          placeholder="Pg #"
-                          value={quickPage}
-                          onChange={e => setQuickPage(e.target.value)}
-                          className="w-14 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400 font-semibold"
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="What needs revision? (e.g. Part / Section)"
+                          placeholder={isDocument ? "What needs revision on this page? (e.g. Methodology, Table 2)" : "Type what needs revision..."}
                           value={quickComment}
                           onChange={e => setQuickComment(e.target.value)}
                           onKeyDown={e => {
@@ -658,35 +846,12 @@ const DocumentViewerModal = ({
                         <button 
                           type="button"
                           onClick={handleAddQuickNote}
-                          className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-lg transition-colors flex items-center justify-center shrink-0 cursor-pointer"
-                          title="Add Note"
+                          className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-xs transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                          title="Add Directive to List"
                         >
-                          +
+                          + Add
                         </button>
                       </div>
-
-                      {/* Display added page notes for adviser */}
-                      {adviserPageNotes.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-stone-200 dark:border-stone-700/60 mt-0.5">
-                          {adviserPageNotes.map((pn, idx) => (
-                            <span 
-                              key={idx}
-                              className="inline-flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-md text-[11px] font-bold text-stone-700 dark:text-stone-300 shadow-xs"
-                            >
-                              <span className="text-[#7a2e46] dark:text-[#f8d070]">Pg {pn.page}:</span>
-                              <span className="font-semibold text-stone-800 dark:text-stone-200 max-w-[120px] truncate">{pn.part}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemovePageNote(pn)}
-                                className="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold cursor-pointer"
-                                title="Remove page note"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     {/* Unsaved Note Draft Banner */}
@@ -730,12 +895,7 @@ const DocumentViewerModal = ({
                             key={cat}
                             type="button"
                             onClick={() => {
-                              const tag = `[${cat}]: `;
-                              const updated = note && note.trim() ? `${note.trim()}\n${tag}` : tag;
-                              setNote(updated);
-                              if (documentUrl) {
-                                saveDraft(documentUrl, 'review_note', updated);
-                              }
+                              setQuickComment(prev => prev ? `${prev} - ${cat}` : cat);
                             }}
                             className="px-2 py-0.5 text-[10px] font-semibold bg-stone-100 hover:bg-[#7a2e46]/10 hover:text-[#7a2e46] dark:bg-stone-800 dark:hover:bg-[#f8d070]/10 dark:hover:text-[#f8d070] text-stone-600 dark:text-stone-300 rounded-md border border-stone-200 dark:border-stone-700 transition-colors cursor-pointer"
                           >
@@ -756,13 +916,19 @@ const DocumentViewerModal = ({
                       </div>
                     )}
 
-                    <textarea 
-                      value={note}
-                      onChange={(e) => handleNoteChange(e.target.value)}
-                      placeholder={isResubmitted ? "Type any additional revision directives if student still needs changes..." : "Type specific revision directives here (or use shortcuts above)..."}
-                      rows={4}
-                      className="w-full p-3 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] focus:border-transparent outline-none resize-none transition-all dark:text-stone-200 min-h-[90px]"
-                    />
+                    {/* Overall Directives / Summary Textarea */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
+                        Overall Directives / Remarks
+                      </label>
+                      <textarea 
+                        value={note}
+                        onChange={(e) => handleNoteChange(e.target.value)}
+                        placeholder="Type any general feedback or edit directives summary here..."
+                        rows={3}
+                        className="w-full p-2.5 text-xs bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] focus:border-transparent outline-none resize-none transition-all dark:text-stone-200 font-mono text-[11px]"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -805,30 +971,45 @@ const DocumentViewerModal = ({
                           {displayPageNotes.map((pn, idx) => (
                             <div 
                               key={idx}
-                              onClick={() => scrollToPage(pn.page)}
-                              className="p-2.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-xl hover:border-[#7a2e46] dark:hover:border-[#f8d070] shadow-xs hover:shadow-sm transition-all cursor-pointer group"
-                              title={`Click to jump to Page ${pn.page}`}
+                              onClick={() => {
+                                if (pn.page && isDocument) scrollToPage(pn.page);
+                              }}
+                              className={`p-2.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-xl shadow-xs hover:shadow-sm transition-all group ${
+                                pn.page && isDocument ? 'cursor-pointer hover:border-[#7a2e46] dark:hover:border-[#f8d070]' : ''
+                              }`}
+                              title={pn.page && isDocument ? `Click to jump to Page ${pn.page}` : undefined}
                             >
                               <div className="flex items-center gap-2">
-                                {/* Page box matching Image 1 */}
-                                <div className="px-2.5 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors flex items-center justify-center gap-1">
-                                  <span className="text-[10px] text-stone-400 group-hover:text-white/80 dark:group-hover:text-stone-700 font-normal">Pg</span>
-                                  <span>{pn.page}</span>
-                                </div>
+                                {pn.page && isDocument ? (
+                                  <div className="px-2.5 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors flex items-center justify-center gap-1">
+                                    <span className="text-[10px] text-stone-400 group-hover:text-white/80 dark:group-hover:text-stone-700 font-normal">Pg</span>
+                                    <span>{pn.page}</span>
+                                  </div>
+                                ) : (
+                                  <div className="px-2 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 flex items-center justify-center">
+                                    <span>📌</span>
+                                  </div>
+                                )}
 
-                                {/* Part box matching Image 1 */}
-                                <div className="flex-1 p-1.5 px-2.5 text-xs font-bold bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 truncate group-hover:border-[#7a2e46]/40 dark:group-hover:border-[#f8d070]/40 transition-colors">
-                                  {pn.part || 'Specific Section'}
-                                </div>
+                                {pn.part && pn.comment ? (
+                                  <div className="flex-1 p-1.5 px-2.5 text-xs font-bold bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 truncate group-hover:border-[#7a2e46]/40 dark:group-hover:border-[#f8d070]/40 transition-colors">
+                                    {pn.part}
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 text-xs text-stone-800 dark:text-stone-200 font-medium">
+                                    {pn.comment || pn.part || 'Specific Directive'}
+                                  </div>
+                                )}
 
-                                {/* Jump button */}
-                                <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0">
-                                  Jump →
-                                </span>
+                                {pn.page && isDocument && (
+                                  <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0">
+                                    Jump →
+                                  </span>
+                                )}
                               </div>
 
-                              {pn.comment && (
-                                <p className="text-xs text-stone-600 dark:text-stone-300 mt-2 font-medium pl-1">
+                              {pn.part && pn.comment && (
+                                <p className="text-xs text-stone-600 dark:text-stone-300 mt-2 font-medium pl-1 leading-relaxed">
                                   "{pn.comment}"
                                 </p>
                               )}
@@ -899,43 +1080,7 @@ const DocumentViewerModal = ({
               {role === 'adviser' && (
                 <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 flex flex-col gap-2.5">
                   <button 
-                    onClick={async () => {
-                      let noteToSave = note.trim();
-
-                      // If adviser has unadded quickPage / quickComment in the input boxes, bundle them!
-                      if (quickPage.trim() || quickComment.trim()) {
-                        const p = quickPage.trim();
-                        const c = quickComment.trim();
-                        const pageTag = p && c 
-                          ? `[Page ${p} - Part: ${c}]` 
-                          : p 
-                            ? `[Page ${p}]` 
-                            : `[Part: ${c}]`;
-
-                        if (!noteToSave.includes(`[Page ${p}`)) {
-                          noteToSave = noteToSave ? `${pageTag}\n${noteToSave}` : pageTag;
-                        }
-                        setNote(noteToSave);
-                        setQuickPage('');
-                        setQuickComment('');
-                      }
-
-                      if (!noteToSave.trim()) {
-                        Swal.fire({
-                          icon: 'info',
-                          title: 'Revision Feedback Required',
-                          text: 'Please type revision directives or choose a shortcut category before issuing a revision request.',
-                          confirmButtonColor: '#7a2e46'
-                        });
-                        return;
-                      }
-                      if (!onSaveNote) return;
-                      setIsSaving(true);
-                      await onSaveNote(noteToSave, 'revision');
-                      if (documentUrl) clearDraft(documentUrl, 'review_note');
-                      setNoteDraftInfo(null);
-                      setIsSaving(false);
-                    }}
+                    onClick={handleRequestRevision}
                     disabled={isSaving}
                     className="w-full py-2.5 px-4 bg-[#7a2e46] hover:bg-[#5f2135] active:bg-[#4a1224] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-950 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
