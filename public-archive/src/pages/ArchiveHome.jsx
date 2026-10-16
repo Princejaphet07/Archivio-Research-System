@@ -451,7 +451,16 @@ function ArchiveHome() {
           <div className="flex flex-col md:flex-row md:items-end gap-4 mb-8">
             <div>
               <p className="text-[#8c7435] dark:text-[#d6ad60] text-xs font-bold tracking-widest uppercase font-sans mb-1">Explore by Category</p>
-              <h2 className="text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] border-b-2 border-[#d6ad60] inline-block pb-1">Browse Categories</h2>
+              <Link 
+                to="/browse" 
+                className="group inline-flex items-center gap-2 border-b-2 border-[#d6ad60] pb-1 hover:border-[#3d0c1b] dark:hover:border-[#c25975] transition-colors"
+                title="Browse Categories"
+              >
+                <h2 className="text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors cursor-pointer">
+                  Browse Categories
+                </h2>
+                <span className="text-[#8c7435] dark:text-[#d6ad60] group-hover:translate-x-1.5 transition-transform text-2xl font-sans font-light">→</span>
+              </Link>
             </div>
             <Link to="/browse" className="text-sm text-[#3d0c1b] dark:text-[#c25975] hover:text-[#8c7435] dark:hover:text-[#d6ad60] font-sans font-medium transition mb-1 md:ml-4">
               All Department ↓

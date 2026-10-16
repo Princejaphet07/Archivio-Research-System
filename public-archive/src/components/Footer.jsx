@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import TermsAndConditionsModal from './TermsAndConditionsModal';
+import { normalizeDepartment } from '../utils/normalizeDepartment';
 
 function Footer() {
   const [totalViews, setTotalViews] = useState(0);
+  const [topDepartments, setTopDepartments] = useState([]);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyTab, setPolicyTab] = useState('terms');
 
@@ -14,11 +16,26 @@ function Footer() {
     
     const unsubscribe = onSnapshot(qSubs, (snapshot) => {
       let views = 0;
+      const deptCounts = {};
       snapshot.forEach(doc => {
         const data = doc.data();
         views += (data.views || 0);
+        const rawDept = data.department || data.program || data.category;
+        if (rawDept && typeof rawDept === 'string' && rawDept.trim()) {
+          const norm = normalizeDepartment(rawDept);
+          deptCounts[norm] = (deptCounts[norm] || 0) + 1;
+        }
       });
       setTotalViews(views);
+
+      const dynamicDepts = Object.keys(deptCounts)
+        .sort((a, b) => deptCounts[b] - deptCounts[a]);
+
+      if (dynamicDepts.length === 0) {
+        setTopDepartments(['Information Technology']);
+      } else {
+        setTopDepartments(dynamicDepts.slice(0, 6));
+      }
     });
 
     return () => unsubscribe();
@@ -44,29 +61,28 @@ function Footer() {
             <h2 className="text-[#f3e5ab] text-xl font-serif font-bold tracking-widest mb-1">
               ARCHIVIO
             </h2>
-            <p className="mb-0.5 text-stone-300">Research Archive Management System</p>
-            <p className="mb-4">SWU PHINMA • Cebu City, Philippines</p>
+            <p className="mb-0.5 text-stone-300 font-medium">Research Archive Management System</p>
+            <p className="mb-1 text-[#f3e5ab]/90 font-semibold text-xs">College of Information Technology</p>
+            <p className="mb-3 text-stone-400">SWU PHINMA • Cebu City, Philippines</p>
+            <p className="text-[10px] text-amber-200/70 italic font-medium">Powered by: College of Information Technology</p>
           </div>
 
           {/* Top Departments */}
           <div className="flex flex-col items-center md:items-start">
             <h3 className="text-[#8c7435] font-bold mb-3 tracking-widest uppercase text-[9px]">Top Departments</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 w-full max-w-[260px] mx-auto md:mx-0">
-              <Link to="/browse" state={{ dept: 'BSIT' }} className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group">
-                <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span> BSIT Research
-              </Link>
-              <Link to="/browse" state={{ dept: 'Nursing' }} className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group">
-                <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span> Nursing Research
-              </Link>
-              <Link to="/browse" state={{ dept: 'Psychology' }} className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group">
-                <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span> Psychology
-              </Link>
-              <Link to="/browse" state={{ dept: 'Business' }} className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group">
-                <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span> Business Admin
-              </Link>
-              <Link to="/browse" state={{ dept: 'Education' }} className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group">
-                <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span> Education
-              </Link>
+              {topDepartments.map((deptName) => (
+                <Link 
+                  key={deptName} 
+                  to="/browse" 
+                  state={{ dept: deptName }} 
+                  className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group truncate"
+                  title={deptName}
+                >
+                  <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span>
+                  <span className="truncate">{deptName}</span>
+                </Link>
+              ))}
               <Link to="/browse" className="hover:text-amber-200 transition flex items-center gap-1.5 text-stone-500 hover:underline">
                 View All
               </Link>
