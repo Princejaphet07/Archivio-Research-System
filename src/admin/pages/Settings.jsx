@@ -221,7 +221,7 @@ export default function Settings() {
       showCancelButton: true,
       confirmButtonText: 'Update Security PIN',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       focusConfirm: false,
       preConfirm: () => {
         const currentPin = document.getElementById('swal-current-pin').value.trim();
@@ -276,7 +276,7 @@ export default function Settings() {
         icon: 'success',
         title: 'PIN Updated Successfully!',
         text: 'Your new 6-digit master security PIN has been saved.',
-        confirmButtonColor: '#801e38',
+        confirmButtonColor: '#10b981',
         timer: 2000
       });
     } catch (err) {
@@ -368,7 +368,7 @@ export default function Settings() {
             <p>🔒 <b>File Format:</b> Formatted JSON</p>
           </div>
         `,
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } catch (error) {
       console.error("Backup failed:", error);
@@ -1080,7 +1080,7 @@ export default function Settings() {
       `,
       showCancelButton: true,
       confirmButtonText: 'Save Quota',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       cancelButtonText: 'Cancel',
       preConfirm: () => {
         const val = Number(document.getElementById('swal-quota-input').value);
@@ -1270,7 +1270,7 @@ export default function Settings() {
       `,
       showCancelButton: true,
       confirmButtonText: 'Proceed to Archive',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       cancelButtonText: 'Cancel'
     });
 
@@ -1394,7 +1394,7 @@ export default function Settings() {
             <p>💾 <i>Archive manifest JSON was downloaded to your device.</i></p>
           </div>
         `,
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } catch (err) {
       console.error("Archiving error:", err);
@@ -1437,7 +1437,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button onClick={handleSaveInst} disabled={savingInst} className="px-6 py-2.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50">
+            <button onClick={handleSaveInst} disabled={savingInst} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50">
               {savingInst ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
@@ -1511,7 +1511,7 @@ export default function Settings() {
               </div>
               <button
                 onClick={handleBackupData}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#801e38] text-white rounded-lg text-xs font-bold transition-all shadow-sm hover:bg-[#601328] shrink-0"
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm hover:bg-emerald-700 shrink-0"
               >
                 <Download className="w-4 h-4" /> Download Full Backup
               </button>
@@ -1850,7 +1850,7 @@ export default function Settings() {
             <button
               onClick={handleArchiveSelectedFiles}
               disabled={isArchiving}
-              className="px-6 py-2.5 bg-[#801e38] hover:bg-[#601328] text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <FolderArchive className="w-4 h-4" />
               {isArchiving ? 'Archiving Files...' : 'Archive Selected Files'}

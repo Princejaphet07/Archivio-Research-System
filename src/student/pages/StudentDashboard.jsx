@@ -383,7 +383,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         <p className="text-stone-500 dark:text-stone-400 text-[13px] sm:text-[14px] mt-0.5">{whatsNextDesc}</p>
                       </div>
                       {showUploadButton && (
-                        <PremiumButton onClick={goToRequirements} className="w-full sm:w-auto justify-center shrink-0 touch-manipulation">
+                        <PremiumButton variant="success" onClick={goToRequirements} className="w-full sm:w-auto justify-center shrink-0 touch-manipulation">
                           Upload Documents
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -502,7 +502,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         <PremiumButton onClick={handleViewManuscript} size="sm" className="min-h-[40px] touch-manipulation">View Manuscript</PremiumButton>
                       </>
                     ) : (
-                      <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">Upload Manuscript</PremiumButton>
+                      <PremiumButton onClick={goToRequirements} variant="success" size="sm" className="min-h-[40px] touch-manipulation">Upload Manuscript</PremiumButton>
                     )}
                   </div>
                 </CardBody>
@@ -575,7 +575,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                       <PremiumButton onClick={goToRequirements} variant="danger" size="sm" className="min-h-[40px] touch-manipulation">Upload Missing</PremiumButton>
                     )}
                     {uploadedCount === 0 && !loadingData && (
-                      <PremiumButton onClick={goToRequirements} size="sm" className="min-h-[40px] touch-manipulation">Start Uploading</PremiumButton>
+                      <PremiumButton onClick={goToRequirements} variant="success" size="sm" className="min-h-[40px] touch-manipulation">Start Uploading</PremiumButton>
                     )}
                   </div>
                 </CardBody>

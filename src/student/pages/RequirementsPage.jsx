@@ -319,7 +319,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         showCancelButton: true,
         confirmButtonText: 'Confirm & Upload File',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         cancelButtonColor: '#6B7280',
         focusConfirm: false,
         preConfirm: () => {
@@ -482,7 +482,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       showCancelButton: true,
       confirmButtonText: 'Save Link',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#7B1F35',
+      confirmButtonColor: '#10b981',
       cancelButtonColor: '#6B7280',
       inputValidator: (value) => {
         if (!value || !value.trim()) {

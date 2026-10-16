@@ -212,7 +212,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         title: 'Success!',
         text: 'Your profile has been updated.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#10b981'
       });
     } catch (error) {
       console.error("Error updating profile: ", error);
@@ -302,7 +302,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         title: 'Success!',
         text: 'Profile photo updated.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         timer: 1500,
         showConfirmButton: false
       });
@@ -378,7 +378,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         title: 'Removed!',
         text: 'Profile photo removed.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         timer: 1500,
         showConfirmButton: false
       });
@@ -525,7 +525,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
         title: 'Success!',
         text: 'Notification preferences saved.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         timer: 1500,
         showConfirmButton: false
       });
@@ -793,7 +793,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     <button 
                       onClick={handleSaveProfile} 
                       disabled={isSaving}
-                      className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center"
+                      className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-full transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center cursor-pointer"
                     >
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -944,7 +944,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
 
                   <div className="flex flex-col-reverse sm:flex-row justify-end items-center gap-3 sm:gap-4 mt-8 pt-4">
                     <button onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-white dark:bg-stone-900 border border-[#DFD5BE] dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-gray-50 dark:hover:bg-stone-800 transition-colors shadow-sm touch-manipulation flex items-center justify-center">Cancel</button>
-                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-[#6B0F1A] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#8C1523] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center">
+                    <button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-full transition-colors shadow-md disabled:opacity-50 touch-manipulation flex items-center justify-center cursor-pointer">
                       {isChangingPassword ? 'Updating...' : 'Update Password'}
                     </button>
                   </div>
@@ -1036,7 +1036,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                     }} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-gray-700 dark:text-stone-300 text-[14px] font-semibold rounded-full hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors shadow-sm cursor-pointer touch-manipulation flex items-center justify-center">
                       Cancel
                     </button>
-                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-[#7B1F35] dark:bg-[#7B1F35] text-white dark:text-white text-[14px] font-semibold rounded-full hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors shadow-md disabled:opacity-50 cursor-pointer touch-manipulation flex items-center justify-center">
+                    <button disabled={isSaving} onClick={handleSaveNotificationPrefs} className="w-full sm:w-auto min-h-[44px] px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-full transition-colors shadow-md disabled:opacity-50 cursor-pointer touch-manipulation flex items-center justify-center">
                       {isSaving ? 'Saving...' : 'Save Preferences'}
                     </button>
                   </div>
@@ -1059,7 +1059,7 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 mt-4 sm:mt-6 shrink-0">
               <button onClick={closeCamera} className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-gray-700 dark:text-stone-300 bg-gray-100 dark:bg-stone-800 rounded-full font-semibold text-[13px] hover:bg-gray-200 dark:hover:bg-stone-700 transition-colors touch-manipulation flex items-center justify-center">Cancel</button>
-              <button onClick={capturePhoto} className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-white dark:text-white bg-[#7B1F35] dark:bg-[#7B1F35] rounded-full font-semibold text-[13px] hover:bg-[#5a1831] dark:hover:bg-[#5a1831] transition-colors flex items-center justify-center gap-2 touch-manipulation">
+              <button onClick={capturePhoto} className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-full font-semibold text-[13px] transition-colors flex items-center justify-center gap-2 touch-manipulation cursor-pointer">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Capture Photo
               </button>

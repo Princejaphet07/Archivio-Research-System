@@ -397,7 +397,7 @@ export default function Settings({ activePage, onNavigate }) {
         text: asGlobal 
           ? 'This requirement is now active for ALL groups department-wide.' 
           : (newStatus === 'approved' ? 'The proposed requirement has been approved for the adviser\'s groups.' : 'The proposed requirement has been declined.'), 
-        confirmButtonColor: '#770000' 
+        confirmButtonColor: '#10b981' 
       });
     } catch (error) {
       console.error(error);
@@ -502,7 +502,7 @@ export default function Settings({ activePage, onNavigate }) {
         title: 'Promoted to Global!',
         text: 'This requirement is now a Global Completion Requirement for ALL research groups.',
         timer: 2000,
-        confirmButtonColor: '#770000'
+        confirmButtonColor: '#10b981'
       });
     } catch (err) {
       console.error(err);
@@ -529,7 +529,7 @@ export default function Settings({ activePage, onNavigate }) {
       });
       setShowAddModal(false);
       setNewReq({ title: '', desc: '', type: 'file', icon: '📄' });
-      Swal.fire({ icon: 'success', title: 'Added', text: 'Global requirement has been added.', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Added', text: 'Global requirement has been added.', confirmButtonColor: '#10b981' });
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Could not add requirement.' });
@@ -569,7 +569,7 @@ export default function Settings({ activePage, onNavigate }) {
           }
         }
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Email template updated successfully.', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'Email template updated successfully.', confirmButtonColor: '#10b981' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save template.' });
@@ -721,7 +721,7 @@ export default function Settings({ activePage, onNavigate }) {
         icon: 'success', 
         title: 'Saved', 
         text: 'Profile updated successfully.', 
-        confirmButtonColor: '#770000' 
+        confirmButtonColor: '#10b981' 
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -735,7 +735,7 @@ export default function Settings({ activePage, onNavigate }) {
       await setDoc(doc(db, 'dean_settings', user.uid), {
         schoolYears: newYearsList
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'School Year updated successfully.', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'School Year updated successfully.', confirmButtonColor: '#10b981' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update school year.' });
@@ -785,7 +785,7 @@ export default function Settings({ activePage, onNavigate }) {
       text: "Setting a new Active SY will archive the current one. This affects the dashboard and all submissions.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#770000',
+      confirmButtonColor: '#10b981',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, set as active'
     }).then((result) => {
@@ -807,7 +807,7 @@ export default function Settings({ activePage, onNavigate }) {
       await setDoc(doc(db, 'dean_settings', user.uid), {
         notifications: notifications
       }, { merge: true });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Notification preferences updated.', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Saved', text: 'Notification preferences updated.', confirmButtonColor: '#10b981' });
     } catch (error) {
       console.error(error);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update notifications.' });
@@ -828,7 +828,7 @@ export default function Settings({ activePage, onNavigate }) {
       await updatePassword(user, passwords.newPass);
       
       setPasswords({ current: '', newPass: '', confirm: '' });
-      Swal.fire({ icon: 'success', title: 'Success', text: 'Password updated successfully.', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Success', text: 'Password updated successfully.', confirmButtonColor: '#10b981' });
     } catch (error) {
       console.error(error);
       let msg = 'Failed to update password. Please try again.';
@@ -1530,7 +1530,7 @@ export default function Settings({ activePage, onNavigate }) {
                   <div className="flex justify-end gap-3 mt-8">
                     <button 
                       onClick={handleSaveNotifications}
-                      className="px-6 py-2.5 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm"
+                      className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition shadow-sm cursor-pointer"
                     >
                       Save Changes
                     </button>
@@ -1647,7 +1647,7 @@ export default function Settings({ activePage, onNavigate }) {
                       <button 
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white text-sm font-bold hover:bg-[#590000] transition shadow-sm disabled:opacity-50"
+                        className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition shadow-sm disabled:opacity-50 cursor-pointer"
                       >
                         {loading ? 'Updating Password...' : 'Update Password'}
                       </button>
@@ -1769,7 +1769,7 @@ export default function Settings({ activePage, onNavigate }) {
 
               <div className="flex gap-3 pt-6">
                 <button type="button" onClick={() => { setShowSYModal(false); setShowEditSYModal(false); }} className="flex-1 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 rounded-lg py-2.5 text-sm font-bold hover:bg-stone-50 dark:hover:bg-stone-700 transition">Cancel</button>
-                <button type="submit" className="flex-1 bg-[#770000] dark:bg-[#d4af37] dark:text-[#590000] text-white rounded-lg py-2.5 text-sm font-bold hover:bg-[#590000] transition">Save Changes</button>
+                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 text-sm font-bold transition cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>

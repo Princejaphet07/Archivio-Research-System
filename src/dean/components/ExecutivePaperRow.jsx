@@ -91,7 +91,7 @@ export default function ExecutivePaperRow({
           <button
             type="button"
             onClick={() => onPublish(item)}
-            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] active:scale-95 shadow-xs hover:shadow-md transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-xs hover:shadow-md transition-all cursor-pointer"
             title="Publish manuscript to live archive"
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />

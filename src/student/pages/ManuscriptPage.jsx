@@ -306,7 +306,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         icon: 'success',
         title: 'Keywords Updated!',
         text: `AI extracted ${parsedKeywords.length} keywords from your abstract.`,
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         timer: 2500,
         showConfirmButton: false
       });
@@ -425,17 +425,17 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         `<input id="swal-pages" class="swal2-input" style="width: 100%; margin: 0 0 15px 0; box-sizing: border-box;" placeholder="e.g. 38" value="${initialPages}">` +
         `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">` +
         `<span style="font-size: 14px; font-weight: bold; color: #1A1A1A;">Abstract</span>` +
-        (hasManuscript ? `<button type="button" id="ai-abstract-fill-btn" style="background: #7B1F35; color: white; border: none; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">⚡ Read from PDF</button>` : '') +
+        (hasManuscript ? `<button type="button" id="ai-abstract-fill-btn" style="background: #10b981; color: white; border: none; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">⚡ Read from PDF</button>` : '') +
         `</div>` +
         `<textarea id="swal-abstract" class="swal2-textarea" style="width: 100%; margin: 0 0 15px 0; height: 120px; box-sizing: border-box;" placeholder="Abstract">${initialAbstract}</textarea>` +
         `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">` +
         `<span style="font-size: 14px; font-weight: bold; color: #1A1A1A;">Keywords (comma separated)</span>` +
-        `<button type="button" id="ai-keywords-btn" style="background: linear-gradient(135deg, #7B1F35, #a32946); color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">✨ AI Extract</button>` +
+        `<button type="button" id="ai-keywords-btn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">✨ AI Extract</button>` +
         `</div>` +
         `<input id="swal-keywords" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" placeholder="e.g. AI, Health, Tech" value="${initialKeywords}">`,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonColor: '#7B1F35',
+      confirmButtonColor: '#10b981',
       didOpen: () => {
         const pagesEl = document.getElementById('swal-pages');
         const absEl = document.getElementById('swal-abstract');
@@ -566,7 +566,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
           details: 'Saved manuscript abstract, keywords, and metadata'
         });
 
-        Swal.fire({ icon: 'success', title: 'Saved!', text: 'Manuscript details updated.', confirmButtonColor: '#7B1F35' });
+        Swal.fire({ icon: 'success', title: 'Saved!', text: 'Manuscript details updated.', confirmButtonColor: '#10b981' });
       } catch (err) {
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update details.', confirmButtonColor: '#7B1F35' });
       }
@@ -648,7 +648,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
             } else if (isNotFound) {
               btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" disabled style="position: absolute; right: 10px; top: 10px; background: #6b7280; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: default;">Not Found</button>`;
             } else {
-              btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" style="position: absolute; right: 10px; top: 10px; background: #7B1F35; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; transition: background 0.2s;">Apply</button>`;
+              btnHtml = `<button class="apply-suggestion-btn" data-index="${idx}" style="position: absolute; right: 10px; top: 10px; background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; transition: background 0.2s;">Apply</button>`;
             }
 
             return `
@@ -678,7 +678,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
         ${suggestionsHtml}
       `,
       showCancelButton: true,
-      confirmButtonColor: '#7B1F35',
+      confirmButtonColor: '#10b981',
       confirmButtonText: 'Got it!',
       cancelButtonColor: '#D97706',
       cancelButtonText: 'Try Again',
@@ -1018,7 +1018,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                         <button 
                           onClick={handleAutoGenerateAbstract}
                           disabled={generatingAbstract || submission?.abstractGenerating}
-                          className="min-h-[36px] text-white bg-[#7B1F35] hover:bg-[#601829] dark:bg-[#7B1F35] dark:hover:bg-[#8F243E] text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5 touch-manipulation cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="min-h-[36px] text-white bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5 touch-manipulation cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Extract or regenerate abstract from your uploaded manuscript"
                         >
                           {generatingAbstract || submission?.abstractGenerating ? (
@@ -1061,7 +1061,7 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
                       <button
                         onClick={handleAutoGenerateAbstract}
                         disabled={generatingAbstract}
-                        className="shrink-0 bg-[#7B1F35] hover:bg-[#601829] text-white text-[12px] font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                        className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
                       >
                         <svg className="w-4 h-4 text-[#F5C518]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         Auto-Generate Abstract

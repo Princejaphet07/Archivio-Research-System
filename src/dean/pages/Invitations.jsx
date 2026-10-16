@@ -327,7 +327,7 @@ Please click the button below to activate your account and set up your credentia
         icon: 'success',
         title: 'Invitation Dispatched!',
         text: `Official invite sent to ${targetEmail}`,
-        confirmButtonColor: '#770000'
+        confirmButtonColor: '#10b981'
       });
 
       setFormData({
@@ -584,7 +584,7 @@ Please click the button below to activate your account and set up your credentia
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#770000] hover:bg-[#590000] active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{loading ? 'Sending Invitation...' : 'Send Official Invitation'}</span>

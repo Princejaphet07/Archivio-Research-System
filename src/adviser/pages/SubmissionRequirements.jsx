@@ -209,7 +209,7 @@ function SubmissionRequirements() {
 
       setShowModal(false);
       setNewReq({ title: '', desc: '', type: 'file', icon: 'file' });
-      Swal.fire({ icon: 'success', title: 'Added', text: 'Requirement proposed to Dean for approval', confirmButtonColor: '#770000' });
+      Swal.fire({ icon: 'success', title: 'Added', text: 'Requirement proposed to Dean for approval', confirmButtonColor: '#10b981' });
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Could not add requirement' });
@@ -400,7 +400,7 @@ function SubmissionRequirements() {
               </div>
               <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-4 border-t border-gray-100 dark:border-stone-800">
                 <button type="button" onClick={() => setShowModal(false)} className="w-full sm:flex-1 border border-gray-300 dark:border-stone-700 text-gray-600 dark:text-stone-300 rounded-lg py-2.5 text-sm font-bold hover:bg-gray-50 dark:hover:bg-stone-800 transition">Cancel</button>
-                <button type="submit" className="w-full sm:flex-1 bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg py-2.5 text-sm font-bold hover:bg-[#590000] dark:hover:bg-[#ffe090] transition shadow-sm">Propose Requirement</button>
+                <button type="submit" className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 text-sm font-bold transition shadow-sm cursor-pointer">Propose Requirement</button>
               </div>
             </form>
           </div>

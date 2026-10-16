@@ -340,12 +340,12 @@ export default function DepartmentsProgramsTab() {
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Department Button */}
-          <PremiumButton onClick={() => setActiveModal('department')} variant="primary" icon={<span>+</span>}>
+          <PremiumButton onClick={() => setActiveModal('department')} variant="success" icon={<span>+</span>}>
             Department
           </PremiumButton>
 
           {/* Programs Button */}
-          <PremiumButton onClick={() => setActiveModal('program')} variant="primary" icon={<span>+</span>}>
+          <PremiumButton onClick={() => setActiveModal('program')} variant="success" icon={<span>+</span>}>
             Programs
           </PremiumButton>
         </div>
@@ -618,7 +618,7 @@ export default function DepartmentsProgramsTab() {
               </button>
               <button
                 onClick={handleAddDepartment}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition"
               >
                 Save School / College
               </button>
@@ -738,7 +738,7 @@ export default function DepartmentsProgramsTab() {
               <button
                 onClick={handleAddProgram}
                 disabled={!programForm.code?.trim() || !programForm.school?.trim()}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <span>✓</span> Save Program
               </button>

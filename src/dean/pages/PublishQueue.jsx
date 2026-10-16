@@ -1037,7 +1037,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                       });
                     }
                   }}
-                  className="w-full bg-[#c49028] hover:bg-[#a6791e] active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer border border-[#b58129]"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-500"
                 >
                   <Globe className="w-4 h-4" />
                   <span>Publish {eligibleCount} Eligible Paper{eligibleCount !== 1 ? 's' : ''}</span>

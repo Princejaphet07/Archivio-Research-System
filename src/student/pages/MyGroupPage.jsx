@@ -441,7 +441,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       `,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonColor: '#7B1F35',
+      confirmButtonColor: '#10b981',
       confirmButtonText: 'Create account',
       cancelButtonText: 'Cancel',
       cancelButtonColor: '#6B7280',
@@ -835,7 +835,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
             </p>
           </div>
         `,
-        confirmButtonColor: '#7B1F35',
+        confirmButtonColor: '#10b981',
         confirmButtonText: 'Great, thanks!'
       });
     } catch (err) {
@@ -1126,7 +1126,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
               <p style="margin: 0;">Portal access details and secure login instructions have been emailed directly to <strong>${member.email}</strong>.</p>
             </div>
           `,
-          confirmButtonColor: '#7B1F35'
+          confirmButtonColor: '#10b981'
         });
       } else {
         Swal.fire({
@@ -1432,7 +1432,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                   </div>
                   
                   {isLeader && (
-                    <PremiumButton onClick={handleAddMember} className="w-full sm:w-auto min-h-[44px] touch-manipulation justify-center">
+                    <PremiumButton variant="success" onClick={handleAddMember} className="w-full sm:w-auto min-h-[44px] touch-manipulation justify-center">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                       </svg>

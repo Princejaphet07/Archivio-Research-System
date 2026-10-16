@@ -287,7 +287,7 @@ function SendInvitations() {
         title: 'Invitation Sent!',
         text: `An invitation email has been successfully sent to ${studentEmail}.`,
         icon: 'success',
-        confirmButtonColor: '#801e38',
+        confirmButtonColor: '#10b981',
         confirmButtonText: 'OK'
       });
       setStudentEmail('');
@@ -300,7 +300,7 @@ function SendInvitations() {
         icon: 'error',
         title: 'Failed to Send Invitation',
         text: error.message || 'An unexpected error occurred while sending the invitation. Please try again.',
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } finally {
       setLoading(false);
@@ -391,7 +391,7 @@ function SendInvitations() {
         title: 'Sent!',
         text: `Invitation resent to ${studentEmail}`,
         icon: 'success',
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } catch (error) {
       console.error('Error resending invitation:', error);
@@ -401,7 +401,7 @@ function SendInvitations() {
         icon: 'error',
         title: 'Failed to Resend',
         text: 'Failed to resend invitation email. Please try again.',
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } finally {
       setLoading(false);
@@ -525,7 +525,7 @@ function SendInvitations() {
                 type="submit"
                 disabled={loading}
                 variant="primary"
-                className="w-full sm:w-auto justify-center flex items-center gap-2"
+                className="w-full sm:w-auto justify-center flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {loading ? (
                   <>

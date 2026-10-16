@@ -179,7 +179,7 @@ function MyProfile() {
         icon: 'success',
         title: 'Profile Updated',
         text: 'Your profile and organizational memberships have been saved.',
-        confirmButtonColor: '#770000',
+        confirmButtonColor: '#10b981',
         timer: 2000,
         showConfirmButton: false
       });
@@ -451,7 +451,7 @@ function MyProfile() {
                   </div>
                   
                   <div className="pt-4 flex justify-end">
-                    <PremiumButton onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} variant="primary" className="w-full sm:w-auto">
+                    <PremiumButton onClick={handleSaveChanges} disabled={loading || saveStatus === 'Saving...'} variant="primary" className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
                       {saveStatus === 'Saving...' ? 'Saving...' : 'Save Changes'}
                     </PremiumButton>
                   </div>
@@ -597,7 +597,7 @@ function MyProfile() {
                   </div>
 
                   <div className="pt-4 flex justify-end">
-                    <PremiumButton variant="primary" className="w-full sm:w-auto">
+                    <PremiumButton variant="primary" className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
                       Update Password
                     </PremiumButton>
                   </div>

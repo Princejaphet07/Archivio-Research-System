@@ -226,7 +226,7 @@ export default function UserManagement() {
         title: 'Department Already Exists',
         html: `The department <strong>"${existingName}"</strong> already exists.<br/><br/><span style="font-size: 13px; color: #6b7280;">Duplicate departments with variations like <em>"${trimmedDept}"</em> vs <em>"${existingName}"</em> (including prefix words like "College of" or acronyms) are not allowed.</span>`,
         showCancelButton: true,
-        confirmButtonColor: '#801e38',
+        confirmButtonColor: '#10b981',
         cancelButtonColor: '#6b7280',
         confirmButtonText: `Select Existing "${existingName}"`,
         cancelButtonText: 'Edit Name'
@@ -255,7 +255,7 @@ export default function UserManagement() {
           title: 'Department Already Exists',
           html: `The department <strong>"${existingName}"</strong> already exists in the system.<br/><br/><span style="font-size: 13px; color: #6b7280;">Duplicate departments with variations like <em>"${trimmedDept}"</em> vs <em>"${existingName}"</em> (including prefix words like "College of" or acronyms) are not allowed.</span>`,
           showCancelButton: true,
-          confirmButtonColor: '#801e38',
+          confirmButtonColor: '#10b981',
           cancelButtonColor: '#6b7280',
           confirmButtonText: `Select Existing "${existingName}"`,
           cancelButtonText: 'Edit Name'
@@ -630,7 +630,7 @@ export default function UserManagement() {
       `,
       showCancelButton: true,
       confirmButtonText: 'Send Message',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       cancelButtonText: 'Cancel',
       cancelButtonColor: '#78716c',
       focusConfirm: false,
@@ -705,7 +705,7 @@ export default function UserManagement() {
           icon: 'success',
           title: 'Message Sent!',
           text: `Your email message has been sent to ${recipientEmail}.`,
-          confirmButtonColor: '#801e38'
+          confirmButtonColor: '#10b981'
         });
       } else {
         throw new Error(result?.error || 'Failed to dispatch email');
@@ -783,7 +783,7 @@ export default function UserManagement() {
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: 'Save Changes',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       cancelButtonColor: '#718096',
       preConfirm: () => {
         const deptEl = document.getElementById('swal-input-dept');
@@ -879,7 +879,7 @@ export default function UserManagement() {
           icon: 'success',
           title: 'Saved!',
           text: 'User profile and roles have been updated.',
-          confirmButtonColor: '#801e38'
+          confirmButtonColor: '#10b981'
         });
       } catch (e) {
         console.error('Failed to update user:', e);
@@ -1131,7 +1131,7 @@ export default function UserManagement() {
               </div>
             `,
             icon: 'success',
-            confirmButtonColor: '#801e38',
+            confirmButtonColor: '#10b981',
             confirmButtonText: 'Great, Copy & Done'
           });
           
@@ -1474,7 +1474,7 @@ export default function UserManagement() {
           </p>
         `,
         icon: 'success',
-        confirmButtonColor: '#801e38',
+        confirmButtonColor: '#10b981',
         confirmButtonText: 'Done',
         width: '440px',
         padding: '28px 24px',
@@ -1686,7 +1686,7 @@ export default function UserManagement() {
           </div>
         `,
         icon: 'success',
-        confirmButtonColor: '#801e38',
+        confirmButtonColor: '#10b981',
         confirmButtonText: 'Great, Copy & Done'
       });
     } catch (error) {
@@ -1815,7 +1815,7 @@ export default function UserManagement() {
               {/* Add User on the right */}
               <PremiumButton 
                 onClick={() => { setIsModalOpen(true); setFormErrors({}); setError(''); }} 
-                variant="primary" 
+                variant="success" 
                 icon={<Plus className="w-4 h-4" />}
                 size="sm"
               >
@@ -2451,7 +2451,7 @@ export default function UserManagement() {
                 <button
                   onClick={handleCreateDean}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Add User'}
                 </button>
@@ -2491,7 +2491,7 @@ export default function UserManagement() {
               <button
                 onClick={handleAddNewDepartment}
                 disabled={addingDept || !newDeptName.trim()}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {addingDept ? 'Adding...' : <><Plus size={16} /> Add Department</>}
               </button>
@@ -2546,7 +2546,7 @@ export default function UserManagement() {
               <button
                 onClick={handleAddNewProgram}
                 disabled={addingProg || !newProgCode.trim() || !newProgName.trim()}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#801e38] hover:bg-[#601328] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {addingProg ? 'Adding...' : <><Plus size={16} /> Add Program</>}
               </button>

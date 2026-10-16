@@ -299,7 +299,7 @@ export default function AllUsers() {
       `,
       showCancelButton: true,
       confirmButtonText: 'Send Message',
-      confirmButtonColor: '#801e38',
+      confirmButtonColor: '#10b981',
       cancelButtonText: 'Cancel',
       cancelButtonColor: '#78716c',
       focusConfirm: false,
@@ -364,7 +364,7 @@ export default function AllUsers() {
           icon: 'success',
           title: 'Message Sent!',
           text: `Your email message has been sent to ${recipientEmail}.`,
-          confirmButtonColor: '#801e38'
+          confirmButtonColor: '#10b981'
         });
       } else {
         throw new Error(result?.error || 'Failed to dispatch email');
@@ -420,7 +420,7 @@ export default function AllUsers() {
         icon: 'success',
         title: 'Invitation Sent!',
         text: `Invitation has been resent to ${cleanEmail}.`,
-        confirmButtonColor: '#801e38'
+        confirmButtonColor: '#10b981'
       });
     } catch (err) {
       console.error('Error resending invite:', err);

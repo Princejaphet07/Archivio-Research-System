@@ -163,7 +163,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         title: 'Group Approved!',
         text: 'Your research group has been approved by your adviser. You can now start uploading your requirements and manuscript.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#10b981'
       });
       // Mark it as seen so it doesn't pop up again
       updateDoc(doc(db, 'students', studentData.uid), {
@@ -290,7 +290,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
         title: 'Message Sent!',
         text: 'Your email has been successfully sent to your adviser.',
         icon: 'success',
-        confirmButtonColor: '#7B1F35'
+        confirmButtonColor: '#10b981'
       });
 
       setShowMsgModal(false);
@@ -981,7 +981,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
                 <button
                   type="submit"
                   disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
-                  className="w-full min-h-[44px] touch-manipulation bg-[#7a1f3d] dark:bg-[#7B1F35] hover:bg-[#4a1024] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] touch-manipulation bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {msgSending ? 'Sending...' : 'Send Message via Email'}
                   {!msgSending && (
