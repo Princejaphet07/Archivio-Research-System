@@ -147,6 +147,7 @@ function ReviewSubmissions() {
       leaderName: group.leaderName || 'Unknown',
       leaderEmail: group.leaderEmail || '',
       program: group.program || '',
+      section: group.section || '',
       members: group.members || [],
       studentUid: group.leaderUid, // Ensure this exists for messages
       submittedDate: sub.createdAt || sub.updatedAt || group.createdAt || group.approvedAt || '',
@@ -893,7 +894,7 @@ function ReviewSubmissions() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
-                        #{String(index + 1).padStart(2, '0')} · {item.groupName}
+                        #{String(index + 1).padStart(2, '0')} · {item.groupName} {item.section ? `(${item.section})` : ''}
                       </span>
                       <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 line-clamp-2 mt-0.5">
                         {item.researchTitle}
@@ -1082,7 +1083,12 @@ function ReviewSubmissions() {
                           {item.researchTitle}
                         </td>
                         <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                          {item.groupName}
+                          <div className="font-semibold text-gray-800 dark:text-stone-200">{item.groupName}</div>
+                          {item.section && (
+                            <span className="text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
+                              Sec: {item.section}
+                            </span>
+                          )}
                         </td>
 
                         {activeTab === 'approved' ? (
@@ -1258,7 +1264,7 @@ function ReviewSubmissions() {
               <p className="text-white/70 dark:text-stone-400 text-xs tracking-widest uppercase font-bold mb-1">Full Review</p>
               <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
               <p className="text-white/80 dark:text-stone-300 text-sm mt-1">
-                Group: {selectedSubmission.groupName} · Leader: {selectedSubmission.leaderName}
+                Group: {selectedSubmission.groupName} {selectedSubmission.section ? `· Section: ${selectedSubmission.section}` : ''} · Leader: {selectedSubmission.leaderName}
               </p>
             </div>
 

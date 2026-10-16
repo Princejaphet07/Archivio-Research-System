@@ -134,6 +134,7 @@ export default function ResearchRecords() {
               subDocId: sub.id,
               title: sub.title || sub.researchTitle || g.researchTitle || 'Untitled Research',
               group: g.groupName || 'Unknown Group',
+              section: g.section || sub.section || '',
               department: g.department || deanDept,
               adviser: g.adviserName || 'Not Assigned',
               year,
@@ -232,6 +233,7 @@ export default function ResearchRecords() {
       setSelectedSubmission({
         ...record.originalSub,
         groupName: record.group,
+        section: record.section || record.originalGroup?.section || '',
         researchTitle: record.title,
         leaderName: record.originalGroup.leaderName,
         members: record.originalGroup.members,
@@ -701,7 +703,12 @@ export default function ResearchRecords() {
 
                         {/* Group */}
                         <td className="py-4 px-4 text-stone-600 dark:text-stone-400 font-medium">
-                          {record.group}
+                          <div>{record.group}</div>
+                          {record.section && (
+                            <span className="inline-block mt-0.5 text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
+                              Sec: {record.section}
+                            </span>
+                          )}
                         </td>
 
                         {/* Adviser */}
@@ -860,7 +867,7 @@ export default function ResearchRecords() {
               <p className="text-white/70 text-xs tracking-widest uppercase font-bold mb-1">Dean Inspection</p>
               <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
               <p className="text-white/80 text-sm mt-1">
-                Group: {selectedSubmission.groupName} · Leader: {selectedSubmission.leaderName}
+                Group: {selectedSubmission.groupName} {selectedSubmission.section ? `· Section: ${selectedSubmission.section}` : ''} · Leader: {selectedSubmission.leaderName}
               </p>
             </div>
 

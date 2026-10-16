@@ -228,7 +228,16 @@ function MyGroups() {
                     return (
                       <tr key={group.id} className="border-b border-gray-100 dark:border-stone-800 hover:bg-gray-50 dark:hover:bg-stone-800/50 transition">
                         <td className="py-4 px-6 text-gray-400 dark:text-stone-500 font-medium">{String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}</td>
-                        <td className="py-4 px-6 font-bold text-gray-900 dark:text-stone-100">{group.groupName}</td>
+                        <td className="py-4 px-6 font-bold text-gray-900 dark:text-stone-100">
+                          <div className="flex items-center gap-2">
+                            <span>{group.groupName}</span>
+                            {group.section && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#590000]/10 dark:bg-[#f8d070]/10 text-[#590000] dark:text-[#f8d070]">
+                                {group.section}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-4 px-6 text-gray-500 dark:text-stone-400">{memberCount} member{memberCount !== 1 ? 's' : ''}</td>
                         <td className="py-4 px-6 text-gray-500 dark:text-stone-400">{registeredDate}</td>
                         <td className="py-4 px-6">
@@ -371,7 +380,7 @@ function MyGroups() {
                 </div>
 
                 {/* Group Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Leader</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-stone-100">{selectedGroup.leaderName}</p>
@@ -380,6 +389,10 @@ function MyGroups() {
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Program</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-stone-100">{selectedGroup.program || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-stone-500 tracking-widest uppercase mb-1">Section</p>
+                    <p className="text-sm font-bold text-[#590000] dark:text-[#f8d070]">{selectedGroup.section || '—'}</p>
                   </div>
                 </div>
 

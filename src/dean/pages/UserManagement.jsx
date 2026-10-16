@@ -126,6 +126,7 @@ export default function UserManagement() {
     return {
       ...student,
       groupName: group?.groupName || 'No Group',
+      section: student.section || group?.section || '',
       program: student.department || student.program || 'Unknown'
     };
   });
@@ -368,7 +369,14 @@ export default function UserManagement() {
                               <p className={`font-bold ${row.status === 'inactive' ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-200'}`}>{row.displayName || 'Unnamed Student'}</p>
                             </td>
                             <td className="py-4 text-stone-500 dark:text-stone-400 font-normal">{row.email}</td>
-                            <td className="py-4 font-bold text-stone-600 dark:text-stone-400">{row.program}</td>
+                            <td className="py-4 font-bold text-stone-600 dark:text-stone-400">
+                              <div>{row.program}</div>
+                              {row.section && (
+                                <span className="inline-block mt-0.5 text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
+                                  Sec: {row.section}
+                                </span>
+                              )}
+                            </td>
                             <td className="py-4">
                               <span className="bg-stone-100 dark:bg-stone-800/80 text-stone-700 dark:text-stone-300 font-bold px-2 py-0.5 rounded text-[10px]">
                                 {row.groupName}
@@ -470,9 +478,15 @@ export default function UserManagement() {
               ) : (
                 <>
                   <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Program</p>
-                      <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.program}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Program</p>
+                        <p className="text-sm font-bold text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.program}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Section</p>
+                        <p className="text-sm font-bold text-[#590000] dark:text-[#f8d070] bg-stone-50 dark:bg-stone-800/50 p-3 rounded-lg border border-stone-100 dark:border-stone-700">{selectedUser.section || 'N/A'}</p>
+                      </div>
                     </div>
                     <div>
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider mb-1">Research Group</p>

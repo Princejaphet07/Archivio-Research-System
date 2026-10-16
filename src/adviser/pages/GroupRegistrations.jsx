@@ -550,6 +550,14 @@ function GroupRegistrations() {
                       <span className="flex items-center gap-1">
                         <GraduationCap className="w-3.5 h-3.5 text-stone-400" /> {req.department || req.program || 'N/A'}
                       </span>
+                      {req.section && (
+                        <>
+                          <span>·</span>
+                          <span className="bg-[#590000]/10 dark:bg-[#f8d070]/10 text-[#590000] dark:text-[#f8d070] px-2 py-0.5 rounded text-[11px] font-bold">
+                            Sec: {req.section}
+                          </span>
+                        </>
+                      )}
                       <span>·</span>
                       <span className="flex items-center gap-1">
                         <Users className="w-3.5 h-3.5 text-stone-400" /> {1 + (req.members?.length || 0)} Members
@@ -614,7 +622,7 @@ function GroupRegistrations() {
 
                   <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-stone-400 pt-2 border-t border-gray-100 dark:border-stone-800 gap-1">
                     <span className="flex items-center gap-1">
-                      <GraduationCap className="w-3.5 h-3.5" /> {item.department || item.program || 'N/A'}
+                      <GraduationCap className="w-3.5 h-3.5" /> {item.department || item.program || 'N/A'} {item.section ? `(${item.section})` : ''}
                     </span>
                     {item.category && (
                       <span className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-[10px] font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1">
@@ -650,7 +658,7 @@ function GroupRegistrations() {
                       <th className="py-3.5 px-5">Leader</th>
                       <th className="py-3.5 px-5">Research Title</th>
                       <th className="py-3.5 px-5">Category</th>
-                      <th className="py-3.5 px-5">Program</th>
+                      <th className="py-3.5 px-5">Program / Sec</th>
                       <th className="py-3.5 px-5">Status</th>
                       <th className="py-3.5 px-5">Date</th>
                       <th className="py-3.5 px-5 text-center">Action</th>
@@ -681,7 +689,14 @@ function GroupRegistrations() {
                             <span className="text-gray-400 dark:text-stone-500 italic">Unassigned</span>
                           )}
                         </td>
-                        <td className="py-3.5 px-5 text-gray-600 dark:text-stone-400">{item.department || item.program || 'N/A'}</td>
+                        <td className="py-3.5 px-5 text-gray-600 dark:text-stone-400">
+                          <div>{item.department || item.program || 'N/A'}</div>
+                          {item.section && (
+                            <span className="inline-block mt-0.5 text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
+                              Sec: {item.section}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3.5 px-5">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
                             item.status === 'approved' 
@@ -773,10 +788,14 @@ function GroupRegistrations() {
                 <p className="text-gray-800 dark:text-stone-300 text-base sm:text-lg font-medium">{selectedGroup.researchTitle}</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-xl border border-gray-100 dark:border-stone-800">
                   <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Program</h3>
                   <p className="text-gray-800 dark:text-stone-300 font-medium text-sm">{selectedGroup.program || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-xl border border-gray-100 dark:border-stone-800">
+                  <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Section</h3>
+                  <p className="text-[#590000] dark:text-[#f8d070] font-bold text-sm">{selectedGroup.section || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-stone-900 p-3 rounded-xl border border-gray-100 dark:border-stone-800">
                   <h3 className="text-[10px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider mb-1">Applied Date</h3>

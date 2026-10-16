@@ -41,6 +41,7 @@ export default function StudentSignup({ onSwitchPage }) {
   // Step 2 — Group Info
   const [groupInfo, setGroupInfo] = useState({
     groupName: '',
+    section: '',
     researchTitle: '',
     researchAdviser: '',
     members: []
@@ -327,6 +328,7 @@ export default function StudentSignup({ onSwitchPage }) {
   const validateStep2 = () => {
     const errors = {};
     if (!groupInfo.groupName.trim()) errors.groupName = 'Group name is required';
+    if (!groupInfo.section.trim()) errors.section = 'Section is required (e.g., C2)';
     if (!groupInfo.researchAdviser.trim()) {
       errors.researchAdviser = 'Research Adviser is required';
     }
@@ -442,6 +444,7 @@ export default function StudentSignup({ onSwitchPage }) {
           programCode: resolvedProgCode || leaderData.programCode || '',
           yearLevel: personalInfo.yearLevel,
           groupName: leaderData.groupName || 'Unknown Group',
+          section: leaderData.section || '',
           researchTitle: leaderData.researchTitle || 'Unknown Title',
           groupMembers: leaderData.groupMembers || [], // Sync from leader
           invitedBy: invitationData.sentBy || leaderData.invitedBy,
@@ -488,6 +491,7 @@ export default function StudentSignup({ onSwitchPage }) {
           programCode: resolvedProgCode,
           yearLevel: personalInfo.yearLevel,
           groupName: groupInfo.groupName.trim(),
+          section: groupInfo.section.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
           researchAdviser: resolvedAdviserName,
           adviserName: resolvedAdviserName,
@@ -514,6 +518,7 @@ export default function StudentSignup({ onSwitchPage }) {
 
         await addDoc(collection(db, 'groups'), {
           groupName: groupInfo.groupName.trim(),
+          section: groupInfo.section.trim(),
           researchTitle: groupInfo.researchTitle.trim(),
           researchAdviser: resolvedAdviserName,
           category: 'General',
@@ -883,6 +888,33 @@ export default function StudentSignup({ onSwitchPage }) {
               {formErrors.groupName && (
                 <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
                   <span>⚠️</span> {formErrors.groupName}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-2.5">
+              <label className="block text-xs font-semibold text-[#2A1115] mb-1">
+                Section <span className="text-red-500 font-bold ml-0.5">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  id="signup-section"
+                  value={groupInfo.section} 
+                  onChange={e => {
+                    setGroupInfo(p => ({ ...p, section: e.target.value }));
+                    if (formErrors.section) setFormErrors(p => ({ ...p, section: '' }));
+                  }}
+                  type="text" 
+                  placeholder="e.g., C2, 4-A"
+                  className={`w-full bg-[#faf6f0] border rounded-xl px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none transition-colors pr-9 ${
+                    formErrors.section ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20' : 'border-[#d5c9bb] focus:border-[#6B0F1A]'
+                  }`} 
+                />
+                <span className="absolute right-3 top-2 sm:top-2.5 text-gray-400 text-xs">🏷️</span>
+              </div>
+              {formErrors.section && (
+                <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 font-semibold pl-1">
+                  <span>⚠️</span> {formErrors.section}
                 </p>
               )}
             </div>
