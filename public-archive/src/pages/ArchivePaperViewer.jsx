@@ -824,63 +824,42 @@ function ArchivePaperViewer() {
     return { nodes, links };
   }, [paper, relatedPapers]);
 
-  const hasIncremented = useRef(false);
+  const recordedViewsRef = useRef(new Set());
   const hasTrackedAnalytics = useRef(false);
-  const hasRecordedUserView = useRef(false);
 
-  // Increment view count when paper viewer opens (session-deduplicated)
+  // Increment view count when paper viewer opens (session & user deduplicated)
   useEffect(() => {
-    if (id && !hasIncremented.current) {
-      const viewedKey = `archivio_viewed_${id}`;
-      if (sessionStorage.getItem(viewedKey)) {
-        hasIncremented.current = true;
-        return;
-      }
+    if (!id) return;
 
-      hasIncremented.current = true;
-      sessionStorage.setItem(viewedKey, '1');
+    const userKey = currentUser?.uid ? `user_${currentUser.uid}` : 'anon';
+    const viewToken = `${id}_${userKey}`;
+    const storageKey = `archivio_viewed_${id}_${userKey}`;
 
-      const docRef = doc(db, 'submissions', id);
-      const updateData = { views: increment(1) };
-      if (currentUser) {
-        const viewerInfo = {
-          uid: currentUser.uid,
-          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          email: currentUser.email || ''
-        };
-        updateData.viewedUsers = arrayUnion(viewerInfo);
-        updateData.viewedBy = arrayUnion(currentUser.uid);
-      }
-      updateDoc(docRef, updateData)
-        .catch(err => {
-          console.warn("View increment failed, retrying once:", err.message);
-          setTimeout(() => {
-            updateDoc(docRef, updateData)
-              .catch(retryErr => console.error("View increment retry failed:", retryErr.message));
-          }, 1500);
-        });
+    if (recordedViewsRef.current.has(viewToken) || sessionStorage.getItem(storageKey)) {
+      return;
     }
-  }, [id, currentUser]);
 
-  // Record user view when user state resolves
-  useEffect(() => {
-    if (id && currentUser && !hasRecordedUserView.current) {
-      const userViewKey = `archivio_user_viewed_${id}_${currentUser.uid}`;
-      if (!sessionStorage.getItem(userViewKey)) {
-        hasRecordedUserView.current = true;
-        sessionStorage.setItem(userViewKey, '1');
-        const docRef = doc(db, 'submissions', id);
-        const viewerInfo = {
-          uid: currentUser.uid,
-          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          email: currentUser.email || ''
-        };
-        updateDoc(docRef, {
-          viewedUsers: arrayUnion(viewerInfo),
-          viewedBy: arrayUnion(currentUser.uid)
-        }).catch(err => console.warn("User view record notice:", err.message));
-      }
+    recordedViewsRef.current.add(viewToken);
+    sessionStorage.setItem(storageKey, '1');
+
+    const docRef = doc(db, 'submissions', id);
+    const updateData = { views: increment(1) };
+    if (currentUser) {
+      const viewerInfo = {
+        uid: currentUser.uid,
+        name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+        email: currentUser.email || ''
+      };
+      updateData.viewedUsers = arrayUnion(viewerInfo);
+      updateData.viewedBy = arrayUnion(currentUser.uid);
     }
+
+    updateDoc(docRef, updateData)
+      .catch(err => {
+        console.warn("Full view update failed, falling back to counter-only update:", err.message);
+        updateDoc(docRef, { views: increment(1) })
+          .catch(retryErr => console.error("Views counter fallback failed:", retryErr.message));
+      });
   }, [id, currentUser]);
 
   // Track paper readership in Google Analytics
@@ -1148,25 +1127,55 @@ function ArchivePaperViewer() {
     }
     trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
-    const likes = paper.likes || [];
+    const likes = Array.isArray(paper?.likes) ? paper.likes : [];
+    const isCurrentlyLiked = likes.includes(currentUser.uid);
     const userInfo = {
       uid: currentUser.uid,
       name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
       email: currentUser.email || ''
     };
-    if (likes.includes(currentUser.uid)) {
-      const existingLikedUser = (paper.likedUsers || []).find(u => u.uid === currentUser.uid);
-      const updates = { likes: arrayRemove(currentUser.uid) };
-      if (existingLikedUser) {
-        updates.likedUsers = arrayRemove(existingLikedUser);
+
+    // Optimistic local update
+    const updatedLikes = isCurrentlyLiked 
+      ? likes.filter(uid => uid !== currentUser.uid)
+      : [...likes, currentUser.uid];
+    setPaper(prev => prev ? ({ ...prev, likes: updatedLikes }) : prev);
+
+    try {
+      if (isCurrentlyLiked) {
+        const existingLikedUser = (paper?.likedUsers || []).find(u => u?.uid === currentUser.uid);
+        const updates = { likes: arrayRemove(currentUser.uid) };
+        if (existingLikedUser) {
+          updates.likedUsers = arrayRemove(existingLikedUser);
+        } else {
+          updates.likedUsers = arrayRemove(userInfo);
+        }
+        try {
+          await updateDoc(paperRef, updates);
+        } catch (fullErr) {
+          console.warn("Full like remove failed, fallback to likes array:", fullErr.message);
+          await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+        }
       } else {
-        updates.likedUsers = arrayRemove(userInfo);
+        try {
+          await updateDoc(paperRef, { 
+            likes: arrayUnion(currentUser.uid),
+            likedUsers: arrayUnion(userInfo)
+          });
+        } catch (fullErr) {
+          console.warn("Full like add failed, fallback to likes array:", fullErr.message);
+          await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+        }
       }
-      await updateDoc(paperRef, updates);
-    } else {
-      await updateDoc(paperRef, { 
-        likes: arrayUnion(currentUser.uid),
-        likedUsers: arrayUnion(userInfo)
+    } catch (finalErr) {
+      console.error("Like toggle completely failed:", finalErr.message);
+      // Revert optimistic update
+      setPaper(prev => prev ? ({ ...prev, likes }) : prev);
+      Swal.fire({
+        title: 'Action Failed',
+        text: 'Unable to update like at this time. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#7a2039'
       });
     }
   };

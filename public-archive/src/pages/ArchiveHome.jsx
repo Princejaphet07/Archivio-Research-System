@@ -112,25 +112,61 @@ function ArchiveHome() {
     }
     trackLike(paper);
     const paperRef = doc(db, 'submissions', paper.id);
-    const likes = paper.likes || [];
+    const likes = Array.isArray(paper?.likes) ? paper.likes : [];
+    const isCurrentlyLiked = likes.includes(currentUser.uid);
     const userInfo = {
       uid: currentUser.uid,
       name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
       email: currentUser.email || ''
     };
-    if (likes.includes(currentUser.uid)) {
-      const existingLikedUser = (paper.likedUsers || []).find(u => u.uid === currentUser.uid);
-      const updates = { likes: arrayRemove(currentUser.uid) };
-      if (existingLikedUser) {
-        updates.likedUsers = arrayRemove(existingLikedUser);
+
+    // Optimistic UI update in publishedPapers
+    setPublishedPapers(prev => prev.map(p => {
+      if (p.id !== paper.id) return p;
+      const updatedLikes = isCurrentlyLiked
+        ? (p.likes || []).filter(uid => uid !== currentUser.uid)
+        : [...(p.likes || []), currentUser.uid];
+      return { ...p, likes: updatedLikes };
+    }));
+
+    try {
+      if (isCurrentlyLiked) {
+        const existingLikedUser = (paper?.likedUsers || []).find(u => u?.uid === currentUser.uid);
+        const updates = { likes: arrayRemove(currentUser.uid) };
+        if (existingLikedUser) {
+          updates.likedUsers = arrayRemove(existingLikedUser);
+        } else {
+          updates.likedUsers = arrayRemove(userInfo);
+        }
+        try {
+          await updateDoc(paperRef, updates);
+        } catch (fullErr) {
+          console.warn("Full like remove failed, fallback to likes array:", fullErr.message);
+          await updateDoc(paperRef, { likes: arrayRemove(currentUser.uid) });
+        }
       } else {
-        updates.likedUsers = arrayRemove(userInfo);
+        try {
+          await updateDoc(paperRef, { 
+            likes: arrayUnion(currentUser.uid),
+            likedUsers: arrayUnion(userInfo)
+          });
+        } catch (fullErr) {
+          console.warn("Full like add failed, fallback to likes array:", fullErr.message);
+          await updateDoc(paperRef, { likes: arrayUnion(currentUser.uid) });
+        }
       }
-      await updateDoc(paperRef, updates);
-    } else {
-      await updateDoc(paperRef, { 
-        likes: arrayUnion(currentUser.uid),
-        likedUsers: arrayUnion(userInfo)
+    } catch (finalErr) {
+      console.error("Like toggle error:", finalErr.message);
+      // Revert optimistic update
+      setPublishedPapers(prev => prev.map(p => {
+        if (p.id !== paper.id) return p;
+        return { ...p, likes };
+      }));
+      Swal.fire({
+        title: 'Action Failed',
+        text: 'Unable to update like at this time. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#7a2039'
       });
     }
   };
