@@ -1146,41 +1146,71 @@ function ReviewSubmissions() {
                             >
                               Review
                             </PremiumButton>
-                            {activeTab === 'needs_review' && (
-                              <PremiumButton 
-                                onClick={() => handleApprove(item)}
-                                variant="primary"
-                                size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1.5"
-                                title="Endorse this verified submission for Dean publishing"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                                Endorse for Dean
-                              </PremiumButton>
-                            )}
-                            {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (
-                              <>
+                            {activeTab === 'needs_review' && (() => {
+                              const readiness = validateSubmissionReadiness(item, requirements);
+                              const isReady = readiness.isReady;
+                              const reasonText = !isReady && readiness.reasons.length > 0 
+                                ? `Incomplete: ${readiness.reasons[0]}` 
+                                : 'Complete and verified for publication';
+                              return (
                                 <PremiumButton 
-                                  onClick={() => handleReject(item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
-                                  title="Forward Dean feedback to student group to revise"
-                                >
-                                  Forward to Student
-                                </PremiumButton>
-                                <PremiumButton 
-                                  onClick={() => handleApprove(item)}
+                                  onClick={() => {
+                                    if (!isReady) return;
+                                    handleApprove(item);
+                                  }}
+                                  disabled={!isReady}
                                   variant="primary"
                                   size="sm"
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1.5"
-                                  title="Re-approve manuscript and return to Dean for publishing"
+                                  className={`text-xs flex items-center gap-1.5 transition-all ${
+                                    isReady 
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
+                                      : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
+                                  }`}
+                                  title={isReady ? "Endorse this verified submission for Dean publishing" : reasonText}
                                 >
                                   <Check className="w-3.5 h-3.5" />
-                                  Re-Approve to Dean
+                                  Endorse for Dean
                                 </PremiumButton>
-                              </>
-                            )}
+                              );
+                            })()}
+                            {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (() => {
+                              const readiness = validateSubmissionReadiness(item, requirements);
+                              const isReady = readiness.isReady;
+                              const reasonText = !isReady && readiness.reasons.length > 0 
+                                ? `Incomplete: ${readiness.reasons[0]}` 
+                                : 'Re-verify all documents first';
+                              return (
+                                <>
+                                  <PremiumButton 
+                                    onClick={() => handleReject(item)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs cursor-pointer"
+                                    title="Forward Dean feedback to student group to revise"
+                                  >
+                                    Forward to Student
+                                  </PremiumButton>
+                                  <PremiumButton 
+                                    onClick={() => {
+                                      if (!isReady) return;
+                                      handleApprove(item);
+                                    }}
+                                    disabled={!isReady}
+                                    variant="primary"
+                                    size="sm"
+                                    className={`text-xs flex items-center gap-1.5 transition-all ${
+                                      isReady 
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
+                                        : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
+                                    }`}
+                                    title={isReady ? "Re-approve manuscript and return to Dean for publishing" : reasonText}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    Re-Approve to Dean
+                                  </PremiumButton>
+                                </>
+                              );
+                            })()}
                             {activeTab === 'approved' && (
                               <PremiumButton 
                                 onClick={() => setCertModalItem(item)}
@@ -1514,18 +1544,51 @@ function ReviewSubmissions() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                {selectedSubmission.reviewStatus !== 'approved' && selectedSubmission.reviewStatus !== 'published' && (
-                  <button
-                    onClick={() => {
-                      setShowReviewModal(false);
-                      handleApprove(selectedSubmission);
-                    }}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Endorse for Dean Publication</span>
-                  </button>
-                )}
+                {selectedSubmission.reviewStatus !== 'approved' && selectedSubmission.reviewStatus !== 'published' && (() => {
+                  const modalReadiness = validateSubmissionReadiness(selectedSubmission, requirements);
+                  const isReady = modalReadiness.isReady;
+                  const incompleteReasons = [];
+                  if (modalReadiness.missingDocs.length > 0) {
+                    incompleteReasons.push(`${modalReadiness.missingDocs.length} missing file(s)`);
+                  }
+                  if (modalReadiness.unapprovedDocs.length > 0) {
+                    incompleteReasons.push(`${modalReadiness.unapprovedDocs.length} unverified file(s)`);
+                  }
+                  if (modalReadiness.hasRevisionsPending) {
+                    incompleteReasons.push('pending revisions');
+                  }
+                  const reasonTooltip = incompleteReasons.length > 0 
+                    ? `Cannot endorse: ${incompleteReasons.join(', ')}`
+                    : 'Please review and verify all documents first';
+
+                  return (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+                      {!isReady && (
+                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Incomplete ({incompleteReasons.join(' · ') || 'Verification Required'})</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (!isReady) return;
+                          setShowReviewModal(false);
+                          handleApprove(selectedSubmission);
+                        }}
+                        disabled={!isReady}
+                        title={isReady ? 'Endorse this verified submission for Dean publication' : reasonTooltip}
+                        className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center flex items-center justify-center gap-1.5 shadow-sm ${
+                          isReady 
+                            ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer active:scale-95'
+                            : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
+                        }`}
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Endorse for Dean Publication</span>
+                      </button>
+                    </div>
+                  );
+                })()}
                 {(selectedSubmission.reviewStatus === 'approved' || selectedSubmission.reviewStatus === 'published') && (
                   <button
                     onClick={() => {

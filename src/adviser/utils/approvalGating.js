@@ -18,19 +18,21 @@ export const validateSubmissionReadiness = (submission, requirements = []) => {
     };
   }
 
-  const uploadedDocs = submission.uploadedDocs || [];
+  const uploadedDocs = Array.isArray(submission.uploadedDocs) ? submission.uploadedDocs : [];
   const approvals = submission.documentApprovals || {};
   const revisions = submission.documentRevisions || {};
+  const documents = submission.documents || {};
   const reasons = [];
 
   // 1. Check required documents vs uploaded documents
   const missingDocs = [];
   requirements.forEach(req => {
+    const docMeta = documents[req.id] || documents[req.title];
     const isUploaded = uploadedDocs.some(docTitle => 
       docTitle === req.id || 
       docTitle === req.title ||
       (req.title && docTitle?.toLowerCase() === req.title?.toLowerCase())
-    );
+    ) || !!docMeta;
     if (!isUploaded) {
       missingDocs.push(req.title || req.id);
     }
@@ -40,12 +42,25 @@ export const validateSubmissionReadiness = (submission, requirements = []) => {
     reasons.push(`Incomplete Submission: ${missingDocs.length} required file(s) have not been uploaded by students.`);
   }
 
-  // 2. Check each uploaded document for adviser review/approval
+  // 2. Check each required / uploaded document for adviser review/approval
   const unapprovedDocs = [];
-  uploadedDocs.forEach(docTitle => {
-    const isApproved = Boolean(approvals[docTitle]);
-    if (!isApproved) {
-      unapprovedDocs.push(docTitle);
+  requirements.forEach(req => {
+    const docMeta = documents[req.id] || documents[req.title];
+    const isUploaded = uploadedDocs.some(docTitle => 
+      docTitle === req.id || 
+      docTitle === req.title ||
+      (req.title && docTitle?.toLowerCase() === req.title?.toLowerCase())
+    ) || !!docMeta;
+
+    if (isUploaded) {
+      const isApproved = Boolean(
+        approvals[req.id] || 
+        approvals[req.title] ||
+        (req.title && Object.keys(approvals).some(k => k.toLowerCase() === req.title.toLowerCase() && approvals[k]))
+      );
+      if (!isApproved) {
+        unapprovedDocs.push(req.title || req.id);
+      }
     }
   });
 
@@ -57,7 +72,7 @@ export const validateSubmissionReadiness = (submission, requirements = []) => {
   const pendingRevisionKeys = Object.keys(revisions).filter(key => Boolean(revisions[key]));
   const hasRevisionsPending = pendingRevisionKeys.length > 0;
   if (hasRevisionsPending) {
-    reasons.push(`Pending Revisions: There are active revision requests on ${pendingRevisionKeys.join(', ')}.`);
+    reasons.push(`Pending Revisions: There are active revision requests that must be resolved first.`);
   }
 
   // 4. Similarity plagiarism check warning
@@ -68,9 +83,15 @@ export const validateSubmissionReadiness = (submission, requirements = []) => {
     reasons.push(similarityWarning);
   }
 
-  const approvedCount = Object.keys(approvals).filter(k => approvals[k] === true).length;
-  const totalRequired = Math.max(requirements.length, uploadedDocs.length);
-  const isReady = reasons.length === 0 && approvedCount >= totalRequired && totalRequired > 0;
+  const approvedCount = requirements.filter(req => {
+    return Boolean(
+      approvals[req.id] || 
+      approvals[req.title] ||
+      (req.title && Object.keys(approvals).some(k => k.toLowerCase() === req.title.toLowerCase() && approvals[k]))
+    );
+  }).length;
+  const totalRequired = Math.max(requirements.length, 1);
+  const isReady = reasons.length === 0 && approvedCount >= requirements.length && requirements.length > 0;
 
   return {
     isReady,
