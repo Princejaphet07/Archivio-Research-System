@@ -11,7 +11,6 @@ import CardSkeleton from '../components/skeletons/CardSkeleton';
 import HorizontalCardSkeleton from '../components/skeletons/HorizontalCardSkeleton';
 import { Card, CardHeader, CardBody, StatCard, PremiumButton, SectionTitle } from '../../components/ui/Card';
 import { 
-  Sparkles, 
   Users, 
   Clock, 
   AlertCircle, 
@@ -168,7 +167,7 @@ function Dashboard() {
             <p className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-1.5">Research Adviser Portal</p>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mb-2 leading-tight flex items-center flex-wrap gap-2">
               <span>{getGreeting()}, {adviserData?.displayName || 'Research Adviser'}</span>
-              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-amber-300 shrink-0 inline-block animate-pulse" />
+              <span className="animate-wave inline-block text-2xl sm:text-3xl select-none" role="img" aria-label="wave">👋</span>
             </h1>
             <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
               {activeGroupCount} active groups under your advisory · {needsReviewCount} submissions ready for review
