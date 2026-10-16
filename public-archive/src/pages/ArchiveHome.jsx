@@ -453,11 +453,11 @@ function ArchiveHome() {
                     <div className="text-xs text-stone-600 dark:text-stone-400 flex items-center gap-3 font-medium">
                       <span
                         onClick={(e) => handleLike(e, paper)}
-                        className="text-rose-600 hover:scale-110 transition-transform cursor-pointer flex items-center gap-1.5 font-bold"
-                        title="Like this paper"
+                        className={`hover:scale-110 transition-transform cursor-pointer flex items-center gap-1.5 font-bold ${isLiked ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 hover:text-[#7a2039]'}`}
+                        title={isLiked ? "Unlike this paper" : "Like this paper"}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke={isLiked ? "none" : "currentColor"} strokeWidth={1.5} className="w-4 h-4 text-rose-600">
-                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isLiked ? "0" : "1.8"} className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.7 0-1.357-.315-1.792-.861l-2.012-2.515a4.5 4.5 0 00-3.513-1.69h-.28c-.414 0-.75-.336-.75-.75V11.25c0-.414.336-.75.75-.75h.28z" />
                         </svg>
                         {paper.likes?.length || 0}
                       </span>

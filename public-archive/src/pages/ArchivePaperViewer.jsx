@@ -1655,14 +1655,12 @@ function ArchivePaperViewer() {
           <div className="flex flex-col items-center gap-1 mt-2">
             <button
               onClick={handleLike}
-              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600' : 'text-stone-500 dark:text-gray-400'}`}
+              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
               title={paper.likes?.includes(currentUser?.uid) ? "Unlike" : "Like"}
             >
-              {paper.likes?.includes(currentUser?.uid) ? (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-              )}
+              <svg className={`w-5 h-5 ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab] fill-current' : 'text-stone-500 dark:text-gray-400'}`} fill={paper.likes?.includes(currentUser?.uid) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={paper.likes?.includes(currentUser?.uid) ? "0" : "1.8"} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.7 0-1.357-.315-1.792-.861l-2.012-2.515a4.5 4.5 0 00-3.513-1.69h-.28c-.414 0-.75-.336-.75-.75V11.25c0-.414.336-.75.75-.75h.28z" />
+              </svg>
             </button>
             <span className="text-[10px] font-bold text-stone-500 dark:text-gray-400">{paper.likes?.length || 0}</span>
             <span className="flex items-center gap-1 text-[11px] font-bold text-stone-500 dark:text-gray-400 mt-2" title="Views">
@@ -1745,9 +1743,9 @@ function ArchivePaperViewer() {
                 <button
                   type="button"
                   onClick={handleLike}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${paper.likes?.includes(currentUser?.uid) ? 'text-red-600 font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
                 >
-                  <span className="text-base">{paper.likes?.includes(currentUser?.uid) ? '❤️' : '🤍'}</span>
+                  <span className="text-base">👍</span>
                   <span className="text-[10px] mt-1">{paper.likes?.length || 0}</span>
                 </button>
                 <button
