@@ -45,7 +45,7 @@ const TEAM_MEMBERS = [
     badgeStyle: 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/60',
     accentGradient: 'bg-gradient-to-r from-[#8c1c38] via-[#a82446] to-[#d6ad60]',
     image: princePhoto,
-    linkedin: 'https://www.linkedin.com/in/prince-japhet-vender',
+    linkedin: 'https://www.linkedin.com/in/prince-japhet-dorotan-vender-a4b3642b2',
     github: 'https://github.com/Princejaphet07',
     email: 'mailto:japhetvender00@gmail.com',
     portfolio: 'https://prince-japhet-portfolio.web.app/'
@@ -61,9 +61,10 @@ const TEAM_MEMBERS = [
     badgeStyle: 'bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/60',
     accentGradient: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400',
     image: jerikaPhoto,
-    linkedin: 'https://www.linkedin.com/in/jerika-zamoras',
+    linkedin: 'https://www.linkedin.com/in/jerika-zamoras-1330ba295/',
     github: 'https://github.com/jezamorasxv',
-    email: 'mailto:jerikazamoras4@gmail.com'
+    email: 'mailto:jerikazamoras4@gmail.com',
+    portfolio: null
   },
   {
     name: 'Hylla Mae Tejada',
@@ -76,9 +77,10 @@ const TEAM_MEMBERS = [
     badgeStyle: 'bg-purple-100 text-purple-900 dark:bg-purple-950/70 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/60',
     accentGradient: 'bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-400',
     image: hyllaPhoto,
-    linkedin: 'https://www.linkedin.com/in/hylla-mae-tejada',
+    linkedin: null,
     github: 'https://github.com/tejadahyllamae',
-    email: 'mailto:tejadahyllamae@gmail.com'
+    email: 'mailto:tejadahyllamae@gmail.com',
+    portfolio: null
   },
   {
     name: 'Andrea Cañete Perote',
@@ -91,9 +93,10 @@ const TEAM_MEMBERS = [
     badgeStyle: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/60',
     accentGradient: 'bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400',
     image: null,
-    linkedin: 'https://www.linkedin.com/in/andrea-canete-perote',
+    linkedin: null,
     github: 'https://github.com/andreavgdeywajk',
-    email: 'mailto:andreaperote04@gmail.com'
+    email: 'mailto:andreaperote04@gmail.com',
+    portfolio: null
   }
 ];
 
@@ -468,31 +471,35 @@ function ArchiveAbout() {
                   )}
 
                   {/* GitHub Button - Official Color */}
-                  <a 
-                    href={member.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 text-[#24292f] dark:text-white shadow-sm border border-stone-200 dark:border-gray-600 hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-200"
-                    title={`Visit GitHub for ${member.name}`}
-                  >
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                    </svg>
-                  </a>
+                  {member.github && (
+                    <a 
+                      href={member.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 text-[#24292f] dark:text-white shadow-sm border border-stone-200 dark:border-gray-600 hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-200"
+                      title={`Visit GitHub for ${member.name}`}
+                    >
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                      </svg>
+                    </a>
+                  )}
 
                   {/* Email Button - Colorful Gmail SVG */}
-                  <a 
-                    href={member.email}
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-stone-200 dark:border-gray-600 hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-200"
-                    title={`Send email regarding ${member.name}`}
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M22 6L12 13L2 6" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M2 6V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V6" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M2 6L12 13L22 6" stroke="#34A853" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M22 6V18C22 19.1046 21.1046 20 20 20H4C2.89543 20 2 19.1046 2 18V6" stroke="#FBBC05" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 2"/>
-                    </svg>
-                  </a>
+                  {member.email && (
+                    <a 
+                      href={member.email}
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-stone-200 dark:border-gray-600 hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-200"
+                      title={`Send email regarding ${member.name}`}
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22 6L12 13L2 6" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 6V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V6" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 6L12 13L22 6" stroke="#34A853" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M22 6V18C22 19.1046 21.1046 20 20 20H4C2.89543 20 2 19.1046 2 18V6" stroke="#FBBC05" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 2"/>
+                      </svg>
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
