@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -301,6 +301,77 @@ export default function Dashboard({ activePage }) {
 
   }, [allRawSubmissions, allGroups, chartFilter, adviserTableYear, adviserSortOrder]);
 
+  // Accurate group requirements progress computation (Approved vs Pending per research group)
+  // Must remain before if (loading) return to obey React Rules of Hooks
+  const groupRequirementsData = useMemo(() => {
+    return allGroups.map((group, index) => {
+      const sub = allRawSubmissions.find(s => 
+        (s.groupId && (s.groupId === group.id || s.groupId === group.groupId)) ||
+        (s.studentUid && s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle)) ||
+        (group.groupName && s.groupName === group.groupName)
+      ) || {};
+
+      // Applicable requirements: global + adviser-scoped
+      const applicableReqs = allRequirements.filter(r => 
+        r.scope === 'global' || 
+        (r.scope === 'adviser' && r.adviserUid === group.adviserUid)
+      );
+
+      // Total requirements: if no requirements configured in db yet, standard is at least 1 (Final Manuscript)
+      const totalReqs = applicableReqs.length > 0 ? applicableReqs.length : 1;
+      
+      const approvals = sub.documentApprovals || {};
+      const isPublished = sub.reviewStatus === 'published';
+      const isApproved = sub.reviewStatus === 'approved';
+
+      let approvedCount = 0;
+      if (isPublished || isApproved) {
+        approvedCount = totalReqs;
+      } else if (applicableReqs.length > 0) {
+        approvedCount = applicableReqs.filter(req => {
+          return Boolean(
+            approvals[req.id] || 
+            approvals[req.title] ||
+            (req.title && Object.keys(approvals).some(k => k.toLowerCase() === req.title.toLowerCase() && approvals[k]))
+          );
+        }).length;
+      } else {
+        approvedCount = (sub.manuscriptUrl || sub.fileUrl) && sub.reviewStatus === 'approved' ? 1 : 0;
+      }
+
+      approvedCount = Math.min(approvedCount, totalReqs);
+      const pendingCount = Math.max(0, totalReqs - approvedCount);
+      const completionRate = totalReqs > 0 ? Math.round((approvedCount / totalReqs) * 100) : 0;
+
+      const rawName = group.groupName || `Group ${index + 1}`;
+      const shortName = rawName.length > 14 ? rawName.slice(0, 12) + '…' : rawName;
+
+      return {
+        id: group.id || `group-${index}`,
+        groupName: rawName,
+        shortName,
+        researchTitle: group.researchTitle || sub.researchTitle || sub.title || 'Untitled Research',
+        adviserName: group.adviserName || sub.adviserName || 'Not Assigned',
+        approved: approvedCount,
+        pending: pendingCount,
+        total: totalReqs,
+        completionRate,
+        isCompleted: pendingCount === 0 && approvedCount > 0,
+        status: sub.reviewStatus || 'in_progress'
+      };
+    });
+  }, [allGroups, allRawSubmissions, allRequirements]);
+
+  const filteredGroupChartData = useMemo(() => {
+    let list = groupRequirementsData;
+    if (groupReqFilter === 'pending') {
+      list = list.filter(g => g.pending > 0);
+    } else if (groupReqFilter === 'completed') {
+      list = list.filter(g => g.isCompleted);
+    }
+    return list;
+  }, [groupRequirementsData, groupReqFilter]);
+
   const handleSortFlip = () => {
     setIsRefreshing(true);
     setAdviserSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
@@ -360,76 +431,6 @@ export default function Dashboard({ activePage }) {
   const chartData = yearlyStats;
   const maxCount = Math.max(...chartData.map(d => d.count || 0), 10);
 
-  // Accurate group requirements progress computation (Approved vs Pending per research group)
-  const groupRequirementsData = React.useMemo(() => {
-    return allGroups.map((group, index) => {
-      const sub = allRawSubmissions.find(s => 
-        (s.groupId && (s.groupId === group.id || s.groupId === group.groupId)) ||
-        (s.studentUid && s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle)) ||
-        (group.groupName && s.groupName === group.groupName)
-      ) || {};
-
-      // Applicable requirements: global + adviser-scoped
-      const applicableReqs = allRequirements.filter(r => 
-        r.scope === 'global' || 
-        (r.scope === 'adviser' && r.adviserUid === group.adviserUid)
-      );
-
-      // Total requirements: if no requirements configured in db yet, standard is at least 1 (Final Manuscript)
-      const totalReqs = applicableReqs.length > 0 ? applicableReqs.length : 1;
-      
-      const approvals = sub.documentApprovals || {};
-      const isPublished = sub.reviewStatus === 'published';
-      const isApproved = sub.reviewStatus === 'approved';
-
-      let approvedCount = 0;
-      if (isPublished || isApproved) {
-        approvedCount = totalReqs;
-      } else if (applicableReqs.length > 0) {
-        approvedCount = applicableReqs.filter(req => {
-          return Boolean(
-            approvals[req.id] || 
-            approvals[req.title] ||
-            (req.title && Object.keys(approvals).some(k => k.toLowerCase() === req.title.toLowerCase() && approvals[k]))
-          );
-        }).length;
-      } else {
-        approvedCount = (sub.manuscriptUrl || sub.fileUrl) && sub.reviewStatus === 'approved' ? 1 : 0;
-      }
-
-      approvedCount = Math.min(approvedCount, totalReqs);
-      const pendingCount = Math.max(0, totalReqs - approvedCount);
-      const completionRate = totalReqs > 0 ? Math.round((approvedCount / totalReqs) * 100) : 0;
-
-      const rawName = group.groupName || `Group ${index + 1}`;
-      const shortName = rawName.length > 14 ? rawName.slice(0, 12) + '…' : rawName;
-
-      return {
-        id: group.id || `group-${index}`,
-        groupName: rawName,
-        shortName,
-        researchTitle: group.researchTitle || sub.researchTitle || sub.title || 'Untitled Research',
-        adviserName: group.adviserName || sub.adviserName || 'Not Assigned',
-        approved: approvedCount,
-        pending: pendingCount,
-        total: totalReqs,
-        completionRate,
-        isCompleted: pendingCount === 0 && approvedCount > 0,
-        status: sub.reviewStatus || 'in_progress'
-      };
-    });
-  }, [allGroups, allRawSubmissions, allRequirements]);
-
-  const filteredGroupChartData = React.useMemo(() => {
-    let list = groupRequirementsData;
-    if (groupReqFilter === 'pending') {
-      list = list.filter(g => g.pending > 0);
-    } else if (groupReqFilter === 'completed') {
-      list = list.filter(g => g.isCompleted);
-    }
-    return list;
-  }, [groupRequirementsData, groupReqFilter]);
-  
   // Color palette for charts
   const COLORS = ['#590000', '#770000', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
   const BRAND_COLORS = ['#590000', '#770000', '#9e2752', '#d4af37', '#f8d070', '#8a7a7a', '#d6cfc7'];
