@@ -13,6 +13,7 @@ import { validateStudentSchoolEmail, verifySchoolEmailOnline } from '../../utils
 import { authFetch } from '../../utils/authFetch';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { sendEmailWithFallback } from '../../utils/emailDispatcher';
+import PrivacyPolicyModal from '../../components/PrivacyPolicyModal';
 
 // Helper to generate a compliant, strong temporary password
 const generateTemporaryPassword = () => {
@@ -208,6 +209,7 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
   const [groupData, setGroupData] = useState(null);
   const [invitationsMap, setInvitationsMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
 
   // Identity and role resolution
   const currentUid = studentUid || auth.currentUser?.uid || studentData?.uid;
@@ -431,11 +433,6 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
                 I agree to the <a href="javascript:void(0)" id="swal-privacy-toggle" style="color: #7B1F35; font-weight: 600; text-decoration: underline;">Privacy Policy</a> and authorize creating an account and sending login credentials. <span class="text-red-500 font-bold">*</span>
               </label>
             </div>
-            <div id="swal-privacy-details" style="display: none; margin-top: 10px; padding: 10px 12px; background: #faf6f0; border-radius: 6px; border: 1px solid #e7dfd5; font-size: 11px; line-height: 1.5; color: #5a4b41; max-height: 120px; overflow-y: auto;">
-              <p style="margin: 0 0 6px 0; font-weight: 700; color: #7B1F35;">Archivio Data Privacy Notice (RA 10173)</p>
-              <p style="margin: 0 0 6px 0;">By creating this member account, you confirm that their school email and student ID are used solely for academic research collaboration, manuscript submission, and progress tracking in SWU PHINMA.</p>
-              <p style="margin: 0;">Personal details and generated credentials are processed strictly in accordance with Republic Act No. 10173 (Data Privacy Act of 2012).</p>
-            </div>
           </div>
         </div>
       `,
@@ -447,17 +444,10 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
       cancelButtonColor: '#6B7280',
       didOpen: () => {
         const toggleBtn = document.getElementById('swal-privacy-toggle');
-        const detailsBox = document.getElementById('swal-privacy-details');
-        if (toggleBtn && detailsBox) {
+        if (toggleBtn) {
           toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (detailsBox.style.display === 'none') {
-              detailsBox.style.display = 'block';
-              toggleBtn.innerText = 'Hide Privacy Policy';
-            } else {
-              detailsBox.style.display = 'none';
-              toggleBtn.innerText = 'Privacy Policy';
-            }
+            setShowPrivacyPolicyModal(true);
           });
         }
       },
@@ -1565,6 +1555,18 @@ export default function MyGroupPage({ onLogout, studentName, initials, groupName
           </div>
         </div>
       </div>
+
+      {/* Official Standalone Data Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={showPrivacyPolicyModal}
+        mode="privacy"
+        onClose={() => setShowPrivacyPolicyModal(false)}
+        onAccept={() => {
+          setShowPrivacyPolicyModal(false);
+          const cb = document.getElementById('swal-privacy-checkbox');
+          if (cb) cb.checked = true;
+        }}
+      />
     </div>
   );
 }

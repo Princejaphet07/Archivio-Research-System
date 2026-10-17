@@ -55,7 +55,7 @@ export default function PrivacyPolicyModal({ isOpen, onClose, onAccept, initialT
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 animate-fade-in-up">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 animate-fade-in-up">
       <div className="bg-[#fcfaf5] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-[#c1b49a] max-h-[92vh]">
         
         {/* Header */}
