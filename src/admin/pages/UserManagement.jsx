@@ -89,6 +89,7 @@ export default function UserManagement() {
   const [programsList, setProgramsList] = useState([]);
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
   const [newDeptName, setNewDeptName] = useState('');
+  const [newDeptColor, setNewDeptColor] = useState('#801e38');
   const [addingDept, setAddingDept] = useState(false);
   const [showProgramsDropdown, setShowProgramsDropdown] = useState(false);
   const [selectedPrograms, setSelectedPrograms] = useState([]);
@@ -273,12 +274,14 @@ export default function UserManagement() {
 
       await addDoc(collection(db, 'departments'), {
         name: trimmedDept,
+        color: newDeptColor || '#801e38',
         status: 'Active',
         createdAt: new Date().toISOString()
       });
       setFormData(prev => ({ ...prev, department: trimmedDept }));
       setFormErrors(prev => ({ ...prev, department: '' }));
       setNewDeptName('');
+      setNewDeptColor('#801e38');
       setShowAddDeptModal(false);
       Swal.fire({ icon: 'success', title: 'Added!', text: 'Department added successfully.', timer: 1500, showConfirmButton: false });
     } catch (err) {
@@ -2465,33 +2468,107 @@ export default function UserManagement() {
       {showAddDeptModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#801e38] px-3 py-3 flex justify-between items-center">
+            <div className="bg-[#801e38] px-4 py-3 flex justify-between items-center" style={{ backgroundColor: newDeptColor || '#801e38' }}>
               <h3 className="text-white font-bold text-lg">Add New Department</h3>
-              <button onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+              <button onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); setNewDeptColor('#801e38'); }} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            <div className="p-6">
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">Department Name <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                placeholder="e.g. College of Engineering"
-                value={newDeptName}
-                onChange={(e) => setNewDeptName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddNewDepartment()}
-                className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#801e38] focus:ring-1 focus:ring-[#801e38] text-stone-900 dark:text-stone-50"
-                autoFocus
-              />
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-200 mb-2">Department Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. College of Nursing"
+                  value={newDeptName}
+                  onChange={(e) => setNewDeptName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddNewDepartment()}
+                  className="w-full bg-white dark:bg-[#1e1e1e] border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none text-stone-900 dark:text-stone-50"
+                  style={{ borderColor: newDeptColor }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Department Theme Color */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200">
+                    Department Theme Color <span className="text-stone-400 font-normal">(Portal Accents)</span>
+                  </label>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded text-white shadow-sm" style={{ backgroundColor: newDeptColor }}>
+                    {newDeptColor}
+                  </span>
+                </div>
+
+                {/* Preset Palettes */}
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {[
+                    { label: 'Maroon (IT)', color: '#801e38' },
+                    { label: 'Pink (Nursing)', color: '#ec4899' },
+                    { label: 'Blue (Engineering)', color: '#2563eb' },
+                    { label: 'Green (Business)', color: '#059669' },
+                    { label: 'Purple (Arts & Sci)', color: '#7c3aed' },
+                    { label: 'Amber (Education)', color: '#d97706' },
+                    { label: 'Navy (Criminology)', color: '#1e3a8a' },
+                    { label: 'Crimson (Medicine)', color: '#dc2626' },
+                    { label: 'Teal (Hospitality)', color: '#0d9488' },
+                    { label: 'Slate (Maritime)', color: '#475569' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      onClick={() => setNewDeptColor(preset.color)}
+                      title={preset.label}
+                      className={`h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                        newDeptColor === preset.color
+                          ? 'ring-2 ring-offset-2 ring-stone-800 dark:ring-white scale-105 shadow-md'
+                          : 'hover:scale-105 hover:opacity-90'
+                      }`}
+                      style={{ backgroundColor: preset.color }}
+                    >
+                      {newDeptColor === preset.color && (
+                        <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Color Input & Preview */}
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/50">
+                  <input
+                    type="color"
+                    value={newDeptColor}
+                    onChange={(e) => setNewDeptColor(e.target.value)}
+                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent p-0"
+                    title="Choose custom hex color"
+                  />
+                  <div className="flex-1">
+                    <span className="text-xs font-mono font-bold text-stone-700 dark:text-stone-300 uppercase">
+                      {newDeptColor}
+                    </span>
+                    <span className="text-[10px] text-stone-500 block">Custom Color Picker</span>
+                  </div>
+                  <div
+                    className="px-2.5 py-1 rounded text-white text-[11px] font-bold shadow-sm"
+                    style={{ backgroundColor: newDeptColor }}
+                  >
+                    Theme Preview
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="bg-stone-50 dark:bg-[#252525] px-3 py-3 flex justify-end gap-3 border-t border-stone-200 dark:border-stone-700">
+            <div className="bg-stone-50 dark:bg-[#252525] px-4 py-3 flex justify-end gap-3 border-t border-stone-200 dark:border-stone-700">
               <button
-                onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); }}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition"
+                onClick={() => { setShowAddDeptModal(false); setNewDeptName(''); setNewDeptColor('#801e38'); }}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-[#1e1e1e] border border-stone-300 hover:bg-stone-100 dark:bg-stone-800 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddNewDepartment}
                 disabled={addingDept || !newDeptName.trim()}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer shadow-md"
+                style={{ backgroundColor: newDeptColor || '#059669' }}
               >
                 {addingDept ? 'Adding...' : <><Plus size={16} /> Add Department</>}
               </button>

@@ -2,8 +2,9 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
-import { UserProvider } from './context/UserContext';
+import { UserProvider, useUser } from './context/UserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
+import { DepartmentThemeProvider } from '../context/DepartmentThemeContext';
 
 // Login loads immediately
 import Login from './pages/Login';
@@ -25,6 +26,29 @@ const UserManagement = lazyWithRetry(() => import('./pages/UserManagement'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 
 const PageLoader = () => <LoadingScreen text="LOADING DEAN..." />;
+
+function DeanThemedRoutes() {
+  const { deanData } = useUser();
+  return (
+    <DepartmentThemeProvider userDepartment={deanData?.department || deanData?.college || ''}>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="research-records" element={<ResearchRecords />} />
+          <Route path="publish-queue" element={<PublishQueue />} />
+          <Route path="requirements" element={<Requirements />} />
+          <Route path="invitations" element={<Invitations />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="user-management" element={<UserManagement />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
+          <Route path="my-profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
+          <Route path="/" element={<Navigate to="/dean/dashboard" replace />} />
+        </Routes>
+      </Suspense>
+    </DepartmentThemeProvider>
+  );
+}
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -57,21 +81,7 @@ function App() {
             element={
               <DarkModeProvider>
                 <UserProvider>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="research-records" element={<ResearchRecords />} />
-                    <Route path="publish-queue" element={<PublishQueue />} />
-                    <Route path="requirements" element={<Requirements />} />
-                    <Route path="invitations" element={<Invitations />} />
-                    <Route path="reports" element={<Reports />} />
-                    <Route path="user-management" element={<UserManagement />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
-                    <Route path="my-profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
-                    <Route path="/" element={<Navigate to="/dean/dashboard" replace />} />
-                  </Routes>
-                  </Suspense>
+                  <DeanThemedRoutes />
                 </UserProvider>
               </DarkModeProvider>
           }

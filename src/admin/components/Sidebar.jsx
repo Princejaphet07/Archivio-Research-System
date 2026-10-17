@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
+import { useSystemLogo } from '../../hooks/useSystemLogo';
 import { useUser } from '../context/UserContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
@@ -12,6 +13,7 @@ function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useUser();
+  const { logoUrl } = useSystemLogo();
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
   const moduleAccess = currentUser?.moduleAccess || {};
@@ -129,7 +131,7 @@ function Sidebar() {
       <div>
         {/* Logo Header */}
         <div className="p-6 border-b border-white/5 flex items-center gap-3">
-          <img src={logo} alt="ARCHIVIO" className="w-10 h-10 rounded-full border border-white/20 object-contain bg-white" />
+          <img src={logoUrl || logo} alt="ARCHIVIO" className="w-10 h-10 rounded-full border border-white/20 object-contain bg-white" />
           <div>
             <h1 className="text-base font-serif font-bold tracking-widest text-[#f5ebd9]">ARCHIVIO</h1>
             <div className="flex items-center gap-2 mt-0.5">

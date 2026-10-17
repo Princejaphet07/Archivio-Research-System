@@ -7,6 +7,7 @@ import { Mail, LockKeyhole } from 'lucide-react';
 import ReCaptcha from '../components/ReCaptcha';
 
 import logo from '../assets/logo.png';
+import { useSystemLogo } from '../hooks/useSystemLogo';
 import loginBg from '../assets/parchment.png';
 import tornEdge from '../assets/torn-edge.png';
 import maroonBg from '../assets/maroon-bg.png';
@@ -18,6 +19,7 @@ function UnifiedLogin() {
   const navigate = useNavigate();
   // Real-time Cloud Firestore Repository Stats
   const { stats } = useRepositoryStats();
+  const { logoUrl } = useSystemLogo();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loginEmail, setLoginEmail] = useState(localStorage.getItem('archivio_remembered_email') || '');
@@ -313,7 +315,7 @@ function UnifiedLogin() {
         <div className="flex flex-col items-center text-center space-y-3 lg:space-y-4 max-w-md relative z-30">
           <div className="flex items-center justify-center">
             <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-full flex items-center justify-center p-1.5 shadow-lg border border-white/20">
-              <img src={logo} alt="ARCHIVIO Logo" className="w-full h-full object-contain rounded-full" />
+              <img src={logoUrl || logo} alt="ARCHIVIO Logo" className="w-full h-full object-contain rounded-full" />
             </div>
           </div>
           <p className="text-[#d6ad60] text-[11px] lg:text-xs font-bold tracking-[0.25em] uppercase mt-1">SWU PHINMA</p>

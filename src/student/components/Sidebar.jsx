@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import swuLogoSeal from '../../assets/new icon.png';
+import { useSystemLogo } from '../../hooks/useSystemLogo';
+import { useDepartmentTheme } from '../../context/DepartmentThemeContext';
 import { db, auth } from '../../firebase/config';
 import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
@@ -8,6 +10,9 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
   const [missingCount, setMissingCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [internalGroupStatus, setInternalGroupStatus] = useState(groupStatus || null);
+  const [studentDept, setStudentDept] = useState('');
+  const { logoUrl } = useSystemLogo();
+  const { theme } = useDepartmentTheme(studentDept);
 
   useEffect(() => {
     if (groupStatus !== undefined && groupStatus !== null) {
@@ -40,12 +45,14 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
     const uid = auth.currentUser?.uid;
     if (!uid) return;
 
-    // Real-time listener for student approval status
+    // Real-time listener for student approval status & department
     const unsubStudent = onSnapshot(doc(db, 'students', uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         const status = data.groupStatus || data.groupMembers?.groupStatus || 'approved';
         setInternalGroupStatus(status);
+        const dept = data.department || data.program || data.groupMembers?.department || '';
+        if (dept) setStudentDept(dept);
       }
     }, (err) => {
       console.warn('Sidebar student status listener notice:', err.message);
@@ -203,22 +210,33 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
                 ? 'opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 bg-white/5'
                 : 'opacity-0'
           }`} 
+          style={!isLocked && isActive ? {
+            background: `linear-gradient(to right, ${theme.primary}55, transparent)`,
+            border: `1px solid ${theme.primary}80`
+          } : {}}
         />
         
         <div 
-          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#d0a36e] ${
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/5 rounded-r-full transition-all duration-300 ease-out ${
             !isLocked && isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
           }`}
+          style={{
+            backgroundColor: theme.accent || '#d0a36e',
+            boxShadow: `0 0 10px ${theme.accent || '#d0a36e'}`
+          }}
         />
 
         <div className={`relative flex items-center gap-3 z-10 transform transition-transform duration-200 ${!isLocked ? 'group-hover:translate-x-1' : ''}`}>
-          <div className={`transition-all duration-200 ${
-            isLocked
-              ? 'text-stone-400/50'
-              : isActive 
-                ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' 
-                : 'text-gray-300 dark:text-stone-300 group-hover:text-white'
-          }`}>
+          <div 
+            className={`transition-all duration-200 ${
+              isLocked
+                ? 'text-stone-400/50'
+                : isActive 
+                  ? 'scale-110' 
+                  : 'text-gray-300 dark:text-stone-300 group-hover:text-white'
+            }`}
+            style={!isLocked && isActive ? { color: theme.accent || '#d0a36e', filter: `drop-shadow(0 0 6px ${theme.accent || '#d0a36e'}88)` } : {}}
+          >
             {icon}
           </div>
           <span className={`tracking-wide text-[13px] ${isLocked ? 'text-stone-300/60 font-medium' : ''}`}>{name}</span>
@@ -235,9 +253,10 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
             </svg>
           </div>
         ) : badge ? (
-          <span className={`relative z-10 text-[10px] font-bold min-w-[18px] h-4.5 px-1.5 flex items-center justify-center rounded-full shadow-sm transition-all duration-200 ${
-            isActive ? 'bg-[#d0a36e] text-[#541b2f]' : 'bg-[#CF3645] text-white'
-          }`}>
+          <span 
+            className="relative z-10 text-[10px] font-bold min-w-[18px] h-4.5 px-1.5 flex items-center justify-center rounded-full shadow-sm transition-all duration-200"
+            style={isActive ? { backgroundColor: theme.accent || '#d0a36e', color: theme.dark || '#541b2f' } : { backgroundColor: '#CF3645', color: '#fff' }}
+          >
             {badge}
           </span>
         ) : null}
@@ -258,9 +277,13 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
 
       {/* Sidebar Drawer Container */}
       <aside 
-        className={`fixed lg:static top-0 left-0 h-[100dvh] lg:h-screen w-[290px] max-w-[84vw] lg:w-[260px] bg-[#541b2f] dark:bg-stone-950 flex flex-col justify-between z-[100] lg:z-auto transition-transform duration-300 ease-in-out font-sans border-r border-[#6b253e] dark:border-stone-800 shadow-2xl lg:shadow-none overflow-y-auto scrollbar-hide will-change-transform ${
+        className={`fixed lg:static top-0 left-0 h-[100dvh] lg:h-screen w-[290px] max-w-[84vw] lg:w-[260px] text-white flex flex-col justify-between z-[100] lg:z-auto transition-all duration-300 ease-in-out font-sans border-r shadow-2xl lg:shadow-none overflow-y-auto scrollbar-hide will-change-transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        style={{
+          backgroundColor: theme.dark || '#541b2f',
+          borderColor: theme.darker || '#6b253e'
+        }}
         aria-label="Sidebar Navigation"
       >
         
@@ -268,12 +291,17 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
           {/* Drawer Top Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4 lg:px-6 lg:pt-8 lg:pb-8 border-b border-white/10 lg:border-none">
             <div className="flex items-center gap-3">
-              <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center overflow-hidden w-11 h-11 shrink-0 shadow-sm">
-                <img src={swuLogoSeal} alt="ARCHIVIO" className="w-full h-full object-cover rounded-full" />
+              <div 
+                className="bg-white/10 p-1.5 rounded-full border flex items-center justify-center overflow-hidden w-11 h-11 shrink-0 shadow-sm"
+                style={{ borderColor: `${theme.accent || '#d0a36e'}80` }}
+              >
+                <img src={logoUrl || swuLogoSeal} alt="ARCHIVIO" className="w-full h-full object-contain rounded-full" />
               </div>
               <div>
                 <span className="text-[17px] font-bold text-white tracking-wide block leading-tight">ARCHIVIO</span>
-                <span className="text-[11px] text-[#d0a36e] font-medium uppercase tracking-wider block mt-0.5">Student Portal</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider block mt-0.5" style={{ color: theme.accent || '#d0a36e' }}>
+                  {studentDept || 'Student Portal'}
+                </span>
               </div>
             </div>
             {/* Mobile close button (✕) */}

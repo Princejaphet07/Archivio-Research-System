@@ -4,6 +4,8 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { collection, onSnapshot, query, where, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
+import { useSystemLogo } from '../../hooks/useSystemLogo';
+import { useDepartmentTheme } from '../../context/DepartmentThemeContext';
 import logo from '../../assets/logo.png';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
@@ -98,6 +100,8 @@ export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const activePage = location.pathname.split('/').pop() || 'dashboard';
   const { deanData } = useUser();
+  const { logoUrl } = useSystemLogo();
+  const { theme } = useDepartmentTheme(deanData?.department || deanData?.college);
   const [counts, setCounts] = useState({ researchRecordsNew: 0, researchRecordsTotal: 0, publishQueue: 0, userManagement: 0 });
   const [showSwitchModal, setShowSwitchModal] = useState(false);
 
@@ -228,19 +232,30 @@ export default function Sidebar({ onNavigate }) {
         <div 
           className={`absolute inset-0 rounded-xl transition-all duration-300 ease-out ${
             isActive 
-              ? 'bg-gradient-to-r from-white/15 to-transparent border border-white/10 opacity-100 translate-x-0' 
+              ? 'opacity-100 translate-x-0' 
               : 'bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4'
-          }`} 
+          }`}
+          style={isActive ? {
+            background: `linear-gradient(to right, ${theme.primary}55, transparent)`,
+            border: `1px solid ${theme.primary}80`
+          } : {}}
         />
         
         <div 
-          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#f8d070] rounded-r-full transition-all duration-300 ease-out shadow-[0_0_10px_#f8d070] ${
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 rounded-r-full transition-all duration-300 ease-out ${
             isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
           }`}
+          style={{
+            backgroundColor: theme.accent || '#f8d070',
+            boxShadow: `0 0 10px ${theme.accent || '#f8d070'}`
+          }}
         />
 
         <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-300 group-hover:translate-x-1">
-          <div className={`transition-all duration-300 ${isActive ? 'text-[#f8d070] scale-110 drop-shadow-[0_0_8px_rgba(248,208,112,0.5)]' : 'text-stone-400 group-hover:text-white'}`}>
+          <div 
+            className={`transition-all duration-300 ${isActive ? 'scale-110' : 'text-stone-400 group-hover:text-white'}`}
+            style={isActive ? { color: theme.accent || '#f8d070', filter: `drop-shadow(0 0 6px ${theme.accent || '#f8d070'}88)` } : {}}
+          >
             {icon}
           </div>
           <span className="tracking-wide">{label}</span>
@@ -257,27 +272,48 @@ export default function Sidebar({ onNavigate }) {
 
   return (
     <>
-      <aside className="w-[260px] bg-[#590000] dark:bg-stone-950 flex flex-col h-screen text-stone-300 font-sans shrink-0 border-r border-[#770000]/40 dark:border-stone-800">
+      <aside 
+        className="w-[260px] flex flex-col h-screen text-stone-300 font-sans shrink-0 border-r transition-colors duration-300"
+        style={{
+          backgroundColor: theme.dark || '#590000',
+          borderColor: theme.darker || '#400000'
+        }}
+      >
 
       {/* LOGO AREA */}
       <div className="p-6 flex items-center gap-3">
-        <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 flex items-center justify-center shrink-0">
-          <img src={logo} alt="ARCHIVIO Logo" className="w-8 h-8 object-contain" />
+        <div 
+          className="bg-white/10 p-1.5 rounded-full border flex items-center justify-center shrink-0 shadow-sm"
+          style={{ borderColor: `${theme.accent || '#d0a36e'}80` }}
+        >
+          <img src={logoUrl || logo} alt="ARCHIVIO Logo" className="w-8 h-8 object-contain" />
         </div>
         <div>
           <h1 className="text-white font-serif text-xl font-bold tracking-wider leading-none mb-1">ARCHIVIO</h1>
-          <p className="text-[9px] text-[#d0a36e] uppercase tracking-[0.2em]">Research Archive</p>
+          <p className="text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: theme.accent || '#d0a36e' }}>
+            {deanData?.department || 'Research Archive'}
+          </p>
         </div>
       </div>
 
-      {/* MODE TOGGLE */}
+      {/* MODE TOGGLE & DEPT THEME BADGE */}
       <div className="px-5 mb-6">
-        <div className="flex items-center justify-between bg-black/20 rounded-lg py-2 px-3 border border-white/5 shadow-inner">
+        <div className="flex items-center justify-between bg-black/25 rounded-lg py-2 px-3 border border-white/10 shadow-inner">
           <span className="text-xs text-stone-200 font-bold flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#f8d070]"></div>
+            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: theme.accent || '#f8d070' }}></div>
             DEAN MODE
           </span>
-          <span className="text-[10px] bg-[#f8d070]/20 text-[#f8d070] px-2 py-0.5 rounded-md font-bold">Active</span>
+          <span 
+            className="text-[10px] px-2 py-0.5 rounded-md font-bold truncate max-w-[110px]"
+            style={{
+              backgroundColor: `${theme.primary}33`,
+              color: theme.accent || '#f8d070',
+              border: `1px solid ${theme.primary}66`
+            }}
+            title={deanData?.department || 'Active'}
+          >
+            {deanData?.department || 'Active'}
+          </span>
         </div>
       </div>
 

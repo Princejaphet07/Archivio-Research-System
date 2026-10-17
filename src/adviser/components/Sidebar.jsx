@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../../assets/logo.png';
+import { useSystemLogo } from '../../hooks/useSystemLogo';
+import { useDepartmentTheme } from '../../context/DepartmentThemeContext';
 import { useAdviser } from '../context/AdviserContext';
 import { db, auth } from '../firebase/config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -13,6 +15,8 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
   const path = location.pathname;
   const navigate = useNavigate();
   const { adviserData, userRole } = useAdviser();
+  const { logoUrl } = useSystemLogo();
+  const { theme } = useDepartmentTheme(adviserData?.department || adviserData?.program);
   const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
 
   const [showSwitchModal, setShowSwitchModal] = useState(false);
@@ -172,28 +176,40 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
         <div 
           className={`absolute inset-0 rounded-xl transition-all duration-200 ease-out ${
             isActive 
-              ? 'bg-gradient-to-r from-white/15 to-transparent border border-white/10 opacity-100 translate-x-0' 
+              ? 'opacity-100 translate-x-0' 
               : 'bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4'
           }`} 
+          style={isActive ? {
+            background: `linear-gradient(to right, ${theme.primary}55, transparent)`,
+            border: `1px solid ${theme.primary}80`
+          } : {}}
         />
         
         <div 
-          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#d0a36e] rounded-r-full transition-all duration-200 ease-out shadow-[0_0_10px_#d0a36e] ${
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 rounded-r-full transition-all duration-200 ease-out ${
             isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
           }`}
+          style={{
+            backgroundColor: theme.accent || '#d0a36e',
+            boxShadow: `0 0 10px ${theme.accent || '#d0a36e'}`
+          }}
         />
 
         <div className="relative flex items-center gap-3 z-10 transform transition-transform duration-200 group-hover:translate-x-1">
-          <div className={`transition-all duration-200 ${isActive ? 'text-[#d0a36e] scale-110 drop-shadow-[0_0_8px_rgba(208,163,110,0.5)]' : 'text-stone-400 group-hover:text-white'}`}>
+          <div 
+            className={`transition-all duration-200 ${isActive ? 'scale-110' : 'text-stone-400 group-hover:text-white'}`}
+            style={isActive ? { color: theme.accent || '#d0a36e', filter: `drop-shadow(0 0 6px ${theme.accent || '#d0a36e'}88)` } : {}}
+          >
             {icon}
           </div>
           <span className="tracking-wide text-xs">{label}</span>
         </div>
         
         {badge && (
-          <span className={`relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-200 ${
-            isActive ? 'bg-[#d0a36e] text-[#590000]' : 'bg-red-500 text-white'
-          }`}>
+          <span 
+            className="relative z-10 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm transition-all duration-200"
+            style={isActive ? { backgroundColor: theme.accent || '#d0a36e', color: theme.dark || '#590000' } : { backgroundColor: '#ef4444', color: '#fff' }}
+          >
             {badge}
           </span>
         )}
@@ -214,19 +230,28 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
 
       {/* Sidebar Container: Fixed slide-out on mobile, static on desktop */}
       <aside 
-        className={`fixed md:static top-0 left-0 h-[100dvh] md:h-screen w-[285px] max-w-[85vw] md:w-64 bg-[#590000] dark:bg-stone-950 text-white flex flex-col z-[100] md:z-20 transition-transform duration-300 ease-in-out font-sans border-r border-[#700000] dark:border-stone-800 shadow-2xl md:shadow-xl overflow-hidden ${
+        className={`fixed md:static top-0 left-0 h-[100dvh] md:h-screen w-[285px] max-w-[85vw] md:w-64 text-white flex flex-col z-[100] md:z-20 transition-all duration-300 ease-in-out font-sans border-r shadow-2xl md:shadow-xl overflow-hidden ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
+        style={{
+          backgroundColor: theme.dark || '#590000',
+          borderColor: theme.darker || '#700000'
+        }}
       >
         {/* Brand & Logo Header */}
         <div className="p-5 md:p-6 flex items-center justify-between border-b border-white/10 md:border-none">
           <div className="flex items-center gap-3">
-            <div className="bg-white/10 p-1.5 rounded-full border border-[#d0a36e]/50 shrink-0 shadow-sm">
-              <img src={logoImg} alt="Archivio" className="w-8 h-8 object-contain" />
+            <div 
+              className="bg-white/10 p-1.5 rounded-full border shrink-0 shadow-sm"
+              style={{ borderColor: `${theme.accent || '#d0a36e'}80` }}
+            >
+              <img src={logoUrl || logoImg} alt="Archivio" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <h1 className="font-serif font-bold tracking-widest text-lg leading-tight">ARCHIVIO</h1>
-              <p className="text-[9px] text-[#d0a36e] tracking-widest uppercase">Research Archive</p>
+              <p className="text-[9px] tracking-widest uppercase font-semibold" style={{ color: theme.accent || '#d0a36e' }}>
+                {adviserData?.department || 'Research Archive'}
+              </p>
             </div>
           </div>
 

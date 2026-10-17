@@ -9,6 +9,7 @@ import { auth } from '../firebase/config';
 import { logActivity } from '../firebase/logActivity';
 import Swal from 'sweetalert2';
 import logo from '../../assets/logo.png';
+import { useSystemLogo } from '../../hooks/useSystemLogo';
 import NotificationBell from './NotificationBell';
 
 export default function Header({ title, breadcrumbs, searchQuery, onSearchChange }) {
@@ -17,6 +18,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
   const { selectedYear, changeYear, availableYears } = useAcademicYear();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const { currentUser } = useUser();
+  const { logoUrl } = useSystemLogo();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -220,7 +222,7 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
               {/* Header */}
               <div className="p-5 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img src={logo} alt="ARCHIVIO" className="w-9 h-9 rounded-full border border-white/20 object-contain bg-white" />
+                  <img src={logoUrl || logo} alt="ARCHIVIO" className="w-9 h-9 rounded-full border border-white/20 object-contain bg-white" />
                   <div>
                     <h1 className="text-sm font-serif font-bold tracking-widest text-[#f5ebd9]">ARCHIVIO</h1>
                     <p className="text-[9px] text-stone-400 tracking-wider uppercase">

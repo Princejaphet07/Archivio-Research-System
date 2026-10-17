@@ -16,11 +16,12 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import BookLoader from '../components/BookLoader';
+import { DepartmentThemeProvider } from '../context/DepartmentThemeContext';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [studentInfo, setStudentInfo] = useState({ uid: '', name: 'STUDENT', initials: 'ST', groupName: 'Your Group', adviserName: 'Your Adviser' });
+  const [studentInfo, setStudentInfo] = useState({ uid: '', name: 'STUDENT', initials: 'ST', groupName: 'Your Group', adviserName: 'Your Adviser', department: '' });
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
@@ -200,7 +201,8 @@ function App() {
               profilePhotoUrl,
               role,
               leaderUid: studentData.leaderUid || null,
-              groupStatus
+              groupStatus,
+              department: studentData.department || studentData.program || studentData.groupMembers?.department || ''
             });
 
             setCurrentPage((prev) => {
@@ -420,7 +422,7 @@ function App() {
       )}
       {/* Authenticated Pages - Render together to preserve state (e.g. active uploads) when switching tabs */}
       {((authUser && currentPage === 'login') || ['dashboard', 'manuscript', 'requirements', 'progress', 'mygroup', 'settings'].includes(currentPage)) && (
-        <>
+        <DepartmentThemeProvider userDepartment={studentInfo.department || ''}>
           <div 
             style={{ display: (currentPage === 'dashboard' || currentPage === 'login') ? 'block' : 'none' }}
             aria-hidden={!(currentPage === 'dashboard' || currentPage === 'login')}
@@ -559,7 +561,7 @@ function App() {
               </div>
             </div>
           )}
-        </>
+        </DepartmentThemeProvider>
       )}
     </div>
   );

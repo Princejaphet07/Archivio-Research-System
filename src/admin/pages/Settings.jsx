@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import DepartmentsProgramsTab from './DepartmentsPrograms';
-import { db, auth } from '../firebase/config';
+import { db, auth, storage } from '../firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   doc,
   setDoc,
@@ -28,8 +29,12 @@ import {
   Sliders,
   Database,
   Filter,
-  CheckCircle2
+  CheckCircle2,
+  Upload,
+  Image as ImageIcon,
+  RefreshCw
 } from 'lucide-react';
+import defaultSchoolLogo from '../../assets/logo.png';
 import { Card, SectionTitle } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
@@ -56,9 +61,13 @@ export default function Settings() {
     name: 'Southwestern University PHINMA',
     shortName: 'SWU PHINMA',
     emailDomain: '@phinmaed.com',
-    location: 'Cebu City, Philippines'
+    location: 'Cebu City, Philippines',
+    logoUrl: ''
   });
   const [savingInst, setSavingInst] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Storage Management State
   const [submissionsList, setSubmissionsList] = useState([]);
@@ -179,6 +188,106 @@ export default function Settings() {
       Swal.fire('Error', 'Failed to save institution info.', 'error');
     } finally {
       setSavingInst(false);
+    }
+  };
+
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      Swal.fire('Invalid File', 'Please select an image file (PNG, JPG, SVG, WebP).', 'warning');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('File Too Large', 'Logo image size must be under 5MB.', 'warning');
+      return;
+    }
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadLogo = async () => {
+    if (!logoFile) return;
+    setIsUploadingLogo(true);
+    try {
+      const ext = (logoFile.name.split('.').pop() || 'png').toLowerCase();
+      const storageRef = ref(storage, `public/system-logo-${Date.now()}.${ext}`);
+      const snapshot = await uploadBytes(storageRef, logoFile, { contentType: logoFile.type });
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+
+      await setDoc(doc(db, 'settings', 'institution_info'), {
+        logoUrl: downloadUrl,
+        logoUpdatedAt: new Date().toISOString(),
+        logoUpdatedBy: auth.currentUser?.email || 'Super Admin'
+      }, { merge: true });
+
+      await logActivity({
+        user: auth.currentUser?.email || 'Super Admin',
+        role: 'Admin',
+        action: 'Update System Logo',
+        status: 'Success',
+        details: 'Updated global school/institution logo across all portals.'
+      });
+
+      setLogoFile(null);
+      setLogoPreview(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Logo Updated!',
+        text: 'New system logo is now active across all portals (Admin, Dean, Adviser, Student, and Public Archive).',
+        confirmButtonColor: '#10b981',
+        timer: 2000
+      });
+    } catch (err) {
+      console.error("Logo upload error:", err);
+      Swal.fire('Upload Failed', 'Could not upload logo. Please check network/storage connection.', 'error');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleResetLogo = async () => {
+    const result = await Swal.fire({
+      title: 'Reset to Default Logo?',
+      text: 'This will revert all portals back to the default Archivio school seal.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Reset',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#801e38'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await setDoc(doc(db, 'settings', 'institution_info'), {
+        logoUrl: '',
+        logoUpdatedAt: new Date().toISOString(),
+        logoUpdatedBy: auth.currentUser?.email || 'Super Admin'
+      }, { merge: true });
+
+      await logActivity({
+        user: auth.currentUser?.email || 'Super Admin',
+        role: 'Admin',
+        action: 'Reset System Logo',
+        status: 'Success',
+        details: 'Restored default school seal across all portals.'
+      });
+
+      setLogoFile(null);
+      setLogoPreview(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Logo Reset',
+        text: 'Default school seal has been restored across all portals.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error("Reset logo error:", err);
+      Swal.fire('Error', 'Failed to reset logo.', 'error');
     }
   };
 
@@ -1414,11 +1523,75 @@ export default function Settings() {
       <Card className="flex flex-col overflow-hidden">
         <div className="p-4 border-b border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-[#252525]">
           <h4 className="font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-[#801e38]" /> Institution Information
+            <Building2 className="w-5 h-5 text-[#801e38]" /> Institution Information & Logo
           </h4>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="p-6 space-y-6">
+          {/* Logo Customizer */}
+          <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/40">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 p-2 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+                  <img
+                    src={logoPreview || instInfo.logoUrl || defaultSchoolLogo}
+                    alt="System Logo"
+                    className="w-full h-full object-contain"
+                    onError={(e) => { e.currentTarget.src = defaultSchoolLogo; }}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h5 className="text-sm font-bold text-stone-800 dark:text-stone-100">School / System Logo</h5>
+                    {instInfo.logoUrl ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Custom Active</span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-700 dark:bg-stone-700 dark:text-stone-300">Default Seal</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 max-w-md">
+                    Changes reflect immediately across Admin, Dean, Adviser, Student portals, and the Public Archive. Supports PNG, JPG, SVG, WebP (max 5MB).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                <label className="cursor-pointer px-3.5 py-2 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 hover:border-[#801e38] text-stone-700 dark:text-stone-200 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm">
+                  <ImageIcon className="w-3.5 h-3.5 text-[#801e38]" />
+                  <span>{logoFile ? 'Change File' : 'Choose New Logo'}</span>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg, image/svg+xml, image/webp"
+                    onChange={handleLogoFileChange}
+                    className="hidden"
+                  />
+                </label>
+
+                {logoFile && (
+                  <button
+                    onClick={handleUploadLogo}
+                    disabled={isUploadingLogo}
+                    className="px-4 py-2 bg-[#801e38] hover:bg-[#68182d] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingLogo ? 'Uploading...' : 'Save & Apply Logo'}</span>
+                  </button>
+                )}
+
+                {instInfo.logoUrl && !logoFile && (
+                  <button
+                    onClick={handleResetLogo}
+                    type="button"
+                    className="px-3 py-2 text-stone-600 dark:text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Reset to Default</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1.5">Institution Name</label>
               <input type="text" value={instInfo.name} onChange={e => setInstInfo({ ...instInfo, name: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
@@ -1436,7 +1609,7 @@ export default function Settings() {
               <input type="text" value={instInfo.location} onChange={e => setInstInfo({ ...instInfo, location: e.target.value })} className="w-full px-4 py-2 bg-white dark:bg-[#1e1e1e] border border-stone-200 dark:border-stone-700 rounded-lg text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-[#801e38]" />
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <button onClick={handleSaveInst} disabled={savingInst} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50">
               {savingInst ? 'Saving...' : 'Save Changes'}
             </button>

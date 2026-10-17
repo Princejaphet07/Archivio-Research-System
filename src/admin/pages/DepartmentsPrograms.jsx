@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where, onSnapshot, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { db } from '../firebase/config';
 import { Card, PremiumButton } from '../../components/ui/Card';
@@ -25,7 +25,7 @@ export default function DepartmentsProgramsTab() {
   const [programs, setPrograms] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
-  const [departmentForm, setDepartmentForm] = useState({ name: '', status: 'Active' });
+  const [departmentForm, setDepartmentForm] = useState({ name: '', status: 'Active', color: '#801e38' });
   const [programForm, setProgramForm] = useState({ school: '', code: '', name: '' });
   const [deans, setDeans] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -119,11 +119,12 @@ export default function DepartmentsProgramsTab() {
       await addDoc(collection(db, 'departments'), {
         name: trimmedName,
         status: departmentForm.status || 'Active',
+        color: departmentForm.color || '#801e38',
         createdAt: new Date().toISOString()
       });
 
       setSuccess('✅ Department added successfully!');
-      setDepartmentForm({ name: '', status: 'Active' });
+      setDepartmentForm({ name: '', status: 'Active', color: '#801e38' });
       setActiveModal(null);
     } catch (error) {
       console.error('Error adding department:', error);
@@ -354,11 +355,17 @@ export default function DepartmentsProgramsTab() {
       {/* GRID CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {departments.map((dept) => (
-          <Card key={dept.id} className={`border-2 ${dept.borderColor} overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col`}>
+          <Card key={dept.id} className={`border-2 ${dept.borderColor} overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col relative`}>
+            {/* Top Color Accent Bar */}
+            <div className="h-1.5 w-full" style={{ backgroundColor: dept.color || '#801e38' }} />
+
             {/* Card Header with Status Badge */}
             <div className="p-5 pb-4 border-b border-stone-100 dark:border-stone-800/50">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-bold text-stone-900 dark:text-stone-50 group-hover:text-[#801e38] transition-colors line-clamp-2">{dept.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: dept.color || '#801e38' }} title={`Theme: ${dept.color || '#801e38'}`} />
+                  <h3 className="font-bold text-stone-900 dark:text-stone-50 group-hover:text-[#801e38] transition-colors line-clamp-2">{dept.name}</h3>
+                </div>
                 <span className={`text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${dept.statusColor}`}>
                   {dept.status}
                 </span>
@@ -475,6 +482,89 @@ export default function DepartmentsProgramsTab() {
                 ) : (
                   <p className="text-sm text-stone-500 dark:text-stone-400">No programs assigned yet</p>
                 )}
+              </div>
+
+              {/* Department Theme Color Section */}
+              <div className="border-t border-stone-200 dark:border-stone-700 pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">Department Theme Color</h3>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded text-white shadow-sm" style={{ backgroundColor: selectedDepartment.color || '#801e38' }}>
+                    {selectedDepartment.color || '#801e38'}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">
+                  This color sets the portal accents, sidebar header, and badges for Deans, Advisers, and Students under this department.
+                </p>
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {[
+                    { label: 'Maroon (IT)', color: '#801e38' },
+                    { label: 'Pink (Nursing)', color: '#ec4899' },
+                    { label: 'Blue (Engineering)', color: '#2563eb' },
+                    { label: 'Green (Business)', color: '#059669' },
+                    { label: 'Purple (Arts & Sci)', color: '#7c3aed' },
+                    { label: 'Amber (Education)', color: '#d97706' },
+                    { label: 'Navy (Criminology)', color: '#1e3a8a' },
+                    { label: 'Crimson (Medicine)', color: '#dc2626' },
+                    { label: 'Teal (Hospitality)', color: '#0d9488' },
+                    { label: 'Slate (Maritime)', color: '#475569' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, 'departments', selectedDepartment.id), { color: preset.color });
+                          setSelectedDepartment(prev => ({ ...prev, color: preset.color }));
+                          Swal.fire({ icon: 'success', title: 'Theme Updated!', text: `Department theme set to ${preset.label}`, timer: 1200, showConfirmButton: false });
+                        } catch (err) {
+                          console.error("Failed to update department color:", err);
+                        }
+                      }}
+                      title={preset.label}
+                      className={`h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                        (selectedDepartment.color || '#801e38') === preset.color
+                          ? 'ring-2 ring-offset-2 ring-stone-800 dark:ring-white scale-105 shadow-md'
+                          : 'hover:scale-105 hover:opacity-90'
+                      }`}
+                      style={{ backgroundColor: preset.color }}
+                    >
+                      {(selectedDepartment.color || '#801e38') === preset.color && (
+                        <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/50">
+                  <input
+                    type="color"
+                    value={selectedDepartment.color || '#801e38'}
+                    onChange={async (e) => {
+                      const newColor = e.target.value;
+                      setSelectedDepartment(prev => ({ ...prev, color: newColor }));
+                      try {
+                        await updateDoc(doc(db, 'departments', selectedDepartment.id), { color: newColor });
+                      } catch (err) {
+                        console.error("Failed to update color:", err);
+                      }
+                    }}
+                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent p-0"
+                    title="Choose custom hex color"
+                  />
+                  <div className="flex-1">
+                    <span className="text-xs font-mono font-bold text-stone-700 dark:text-stone-300 uppercase">
+                      {selectedDepartment.color || '#801e38'}
+                    </span>
+                    <span className="text-[10px] text-stone-500 block">Click picker to set custom hex color</span>
+                  </div>
+                  <div
+                    className="px-2.5 py-1 rounded text-white text-[11px] font-bold shadow-sm"
+                    style={{ backgroundColor: selectedDepartment.color || '#801e38' }}
+                  >
+                    Active Theme
+                  </div>
+                </div>
               </div>
 
               {/* Assigned Deans Section */}
@@ -598,6 +688,74 @@ export default function DepartmentsProgramsTab() {
                   <option value="Pending">Pending</option>
                   <option value="Active">Active</option>
                 </select>
+              </div>
+
+              {/* Department Theme Color */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-200">
+                    Department Theme Color <span className="text-stone-400 font-normal">(Portal Accents)</span>
+                  </label>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded text-white shadow-sm" style={{ backgroundColor: departmentForm.color || '#801e38' }}>
+                    {departmentForm.color || '#801e38'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {[
+                    { label: 'Maroon (IT)', color: '#801e38' },
+                    { label: 'Pink (Nursing)', color: '#ec4899' },
+                    { label: 'Blue (Engineering)', color: '#2563eb' },
+                    { label: 'Green (Business)', color: '#059669' },
+                    { label: 'Purple (Arts & Sci)', color: '#7c3aed' },
+                    { label: 'Amber (Education)', color: '#d97706' },
+                    { label: 'Navy (Criminology)', color: '#1e3a8a' },
+                    { label: 'Crimson (Medicine)', color: '#dc2626' },
+                    { label: 'Teal (Hospitality)', color: '#0d9488' },
+                    { label: 'Slate (Maritime)', color: '#475569' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      onClick={() => setDepartmentForm({ ...departmentForm, color: preset.color })}
+                      title={preset.label}
+                      className={`h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                        (departmentForm.color || '#801e38') === preset.color
+                          ? 'ring-2 ring-offset-2 ring-stone-800 dark:ring-white scale-105 shadow-md'
+                          : 'hover:scale-105 hover:opacity-90'
+                      }`}
+                      style={{ backgroundColor: preset.color }}
+                    >
+                      {(departmentForm.color || '#801e38') === preset.color && (
+                        <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/50">
+                  <input
+                    type="color"
+                    value={departmentForm.color || '#801e38'}
+                    onChange={(e) => setDepartmentForm({ ...departmentForm, color: e.target.value })}
+                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent p-0"
+                    title="Choose custom hex color"
+                  />
+                  <div className="flex-1">
+                    <span className="text-xs font-mono font-bold text-stone-700 dark:text-stone-300 uppercase">
+                      {departmentForm.color || '#801e38'}
+                    </span>
+                    <span className="text-[10px] text-stone-500 block">Custom Color Picker</span>
+                  </div>
+                  <div
+                    className="px-2.5 py-1 rounded text-white text-[11px] font-bold shadow-sm"
+                    style={{ backgroundColor: departmentForm.color || '#801e38' }}
+                  >
+                    Theme Preview
+                  </div>
+                </div>
               </div>
 
               {/* Info Box */}

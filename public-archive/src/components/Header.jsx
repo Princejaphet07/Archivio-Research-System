@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import SettingsModal from './SettingsModal';
 import logo from '../assets/logo.png';
+import { useSystemLogo } from '../hooks/useSystemLogo';
 import Swal from 'sweetalert2';
 
 function Header() {
@@ -11,6 +12,7 @@ function Header() {
   const path = location.pathname;
   const { currentUser, signOut } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { logoUrl } = useSystemLogo();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -100,7 +102,7 @@ function Header() {
   return (
     <nav className="flex justify-between items-center px-4 md:px-12 py-4 bg-[#3d0c1b] text-white sticky top-0 z-50 shadow-md w-full transition-all">
       <Link to="/" className="flex items-center space-x-3">
-        <img src={logo} alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-full p-1" />
+        <img src={logoUrl || logo} alt="Logo" className="w-10 h-10 object-contain bg-white/10 rounded-full p-1" />
         <span className="text-xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</span>
       </Link>
       <div className="hidden md:flex space-x-8 text-sm font-sans">

@@ -9,8 +9,9 @@ import Login from './pages/Login';
 import ActivateAccount from './pages/ActivateAccount';
 import ForgotPassword from './pages/ForgotPassword';
 import ProtectedRoute from './components/ProtectedRoute';
-import { AdviserProvider } from './context/AdviserContext';
+import { AdviserProvider, useAdviser } from './context/AdviserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
+import { DepartmentThemeProvider } from '../context/DepartmentThemeContext';
 import { Wrench } from 'lucide-react';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -27,6 +28,28 @@ const SubmissionRequirements = lazyWithRetry(() => import('./pages/SubmissionReq
 const MyProfile = lazyWithRetry(() => import('./pages/MyProfile'));
 
 const PageLoader = () => <LoadingScreen text="LOADING ADVISER..." />;
+
+function AdviserThemedRoutes() {
+  const { adviserData } = useAdviser();
+  return (
+    <DepartmentThemeProvider userDepartment={adviserData?.department || adviserData?.program || ''}>
+      <ProtectedRoute>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="my-groups" element={<MyGroups />} />
+            <Route path="review-submissions" element={<ReviewSubmissions />} />
+            <Route path="research-categories" element={<ResearchCategories />} />
+            <Route path="group-registrations" element={<GroupRegistrations />} />
+            <Route path="send-invitations" element={<SendInvitations />} />
+            <Route path="submission-requirements" element={<SubmissionRequirements />} />
+            <Route path="my-profile" element={<MyProfile />} />
+          </Routes>
+        </Suspense>
+      </ProtectedRoute>
+    </DepartmentThemeProvider>
+  );
+}
 
 function App() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
@@ -77,20 +100,7 @@ function App() {
       <Route path="/*" element={
         <DarkModeProvider>
           <AdviserProvider>
-            <ProtectedRoute>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="my-groups" element={<MyGroups />} />
-                  <Route path="review-submissions" element={<ReviewSubmissions />} />
-                  <Route path="research-categories" element={<ResearchCategories />} />
-                  <Route path="group-registrations" element={<GroupRegistrations />} />
-                  <Route path="send-invitations" element={<SendInvitations />} />
-                  <Route path="submission-requirements" element={<SubmissionRequirements />} />
-                  <Route path="my-profile" element={<MyProfile />} />
-                </Routes>
-              </Suspense>
-            </ProtectedRoute>
+            <AdviserThemedRoutes />
           </AdviserProvider>
         </DarkModeProvider>
       } />

@@ -13,6 +13,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import logo from '../assets/logo.png';
+import { useSystemLogo } from '../hooks/useSystemLogo';
 import bg from '../assets/parchment.png';
 import { useTheme } from '../context/ThemeContext';
 import ReCaptcha from '../components/ReCaptcha';
@@ -20,6 +21,7 @@ import TermsAndConditionsModal from '../components/TermsAndConditionsModal';
 
 function ArchiveLogin() {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { logoUrl } = useSystemLogo();
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -284,11 +286,11 @@ function ArchiveLogin() {
       <div className="w-full md:w-[42%] lg:w-[40%] bg-[#24050f] text-white flex flex-col justify-between p-4 sm:p-6 md:p-8 lg:p-12 relative z-20 shadow-xl md:shadow-[15px_0_30px_-5px_rgba(0,0,0,0.6)] shrink-0">
         <div className="flex flex-col items-center text-center my-auto space-y-1.5 md:space-y-5 relative z-30">
           <div className="bg-white/5 p-2 rounded-full mb-1 hidden md:block">
-            <img src={logo} alt="Archivio Logo" className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain drop-shadow-lg" />
+            <img src={logoUrl || logo} alt="Archivio Logo" className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain drop-shadow-lg" />
           </div>
           {/* Mobile Logo row */}
           <div className="md:hidden flex items-center gap-2.5 py-1">
-            <img src={logo} alt="Archivio Logo" className="w-8 h-8 object-contain drop-shadow-lg" />
+            <img src={logoUrl || logo} alt="Archivio Logo" className="w-8 h-8 object-contain drop-shadow-lg" />
             <h1 className="text-2xl sm:text-3xl font-bold tracking-widest text-[#f3e5ab]">ARCHIVIO</h1>
           </div>
           
