@@ -19,7 +19,7 @@ const DEFAULT_REQUIREMENTS = [
   { id: 'Final Manuscript', title: 'Final Manuscript', desc: 'Complete approved research paper (PDF)', icon: '📄', type: 'file', scope: 'global', status: 'approved', priority: 1 },
   { id: 'Approval Sheet', title: 'Approval Sheet', desc: 'Signed by adviser, dean, and defense panel', icon: '📑', type: 'file', scope: 'global', status: 'approved', priority: 2 },
   { id: 'Dataset Files', title: 'Dataset Files', desc: 'Raw datasets used in study (ZIP/CSV)', icon: '💾', type: 'file', scope: 'global', status: 'approved', priority: 3 },
-  { id: 'Video Pitch', title: 'Video Pitch', desc: 'Brief 3-5 min video presentation of findings', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4 },
+  { id: 'Video Pitch', title: 'Video Pitch', desc: 'Minimum 3-minute video presentation of findings', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4 },
   { id: 'User Manual', title: 'User Manual', desc: 'Comprehensive manual for the developed system', icon: '📖', type: 'file', scope: 'global', status: 'approved', priority: 5 },
   { id: 'Upload URL', title: 'Upload URL', desc: 'Source code or publication repository URL', icon: '🔗', type: 'url', scope: 'global', status: 'approved', priority: 6 },
   { id: 'Signature Page', title: 'Signature Page', desc: 'Original signed endorsement page from academic committee', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7 }

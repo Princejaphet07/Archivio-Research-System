@@ -821,7 +821,7 @@ export default function Settings() {
         { id: 'Final Manuscript', title: 'Final Manuscript', desc: 'Complete approved research paper (PDF)', icon: '📄', type: 'file', scope: 'global', status: 'approved', priority: 1, storageEnabled: true, storageStatus: 'active' },
         { id: 'Approval Sheet', title: 'Approval Sheet', desc: 'Signed by adviser, dean, and defense panel', icon: '📑', type: 'file', scope: 'global', status: 'approved', priority: 2, storageEnabled: true, storageStatus: 'active' },
         { id: 'Dataset Files', title: 'Dataset Files', desc: 'Raw data, spreadsheets, or training models', icon: '📊', type: 'file', scope: 'global', status: 'approved', priority: 3, storageEnabled: true, storageStatus: 'active' },
-        { id: 'Video Pitch', title: 'Video Pitch', desc: '5-minute recorded video presentation (MP4, WebM, MOV)', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4, storageEnabled: true, storageStatus: 'active' },
+        { id: 'Video Pitch', title: 'Video Pitch', desc: 'Minimum 3-minute video presentation (MP4, WebM, MOV)', icon: '🎥', type: 'file', scope: 'global', status: 'approved', priority: 4, storageEnabled: true, storageStatus: 'active' },
         { id: 'User Manual', title: 'User Manual', desc: 'Documentation, installation, or user operating guide', icon: '📖', type: 'file', scope: 'global', status: 'approved', priority: 5, storageEnabled: true, storageStatus: 'active' },
         { id: 'Upload URL', title: 'Upload URL', desc: 'Public or GitHub repository link', icon: '🔗', type: 'url', scope: 'global', status: 'approved', priority: 6, storageEnabled: true, storageStatus: 'active' },
         { id: 'Signature Page', title: 'Signature Page', desc: 'Institutional panel and defense signature page', icon: '✍️', type: 'file', scope: 'global', status: 'approved', priority: 7, storageEnabled: true, storageStatus: 'active' }
@@ -976,7 +976,7 @@ export default function Settings() {
     return [
       { id: 'approval_sheet', title: 'Approval Sheet', icon: '📝', desc: 'Signed by adviser, dean, and panel' },
       { id: 'dataset_files', title: 'Dataset Files', icon: '💾', desc: 'Raw datasets used in study (ZIP/CSV)' },
-      { id: 'video_pitch', title: 'Video Pitch', icon: '🎥', desc: 'Brief 3-5 min video presentation' },
+      { id: 'video_pitch', title: 'Video Pitch', icon: '🎥', desc: 'Minimum 3-minute video presentation' },
       { id: 'user_manual', title: 'User Manual', icon: '📖', desc: 'Manual for the developed system' },
       { id: 'upload_url', title: 'Upload URL', icon: '🔗', desc: 'Source code or publication repository' },
       { id: 'signature_page', title: 'Signature Page', icon: '✍️', desc: 'Original signed page from approval committee' },

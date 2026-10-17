@@ -317,7 +317,7 @@ export default function Requirements({ activePage, onNavigate }) {
             { id: 'datasets', title: 'Dataset Files (ZIP)' },
             { id: 'repo', title: 'Upload URL / Repository' },
             { id: 'signatures', title: 'Signature Page' },
-            { id: 'video_pitch', title: 'Video Pitch (3–5 min)' },
+            { id: 'video_pitch', title: 'Video Pitch (Min. 3 min)' },
           ]);
 
     const uploadedCount = sub.uploadedDocs?.length || 0;
