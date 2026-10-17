@@ -3,7 +3,7 @@ import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { ComposedChart, Line, Bar, BarChart, YAxis, CartesianGrid, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ComposedChart, Line, Bar, BarChart, YAxis, CartesianGrid, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 import { db } from '../firebase/config';
 
 import { useNavigate } from 'react-router-dom';
@@ -650,28 +650,29 @@ export default function Dashboard({ activePage }) {
 
               <div className="relative h-60 w-full mt-2 overflow-x-auto custom-scrollbar">
                 {filteredGroupChartData.length > 0 ? (
-                  <div style={{ minWidth: filteredGroupChartData.length > 8 ? `${filteredGroupChartData.length * 65}px` : '100%', height: '100%' }}>
+                  <div style={{ minWidth: filteredGroupChartData.length > 8 ? `${filteredGroupChartData.length * 75}px` : '100%', height: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={filteredGroupChartData}
-                        margin={{ top: 12, right: 12, left: -20, bottom: 24 }}
-                        barCategoryGap="22%"
-                        barGap={4}
+                        margin={{ top: 22, right: 16, left: -20, bottom: 24 }}
+                        barCategoryGap="20%"
+                        barGap={6}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.15)" />
                         <XAxis 
                           dataKey="shortName" 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fontSize: 10, fill: '#78716c', fontWeight: 600 }}
+                          tick={{ fontSize: 11, fill: '#78716c', fontWeight: 600 }}
                           interval={0}
-                          dy={8}
+                          dy={6}
                         />
                         <YAxis 
                           allowDecimals={false} 
                           axisLine={false} 
                           tickLine={false} 
                           tick={{ fontSize: 10, fill: '#a8a29e', fontWeight: 600 }} 
+                          domain={[0, (dataMax) => Math.max(dataMax + 2, 6)]}
                         />
                         <Tooltip content={<GroupRequirementsTooltip />} cursor={{ fill: 'rgba(120, 113, 108, 0.08)' }} />
                         <Legend 
@@ -684,15 +685,37 @@ export default function Dashboard({ activePage }) {
                           name="Approved Requirements" 
                           fill="#059669" 
                           radius={[4, 4, 0, 0]} 
-                          animationDuration={1000} 
-                        />
+                          barSize={24}
+                          minPointSize={6}
+                          animationDuration={800} 
+                        >
+                          <LabelList 
+                            dataKey="approved" 
+                            position="top" 
+                            fill="#059669" 
+                            fontSize={10} 
+                            fontWeight={700}
+                            offset={6}
+                          />
+                        </Bar>
                         <Bar 
                           dataKey="pending" 
                           name="Pending Requirements" 
                           fill="#d97706" 
                           radius={[4, 4, 0, 0]} 
-                          animationDuration={1000} 
-                        />
+                          barSize={24}
+                          minPointSize={6}
+                          animationDuration={800} 
+                        >
+                          <LabelList 
+                            dataKey="pending" 
+                            position="top" 
+                            fill="#d97706" 
+                            fontSize={10} 
+                            fontWeight={700}
+                            offset={6}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
