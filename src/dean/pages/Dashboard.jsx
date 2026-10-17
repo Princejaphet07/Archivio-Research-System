@@ -3,7 +3,7 @@ import { useUser } from '../context/UserContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { ComposedChart, Line, Bar, CartesianGrid, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ComposedChart, Line, Bar, BarChart, YAxis, CartesianGrid, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { db } from '../firebase/config';
 
 import { useNavigate } from 'react-router-dom';
@@ -63,6 +63,8 @@ export default function Dashboard({ activePage }) {
   const [allPapers, setAllPapers] = useState([]);
   const [allGroups, setAllGroups] = useState([]);
   const [allRawSubmissions, setAllRawSubmissions] = useState([]);
+  const [allRequirements, setAllRequirements] = useState([]);
+  const [groupReqFilter, setGroupReqFilter] = useState('all'); // 'all' | 'pending' | 'completed'
   const [yearlyStats, setYearlyStats] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
   const [topPapersSort, setTopPapersSort] = useState('views'); // 'views' | 'likes'
@@ -174,12 +176,21 @@ export default function Dashboard({ activePage }) {
       console.warn("Students listener notice:", err.message);
     });
 
+    const unsubRequirements = onSnapshot(collection(db, 'requirements'), (snapshot) => {
+      const reqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const activeReqs = reqs.filter(r => r.status === 'approved' || !r.status);
+      setAllRequirements(activeReqs);
+    }, (err) => {
+      console.warn("Requirements listener notice:", err.message);
+    });
+
     return () => { 
       unsubSubmissions(); 
       unsubGroups(); 
       unsubAdvisers(); 
       unsubUsers(); 
       unsubStudents(); 
+      unsubRequirements();
     };
   }, [deanData]);
 
@@ -348,6 +359,76 @@ export default function Dashboard({ activePage }) {
   
   const chartData = yearlyStats;
   const maxCount = Math.max(...chartData.map(d => d.count || 0), 10);
+
+  // Accurate group requirements progress computation (Approved vs Pending per research group)
+  const groupRequirementsData = React.useMemo(() => {
+    return allGroups.map((group, index) => {
+      const sub = allRawSubmissions.find(s => 
+        (s.groupId && (s.groupId === group.id || s.groupId === group.groupId)) ||
+        (s.studentUid && s.studentUid === group.leaderUid && (s.groupName === group.groupName || (s.title || s.researchTitle) === group.researchTitle)) ||
+        (group.groupName && s.groupName === group.groupName)
+      ) || {};
+
+      // Applicable requirements: global + adviser-scoped
+      const applicableReqs = allRequirements.filter(r => 
+        r.scope === 'global' || 
+        (r.scope === 'adviser' && r.adviserUid === group.adviserUid)
+      );
+
+      // Total requirements: if no requirements configured in db yet, standard is at least 1 (Final Manuscript)
+      const totalReqs = applicableReqs.length > 0 ? applicableReqs.length : 1;
+      
+      const approvals = sub.documentApprovals || {};
+      const isPublished = sub.reviewStatus === 'published';
+      const isApproved = sub.reviewStatus === 'approved';
+
+      let approvedCount = 0;
+      if (isPublished || isApproved) {
+        approvedCount = totalReqs;
+      } else if (applicableReqs.length > 0) {
+        approvedCount = applicableReqs.filter(req => {
+          return Boolean(
+            approvals[req.id] || 
+            approvals[req.title] ||
+            (req.title && Object.keys(approvals).some(k => k.toLowerCase() === req.title.toLowerCase() && approvals[k]))
+          );
+        }).length;
+      } else {
+        approvedCount = (sub.manuscriptUrl || sub.fileUrl) && sub.reviewStatus === 'approved' ? 1 : 0;
+      }
+
+      approvedCount = Math.min(approvedCount, totalReqs);
+      const pendingCount = Math.max(0, totalReqs - approvedCount);
+      const completionRate = totalReqs > 0 ? Math.round((approvedCount / totalReqs) * 100) : 0;
+
+      const rawName = group.groupName || `Group ${index + 1}`;
+      const shortName = rawName.length > 14 ? rawName.slice(0, 12) + '…' : rawName;
+
+      return {
+        id: group.id || `group-${index}`,
+        groupName: rawName,
+        shortName,
+        researchTitle: group.researchTitle || sub.researchTitle || sub.title || 'Untitled Research',
+        adviserName: group.adviserName || sub.adviserName || 'Not Assigned',
+        approved: approvedCount,
+        pending: pendingCount,
+        total: totalReqs,
+        completionRate,
+        isCompleted: pendingCount === 0 && approvedCount > 0,
+        status: sub.reviewStatus || 'in_progress'
+      };
+    });
+  }, [allGroups, allRawSubmissions, allRequirements]);
+
+  const filteredGroupChartData = React.useMemo(() => {
+    let list = groupRequirementsData;
+    if (groupReqFilter === 'pending') {
+      list = list.filter(g => g.pending > 0);
+    } else if (groupReqFilter === 'completed') {
+      list = list.filter(g => g.isCompleted);
+    }
+    return list;
+  }, [groupRequirementsData, groupReqFilter]);
   
   // Color palette for charts
   const COLORS = ['#590000', '#770000', '#059669', '#d97706', '#0d9488', '#dc2626', '#7c3aed'];
@@ -516,92 +597,150 @@ export default function Dashboard({ activePage }) {
           </div>
 
           {/* ================= CHARTS AND SUMMARIES GRID (ROW 2) ================= */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
-            {/* Research Upload Trend Line Chart */}
-            <Card glass={true} className="col-span-2 p-6 flex flex-col justify-between">
-              <div className="flex justify-between items-start mb-4">
+            {/* Group Requirements Progress Bar Chart */}
+            <Card glass={true} className="lg:col-span-2 p-6 flex flex-col justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">Research Upload Trend</h3>
-                  <p className="text-xs text-stone-400 mt-0.5">Dynamic — adjust filters below</p>
+                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">
+                    Group Requirements Progress
+                  </h3>
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    Approved vs. pending requirements per research group
+                  </p>
                 </div>
-                <div className="flex bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[11px] font-bold">
+                <div className="flex flex-wrap bg-stone-100 dark:bg-stone-800/80 rounded-lg p-0.5 border border-stone-200 dark:border-stone-700 text-[11px] font-bold">
                   <button 
-                    onClick={() => setChartFilter('year')}
-                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'year' ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
+                    type="button"
+                    onClick={() => setGroupReqFilter('all')}
+                    className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                      groupReqFilter === 'all' 
+                        ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white shadow-sm' 
+                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                    }`}
                   >
-                    By Year
+                    All Groups ({groupRequirementsData.length})
                   </button>
                   <button 
-                    onClick={() => setChartFilter('month')}
-                    className={`px-3 py-1 rounded-md shadow-sm transition-all ${chartFilter === 'month' ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:text-stone-200'}`}
+                    type="button"
+                    onClick={() => setGroupReqFilter('pending')}
+                    className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                      groupReqFilter === 'pending' 
+                        ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white shadow-sm' 
+                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                    }`}
                   >
-                    By Month
+                    With Pending ({groupRequirementsData.filter(g => g.pending > 0).length})
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setGroupReqFilter('completed')}
+                    className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                      groupReqFilter === 'completed' 
+                        ? 'bg-[#770000] dark:bg-[#d4af37] dark:text-[#770000] text-white shadow-sm' 
+                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    Completed ({groupRequirementsData.filter(g => g.isCompleted).length})
                   </button>
                 </div>
               </div>
 
-              <div className="relative h-44 w-full mt-2 flex items-end">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#590000" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#590000" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorPublished" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#d97706" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.2)" />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a8a29e', fontWeight: 'bold'}} dy={10} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(150, 150, 150, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
-                    <Area type="monotone" dataKey="count" name="Total Uploads" stroke="#590000" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={1500} />
-                    <Area type="monotone" dataKey="approved" name="Approved Papers" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorApproved)" animationDuration={1500} />
-                    <Area type="monotone" dataKey="published" name="Published Papers" stroke="#d97706" strokeWidth={3} fillOpacity={1} fill="url(#colorPublished)" animationDuration={1500} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+              <div className="relative h-60 w-full mt-2 overflow-x-auto custom-scrollbar">
+                {filteredGroupChartData.length > 0 ? (
+                  <div style={{ minWidth: filteredGroupChartData.length > 8 ? `${filteredGroupChartData.length * 65}px` : '100%', height: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={filteredGroupChartData}
+                        margin={{ top: 12, right: 12, left: -20, bottom: 24 }}
+                        barCategoryGap="22%"
+                        barGap={4}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.15)" />
+                        <XAxis 
+                          dataKey="shortName" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fill: '#78716c', fontWeight: 600 }}
+                          interval={0}
+                          dy={8}
+                        />
+                        <YAxis 
+                          allowDecimals={false} 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fill: '#a8a29e', fontWeight: 600 }} 
+                        />
+                        <Tooltip content={<GroupRequirementsTooltip />} cursor={{ fill: 'rgba(120, 113, 108, 0.08)' }} />
+                        <Legend 
+                          iconType="circle" 
+                          iconSize={8} 
+                          wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} 
+                        />
+                        <Bar 
+                          dataKey="approved" 
+                          name="Approved Requirements" 
+                          fill="#059669" 
+                          radius={[4, 4, 0, 0]} 
+                          animationDuration={1000} 
+                        />
+                        <Bar 
+                          dataKey="pending" 
+                          name="Pending Requirements" 
+                          fill="#d97706" 
+                          radius={[4, 4, 0, 0]} 
+                          animationDuration={1000} 
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-stone-400 text-xs">
+                    <FolderKanban className="w-8 h-8 mb-2 opacity-40 text-stone-400" />
+                    <span>No research groups found for this filter</span>
+                  </div>
+                )}
               </div>
             </Card>
 
-            {/* Timeline Summary */}
+            {/* Requirements Overview Summary Card */}
             <Card glass={true} className="p-6 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight">
-                  {chartFilter === 'year' ? 'Yearly Summary' : 'Monthly Summary'}
+                  Requirements Overview
                 </h3>
+                <p className="text-xs text-stone-400 mt-0.5">Department submission status</p>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 flex-1 justify-center content-center">
-                {chartData.map((d, i) => {
-                  const prev = i > 0 ? chartData[i - 1].count : 0;
-                  const growth = prev > 0 ? Math.round(((d.count - prev) / prev) * 100) : 0;
-                  let badge = undefined;
-                  let growthText = undefined;
-                  let textGreen = false;
-                  
-                  if (i === 0) badge = "Baseline";
-                  else if (growth > 0) { growthText = `↑ ${growth}%`; textGreen = true; }
-                  else if (growth < 0) { growthText = `↓ ${Math.abs(growth)}%`; }
-                  else { growthText = "0%"; }
-                  
-                  return (
-                    <YearMetricBox 
-                      key={`${chartFilter}-${d.label}-${i}`} 
-                      year={d.label} 
-                      count={d.count} 
-                      badge={badge} 
-                      growth={growthText} 
-                      textGreen={textGreen} 
-                      active={false} 
-                    />
-                  );
-                })}
+                <div className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm">
+                  <span className="text-xs font-bold text-stone-700 dark:text-stone-300">Total Groups</span>
+                  <p className="text-xl font-serif font-bold text-[#590000] dark:text-[#f8d070] my-0.5">{allGroups.length}</p>
+                  <span className="text-[10px] text-stone-400 font-medium">Monitored teams</span>
+                </div>
+                <div className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-400">100% Completed</span>
+                  <p className="text-xl font-serif font-bold text-emerald-700 dark:text-emerald-300 my-0.5">
+                    {groupRequirementsData.filter(g => g.isCompleted).length}
+                  </p>
+                  <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">All reqs approved</span>
+                </div>
+                <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 backdrop-blur-sm">
+                  <span className="text-xs font-bold text-amber-800 dark:text-amber-400">With Pending</span>
+                  <p className="text-xl font-serif font-bold text-amber-700 dark:text-amber-300 my-0.5">
+                    {groupRequirementsData.filter(g => g.pending > 0).length}
+                  </p>
+                  <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80 font-medium">Awaiting action</span>
+                </div>
+                <div className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white/60 dark:bg-stone-900/60 backdrop-blur-sm">
+                  <span className="text-xs font-bold text-stone-700 dark:text-stone-300">Avg Progress</span>
+                  <p className="text-xl font-serif font-bold text-[#770000] dark:text-[#f8d070] my-0.5">
+                    {groupRequirementsData.length > 0
+                      ? Math.round(groupRequirementsData.reduce((acc, g) => acc + g.completionRate, 0) / groupRequirementsData.length)
+                      : 0}%
+                  </p>
+                  <span className="text-[10px] text-stone-400 font-medium">Department completion</span>
+                </div>
               </div>
             </Card>
           </div>
@@ -1302,3 +1441,48 @@ function CustomTooltip({ active, payload, label }) {
   }
   return null;
 }
+
+function GroupRequirementsTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200 dark:border-stone-700 p-3.5 rounded-xl shadow-xl max-w-xs font-sans pointer-events-none z-50">
+        <div className="border-b border-stone-200 dark:border-stone-700 pb-2 mb-2">
+          <p className="font-bold text-xs text-stone-900 dark:text-stone-100 truncate">{data.groupName}</p>
+          <p className="text-[10px] text-stone-500 dark:text-stone-400 line-clamp-2 mt-0.5" title={data.researchTitle}>
+            "{data.researchTitle}"
+          </p>
+          <p className="text-[10px] text-stone-400 font-medium mt-1">
+            Adviser: <span className="text-stone-700 dark:text-stone-300 font-semibold">{data.adviserName}</span>
+          </p>
+        </div>
+        <div className="space-y-1.5 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>Approved Requirements:
+            </span>
+            <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono">
+              {data.approved} / {data.total}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>Pending Requirements:
+            </span>
+            <span className="font-bold text-amber-800 dark:text-amber-300 font-mono">
+              {data.pending} / {data.total}
+            </span>
+          </div>
+          <div className="pt-2 mt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-[11px]">
+            <span className="text-stone-500 dark:text-stone-400 font-medium">Completion Rate:</span>
+            <span className={`font-extrabold ${data.completionRate === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#770000] dark:text-[#f8d070]'}`}>
+              {data.completionRate}%
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
