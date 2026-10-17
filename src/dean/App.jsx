@@ -1,7 +1,8 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './firebase/config';
 import { UserProvider, useUser } from './context/UserContext';
 import { DarkModeProvider } from './context/DarkModeContext';
 import { DepartmentThemeProvider } from '../context/DepartmentThemeContext';
@@ -12,8 +13,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import './App.css';
 
 import { lazyWithRetry } from '../utils/lazyWithRetry';
-
 import LoadingScreen from './components/LoadingScreen';
+import MaintenanceScreen from '../components/MaintenanceScreen';
 
 // Lazy-load dashboard pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
@@ -51,18 +52,41 @@ function DeanThemedRoutes() {
 }
 
 function App() {
-  const [user, setUser] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    // Real-time Cloud Firestore Maintenance Listener
+    const unsubMaintenance = onSnapshot(
+      doc(db, 'settings', 'system_preferences'),
+      (snap) => {
+        if (snap.exists() && snap.data().maintenance === true) {
+          setIsMaintenanceMode(true);
+        } else {
+          setIsMaintenanceMode(false);
+        }
+      },
+      (err) => {
+        console.warn('Dean maintenance listener notice (non-fatal):', err.message);
+      }
+    );
+
     // Check if user is logged in
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubMaintenance();
+      unsubscribeAuth();
+    };
   }, []);
+
+  if (isMaintenanceMode) {
+    return <MaintenanceScreen portalName="Dean Portal" />;
+  }
 
   if (loading) {
     return <LoadingScreen text="LOADING DEAN..." />;

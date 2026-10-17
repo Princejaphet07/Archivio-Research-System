@@ -17,6 +17,7 @@ import { collection, query, where, getDocs, onSnapshot, doc, getDoc, setDoc, upd
 import Swal from 'sweetalert2';
 import BookLoader from '../components/BookLoader';
 import { DepartmentThemeProvider } from '../context/DepartmentThemeContext';
+import MaintenanceScreen from '../components/MaintenanceScreen';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
@@ -26,15 +27,16 @@ function App() {
   const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Global Maintenance Mode Listener
+  // Global Maintenance Mode Listener (Real-time Cloud Firestore)
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [showAbstractSuccess, setShowAbstractSuccess] = useState(false);
   const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
   const prevGeneratingRef = React.useRef(false);
 
   React.useEffect(() => {
+    // Listen to settings/system_preferences (master doc)
     const unsub = onSnapshot(
-      doc(db, 'system', 'preferences'),
+      doc(db, 'settings', 'system_preferences'),
       (snap) => {
         if (snap.exists() && snap.data().maintenance === true) {
           setIsMaintenanceMode(true);
@@ -394,16 +396,7 @@ function App() {
   }
 
   if (isMaintenanceMode) {
-    return (
-      <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center p-6 text-center">
-        <span className="text-6xl mb-6">🛠️</span>
-        <h1 className="text-3xl font-serif font-bold text-[#801e38] mb-4">System Under Maintenance</h1>
-        <p className="text-stone-600 max-w-md mx-auto">
-          ARCHIVIO is currently undergoing scheduled maintenance and updates. 
-          Please check back later. We apologize for the inconvenience.
-        </p>
-      </div>
-    );
+    return <MaintenanceScreen portalName="Student Portal" />;
   }
 
   return (

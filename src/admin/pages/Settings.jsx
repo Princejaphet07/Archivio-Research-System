@@ -164,10 +164,42 @@ export default function Settings() {
 
     try {
       await setDoc(doc(db, 'settings', 'system_preferences'), {
-        [key]: newValue
+        [key]: newValue,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.email || 'Super Admin'
       }, { merge: true });
+
+      // Synchronize with legacy collection for universal compatibility
+      await setDoc(doc(db, 'system', 'preferences'), {
+        [key]: newValue,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(() => {});
+
+      if (key === 'maintenance') {
+        await logActivity({
+          user: auth.currentUser?.email || 'Super Admin',
+          role: 'Admin',
+          action: newValue ? 'Enable Maintenance Mode' : 'Disable Maintenance Mode',
+          status: 'Success',
+          details: newValue 
+            ? 'Activated System Maintenance Mode across Dean, Adviser, Student portals, and Public Archive.' 
+            : 'Deactivated System Maintenance Mode. All portals restored to normal operation.'
+        }).catch(() => {});
+
+        Swal.fire({
+          icon: newValue ? 'warning' : 'success',
+          title: newValue ? 'Maintenance Mode Enabled' : 'Maintenance Mode Disabled',
+          text: newValue
+            ? 'All portals (Student, Dean, Adviser, Public Archive) are now displaying the animated maintenance screen.'
+            : 'All portals have been restored to normal online status.',
+          timer: 2500,
+          showConfirmButton: false,
+          confirmButtonColor: '#801e38'
+        });
+      }
     } catch (error) {
       console.error("Failed to update setting:", error);
+      Swal.fire('Error', 'Failed to update system preference.', 'error');
     }
   };
 

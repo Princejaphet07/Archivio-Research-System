@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, getDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { Mail, LockKeyhole } from 'lucide-react';
 import ReCaptcha from '../components/ReCaptcha';
+import MaintenanceScreen from '../components/MaintenanceScreen';
 
 import logo from '../assets/logo.png';
 import { useSystemLogo } from '../hooks/useSystemLogo';
@@ -31,7 +32,20 @@ function UnifiedLogin() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
   const [inviteNotice, setInviteNotice] = useState(null);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [showAdminLoginOverride, setShowAdminLoginOverride] = useState(false);
   const recaptchaRef = useRef(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'system_preferences'), (snap) => {
+      if (snap.exists() && snap.data().maintenance === true) {
+        setIsMaintenanceMode(true);
+      } else {
+        setIsMaintenanceMode(false);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -260,6 +274,14 @@ function UnifiedLogin() {
         return;
       }
 
+      // Block non-admin login if maintenance mode is active
+      if (isMaintenanceMode && role !== 'admin' && role !== 'super-admin') {
+        setError('The system is currently under maintenance. Only administrators can sign in at this time.');
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       // Redirect based on role
       if (role === 'admin' || role === 'super-admin') {
         window.location.href = '/admin/';
@@ -293,6 +315,16 @@ function UnifiedLogin() {
       setLoading(false);
     }
   };
+
+  if (isMaintenanceMode && !showAdminLoginOverride) {
+    return (
+      <MaintenanceScreen
+        portalName="Unified Login"
+        allowAdminLogin={true}
+        onAdminAccessClick={() => setShowAdminLoginOverride(true)}
+      />
+    );
+  }
 
   return (
     <div className="h-screen max-h-screen w-full flex font-sans overflow-hidden bg-[#e8e3d6]">
@@ -376,6 +408,22 @@ function UnifiedLogin() {
             <h2 className="text-3xl lg:text-4xl font-serif font-bold text-[#2d1b11] mb-1 tracking-tight drop-shadow-sm">Welcome Back</h2>
             <p className="text-[#7d6f65] text-xs lg:text-sm font-medium">Log in to your respective portal.</p>
           </div>
+
+          {isMaintenanceMode && (
+            <div className="mb-3 p-2.5 bg-amber-50/95 backdrop-blur-sm border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-900 shadow-sm animate-fade-in-up">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span className="font-bold">Maintenance Mode Active · Admin Only</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdminLoginOverride(false)}
+                className="text-amber-800 underline font-semibold hover:text-amber-950 text-[11px] cursor-pointer"
+              >
+                Back to Notice
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="mb-3 p-3 bg-red-50/90 backdrop-blur-sm border-l-4 border-red-600 rounded-r-xl flex items-center gap-2.5 shadow-md animate-shake">
