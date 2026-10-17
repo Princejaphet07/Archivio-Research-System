@@ -32,7 +32,7 @@ function Footer() {
         .sort((a, b) => deptCounts[b] - deptCounts[a]);
 
       if (dynamicDepts.length === 0) {
-        setTopDepartments(['Information Technology']);
+        setTopDepartments([]);
       } else {
         setTopDepartments(dynamicDepts.slice(0, 6));
       }
@@ -70,23 +70,25 @@ function Footer() {
           {/* Top Departments */}
           <div className="flex flex-col items-center md:items-start">
             <h3 className="text-[#8c7435] font-bold mb-3 tracking-widest uppercase text-[9px]">Top Departments</h3>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 w-full max-w-[260px] mx-auto md:mx-0">
-              {topDepartments.map((deptName) => (
-                <Link 
-                  key={deptName} 
-                  to="/browse" 
-                  state={{ dept: deptName }} 
-                  className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group truncate"
-                  title={deptName}
-                >
-                  <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span>
-                  <span className="truncate">{deptName}</span>
+            {topDepartments.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 w-full max-w-[260px] mx-auto md:mx-0">
+                {topDepartments.map((deptName) => (
+                  <Link 
+                    key={deptName} 
+                    to="/browse" 
+                    state={{ dept: deptName }} 
+                    className="hover:text-[#f3e5ab] transition flex items-center gap-1.5 group truncate"
+                    title={deptName}
+                  >
+                    <span className="text-stone-600 group-hover:text-[#7a2039] transition">›</span>
+                    <span className="truncate">{deptName}</span>
+                  </Link>
+                ))}
+                <Link to="/browse" className="hover:text-amber-200 transition flex items-center gap-1.5 text-stone-500 hover:underline">
+                  View All
                 </Link>
-              ))}
-              <Link to="/browse" className="hover:text-amber-200 transition flex items-center gap-1.5 text-stone-500 hover:underline">
-                View All
-              </Link>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Links */}

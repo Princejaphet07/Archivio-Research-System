@@ -435,34 +435,38 @@ function ArchiveBrowse() {
     };
   }, []);
 
-  // Dynamic categories aggregated from adviser configurations in DB and published papers
+  // Dynamic categories aggregated strictly from published papers (with icons/names enhanced by adviser configs)
   const availableCategories = useMemo(() => {
     const catMap = new Map();
 
-    // 1. Categories created in DB by advisers
-    dbCategories.forEach(c => {
-      const name = (c.name || '').trim();
-      if (name && !catMap.has(name.toLowerCase())) {
-        catMap.set(name.toLowerCase(), {
-          name,
-          icon: c.icon || '🏷️'
-        });
-      }
-    });
-
-    // 2. Add categories found in published papers
     publishedPapers.forEach(p => {
       const cat = (p.category || '').trim();
       if (cat && !catMap.has(cat.toLowerCase())) {
+        const dbMatch = dbCategories.find(c => (c.name || '').toLowerCase().trim() === cat.toLowerCase());
         catMap.set(cat.toLowerCase(), {
-          name: cat,
-          icon: '🏷️'
+          name: dbMatch?.name || cat,
+          icon: dbMatch?.icon || '🏷️'
         });
       }
     });
 
     return Array.from(catMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [dbCategories, publishedPapers]);
+
+  // Dynamic departments aggregated strictly from published papers
+  const availableDepartments = useMemo(() => {
+    const deptMap = new Map();
+    publishedPapers.forEach(p => {
+      const rawDept = p.department || p.program;
+      if (rawDept && typeof rawDept === 'string' && rawDept.trim()) {
+        const norm = normalizeDepartment(rawDept);
+        if (!deptMap.has(norm.toLowerCase())) {
+          deptMap.set(norm.toLowerCase(), norm);
+        }
+      }
+    });
+    return Array.from(deptMap.values()).sort();
+  }, [publishedPapers]);
 
   // Filter & Sort
   const filteredPapers = publishedPapers.filter(paper => {
@@ -683,84 +687,88 @@ function ArchiveBrowse() {
             </div>
 
             {/* RESEARCH CATEGORIES (Set by Adviser) */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">RESEARCH CATEGORIES</h3>
-                <button onClick={() => { setSelectedCategories([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
-                    checked={selectedCategories.length === 0}
-                    onChange={() => { setSelectedCategories([]); setDisplayLimit(5); }}
-                  />
-                  <span className={`group-hover:text-[#7a2039] transition ${selectedCategories.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
-                    All Categories <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
-                  </span>
-                </label>
+            {availableCategories.length > 0 && (
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">RESEARCH CATEGORIES</h3>
+                  <button onClick={() => { setSelectedCategories([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                  <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                      checked={selectedCategories.length === 0}
+                      onChange={() => { setSelectedCategories([]); setDisplayLimit(5); }}
+                    />
+                    <span className={`group-hover:text-[#7a2039] transition ${selectedCategories.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
+                      All Categories <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
+                    </span>
+                  </label>
 
-                {availableCategories.map(catItem => {
-                  const count = publishedPapers.filter(p => (p.category || '').toLowerCase().trim() === catItem.name.toLowerCase().trim()).length;
-                  const isChecked = selectedCategories.some(c => c.toLowerCase().trim() === catItem.name.toLowerCase().trim());
-                  return (
-                    <label key={catItem.name} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
-                        checked={isChecked}
-                        onChange={() => toggleCategory(catItem.name)}
-                      />
-                      <span className={`group-hover:text-[#7a2039] transition flex items-center gap-1.5 truncate ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
-                        <span>{catItem.icon || '🏷️'}</span>
-                        <span className="truncate">{catItem.name}</span>
-                        <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
-                      </span>
-                    </label>
-                  );
-                })}
+                  {availableCategories.map(catItem => {
+                    const count = publishedPapers.filter(p => (p.category || '').toLowerCase().trim() === catItem.name.toLowerCase().trim()).length;
+                    const isChecked = selectedCategories.some(c => c.toLowerCase().trim() === catItem.name.toLowerCase().trim());
+                    return (
+                      <label key={catItem.name} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                          checked={isChecked}
+                          onChange={() => toggleCategory(catItem.name)}
+                        />
+                        <span className={`group-hover:text-[#7a2039] transition flex items-center gap-1.5 truncate ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
+                          <span>{catItem.icon || '🏷️'}</span>
+                          <span className="truncate">{catItem.name}</span>
+                          <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* DEPARTMENTS */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">DEPARTMENTS</h3>
-                <button onClick={() => { setSelectedDepartments([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
-                    checked={selectedDepartments.length === 0}
-                    onChange={() => { setSelectedDepartments([]); setDisplayLimit(5); }}
-                  />
-                  <span className={`group-hover:text-[#7a2039] transition ${selectedDepartments.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
-                    All Departments <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
-                  </span>
-                </label>
+            {availableDepartments.length > 0 && (
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold text-stone-800 dark:text-gray-200 text-xs uppercase tracking-wider">DEPARTMENTS</h3>
+                  <button onClick={() => { setSelectedDepartments([]); setDisplayLimit(5); }} className="text-[11px] text-stone-500 hover:text-[#7a2039] cursor-pointer">View All</button>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                  <label className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                      checked={selectedDepartments.length === 0}
+                      onChange={() => { setSelectedDepartments([]); setDisplayLimit(5); }}
+                    />
+                    <span className={`group-hover:text-[#7a2039] transition ${selectedDepartments.length === 0 ? 'font-semibold text-[#7a2039]' : ''}`}>
+                      All Departments <span className="text-stone-400 dark:text-stone-500 font-normal">({publishedPapers.length})</span>
+                    </span>
+                  </label>
 
-                {['College of Information Technology', 'College of Management', 'College of Engineering'].map(dept => {
-                  const count = publishedPapers.filter(p => normalizeDepartment(p.department || p.program).toLowerCase() === normalizeDepartment(dept).toLowerCase()).length;
-                  const isChecked = selectedDepartments.some(d => normalizeDepartment(d).toLowerCase() === normalizeDepartment(dept).toLowerCase());
-                  return (
-                    <label key={dept} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
-                        checked={isChecked}
-                        onChange={() => toggleDepartment(dept)}
-                      />
-                      <span className={`group-hover:text-[#7a2039] transition ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
-                        {dept} <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
-                      </span>
-                    </label>
-                  );
-                })}
+                  {availableDepartments.map(dept => {
+                    const count = publishedPapers.filter(p => normalizeDepartment(p.department || p.program).toLowerCase() === normalizeDepartment(dept).toLowerCase()).length;
+                    const isChecked = selectedDepartments.some(d => normalizeDepartment(d).toLowerCase() === normalizeDepartment(dept).toLowerCase());
+                    return (
+                      <label key={dept} className="flex items-center gap-2.5 text-xs text-stone-700 dark:text-gray-300 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-stone-300 text-[#7a2039] accent-[#7a2039] cursor-pointer"
+                          checked={isChecked}
+                          onChange={() => toggleDepartment(dept)}
+                        />
+                        <span className={`group-hover:text-[#7a2039] transition ${isChecked ? 'font-semibold text-[#7a2039]' : ''}`}>
+                          {dept} <span className="text-stone-400 dark:text-stone-500 font-normal">({count})</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* TOP RESEARCHERS */}
             {topResearchers.length > 0 && (

@@ -342,6 +342,7 @@ function ArchiveHome() {
     });
 
     return Array.from(catMap.values())
+      .filter(item => item.count > 0)
       .map(item => ({
         name: item.name,
         icon: item.icon,
@@ -540,48 +541,50 @@ function ArchiveHome() {
       </div>
 
       {/* BROWSE CATEGORIES SECTION */}
-      <div className="bg-[#f2ead3] dark:bg-gray-900 px-8 md:px-16 py-16 border-t border-[#e5d4a6] dark:border-gray-800 transition-colors">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end gap-4 mb-8">
-            <div>
-              <p className="text-[#8c7435] dark:text-[#d6ad60] text-xs font-bold tracking-widest uppercase font-sans mb-1">Explore by Category</p>
-              <Link 
-                to="/browse" 
-                className="group inline-flex items-center gap-2 border-b-2 border-[#d6ad60] pb-1 hover:border-[#3d0c1b] dark:hover:border-[#c25975] transition-colors"
-                title="Browse Categories"
-              >
-                <h2 className="text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors cursor-pointer">
-                  Browse Categories
-                </h2>
-                <span className="text-[#8c7435] dark:text-[#d6ad60] group-hover:translate-x-1.5 transition-transform text-2xl font-sans font-light">→</span>
+      {categories.length > 0 && (
+        <div className="bg-[#f2ead3] dark:bg-gray-900 px-8 md:px-16 py-16 border-t border-[#e5d4a6] dark:border-gray-800 transition-colors">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 mb-8">
+              <div>
+                <p className="text-[#8c7435] dark:text-[#d6ad60] text-xs font-bold tracking-widest uppercase font-sans mb-1">Explore by Category</p>
+                <Link 
+                  to="/browse" 
+                  className="group inline-flex items-center gap-2 border-b-2 border-[#d6ad60] pb-1 hover:border-[#3d0c1b] dark:hover:border-[#c25975] transition-colors"
+                  title="Browse Categories"
+                >
+                  <h2 className="text-3xl font-bold text-[#3d0c1b] dark:text-[#c25975] group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors cursor-pointer">
+                    Browse Categories
+                  </h2>
+                  <span className="text-[#8c7435] dark:text-[#d6ad60] group-hover:translate-x-1.5 transition-transform text-2xl font-sans font-light">→</span>
+                </Link>
+              </div>
+              <Link to="/browse" className="text-sm text-[#3d0c1b] dark:text-[#c25975] hover:text-[#8c7435] dark:hover:text-[#d6ad60] font-sans font-medium transition mb-1 md:ml-4">
+                All Department ↓
               </Link>
             </div>
-            <Link to="/browse" className="text-sm text-[#3d0c1b] dark:text-[#c25975] hover:text-[#8c7435] dark:hover:text-[#d6ad60] font-sans font-medium transition mb-1 md:ml-4">
-              All Department ↓
-            </Link>
-          </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-6 pt-2 font-sans snap-x">
-            {categories.map((cat, index) => (
-              <Link 
-                to="/browse" 
-                state={{ category: cat.name }} 
-                key={index} 
-                className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block hover:border-[#6b142c] group"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{cat.icon || '🏷️'}</span>
-                  <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors truncate">{cat.name}</h3>
-                </div>
-                <div className="flex justify-between items-center text-xs text-stone-500 dark:text-gray-400">
-                  <span>{cat.papers}</span>
-                  <span className="text-[#8c7435] group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-              </Link>
-            ))}
+            <div className="flex gap-4 overflow-x-auto pb-6 pt-2 font-sans snap-x">
+              {categories.map((cat, index) => (
+                <Link 
+                  to="/browse" 
+                  state={{ category: cat.name }} 
+                  key={index} 
+                  className="min-w-[200px] h-24 bg-[#fcfbf7] dark:bg-gray-800 shadow-sm hover:shadow-md border border-stone-200 dark:border-gray-700 border-l-4 border-l-[#6b142c] rounded-r-lg p-4 flex flex-col justify-between cursor-pointer transition-all snap-start block hover:border-[#6b142c] group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{cat.icon || '🏷️'}</span>
+                    <h3 className="font-bold text-stone-800 dark:text-gray-200 text-sm group-hover:text-[#6b142c] dark:group-hover:text-[#f3e5ab] transition-colors truncate">{cat.name}</h3>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-stone-500 dark:text-gray-400">
+                    <span>{cat.papers}</span>
+                    <span className="text-[#8c7435] group-hover:translate-x-0.5 transition-transform">→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <Footer />
     </div>
