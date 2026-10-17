@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { useSystemLogo } from '../hooks/useSystemLogo';
 
 export default function MaintenanceScreen({ portalName, onAdminAccessClick, allowAdminLogin = false }) {
-  const { logoUrl } = useSystemLogo();
   const [checking, setChecking] = useState(false);
 
   const handleRefresh = () => {
@@ -13,7 +11,7 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#FAF7F0] via-[#F4EFE6] to-[#EAE3D6] dark:from-[#18181b] dark:via-[#1c1917] dark:to-[#0c0a09] text-stone-800 dark:text-stone-100 flex flex-col items-center justify-center p-4 sm:p-6 select-none relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full bg-[#FAF7F0] dark:bg-[#121212] text-stone-800 dark:text-stone-100 flex flex-col items-center justify-center p-4 sm:p-6 select-none relative overflow-hidden font-sans">
       <style>{`
         @keyframes typeHandLeft {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -28,8 +26,8 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
           50% { transform: translateY(-2px); }
         }
         @keyframes screenGlow {
-          0%, 100% { filter: drop-shadow(0 0 16px rgba(128, 30, 56, 0.45)) drop-shadow(0 0 35px rgba(245, 158, 11, 0.25)); }
-          50% { filter: drop-shadow(0 0 24px rgba(59, 130, 246, 0.5)) drop-shadow(0 0 45px rgba(128, 30, 56, 0.35)); }
+          0%, 100% { filter: drop-shadow(0 0 14px rgba(128, 30, 56, 0.4)) drop-shadow(0 0 28px rgba(245, 158, 11, 0.2)); }
+          50% { filter: drop-shadow(0 0 22px rgba(59, 130, 246, 0.45)) drop-shadow(0 0 38px rgba(128, 30, 56, 0.3)); }
         }
         @keyframes steamFloat {
           0% { transform: translateY(0) scaleX(1); opacity: 0.7; }
@@ -48,11 +46,6 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
           0%, 100% { transform: translateY(0px) rotate(-1deg); }
           50% { transform: translateY(-8px) rotate(3deg); }
         }
-        @keyframes codeLineAnim {
-          0% { width: 0%; opacity: 0.3; }
-          50% { width: 85%; opacity: 1; }
-          100% { width: 100%; opacity: 0.7; }
-        }
         @keyframes pulseDot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(1.3); }
@@ -67,41 +60,18 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
         .anim-tag-1 { animation: floatTag1 3.8s infinite ease-in-out; }
         .anim-tag-2 { animation: floatTag2 4.2s infinite ease-in-out 0.8s; }
         .anim-tag-3 { animation: floatTag3 3.4s infinite ease-in-out 1.5s; }
-        .anim-code-bar { animation: codeLineAnim 2s infinite ease-in-out; }
         .anim-pulse-dot { animation: pulseDot 1.8s infinite ease-in-out; }
       `}</style>
 
-      {/* Decorative ambient background circles */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#801e38]/10 dark:bg-[#801e38]/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main Container Card */}
-      <div className="max-w-2xl w-full bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl border border-stone-200/80 dark:border-stone-800 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-stone-900/10 dark:shadow-black/40 flex flex-col items-center text-center relative z-10 transition-all">
+      {/* Main Content (Direct on page, NO white square card background) */}
+      <div className="max-w-xl w-full flex flex-col items-center text-center relative z-10 transition-all">
         
-        {/* Brand Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <img
-            src={logoUrl || '/assets/logo.png'}
-            alt="ARCHIVIO"
-            className="w-10 h-10 object-contain drop-shadow-sm"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <div className="text-left">
-            <span className="font-serif font-black tracking-wider text-[#801e38] dark:text-red-400 text-lg block leading-tight">
-              ARCHIVIO
-            </span>
-            <span className="text-[10px] tracking-widest uppercase font-semibold text-stone-500 dark:text-stone-400 block">
-              Southwestern University PHINMA
-            </span>
-          </div>
-        </div>
-
         {/* Live Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 text-xs font-bold tracking-wide uppercase shadow-xs mb-5">
-          <span className="w-2 h-2 rounded-full bg-amber-500 anim-pulse-dot"></span>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-300 text-xs font-bold tracking-wide uppercase shadow-xs mb-4">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 anim-pulse-dot"></span>
           <span>System Maintenance Active</span>
           {portalName && (
-            <span className="bg-amber-200/80 dark:bg-amber-900/60 px-2 py-0.5 rounded-full text-[10px] font-mono lowercase">
+            <span className="bg-amber-200/90 dark:bg-amber-900/70 px-2 py-0.5 rounded-full text-[10.5px] font-mono lowercase text-amber-900 dark:text-amber-200">
               {portalName}
             </span>
           )}
@@ -141,10 +111,6 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
-              <linearGradient id="laptopGlow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#801e38" stopOpacity="0.7" />
-              </linearGradient>
               <linearGradient id="hoodieGrad" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#801e38" />
                 <stop offset="100%" stopColor="#4a0e1c" />
@@ -194,7 +160,6 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
             </g>
 
             {/* Programmer: Arms & Hands Typing (Animated) */}
-            {/* Left Arm & Hand */}
             <path
               d="M 146 130 Q 148 152 165 154"
               fill="none"
@@ -203,7 +168,6 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
               strokeLinecap="round"
               className="anim-hand-left"
             />
-            {/* Right Arm & Hand */}
             <path
               d="M 204 130 Q 202 152 185 154"
               fill="none"
@@ -222,12 +186,12 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
               {/* Laptop Screen Display with Glow */}
               <g className="anim-screen-glow">
                 <rect x="15" y="5" width="50" height="38" rx="4" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
-                {/* Syntax Lines on Screen */}
+                {/* Fixed Syntax Lines cleanly enclosed inside the screen */}
                 <rect x="19" y="10" width="22" height="2.5" rx="1" fill="#38bdf8" />
-                <rect x="19" y="15" width="35" height="2" rx="1" fill="#a78bfa" className="anim-code-bar" />
+                <rect x="19" y="15" width="32" height="2" rx="1" fill="#a78bfa" />
                 <rect x="23" y="19" width="28" height="2" rx="1" fill="#34d399" />
                 <rect x="23" y="23" width="18" height="2" rx="1" fill="#fbbf24" />
-                <rect x="19" y="27" width="38" height="2" rx="1" fill="#f43f5e" />
+                <rect x="19" y="27" width="35" height="2" rx="1" fill="#f43f5e" />
                 <rect x="19" y="32" width="14" height="2" rx="1" fill="#38bdf8" />
                 {/* Blinking Cursor */}
                 <rect x="35" y="32" width="3" height="3" fill="#ffffff" className="anim-pulse-dot" />
@@ -244,46 +208,24 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
           </svg>
         </div>
 
-        {/* Informative Content */}
-        <h1 className="text-2xl sm:text-3xl font-serif font-black text-stone-900 dark:text-stone-50 mb-2.5">
+        {/* Informative Heading */}
+        <h1 className="text-3xl sm:text-4xl font-serif font-black text-stone-900 dark:text-stone-50 mb-3 tracking-tight">
           System Under Maintenance
         </h1>
 
-        <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 max-w-lg mb-6 leading-relaxed">
-          The ARCHIVIO Institutional Repository is currently undergoing scheduled platform upgrades and database optimizations to serve you better.
+        {/* Description */}
+        <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 max-w-lg mb-8 leading-relaxed font-medium">
+          {portalName === 'Public Research Archive'
+            ? 'The ARCHIVIO Public Research Archive is currently undergoing scheduled platform upgrades and optimizations to serve you better.'
+            : 'The ARCHIVIO Institutional Repository is currently undergoing scheduled platform upgrades and database optimizations to serve you better.'}
         </p>
 
-        {/* Real-time Checklist Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full max-w-lg mb-6 text-left">
-          <div className="bg-stone-50 dark:bg-stone-800/60 p-3 rounded-2xl border border-stone-200/60 dark:border-stone-700/60">
-            <div className="text-[11px] font-bold text-stone-400 dark:text-stone-400 uppercase tracking-wider mb-1">Status</div>
-            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 anim-pulse-dot"></span>
-              Engineering Active
-            </div>
-          </div>
-          <div className="bg-stone-50 dark:bg-stone-800/60 p-3 rounded-2xl border border-stone-200/60 dark:border-stone-700/60">
-            <div className="text-[11px] font-bold text-stone-400 dark:text-stone-400 uppercase tracking-wider mb-1">Data Safety</div>
-            <div className="text-xs font-bold text-stone-700 dark:text-stone-200 flex items-center gap-1.5">
-              <span>🛡️</span>
-              100% Preserved
-            </div>
-          </div>
-          <div className="bg-stone-50 dark:bg-stone-800/60 p-3 rounded-2xl border border-stone-200/60 dark:border-stone-700/60">
-            <div className="text-[11px] font-bold text-stone-400 dark:text-stone-400 uppercase tracking-wider mb-1">Portals</div>
-            <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-              <span>⏳</span>
-              Temporarily Paused
-            </div>
-          </div>
-        </div>
-
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-3 w-full">
+        <div className="flex flex-wrap items-center justify-center gap-3 w-full mb-6">
           <button
             onClick={handleRefresh}
             disabled={checking}
-            className="px-6 py-2.5 bg-[#801e38] hover:bg-[#68182d] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-[#801e38]/20 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="px-7 py-3 bg-[#801e38] hover:bg-[#68182d] text-white rounded-xl text-sm font-bold shadow-md shadow-[#801e38]/25 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`}
@@ -301,7 +243,7 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
             <button
               onClick={onAdminAccessClick}
               type="button"
-              className="px-4 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-stone-200 dark:border-stone-700"
+              className="px-4 py-3 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-stone-300/60 dark:border-stone-700"
             >
               <span>🔐</span>
               <span>Administrator Sign In</span>
@@ -310,7 +252,7 @@ export default function MaintenanceScreen({ portalName, onAdminAccessClick, allo
         </div>
 
         {/* Footer Note */}
-        <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-6 max-w-sm">
+        <p className="text-xs text-stone-400 dark:text-stone-500 max-w-md">
           Normal operations will resume automatically once updates are finalized. Thank you for your patience.
         </p>
 
