@@ -284,37 +284,6 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please upload a valid video file (MP4, WebM, MOV).', confirmButtonColor: '#7B1F35' });
         return;
       }
-      // Check for Minimum 3 minutes (180 seconds) video duration
-      try {
-        const duration = await new Promise((resolve) => {
-          const videoElement = document.createElement('video');
-          videoElement.preload = 'metadata';
-          videoElement.onloadedmetadata = () => {
-            URL.revokeObjectURL(videoElement.src);
-            resolve(videoElement.duration);
-          };
-          videoElement.onerror = () => {
-            resolve(null);
-          };
-          setTimeout(() => resolve(null), 3500);
-          videoElement.src = URL.createObjectURL(file);
-        });
-
-        if (duration !== null && duration > 0 && duration < 180) {
-          const mins = Math.floor(duration / 60);
-          const secs = Math.floor(duration % 60);
-          const timeFormatted = `${mins}m ${secs}s`;
-          Swal.fire({
-            icon: 'warning',
-            title: 'Video Too Short',
-            html: `The Video Pitch must be a <strong>minimum of 3 minutes</strong> long.<br/><br/>Your uploaded video is only <strong>${timeFormatted}</strong>. Please upload a presentation of at least 3 minutes.`,
-            confirmButtonColor: '#7B1F35'
-          });
-          return;
-        }
-      } catch (err) {
-        console.warn('Could not inspect video duration:', err);
-      }
     }
 
     // Interactive Revision Resubmission: Offer optional Student Response / Comment Box
@@ -1111,7 +1080,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                               {isUrlReq(item) ? 'Click to enter URL' : isVideoReq(item) ? 'Drop video here or browse' : 'Drop file here or browse'}
                             </p>
                             <p className="text-red-400/70 dark:text-red-500/60 text-[11px] mt-1">
-                              {isUrlReq(item) ? 'GitHub or Publisher Link' : isVideoReq(item) ? 'MP4, WebM, MOV · Min. 3 minutes · No size limit' : isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB'}
+                              {isUrlReq(item) ? 'GitHub or Publisher Link' : isVideoReq(item) ? 'MP4, WebM, MOV · No size limit' : isPdfOnly(item) ? 'PDF format · max 50MB' : 'PDF, ZIP, Word, Video · max 50MB'}
                             </p>
                           </>
                         )}
