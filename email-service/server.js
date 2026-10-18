@@ -1572,6 +1572,12 @@ app.post('/api/disable-auth-user', verifyToken, async (req, res) => {
     }
     
     await getAuth().updateUser(targetUid, { disabled: true });
+    try {
+      const db = getFirestore();
+      await db.collection('users').doc(targetUid).set({ status: 'inactive' }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore users sync note (non-fatal):', e.message);
+    }
     
     res.status(200).json({
       success: true,
@@ -1608,6 +1614,12 @@ app.post('/api/enable-auth-user', verifyToken, async (req, res) => {
     }
     
     await getAuth().updateUser(targetUid, { disabled: false });
+    try {
+      const db = getFirestore();
+      await db.collection('users').doc(targetUid).set({ status: 'active' }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore users sync note (non-fatal):', e.message);
+    }
     
     res.status(200).json({
       success: true,
