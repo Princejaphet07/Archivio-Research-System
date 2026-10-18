@@ -13,6 +13,7 @@ import { getBackendUrl } from '../../utils/backendUrl';
 import CertificateModal from '../../components/CertificateModal';
 import { validateSubmissionReadiness } from '../utils/approvalGating';
 import RequirementIcon from '../components/RequirementIcon';
+import { useAdviser } from '../context/AdviserContext';
 import { 
   Clock, 
   AlertCircle, 
@@ -29,10 +30,13 @@ import {
   ShieldAlert, 
   RefreshCw, 
   X,
-  Check
+  Check,
+  Globe
 } from 'lucide-react';
 
 function ReviewSubmissions() {
+  const { adviserData, userRole } = useAdviser();
+  const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
   const location = useLocation();
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -374,7 +378,7 @@ function ReviewSubmissions() {
         title: 'Academic Verification Incomplete',
         html: `
           <div style="font-size: 13px; color: #4a5568; margin-bottom: 12px; text-align: left;">
-            ARCHIVIO linear gating requires all manuscript files to be individually examined and marked approved before endorsing for publication.
+            ARCHIVIO linear gating requires all manuscript files to be individually examined and marked approved before ${isDualRole ? 'publishing to the archive' : 'endorsing for publication'}.
           </div>
           ${unapprovedListHtml}
           ${missingListHtml}
@@ -399,80 +403,116 @@ function ReviewSubmissions() {
     }
 
     const isDeanRev = sub.reviewStatus === 'dean_revision';
-    const res = await Swal.fire({
-      title: isDeanRev ? 'Endorse Revised Manuscript to Dean?' : 'Endorse for Dean Publication?',
-      text: isDeanRev 
+    const dialogTitle = isDualRole 
+      ? 'Publish Research Paper?' 
+      : (isDeanRev ? 'Endorse Revised Manuscript to Dean?' : 'Endorse for Dean Publication?');
+
+    const dialogText = isDualRole
+      ? 'All required documents have been verified. Since you have dual role (Dean + Adviser), this will officially publish the manuscript directly to the live ARCHIVIO Public Archive.'
+      : (isDeanRev 
         ? "All documents and revisions verified. This will forward the manuscript back to the Dean's Publish Queue."
-        : "All required documents have been verified. This will endorse the research and forward it to the Dean's Publish Queue.",
+        : "All required documents have been verified. This will endorse the research and forward it to the Dean's Publish Queue.");
+
+    const confirmBtnText = isDualRole
+      ? 'Yes, Publish Live'
+      : (isDeanRev ? 'Yes, Endorse to Dean' : 'Yes, Endorse for Publication');
+
+    const loadingTitle = isDualRole
+      ? 'Publishing Research Paper...'
+      : (isDeanRev ? 'Endorsing to Dean...' : 'Endorsing for Publication...');
+
+    const res = await Swal.fire({
+      title: dialogTitle,
+      text: dialogText,
       input: 'textarea',
-      inputLabel: 'Adviser Endorsement Remarks / Directives (Optional)',
-      inputPlaceholder: isDeanRev ? 'E.g. Verified revisions requested by the Dean...' : 'E.g. Ready for final archival publishing...',
+      inputLabel: isDualRole ? 'Dean & Adviser Remarks / Directives (Optional)' : 'Adviser Endorsement Remarks / Directives (Optional)',
+      inputPlaceholder: isDualRole ? 'E.g. Approved and verified for official publication...' : (isDeanRev ? 'E.g. Verified revisions requested by the Dean...' : 'E.g. Ready for final archival publishing...'),
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#059669',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: isDeanRev ? 'Yes, Endorse to Dean' : 'Yes, Endorse for Publication'
+      confirmButtonText: confirmBtnText
     });
 
     if (res.isConfirmed) {
       const comments = res.value || '';
 
       Swal.fire({
-        title: isDeanRev ? 'Endorsing to Dean...' : 'Endorsing for Publication...',
+        title: loadingTitle,
         text: 'Updating submission records and notifying stakeholders...',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
 
       try {
-        await updateDoc(doc(db, 'submissions', sub.id), {
-          reviewStatus: 'approved',
-          reviewedAt: new Date().toISOString(),
-          reviewedBy: auth.currentUser?.email,
-          adviserComments: comments
-        });
+        const nowIso = new Date().toISOString();
 
-        await logActivity({
-          user: auth.currentUser?.email || 'Adviser',
-          role: 'Research Adviser',
-          action: 'Endorsed submission for Dean publication',
-          details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
-          status: 'Success'
-        });
-
-        if (sub.studentUid) {
-          await addDoc(collection(db, 'notifications'), {
-            userId: sub.studentUid,
-            title: "Research Approved!",
-            message: "Congratulations! Your Research Adviser has approved your manuscript. It is now awaiting the Dean's final review.",
-            isRead: false,
-            createdAt: serverTimestamp()
+        if (isDualRole) {
+          // Dual Role: Publish directly to live public archive
+          await updateDoc(doc(db, 'submissions', sub.id), {
+            reviewStatus: 'published',
+            publishedAt: nowIso,
+            reviewedAt: nowIso,
+            reviewedBy: auth.currentUser?.email,
+            adviserComments: comments,
+            researchTitle: sub.researchTitle || sub.title,
+            groupName: sub.groupName,
+            adviserName: sub.adviserName || adviserData?.fullName || auth.currentUser?.displayName || 'Dean & Adviser',
+            adviserUid: sub.adviserUid || auth.currentUser?.email,
+            program: sub.program || '',
+            authorDisplay: sub.authorDisplay || sub.leaderName || ''
           });
-          
-          // Notify the Dean(s)
-          try {
-            const deansQuery = query(collection(db, 'users'), where('role', '==', 'dean'));
-            const deansSnap = await getDocs(deansQuery);
-            const batchPromises = deansSnap.docs.map(deanDoc => 
-              addDoc(collection(db, 'notifications'), {
-                userId: deanDoc.id, // Usually the UID is the doc ID for users collection
-                title: "Manuscript Ready for Publishing",
-                message: `Adviser ${auth.currentUser?.email} has approved "${sub.researchTitle}". It is now in your Publish Queue.`,
-                isRead: false,
-                createdAt: serverTimestamp()
-              })
-            );
-            await Promise.all(batchPromises);
-          } catch (notifyErr) {
-            console.error("Failed to notify Dean:", notifyErr);
+
+          await logActivity({
+            user: auth.currentUser?.email || 'Dean & Adviser',
+            role: 'Dean + Adviser',
+            action: 'Published research to public archive',
+            details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
+            status: 'Success'
+          });
+
+          // Notify students (leader + members)
+          const recipientUids = new Set();
+          if (sub.studentUid) recipientUids.add(sub.studentUid);
+
+          const group = groups.find(g => 
+            (sub.groupId && g.id === sub.groupId) || 
+            (sub.groupName && g.groupName === sub.groupName)
+          );
+
+          if (group) {
+            if (group.leaderUid) recipientUids.add(group.leaderUid);
+            if (Array.isArray(group.members)) {
+              for (const member of group.members) {
+                if (typeof member === 'object' && member !== null) {
+                  if (member.uid) recipientUids.add(member.uid);
+                  else if (member.id) recipientUids.add(member.id);
+                }
+              }
+            }
           }
-          
+
+          const paperTitle = sub.researchTitle || sub.title || 'Research Paper';
+
+          for (const uid of recipientUids) {
+            await addDoc(collection(db, 'notifications'), {
+              userId: uid,
+              title: 'Research Paper Published! 🎉',
+              message: `Congratulations! Your manuscript "${paperTitle}" has been verified and published to the live ARCHIVIO public archive.`,
+              type: 'publication',
+              link: 'manuscript',
+              submissionId: sub.id,
+              isRead: false,
+              createdAt: serverTimestamp()
+            });
+          }
+
           if (sub.leaderEmail) {
             try {
               await addDoc(collection(db, 'mail'), {
                 to: sub.leaderEmail,
                 message: {
-                  subject: `Update on your submission: ${sub.researchTitle}`,
+                  subject: `Congratulations! Your manuscript is now Published: ${paperTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                       <div style="background-color: #590000; padding: 20px; text-align: center;">
@@ -480,12 +520,12 @@ function ReviewSubmissions() {
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                       </div>
                       <div style="padding: 30px; background-color: #ffffff;">
-                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
-                        <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName || 'Student'},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">Great news! Your research paper <strong>"${paperTitle}"</strong> has been approved and officially published in the ARCHIVIO live public archive by your Dean & Research Adviser.</p>
                         
                         ${comments ? `
                         <div style="background-color: #f7fafc; border-left: 4px solid #590000; padding: 15px; margin: 20px 0;">
-                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Remarks:</strong></p>
                           <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
                         </div>
                         ` : ''}
@@ -499,18 +539,106 @@ function ReviewSubmissions() {
                   `
                 }
               });
-            } catch (e) {
-              console.error('Failed to send status email', e);
+            } catch (mailErr) {
+              console.error('Failed to dispatch publication email:', mailErr);
             }
           }
-        }
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Endorsed for Publication!',
-          text: `${sub.groupName}'s manuscript has been verified and forwarded to the Dean.`,
-          confirmButtonColor: '#059669',
-        });
+          Swal.fire({
+            icon: 'success',
+            title: 'Research Published! 🎉',
+            text: `${sub.groupName}'s manuscript has been published directly to the live ARCHIVIO Public Archive.`,
+            confirmButtonColor: '#059669',
+          });
+        } else {
+          // Standard Adviser Endorsement
+          await updateDoc(doc(db, 'submissions', sub.id), {
+            reviewStatus: 'approved',
+            reviewedAt: nowIso,
+            reviewedBy: auth.currentUser?.email,
+            adviserComments: comments
+          });
+
+          await logActivity({
+            user: auth.currentUser?.email || 'Adviser',
+            role: 'Research Adviser',
+            action: 'Endorsed submission for Dean publication',
+            details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
+            status: 'Success'
+          });
+
+          if (sub.studentUid) {
+            await addDoc(collection(db, 'notifications'), {
+              userId: sub.studentUid,
+              title: "Research Approved!",
+              message: "Congratulations! Your Research Adviser has approved your manuscript. It is now awaiting the Dean's final review.",
+              isRead: false,
+              createdAt: serverTimestamp()
+            });
+            
+            // Notify the Dean(s)
+            try {
+              const deansQuery = query(collection(db, 'users'), where('role', '==', 'dean'));
+              const deansSnap = await getDocs(deansQuery);
+              const batchPromises = deansSnap.docs.map(deanDoc => 
+                addDoc(collection(db, 'notifications'), {
+                  userId: deanDoc.id,
+                  title: "Manuscript Ready for Publishing",
+                  message: `Adviser ${auth.currentUser?.email} has approved "${sub.researchTitle}". It is now in your Publish Queue.`,
+                  isRead: false,
+                  createdAt: serverTimestamp()
+                })
+              );
+              await Promise.all(batchPromises);
+            } catch (notifyErr) {
+              console.error("Failed to notify Dean:", notifyErr);
+            }
+            
+            if (sub.leaderEmail) {
+              try {
+                await addDoc(collection(db, 'mail'), {
+                  to: sub.leaderEmail,
+                  message: {
+                    subject: `Update on your submission: ${sub.researchTitle}`,
+                    html: `
+                      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <div style="background-color: #590000; padding: 20px; text-align: center;">
+                          <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                          <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                        </div>
+                        <div style="padding: 30px; background-color: #ffffff;">
+                          <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
+                          <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
+                          
+                          ${comments ? `
+                          <div style="background-color: #f7fafc; border-left: 4px solid #590000; padding: 15px; margin: 20px 0;">
+                            <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
+                            <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
+                          </div>
+                          ` : ''}
+                          
+                          <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
+                            Best regards,<br>
+                            <strong>ARCHIVIO System</strong>
+                          </p>
+                        </div>
+                      </div>
+                    `
+                  }
+                });
+              } catch (e) {
+                console.error('Failed to send status email', e);
+              }
+            }
+          }
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Endorsed for Publication!',
+            text: `${sub.groupName}'s manuscript has been verified and forwarded to the Dean.`,
+            confirmButtonColor: '#059669',
+          });
+        }
       } catch (err) {
         console.error('Error approving:', err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#770000' });
@@ -836,7 +964,7 @@ function ReviewSubmissions() {
             className={`pb-3 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer ${activeTab === 'approved' ? 'border-b-2 border-[#590000] dark:border-[#f8d070] text-[#590000] dark:text-[#f8d070]' : 'text-gray-500 dark:text-stone-400 hover:text-gray-700 dark:hover:text-stone-200'}`}
           >
             <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>Endorsed & Published</span>
+            <span>{isDualRole ? 'Published' : 'Endorsed & Published'}</span>
             <span className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold' : 'bg-gray-100 dark:bg-stone-800 text-gray-600 dark:text-stone-400'}`}>{approvedCount}</span>
           </button>
         </div>
@@ -978,8 +1106,8 @@ function ReviewSubmissions() {
                         size="sm"
                         className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-xs py-2 flex items-center gap-1.5"
                       >
-                        <Check className="w-3.5 h-3.5" />
-                        Endorse
+                        {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                        {isDualRole ? 'Publish' : 'Endorse'}
                       </PremiumButton>
                     )}
 
@@ -997,9 +1125,10 @@ function ReviewSubmissions() {
                           onClick={() => handleApprove(item)}
                           variant="primary"
                           size="sm"
-                          className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs"
+                          className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1"
                         >
-                          Re-Approve
+                          {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                          {isDualRole ? 'Publish' : 'Re-Approve'}
                         </PremiumButton>
                       </div>
                     )}
@@ -1172,10 +1301,10 @@ function ReviewSubmissions() {
                                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
                                       : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
                                   }`}
-                                  title={isReady ? "Endorse this verified submission for Dean publishing" : reasonText}
+                                  title={isReady ? (isDualRole ? "Publish this verified submission directly to live public archive" : "Endorse this verified submission for Dean publishing") : reasonText}
                                 >
-                                  <Check className="w-3.5 h-3.5" />
-                                  Endorse
+                                  {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                                  {isDualRole ? 'Publish' : 'Endorse'}
                                 </PremiumButton>
                               );
                             })()}
@@ -1209,10 +1338,10 @@ function ReviewSubmissions() {
                                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
                                         : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
                                     }`}
-                                    title={isReady ? "Re-approve manuscript and return to Dean for publishing" : reasonText}
+                                    title={isReady ? (isDualRole ? "Publish revised manuscript directly to archive" : "Re-approve manuscript and return to Dean for publishing") : reasonText}
                                   >
-                                    <Check className="w-3.5 h-3.5" />
-                                    Re-Approve to Dean
+                                    {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                                    {isDualRole ? 'Publish' : 'Re-Approve to Dean'}
                                   </PremiumButton>
                                 </>
                               );
@@ -1582,15 +1711,15 @@ function ReviewSubmissions() {
                           handleApprove(selectedSubmission);
                         }}
                         disabled={!isReady}
-                        title={isReady ? 'Endorse this verified submission for Dean publication' : reasonTooltip}
+                        title={isReady ? (isDualRole ? 'Publish this verified manuscript directly to live public archive' : 'Endorse this verified submission for Dean publication') : reasonTooltip}
                         className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold transition text-center flex items-center justify-center gap-1.5 shadow-sm ${
                           isReady 
                             ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer active:scale-95'
                             : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
                         }`}
                       >
-                        <Check className="w-4 h-4" />
-                        <span>Endorse</span>
+                        {isDualRole ? <Globe className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                        <span>{isDualRole ? 'Publish' : 'Endorse'}</span>
                       </button>
                     </div>
                   );
