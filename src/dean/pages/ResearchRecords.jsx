@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { db } from '../firebase/config';
@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
-import { Download, Search, Eye, Sparkles, FolderArchive, Printer } from 'lucide-react';
+import { Download, Search, Eye, Sparkles, FolderArchive, Printer, X } from 'lucide-react';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -57,6 +57,7 @@ const formatStatus = (status) => {
 
 export default function ResearchRecords() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { deanData } = useUser();
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('All Years');
@@ -66,6 +67,18 @@ export default function ResearchRecords() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
+
+  // Highlighted adviser from navigation (e.g. Dashboard)
+  const [highlightAdviser, setHighlightAdviser] = useState(
+    location.state?.highlightAdviser || location.state?.selectedAdviser || null
+  );
+
+  useEffect(() => {
+    const incAdv = location.state?.highlightAdviser || location.state?.selectedAdviser;
+    if (incAdv) {
+      setHighlightAdviser(incAdv);
+    }
+  }, [location.state]);
   
   const [records, setRecords] = useState([]);
   const [requirements, setRequirements] = useState([]);
@@ -223,6 +236,32 @@ export default function ResearchRecords() {
       setFilterStatus('All Statuses');
     }
   }, [allStatuses, filterStatus]);
+
+  // When highlightAdviser is present, automatically navigate to the page containing that adviser's record
+  useEffect(() => {
+    if (highlightAdviser && filtered.length > 0) {
+      const targetIdx = filtered.findIndex(r => 
+        r.adviser && r.adviser.toLowerCase().trim() === highlightAdviser.toLowerCase().trim()
+      );
+      if (targetIdx !== -1) {
+        const targetPage = Math.floor(targetIdx / itemsPerPage) + 1;
+        setCurrentPage(targetPage);
+      }
+    }
+  }, [highlightAdviser, filtered.length, itemsPerPage]);
+
+  // Auto-scroll to highlighted record
+  useEffect(() => {
+    if (highlightAdviser && !loading && paginated.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.querySelector('[data-highlighted="true"]');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightAdviser, loading, currentPage]);
 
   const handleView = (record) => {
     if (record.originalSub && record.originalSub.id) {
@@ -650,6 +689,30 @@ export default function ResearchRecords() {
               </div>
             </div>
 
+            {/* Active Highlight Banner */}
+            {highlightAdviser && (
+              <div className="mx-4 mt-3 mb-1 px-3.5 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  <span>
+                    Highlighting research records for adviser: <strong className="font-extrabold underline decoration-amber-500 decoration-2">{highlightAdviser}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHighlightAdviser(null)}
+                  className="inline-flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 hover:text-[#590000] dark:hover:text-white cursor-pointer px-2 py-0.5 rounded hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                  title="Clear highlight"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Clear Highlight</span>
+                </button>
+              </div>
+            )}
+
             {/* ---- Table ---- */}
             <div className="overflow-x-auto">
               {loading ? (
@@ -684,11 +747,22 @@ export default function ResearchRecords() {
                       </td>
                     </tr>
                   ) : (
-                    paginated.map((record, index) => (
+                    paginated.map((record, index) => {
+                      const isHighlighted = Boolean(
+                        highlightAdviser &&
+                        record.adviser &&
+                        (record.adviser.toLowerCase().trim() === highlightAdviser.toLowerCase().trim())
+                      );
+                      return (
                       <tr
                         key={record.id}
-                        className={`hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors ${
-                          record.adviserSelf ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
+                        data-highlighted={isHighlighted ? 'true' : undefined}
+                        className={`transition-all duration-300 ${
+                          isHighlighted
+                            ? 'bg-amber-100/75 dark:bg-amber-950/50 border-l-4 border-l-[#590000] dark:border-l-[#d4af37] ring-1 ring-inset ring-amber-300 dark:ring-amber-600/50 shadow-xs'
+                            : record.adviserSelf
+                              ? 'bg-amber-50/30 dark:bg-amber-900/10 hover:bg-stone-50 dark:hover:bg-stone-700'
+                              : 'hover:bg-stone-50 dark:hover:bg-stone-700'
                         }`}
                       >
                         {/* No. */}
@@ -714,12 +788,23 @@ export default function ResearchRecords() {
                         {/* Adviser */}
                         <td className="py-4 px-4 text-stone-700 dark:text-stone-300">
                           <div className="flex items-center gap-2">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${record.adviserSelf ? 'bg-[#590000] text-white dark:bg-[#f8d070] dark:text-[#590000]' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                              isHighlighted
+                                ? 'bg-[#590000] text-white dark:bg-[#d4af37] dark:text-[#590000] ring-2 ring-amber-400 shadow-xs'
+                                : record.adviserSelf 
+                                  ? 'bg-[#590000] text-white dark:bg-[#f8d070] dark:text-[#590000]' 
+                                  : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'
+                            }`}>
                               {record.adviser.charAt(0).toUpperCase()}
                             </div>
-                            <span className={record.adviserSelf ? 'font-bold text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
+                            <span className={isHighlighted || record.adviserSelf ? 'font-bold text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
                               {record.adviser}
                             </span>
+                            {isHighlighted && (
+                              <span className="text-[9px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-xs animate-pulse">
+                                Highlighted
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -784,7 +869,8 @@ export default function ResearchRecords() {
                           </button>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>

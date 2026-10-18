@@ -937,10 +937,25 @@ export default function Dashboard({ activePage }) {
                       return (
                         <tr key={adv.uid} className={`${isYou ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/60 dark:hover:bg-amber-950/30' : 'hover:bg-stone-50 dark:hover:bg-stone-700'} transition-colors`}>
                           <td className="py-3.5 px-5 flex items-center gap-3">
-                            <div className={`w-7 h-7 rounded-full ${isYou ? 'bg-amber-500/20 text-amber-800' : 'bg-purple-100 text-purple-700'} font-bold flex items-center justify-center text-[11px]`}>{initials}</div>
-                            <div>
-                              <span className="font-bold text-stone-900 dark:text-stone-100">{adv.name}</span>
-                              {isYou && <span className="ml-2 text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-extrabold uppercase">You</span>}
+                            <button
+                              type="button"
+                              onClick={() => navigate('/dean/records', { state: { highlightAdviser: adv.name } })}
+                              className={`w-7 h-7 rounded-full ${isYou ? 'bg-amber-500/20 text-amber-800 hover:bg-amber-500/30' : 'bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'} font-bold flex items-center justify-center text-[11px] cursor-pointer transition-transform hover:scale-105 shrink-0`}
+                              title={`View ${adv.name}'s research records`}
+                            >
+                              {initials}
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => navigate('/dean/records', { state: { highlightAdviser: adv.name } })}
+                                className="font-bold text-stone-900 dark:text-stone-100 hover:text-[#590000] dark:hover:text-[#d4af37] hover:underline transition-colors inline-flex items-center gap-1.5 group text-left cursor-pointer"
+                                title={`Click to view research records and highlight ${adv.name}'s rows`}
+                              >
+                                <span>{adv.name}</span>
+                                <ExternalLink className="w-3 h-3 text-stone-400 group-hover:text-[#590000] dark:group-hover:text-[#d4af37] transition-colors" />
+                              </button>
+                              {isYou && <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-extrabold uppercase shrink-0">You</span>}
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-left font-bold">{adv.uploads}</td>
