@@ -40,7 +40,7 @@ function DeanThemedRoutes() {
           <Route path="publish-queue" element={<PublishQueue />} />
           <Route path="requirements" element={<Requirements />} />
           <Route path="invitations" element={<Invitations />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="reports" element={<Navigate to="/dean/research-records" replace />} />
           <Route path="user-management" element={<UserManagement />} />
           <Route path="settings" element={<Settings />} />
           <Route path="profile" element={<Navigate to="/dean/settings" state={{ tab: 'profile' }} replace />} />
