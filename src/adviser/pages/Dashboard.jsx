@@ -157,7 +157,7 @@ function Dashboard() {
   const avgCompletion = enrichedSubmissions.length > 0 ? Math.round(totalCompletion / enrichedSubmissions.length) : 0;
 
   return (
-    <Layout>
+    <Layout showSearch={false}>
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Welcome Banner */}
