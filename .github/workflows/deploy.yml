@@ -5,10 +5,15 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -31,6 +36,8 @@ jobs:
           echo "VITE_RECAPTCHA_SITE_KEY=6Lf197otAAAAAKWaNv2gSG5G2pJBQeHa0Vh8v5IB" >> public-archive/.env
 
       - name: Build Both Applications
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
         run: npm run build:all
 
       - name: Authenticate with Google Cloud / Firebase
