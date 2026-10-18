@@ -1985,14 +1985,39 @@ function ReviewSubmissions() {
                     confirmButtonText: 'Done',
                     confirmButtonColor: '#10b981'
                   });
+                } else if (actionType === 'approved') {
+                  const reqDocTitle = viewerState.title?.split(' - ')[1] || 'Requirement';
+                  await Swal.fire({
+                    icon: 'success',
+                    title: 'Requirement Approved!',
+                    html: `
+                      <div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: center; padding: 4px 0;">
+                        <p style="margin-bottom: 8px; font-weight: 700; color: #047857; font-size: 15px;">
+                          ✓ ${reqDocTitle}
+                        </p>
+                        <p style="margin: 0; color: #4b5563;">
+                          This requirement has been successfully verified and marked as approved.
+                        </p>
+                        ${isAllApproved ? `
+                          <div style="margin-top: 14px; padding: 10px 14px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #047857; font-size: 13px; font-weight: 600;">
+                            🎉 All required documents are now verified and complete!
+                          </div>
+                        ` : ''}
+                      </div>
+                    `,
+                    confirmButtonText: 'Done',
+                    confirmButtonColor: '#059669',
+                    timer: 3500,
+                    timerProgressBar: true
+                  });
                 } else {
                   Swal.fire({
-                    toast: true,
-                    position: 'bottom-end',
-                    icon: 'success',
-                    title: 'Document marked as checked.' + statusChangedMsg,
-                    showConfirmButton: false,
-                    timer: 4000
+                    icon: 'info',
+                    title: 'Document Updated',
+                    text: 'The document review state has been updated.' + statusChangedMsg,
+                    confirmButtonColor: '#770000',
+                    timer: 2500,
+                    timerProgressBar: true
                   });
                 }
               } catch (error) {
