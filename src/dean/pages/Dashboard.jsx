@@ -563,7 +563,7 @@ export default function Dashboard({ activePage }) {
                   warning 
                 />
                 <KpiCard 
-                  title="COMPLETED" 
+                  title="FOR COMPLETION" 
                   value={stats.approved} 
                   trend="Awaiting publish" 
                   icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} 
