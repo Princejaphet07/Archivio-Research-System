@@ -69,16 +69,24 @@ export default function ResearchRecords() {
   const [loading, setLoading] = useState(true);
 
   // Highlighted adviser from navigation (e.g. Dashboard)
-  const [highlightAdviser, setHighlightAdviser] = useState(
-    location.state?.highlightAdviser || location.state?.selectedAdviser || null
-  );
+  const searchParams = new URLSearchParams(location.search);
+  const initialAdviser = location.state?.highlightAdviser || 
+                         location.state?.selectedAdviser || 
+                         searchParams.get('adviser') || 
+                         searchParams.get('highlight') || 
+                         null;
+  const [highlightAdviser, setHighlightAdviser] = useState(initialAdviser);
 
   useEffect(() => {
-    const incAdv = location.state?.highlightAdviser || location.state?.selectedAdviser;
+    const params = new URLSearchParams(location.search);
+    const incAdv = location.state?.highlightAdviser || 
+                   location.state?.selectedAdviser || 
+                   params.get('adviser') || 
+                   params.get('highlight');
     if (incAdv) {
       setHighlightAdviser(incAdv);
     }
-  }, [location.state]);
+  }, [location.state, location.search]);
   
   const [records, setRecords] = useState([]);
   const [requirements, setRequirements] = useState([]);
@@ -240,9 +248,12 @@ export default function ResearchRecords() {
   // When highlightAdviser is present, automatically navigate to the page containing that adviser's record
   useEffect(() => {
     if (highlightAdviser && filtered.length > 0) {
-      const targetIdx = filtered.findIndex(r => 
-        r.adviser && r.adviser.toLowerCase().trim() === highlightAdviser.toLowerCase().trim()
-      );
+      const hNorm = highlightAdviser.toLowerCase().trim();
+      const targetIdx = filtered.findIndex(r => {
+        if (!r.adviser) return false;
+        const aNorm = r.adviser.toLowerCase().trim();
+        return aNorm === hNorm || aNorm.includes(hNorm) || hNorm.includes(aNorm);
+      });
       if (targetIdx !== -1) {
         const targetPage = Math.floor(targetIdx / itemsPerPage) + 1;
         setCurrentPage(targetPage);
@@ -748,10 +759,12 @@ export default function ResearchRecords() {
                     </tr>
                   ) : (
                     paginated.map((record, index) => {
+                      const hNorm = highlightAdviser ? highlightAdviser.toLowerCase().trim() : '';
+                      const aNorm = record.adviser ? record.adviser.toLowerCase().trim() : '';
                       const isHighlighted = Boolean(
-                        highlightAdviser &&
-                        record.adviser &&
-                        (record.adviser.toLowerCase().trim() === highlightAdviser.toLowerCase().trim())
+                        hNorm &&
+                        aNorm &&
+                        (aNorm === hNorm || aNorm.includes(hNorm) || hNorm.includes(aNorm))
                       );
                       return (
                       <tr

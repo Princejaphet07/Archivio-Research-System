@@ -36,6 +36,7 @@ function DeanThemedRoutes() {
         <Routes>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="research-records" element={<ResearchRecords />} />
+          <Route path="records" element={<ResearchRecords />} />
           <Route path="publish-queue" element={<PublishQueue />} />
           <Route path="requirements" element={<Requirements />} />
           <Route path="invitations" element={<Invitations />} />
