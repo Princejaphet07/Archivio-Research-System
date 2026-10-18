@@ -575,9 +575,9 @@ export default function Dashboard({ activePage }) {
                   icon={<Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />} 
                 />
                 <KpiCard 
-                  title="PENDING REVIEW" 
+                  title="IN PROGRESS" 
                   value={stats.pending} 
-                  trend="Needs attention" 
+                  trend="Ongoing research" 
                   icon={<Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />} 
                   warning 
                 />
