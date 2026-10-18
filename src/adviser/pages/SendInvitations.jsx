@@ -8,6 +8,8 @@ import Swal from 'sweetalert2';
 import { validateStudentSchoolEmail } from '../../utils/schoolEmailValidator';
 import { sendEmailWithFallback } from '../../utils/emailDispatcher';
 import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { getBackendUrl } from '../../utils/backendUrl';
+import { authFetch } from '../../utils/authFetch';
 import { 
   Mail, 
   Send, 
@@ -160,10 +162,29 @@ function SendInvitations() {
       );
       const snapUser = await getDocs(qUser);
       if (!snapUser.empty) {
-        Swal.close();
-        setError('This email is already registered to an active account.');
-        setLoading(false);
-        return;
+        let isActuallyActiveInAuth = true;
+        try {
+          const backendUrl = getBackendUrl();
+          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: emailToInvite });
+          if (checkRes && checkRes.inAuth === false) {
+            isActuallyActiveInAuth = false;
+          }
+        } catch (_) {
+          const userDocData = snapUser.docs[0].data();
+          if (userDocData?.status === 'inactive' || userDocData?.deleted) {
+            isActuallyActiveInAuth = false;
+          }
+        }
+
+        if (!isActuallyActiveInAuth) {
+          console.log(`🧹 Auto-purging orphaned account for ${emailToInvite}`);
+          await wipeEmailData(emailToInvite, snapUser.docs[0].id);
+        } else {
+          Swal.close();
+          setError('This email is already registered to an active account.');
+          setLoading(false);
+          return;
+        }
       }
 
       // 3. Fast check if email already has a pending invitation FROM THIS ADVISER

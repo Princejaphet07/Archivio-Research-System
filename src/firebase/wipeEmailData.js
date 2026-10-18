@@ -28,7 +28,7 @@ export async function wipeEmailData(emailInput, uidInput = null) {
 
   // 2. Direct document deletions by ID/UID across all potential role collections
   if (uid) {
-    const directCollections = ['super_admins', 'deans', 'advisers', 'students', 'users', 'dean_settings', 'user_bookmarks'];
+    const directCollections = ['super_admins', 'admins', 'deans', 'advisers', 'students', 'users', 'dean_settings', 'user_bookmarks'];
     await Promise.allSettled(
       directCollections.map(col => deleteDoc(doc(db, col, uid)).catch(() => {}))
     );
@@ -38,11 +38,16 @@ export async function wipeEmailData(emailInput, uidInput = null) {
   if (email) {
     const emailCollections = [
       { col: 'super_admins', field: 'email' },
+      { col: 'admins', field: 'email' },
       { col: 'deans', field: 'email' },
       { col: 'advisers', field: 'email' },
       { col: 'students', field: 'email' },
+      { col: 'students', field: 'studentEmail' },
       { col: 'users', field: 'email' },
       { col: 'studentInvitations', field: 'studentEmail' },
+      { col: 'studentInvitations', field: 'email' },
+      { col: 'student_invitations', field: 'studentEmail' },
+      { col: 'student_invitations', field: 'email' },
       { col: 'invitations', field: 'email' },
     ];
 

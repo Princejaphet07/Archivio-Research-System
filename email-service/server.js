@@ -1495,60 +1495,393 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
-// HARD DELETE FIREBASE AUTH USER
+// COMPREHENSIVE HARD DELETE & PURGE OF ALL USER DATA (ADMIN SDK)
 // ============================================
+async function performDeepUserPurge({ uid, email }) {
+  const result = {
+    authDeleted: 0,
+    firestoreDocsDeleted: 0,
+    groupsUpdated: 0,
+    details: []
+  };
+
+  const cleanEmail = email ? String(email).toLowerCase().trim() : null;
+  let targetUid = uid ? String(uid).trim() : null;
+
+  console.log(`🔥 [DEEP PURGE] Starting complete purge for: email=${cleanEmail}, uid=${targetUid}`);
+
+  const authUids = new Set();
+  const emails = new Set();
+  if (targetUid) authUids.add(targetUid);
+  if (cleanEmail) emails.add(cleanEmail);
+
+  // 1. Firebase Auth resolution & deletion
+  if (cleanEmail) {
+    try {
+      const userRecord = await getAuth().getUserByEmail(cleanEmail);
+      if (userRecord && userRecord.uid) {
+        authUids.add(userRecord.uid);
+      }
+    } catch (e) {
+      if (e.code !== 'auth/user-not-found') {
+        console.warn(`[DEEP PURGE] Auth getUserByEmail warning for ${cleanEmail}:`, e.message);
+      }
+    }
+  }
+
+  // Delete all resolved UIDs from Firebase Auth
+  for (const u of authUids) {
+    try {
+      await getAuth().deleteUser(u);
+      console.log(`✅ [DEEP PURGE] Hard-deleted user ${u} from Firebase Auth`);
+      result.authDeleted++;
+      result.details.push(`Auth user ${u} deleted`);
+    } catch (delErr) {
+      if (delErr.code !== 'auth/user-not-found') {
+        console.warn(`[DEEP PURGE] Auth deleteUser warning for ${u}:`, delErr.message);
+      }
+    }
+  }
+
+  // 2. Discover any additional UIDs or emails from Firestore before deletion
+  const db = getFirestore();
+  if (cleanEmail) {
+    try {
+      const uSnap = await db.collection('users').where('email', '==', cleanEmail).get();
+      uSnap.forEach(d => {
+        authUids.add(d.id);
+        const data = d.data();
+        if (data.uid) authUids.add(String(data.uid).trim());
+        if (data.email) emails.add(String(data.email).toLowerCase().trim());
+      });
+    } catch (_) {}
+
+    try {
+      const sSnap = await db.collection('students').where('email', '==', cleanEmail).get();
+      sSnap.forEach(d => {
+        authUids.add(d.id);
+        const data = d.data();
+        if (data.uid) authUids.add(String(data.uid).trim());
+      });
+    } catch (_) {}
+
+    try {
+      const aSnap = await db.collection('advisers').where('email', '==', cleanEmail).get();
+      aSnap.forEach(d => {
+        authUids.add(d.id);
+        const data = d.data();
+        if (data.uid) authUids.add(String(data.uid).trim());
+      });
+    } catch (_) {}
+
+    try {
+      const dSnap = await db.collection('deans').where('email', '==', cleanEmail).get();
+      dSnap.forEach(d => {
+        authUids.add(d.id);
+        const data = d.data();
+        if (data.uid) authUids.add(String(data.uid).trim());
+      });
+    } catch (_) {}
+  }
+
+  for (const u of Array.from(authUids)) {
+    try {
+      const uDoc = await db.collection('users').doc(u).get();
+      if (uDoc.exists) {
+        const data = uDoc.data();
+        if (data.email) emails.add(String(data.email).toLowerCase().trim());
+      }
+    } catch (_) {}
+  }
+
+  // Helper function to safely delete documents matching a query
+  const deleteMatchingDocs = async (colName, queryRef, label) => {
+    try {
+      const snap = await queryRef.get();
+      if (!snap.empty) {
+        for (const docSnap of snap.docs) {
+          await docSnap.ref.delete();
+          result.firestoreDocsDeleted++;
+          result.details.push(`Deleted ${colName}/${docSnap.id} (${label})`);
+          console.log(`🗑️ [DEEP PURGE] Deleted from ${colName}: ${docSnap.id}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[DEEP PURGE] Error querying ${colName} (${label}):`, err.message);
+    }
+  };
+
+  // Helper function to safely delete a document by ID directly
+  const deleteDocById = async (colName, docId) => {
+    if (!docId) return;
+    try {
+      const ref = db.collection(colName).doc(docId);
+      const docSnap = await ref.get();
+      if (docSnap.exists) {
+        await ref.delete();
+        result.firestoreDocsDeleted++;
+        result.details.push(`Deleted ${colName}/${docId} (by ID)`);
+        console.log(`🗑️ [DEEP PURGE] Deleted direct doc ${colName}/${docId}`);
+      }
+    } catch (err) {
+      console.warn(`[DEEP PURGE] Error deleting ${colName}/${docId}:`, err.message);
+    }
+  };
+
+  // 3. Direct document deletions across primary collections
+  const directCollections = [
+    'users',
+    'students',
+    'advisers',
+    'deans',
+    'super_admins',
+    'admins',
+    'dean_settings',
+    'user_bookmarks',
+    'user_status',
+    'presence'
+  ];
+
+  for (const col of directCollections) {
+    for (const u of authUids) {
+      await deleteDocById(col, u);
+    }
+  }
+
+  // 4. Query-based deletions by Email across collections
+  for (const emailVal of emails) {
+    await deleteMatchingDocs('users', db.collection('users').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('students', db.collection('students').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('students', db.collection('students').where('studentEmail', '==', emailVal), 'studentEmail');
+    await deleteMatchingDocs('advisers', db.collection('advisers').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('deans', db.collection('deans').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('super_admins', db.collection('super_admins').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('admins', db.collection('admins').where('email', '==', emailVal), 'email');
+
+    // Invitations
+    await deleteMatchingDocs('studentInvitations', db.collection('studentInvitations').where('studentEmail', '==', emailVal), 'studentEmail');
+    await deleteMatchingDocs('studentInvitations', db.collection('studentInvitations').where('email', '==', emailVal), 'email');
+    await deleteMatchingDocs('student_invitations', db.collection('student_invitations').where('studentEmail', '==', emailVal), 'studentEmail');
+    await deleteMatchingDocs('invitations', db.collection('invitations').where('email', '==', emailVal), 'email');
+
+    // Password resets
+    await deleteDocById('password_resets', emailVal);
+
+    // Notifications
+    await deleteMatchingDocs('notifications', db.collection('notifications').where('userId', '==', emailVal), 'userId=email');
+    await deleteMatchingDocs('notifications', db.collection('notifications').where('recipientEmail', '==', emailVal), 'recipientEmail');
+
+    // Submissions
+    await deleteMatchingDocs('submissions', db.collection('submissions').where('studentEmail', '==', emailVal), 'studentEmail');
+
+    // Requirements
+    await deleteMatchingDocs('requirements', db.collection('requirements').where('adviserEmail', '==', emailVal), 'adviserEmail');
+    await deleteMatchingDocs('requirements', db.collection('requirements').where('adviserUid', '==', emailVal), 'adviserUid=email');
+  }
+
+  // Query-based deletions by UID in students, users, notifications, submissions, requirements
+  for (const u of authUids) {
+    await deleteMatchingDocs('students', db.collection('students').where('uid', '==', u), 'uid');
+    await deleteMatchingDocs('users', db.collection('users').where('uid', '==', u), 'uid');
+    await deleteMatchingDocs('notifications', db.collection('notifications').where('userId', '==', u), 'userId=uid');
+    await deleteMatchingDocs('submissions', db.collection('submissions').where('studentUid', '==', u), 'studentUid');
+    await deleteMatchingDocs('requirements', db.collection('requirements').where('adviserUid', '==', u), 'adviserUid');
+  }
+
+  // 5. Clean up Groups and Group Memberships
+  if (emails.size > 0 || authUids.size > 0) {
+    // If student was leader of a group: delete group and group submissions
+    const leaderQueries = [];
+    for (const emailVal of emails) {
+      leaderQueries.push(db.collection('groups').where('leaderEmail', '==', emailVal));
+    }
+    for (const u of authUids) {
+      leaderQueries.push(db.collection('groups').where('leaderUid', '==', u));
+    }
+
+    for (const qRef of leaderQueries) {
+      try {
+        const snap = await qRef.get();
+        for (const gDoc of snap.docs) {
+          const groupId = gDoc.id;
+          await deleteMatchingDocs('submissions', db.collection('submissions').where('groupId', '==', groupId), `groupId=${groupId}`);
+          await gDoc.ref.delete();
+          result.firestoreDocsDeleted++;
+          result.details.push(`Deleted group ${groupId} (where user was leader)`);
+          console.log(`🗑️ [DEEP PURGE] Deleted group led by user: ${groupId}`);
+        }
+      } catch (err) {
+        console.warn('[DEEP PURGE] Error deleting led groups:', err.message);
+      }
+    }
+
+    // If adviser of groups: delete or unassign group
+    const adviserQueries = [];
+    for (const emailVal of emails) {
+      adviserQueries.push(db.collection('groups').where('adviserUid', '==', emailVal));
+      adviserQueries.push(db.collection('groups').where('adviserEmail', '==', emailVal));
+    }
+    for (const u of authUids) {
+      adviserQueries.push(db.collection('groups').where('adviserUid', '==', u));
+    }
+
+    for (const qRef of adviserQueries) {
+      try {
+        const snap = await qRef.get();
+        for (const gDoc of snap.docs) {
+          await gDoc.ref.delete();
+          result.firestoreDocsDeleted++;
+          result.details.push(`Deleted group ${gDoc.id} (where user was adviser)`);
+          console.log(`🗑️ [DEEP PURGE] Deleted group advised by user: ${gDoc.id}`);
+        }
+      } catch (err) {
+        console.warn('[DEEP PURGE] Error deleting advised groups:', err.message);
+      }
+    }
+
+    // Clean up members array across all groups
+    if (emails.size > 0) {
+      try {
+        const allGroupsSnap = await db.collection('groups').get();
+        for (const gDoc of allGroupsSnap.docs) {
+          const gData = gDoc.data();
+          if (Array.isArray(gData.members)) {
+            const hasMember = gData.members.some(m => {
+              if (typeof m === 'object' && m !== null) {
+                return (m.email && emails.has(m.email.toLowerCase().trim())) || (m.uid && authUids.has(String(m.uid)));
+              }
+              return (typeof m === 'string' && (emails.has(m.toLowerCase().trim()) || authUids.has(m)));
+            });
+
+            if (hasMember) {
+              const updatedMembers = gData.members.filter(m => {
+                if (typeof m === 'object' && m !== null) {
+                  return !(m.email && emails.has(m.email.toLowerCase().trim())) && !(m.uid && authUids.has(String(m.uid)));
+                }
+                return !(typeof m === 'string' && (emails.has(m.toLowerCase().trim()) || authUids.has(m)));
+              });
+              await gDoc.ref.update({ members: updatedMembers });
+              result.groupsUpdated++;
+              console.log(`🧹 [DEEP PURGE] Removed member from group: ${gDoc.id}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DEEP PURGE] Error cleaning group members:', err.message);
+      }
+
+      // Clean up groupMembers in students collection
+      try {
+        const allStudentsSnap = await db.collection('students').get();
+        for (const sDoc of allStudentsSnap.docs) {
+          const sData = sDoc.data();
+          if (Array.isArray(sData.groupMembers)) {
+            const hasMember = sData.groupMembers.some(m => {
+              if (typeof m === 'object' && m !== null) {
+                return (m.email && emails.has(m.email.toLowerCase().trim())) || (m.uid && authUids.has(String(m.uid)));
+              }
+              return (typeof m === 'string' && (emails.has(m.toLowerCase().trim()) || authUids.has(m)));
+            });
+
+            if (hasMember) {
+              const updatedGroupMembers = sData.groupMembers.filter(m => {
+                if (typeof m === 'object' && m !== null) {
+                  return !(m.email && emails.has(m.email.toLowerCase().trim())) && !(m.uid && authUids.has(String(m.uid)));
+                }
+                return !(typeof m === 'string' && (emails.has(m.toLowerCase().trim()) || authUids.has(m)));
+              });
+              await sDoc.ref.update({ groupMembers: updatedGroupMembers });
+              console.log(`🧹 [DEEP PURGE] Removed group member from student doc: ${sDoc.id}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DEEP PURGE] Error cleaning students.groupMembers:', err.message);
+      }
+    }
+  }
+
+  console.log(`✨ [DEEP PURGE] Complete: Auth=${result.authDeleted}, FirestoreDocs=${result.firestoreDocsDeleted}, GroupsCleaned=${result.groupsUpdated}`);
+  return result;
+}
+
+// Hard-delete endpoint called by wipeEmailData and Administrator User Management
 app.post('/api/hard-delete-auth-user', async (req, res) => {
   try {
     const { uid, email } = req.body;
-
     if (!uid && !email) {
       return res.status(400).json({ error: 'Missing UID or email' });
     }
 
-    console.log(`📍 Attempting to hard-delete Firebase Auth user: ${email || uid}`);
-
-    let targetUid = uid;
-    if (!targetUid && email) {
-      try {
-        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
-        targetUid = userRecord.uid;
-      } catch (notFound) {
-        console.log(`ℹ️ User ${email} not found in Firebase Auth by email (already deleted)`);
-      }
-    }
-
-    if (targetUid) {
-      try {
-        await getAuth().deleteUser(targetUid);
-        console.log(`✅ Hard-deleted user ${targetUid} from Firebase Auth`);
-      } catch (delErr) {
-        if (delErr.code !== 'auth/user-not-found') {
-          console.warn('Firebase Auth deleteUser warning:', delErr.message);
-        }
-      }
-    }
-
-    // Also double check by email in case uid was a Firestore document ID different from Auth UID
-    if (email) {
-      try {
-        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
-        if (userRecord && userRecord.uid && userRecord.uid !== targetUid) {
-          await getAuth().deleteUser(userRecord.uid);
-          console.log(`✅ Also deleted Firebase Auth user with matching email: ${userRecord.uid}`);
-        }
-      } catch (_) {}
-    }
-
+    const purgeResult = await performDeepUserPurge({ uid, email });
     res.status(200).json({
       success: true,
-      message: 'User successfully purged from Firebase Auth'
+      message: 'User and all associated data permanently purged from ARCHIVIO',
+      purgeResult
     });
   } catch (error) {
     console.error('❌ Error in hard-delete-auth-user:', error);
     res.status(500).json({
-      error: 'Failed to hard-delete auth user',
+      error: 'Failed to completely purge user data',
       details: error.message
     });
+  }
+});
+
+// Dedicated full admin purge endpoint
+app.post('/api/admin-delete-user-completely', async (req, res) => {
+  try {
+    const { uid, email } = req.body;
+    if (!uid && !email) {
+      return res.status(400).json({ error: 'Missing UID or email' });
+    }
+
+    const purgeResult = await performDeepUserPurge({ uid, email });
+    res.status(200).json({
+      success: true,
+      message: 'All user records across Authentication and all databases completely obliterated',
+      purgeResult
+    });
+  } catch (error) {
+    console.error('❌ Error in admin-delete-user-completely:', error);
+    res.status(500).json({
+      error: 'Failed to completely purge user data',
+      details: error.message
+    });
+  }
+});
+
+// Check if email or user is actually registered and active in Firebase Auth
+app.post('/api/check-auth-user', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const cleanEmail = String(email).toLowerCase().trim();
+    try {
+      const userRecord = await getAuth().getUserByEmail(cleanEmail);
+      return res.status(200).json({
+        exists: true,
+        inAuth: true,
+        uid: userRecord.uid,
+        disabled: userRecord.disabled || false,
+        emailVerified: userRecord.emailVerified || false
+      });
+    } catch (authErr) {
+      if (authErr.code === 'auth/user-not-found') {
+        return res.status(200).json({
+          exists: false,
+          inAuth: false,
+          message: 'User does not exist in Firebase Auth'
+        });
+      }
+      throw authErr;
+    }
+  } catch (error) {
+    console.error('❌ Error checking auth user:', error);
+    res.status(500).json({ error: 'Failed to check auth user', details: error.message });
   }
 });
 
@@ -3010,56 +3343,7 @@ app.post('/api/disable-auth-user', async (req, res) => {
   }
 });
 
-// ============================================
-// HARD DELETE USER FROM FIREBASE AUTH
-// ============================================
-app.post('/api/hard-delete-auth-user', async (req, res) => {
-  try {
-    const { uid, email } = req.body;
-    if (!uid && !email) {
-      return res.status(400).json({ error: 'Missing uid or email' });
-    }
 
-    let deletedCount = 0;
-
-    // 1. Delete by UID if provided
-    if (uid) {
-      try {
-        await getAuth().deleteUser(uid);
-        console.log(`✅ Successfully hard deleted user from Auth by UID: ${uid}`);
-        deletedCount++;
-      } catch (uErr) {
-        if (uErr.code !== 'auth/user-not-found') {
-          console.warn(`Warning deleting by UID ${uid}:`, uErr.message);
-        }
-      }
-    }
-
-    // 2. ALWAYS also check by email if provided to ensure no orphaned auth records remain
-    if (email) {
-      try {
-        const userRecord = await getAuth().getUserByEmail(email.toLowerCase().trim());
-        if (userRecord && userRecord.uid !== uid) {
-          await getAuth().deleteUser(userRecord.uid);
-          console.log(`✅ Successfully hard deleted user by email from Auth: ${email} (UID: ${userRecord.uid})`);
-          deletedCount++;
-        }
-      } catch (eErr) {
-        if (eErr.code !== 'auth/user-not-found') {
-          console.warn(`Warning deleting by email ${email}:`, eErr.message);
-        }
-      }
-    }
-
-    res.status(200).json({ success: true, message: `User permanently deleted from Firebase Auth (${deletedCount} records removed)` });
-  } catch (error) {
-    console.error('❌ Error hard deleting user from Auth:', error);
-    if (error.code === 'auth/user-not-found') {
-      return res.status(200).json({ success: true, message: 'User already deleted' });
-    }
-    res.status(500).json({ error: 'Failed to hard delete user from Auth' });
-  }
-});
 
 // ============================================
 // VERIFY SWU PHINMA SCHOOL EMAIL & MX RECORDS

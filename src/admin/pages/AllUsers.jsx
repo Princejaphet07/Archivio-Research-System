@@ -523,7 +523,7 @@ export default function AllUsers() {
           }
 
           // 2. Comprehensive deep wipe across all collections, references, and Auth
-          await wipeEmailData(user.email, user.id);
+          await wipeEmailData(user.email, user.raw?.uid || user.id);
 
           if (viewUser && viewUser.id === user.id) {
             setViewUser(null);
@@ -629,7 +629,7 @@ export default function AllUsers() {
             if (user.id) {
               await deleteDoc(doc(db, colName, user.id)).catch(() => {});
             }
-            await wipeEmailData(user.email, user.id);
+            await wipeEmailData(user.email, user.raw?.uid || user.id);
           }
 
           Swal.fire({

@@ -19,6 +19,9 @@ import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
 import Swal from 'sweetalert2';
 import { validateAdviserSchoolEmail } from '../../utils/schoolEmailValidator';
 import { sendEmailWithFallback } from '../../utils/emailDispatcher';
+import { wipeEmailData } from '../../firebase/wipeEmailData';
+import { getBackendUrl } from '../../utils/backendUrl';
+import { authFetch } from '../../utils/authFetch';
 import { 
   RefreshCw, 
   Trash2, 
@@ -188,14 +191,34 @@ Please click the button below to activate your account and set up your credentia
       }
       const targetEmail = emailCheck.normalizedEmail;
 
-      // Duplicate check in active users
+      // Duplicate check in active users (with automatic ghost/orphan account detection)
       const qUser = query(collection(db, 'users'), where('email', '==', targetEmail), limit(1));
       const snapUser = await getDocs(qUser);
       if (!snapUser.empty) {
-        Swal.close();
-        setError('This email is already registered to an active ARCHIVIO account.');
-        setLoading(false);
-        return;
+        let isActuallyActiveInAuth = true;
+        try {
+          const backendUrl = getBackendUrl();
+          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          if (checkRes && checkRes.inAuth === false) {
+            isActuallyActiveInAuth = false;
+          }
+        } catch (_) {
+          const userDocData = snapUser.docs[0].data();
+          if (userDocData?.status === 'inactive' || userDocData?.deleted) {
+            isActuallyActiveInAuth = false;
+          }
+        }
+
+        if (!isActuallyActiveInAuth) {
+          // Ghost or orphaned record: auto-clean it completely so Dean is never blocked
+          console.log(`🧹 Auto-purging orphaned account for ${targetEmail}`);
+          await wipeEmailData(targetEmail, snapUser.docs[0].id);
+        } else {
+          Swal.close();
+          setError('This email is already registered to an active ARCHIVIO account.');
+          setLoading(false);
+          return;
+        }
       }
 
       // Check existing pending invitation
@@ -211,6 +234,24 @@ Please click the button below to activate your account and set up your credentia
         setError('This email already has a pending invitation in the Sent Invitations table.');
         setLoading(false);
         return;
+      }
+
+      // Check existing adviser record if any exists but is orphaned (not in Auth)
+      const qAdvExisting = query(
+        collection(db, 'advisers'),
+        where('email', '==', targetEmail),
+        limit(1)
+      );
+      const snapAdvExisting = await getDocs(qAdvExisting);
+      if (!snapAdvExisting.empty) {
+        try {
+          const backendUrl = getBackendUrl();
+          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          if (checkRes && checkRes.inAuth === false) {
+            console.log(`🧹 Auto-purging orphaned adviser record for ${targetEmail}`);
+            await wipeEmailData(targetEmail, snapAdvExisting.docs[0].id);
+          }
+        } catch (_) {}
       }
 
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -410,7 +451,7 @@ Please click the button below to activate your account and set up your credentia
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        await deleteDoc(doc(db, 'advisers', adviserId));
+        await wipeEmailData(adviserEmail, adviserId);
         Swal.fire({
           icon: 'success',
           title: 'Invitation Revoked',
