@@ -5,12 +5,14 @@ import { useDepartmentTheme } from '../../context/DepartmentThemeContext';
 import { db, auth } from '../../firebase/config';
 import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import MessageAdviserModal from './MessageAdviserModal';
 
 export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, onLogout, studentName, initials, profilePhotoUrl, role, groupStatus }) {
   const [missingCount, setMissingCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [internalGroupStatus, setInternalGroupStatus] = useState(groupStatus || null);
   const [studentDept, setStudentDept] = useState('');
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const { logoUrl } = useSystemLogo();
   const { theme } = useDepartmentTheme(studentDept);
 
@@ -339,7 +341,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
             className="bg-[#6b253e]/40 dark:bg-white/5 p-3.5 rounded-xl flex flex-col gap-1 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all border border-[#d0a36e]/20 dark:border-white/5 touch-manipulation"
             onClick={() => {
               setIsOpen(false);
-              window.dispatchEvent(new CustomEvent('open-chat'));
+              setShowHelpModal(true);
             }}
           >
             <div className="flex items-center gap-2.5">
@@ -384,6 +386,12 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab, on
         </div>
 
       </aside>
+
+      {/* Message Adviser Modal from Need Help */}
+      <MessageAdviserModal 
+        isOpen={showHelpModal} 
+        onClose={() => setShowHelpModal(false)} 
+      />
     </>
   );
 }
