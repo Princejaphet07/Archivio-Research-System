@@ -270,6 +270,60 @@ export default function Settings({ activePage, onNavigate }) {
         } catch (e) {}
       }
 
+      const advInfo = targetReq ? getAdviserInfo(targetReq) : { name: 'Research Adviser' };
+      const reqTitle = targetReq?.title || 'Requirement';
+
+      // Confirmation modal before approving or declining
+      if (newStatus === 'approved') {
+        const confirmResult = await Swal.fire({
+          title: 'Approve Requirement Proposal?',
+          html: `
+            <div style="text-align: left; font-size: 13px; color: #44403c; line-height: 1.5;">
+              <p style="margin-bottom: 8px;">Are you sure you want to approve this completion requirement proposal?</p>
+              <div style="background-color: #f5f5f4; border: 1px solid #e7e5e4; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-weight: 700; color: #1c1917; font-size: 14px;">${reqTitle}</p>
+                <p style="margin: 4px 0 0 0; color: #78716c; font-size: 12px;">Proposed by: <strong style="color: #1c1917;">${advInfo.name}</strong></p>
+              </div>
+              <p style="margin-top: 12px; font-size: 12px; color: #15803d; font-weight: 600;">
+                ✓ This will activate the requirement for the adviser's research groups.
+              </p>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#16a34a',
+          cancelButtonColor: '#78716c',
+          confirmButtonText: 'Yes, Approve',
+          cancelButtonText: 'Cancel'
+        });
+
+        if (!confirmResult.isConfirmed) return;
+      } else if (newStatus === 'declined') {
+        const confirmResult = await Swal.fire({
+          title: 'Decline Requirement Proposal?',
+          html: `
+            <div style="text-align: left; font-size: 13px; color: #44403c; line-height: 1.5;">
+              <p style="margin-bottom: 8px;">Are you sure you want to decline this completion requirement proposal?</p>
+              <div style="background-color: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-weight: 700; color: #991b1b; font-size: 14px;">${reqTitle}</p>
+                <p style="margin: 4px 0 0 0; color: #78716c; font-size: 12px;">Proposed by: <strong style="color: #1c1917;">${advInfo.name}</strong></p>
+              </div>
+              <p style="margin-top: 12px; font-size: 12px; color: #dc2626; font-weight: 600;">
+                ✕ The adviser will be notified that this proposal was declined.
+              </p>
+            </div>
+          `,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#dc2626',
+          cancelButtonColor: '#78716c',
+          confirmButtonText: 'Yes, Decline',
+          cancelButtonText: 'Cancel'
+        });
+
+        if (!confirmResult.isConfirmed) return;
+      }
+
       const payload = {
         status: newStatus,
         updatedAt: new Date().toISOString()
@@ -414,6 +468,31 @@ export default function Settings({ activePage, onNavigate }) {
           if (snap.exists()) targetReq = { id: snap.id, ...snap.data() };
         } catch (e) {}
       }
+
+      const reqTitle = targetReq?.title || 'Requirement';
+
+      const confirmResult = await Swal.fire({
+        title: 'Make Global Requirement?',
+        html: `
+          <div style="text-align: left; font-size: 13px; color: #44403c; line-height: 1.5;">
+            <p style="margin-bottom: 8px;">Are you sure you want to promote this requirement to a <strong>Department-Wide Global Requirement</strong>?</p>
+            <div style="background-color: #f5f5f4; border: 1px solid #e7e5e4; border-radius: 8px; padding: 12px; margin-top: 10px;">
+              <p style="margin: 0; font-weight: 700; color: #1c1917; font-size: 14px;">${reqTitle}</p>
+            </div>
+            <p style="margin-top: 12px; font-size: 12px; color: #590000; font-weight: 600;">
+              ★ This requirement will immediately apply to ALL research groups department-wide.
+            </p>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#590000',
+        cancelButtonColor: '#78716c',
+        confirmButtonText: 'Yes, Make Global',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (!confirmResult.isConfirmed) return;
 
       const globalReqs = requirements.filter(r => r.scope === 'global');
       const maxPriority = globalReqs.reduce((max, r) => Math.max(max, r.priority || 0), 0);
