@@ -979,7 +979,7 @@ function ReviewSubmissions() {
                         className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-xs py-2 flex items-center gap-1.5"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        Endorse for Dean
+                        Endorse
                       </PremiumButton>
                     )}
 
@@ -1175,7 +1175,7 @@ function ReviewSubmissions() {
                                   title={isReady ? "Endorse this verified submission for Dean publishing" : reasonText}
                                 >
                                   <Check className="w-3.5 h-3.5" />
-                                  Endorse for Dean
+                                  Endorse
                                 </PremiumButton>
                               );
                             })()}
@@ -1590,7 +1590,7 @@ function ReviewSubmissions() {
                         }`}
                       >
                         <Check className="w-4 h-4" />
-                        <span>Endorse for Dean Publication</span>
+                        <span>Endorse</span>
                       </button>
                     </div>
                   );

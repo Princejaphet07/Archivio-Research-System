@@ -1118,7 +1118,7 @@ const DocumentViewerModal = ({
                     ) : (
                       <>
                         <span>✓</span>
-                        <span>Approved</span>
+                        <span>Approve</span>
                       </>
                     )}
                   </button>
