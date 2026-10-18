@@ -392,8 +392,8 @@ export default function Dashboard({ activePage }) {
               </div>
             </div>
             
-            <div className="grid grid-cols-6 gap-4 mb-6">
-              {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+              {Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
 
             <div className="grid grid-cols-3 gap-6 mb-6">
@@ -544,15 +544,9 @@ export default function Dashboard({ activePage }) {
           )}
 
           {/* ================= KPI STATS HIGHLIGHT GRID ================= */}
-          <div className="grid grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {loading ? (
-              <>
-                <div className="col-span-2"><CardSkeleton borderTopColor="#3b82f6" /></div>
-                <div className="col-span-1"><CardSkeleton borderTopColor="#22c55e" /></div>
-                <div className="col-span-1"><CardSkeleton borderTopColor="#eab308" /></div>
-                <div className="col-span-1"><CardSkeleton borderTopColor="#ef4444" /></div>
-                <div className="col-span-1"><CardSkeleton borderTopColor="#64748b" /></div>
-              </>
+              Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
             ) : (
               <>
                 <KpiCard 
@@ -562,7 +556,14 @@ export default function Dashboard({ activePage }) {
                   icon={<FolderKanban className="w-5 h-5 text-[#590000] dark:text-[#f8d070]" />} 
                 />
                 <KpiCard 
-                  title="APPROVED" 
+                  title="IN PROGRESS" 
+                  value={stats.pending} 
+                  trend="Ongoing research" 
+                  icon={<Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />} 
+                  warning 
+                />
+                <KpiCard 
+                  title="COMPLETED" 
                   value={stats.approved} 
                   trend="Awaiting publish" 
                   icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} 
@@ -575,23 +576,10 @@ export default function Dashboard({ activePage }) {
                   icon={<Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />} 
                 />
                 <KpiCard 
-                  title="IN PROGRESS" 
-                  value={stats.pending} 
-                  trend="Ongoing research" 
-                  icon={<Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />} 
-                  warning 
-                />
-                <KpiCard 
                   title="TOTAL ADVISERS" 
                   value={stats.totalAdvisers} 
                   subtext="Registered advisers" 
                   icon={<Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />} 
-                />
-                <KpiCard 
-                  title="COMPLETION RATE" 
-                  value={`${stats.totalGroups > 0 ? Math.round((stats.published / stats.totalGroups) * 100) : 0}%`} 
-                  trend="Published / Total" 
-                  icon={<TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} 
                 />
               </>
             )}
