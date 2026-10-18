@@ -165,7 +165,8 @@ function SendInvitations() {
         let isActuallyActiveInAuth = true;
         try {
           const backendUrl = getBackendUrl();
-          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: emailToInvite });
+          const resp = await authFetch(`${backendUrl}/api/check-auth-user`, { email: emailToInvite });
+          const checkRes = resp && resp.ok ? await resp.json() : null;
           if (checkRes && checkRes.inAuth === false) {
             isActuallyActiveInAuth = false;
           }

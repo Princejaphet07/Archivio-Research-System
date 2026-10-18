@@ -198,7 +198,8 @@ Please click the button below to activate your account and set up your credentia
         let isActuallyActiveInAuth = true;
         try {
           const backendUrl = getBackendUrl();
-          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          const resp = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          const checkRes = resp && resp.ok ? await resp.json() : null;
           if (checkRes && checkRes.inAuth === false) {
             isActuallyActiveInAuth = false;
           }
@@ -246,7 +247,8 @@ Please click the button below to activate your account and set up your credentia
       if (!snapAdvExisting.empty) {
         try {
           const backendUrl = getBackendUrl();
-          const checkRes = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          const resp = await authFetch(`${backendUrl}/api/check-auth-user`, { email: targetEmail });
+          const checkRes = resp && resp.ok ? await resp.json() : null;
           if (checkRes && checkRes.inAuth === false) {
             console.log(`🧹 Auto-purging orphaned adviser record for ${targetEmail}`);
             await wipeEmailData(targetEmail, snapAdvExisting.docs[0].id);
