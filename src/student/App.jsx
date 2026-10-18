@@ -58,25 +58,22 @@ function App() {
       if (!user) return;
 
       try {
-        // 1. Update presence in students collection (primary student document)
-        await setDoc(doc(db, 'students', user.uid), {
-          lastActive: serverTimestamp()
-        }, { merge: true }).catch(() => {});
+        // 1. Update presence in students collection ONLY if the student document exists
+        const stdRef = doc(db, 'students', user.uid);
+        const stdSnap = await getDoc(stdRef).catch(() => null);
+        if (stdSnap && stdSnap.exists()) {
+          await updateDoc(stdRef, {
+            lastActive: serverTimestamp()
+          }).catch(() => {});
+        }
 
-        // 2. Ensure/update users collection for cross-portal presence tracking (ChatWidget)
+        // 2. Update users collection for cross-portal presence tracking (ChatWidget)
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef).catch(() => null);
         if (userSnap && userSnap.exists()) {
           await updateDoc(userRef, {
             lastActive: serverTimestamp()
           }).catch(() => {});
-        } else {
-          await setDoc(userRef, {
-            uid: user.uid,
-            email: user.email || '',
-            role: 'student',
-            lastActive: serverTimestamp()
-          }, { merge: true }).catch(() => {});
         }
       } catch (e) {
         console.warn('Presence ping notice (non-fatal):', e?.message || e);

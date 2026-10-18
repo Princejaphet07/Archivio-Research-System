@@ -30,16 +30,17 @@ export default function UserManagement() {
     if (!deanData) return;
     const deanDept = deanData.department || '';
 
-    const deptLower = deanDept.toLowerCase();
+    const deptLower = (deanDept || '').toLowerCase().trim();
     const flexMatch = (val) => {
-      const v = (val || '').toLowerCase();
+      if (!val || typeof val !== 'string' || !val.trim() || !deptLower) return false;
+      const v = val.toLowerCase().trim();
       return v.includes(deptLower) || deptLower.includes(v);
     };
 
     // Fetch Advisers — filter by this Dean's department (flexible match)
     const unsubAdvisers = onSnapshot(collection(db, 'advisers'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAdvisers(all.filter(a => flexMatch(a.department)));
+      setAdvisers(all.filter(a => (a.email || a.displayName) && flexMatch(a.department)));
     }, (err) => {
       console.warn('Advisers listener notice:', err.message);
     });
@@ -47,7 +48,7 @@ export default function UserManagement() {
     // Fetch Students — filter by this Dean's department (flexible match)
     const unsubStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setStudents(all.filter(s => flexMatch(s.department)));
+      setStudents(all.filter(s => (s.email || s.displayName) && flexMatch(s.department)));
     }, (err) => {
       console.warn('Students listener notice:', err.message);
     });

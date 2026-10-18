@@ -116,12 +116,13 @@ export default function PublishQueue({ activePage, onNavigate }) {
     // 2. Fetch Groups — filter by department (robust partial match)
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const deptLower = deanDept.toLowerCase();
+      const deptLower = (deanDept || '').toLowerCase().trim();
       setGroups(all.filter(g => {
-        const gDept = (g.department || '').toLowerCase();
-        const gProg = (g.program || '').toLowerCase();
-        return gDept.includes(deptLower) || deptLower.includes(gDept) ||
-               gProg.includes(deptLower) || deptLower.includes(gProg);
+        if (!deptLower) return false;
+        const gDept = (g.department || '').toLowerCase().trim();
+        const gProg = (g.program || '').toLowerCase().trim();
+        return (gDept && (gDept.includes(deptLower) || deptLower.includes(gDept))) ||
+               (gProg && (gProg.includes(deptLower) || deptLower.includes(gProg)));
       }));
     }, (err) => {
       console.warn('PublishQueue groups listener notice:', err.message);

@@ -36,15 +36,15 @@ export default function Reports() {
 
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
-      const deptLower = deanDept.toLowerCase();
+      const deptLower = (deanDept || '').toLowerCase().trim();
       const groupsData = groupsSnapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(g => {
-          const gDept = (g.department || '').toLowerCase();
-          const gProg = (g.program || '').toLowerCase();
           if (!deptLower) return false;
-          return gDept.includes(deptLower) || deptLower.includes(gDept) ||
-                 gProg.includes(deptLower) || deptLower.includes(gProg);
+          const gDept = (g.department || '').toLowerCase().trim();
+          const gProg = (g.program || '').toLowerCase().trim();
+          return (gDept && (gDept.includes(deptLower) || deptLower.includes(gDept))) ||
+                 (gProg && (gProg.includes(deptLower) || deptLower.includes(gProg)));
         });
       
       const unsubSubs = onSnapshot(collection(db, 'submissions'), (subsSnapshot) => {

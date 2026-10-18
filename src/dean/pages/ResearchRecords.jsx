@@ -94,14 +94,14 @@ export default function ResearchRecords() {
     const groupsQuery = query(collection(db, 'groups'), where('status', '==', 'approved'));
     const unsubGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
       const allGroupsData = groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const deptLower = deanDept.toLowerCase();
+      const deptLower = (deanDept || '').toLowerCase().trim();
       // DEPARTMENT FILTER: flexible match to support new deans on same department
       const groupsData = allGroupsData.filter(g => {
-        const gDept = (g.department || '').toLowerCase();
-        const gProg = (g.program || '').toLowerCase();
         if (!deptLower) return false;
-        return gDept.includes(deptLower) || deptLower.includes(gDept) ||
-               gProg.includes(deptLower) || deptLower.includes(gProg);
+        const gDept = (g.department || '').toLowerCase().trim();
+        const gProg = (g.program || '').toLowerCase().trim();
+        return (gDept && (gDept.includes(deptLower) || deptLower.includes(gDept))) ||
+               (gProg && (gProg.includes(deptLower) || deptLower.includes(gProg)));
       });
       
       // Listen to submissions
