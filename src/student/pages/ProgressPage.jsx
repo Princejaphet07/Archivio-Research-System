@@ -223,14 +223,17 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
     const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
     const isResub = Object.entries(docResubmissions).some(([resubKey, isDone]) => {
       if (!isDone) return false;
-      return resubKey.toLowerCase().replace(/[^a-z0-9]/g, '') === normKey;
+      const normResub = resubKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return normResub === normKey || (normKey.includes('manuscript') && normResub.includes('manuscript'));
     });
     return !isResub;
   });
 
-  const isRevision = hasRevisionEntries
-    ? hasPendingDocRevisions
-    : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !submission?.hasResubmittedAll && Object.keys(docResubmissions).length === 0);
+  const isRevision = submission?.hasResubmittedAll
+    ? false
+    : (hasRevisionEntries
+      ? hasPendingDocRevisions
+      : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && Object.keys(docResubmissions).length === 0));
 
   const isResubmittedAwaitingReview = (reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !isRevision;
   const isDeanRevision    = (reviewStatus === 'dean_revision' || !!submission?.deanComments) && isRevision;

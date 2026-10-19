@@ -172,20 +172,23 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
     if (!note || (typeof note === 'string' && !note.trim())) return false;
     // Already marked as resubmitted by exact key
     if (docResubmissions[key]) return false;
-    // Check normalized key/title match (e.g. 'approval-sheet' vs 'Approval Sheet')
+    // Check normalized key/title match (e.g. 'approval-sheet' vs 'Approval Sheet' or manuscript)
     const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
     const isResub = Object.entries(docResubmissions).some(([resubKey, isDone]) => {
       if (!isDone) return false;
-      return resubKey.toLowerCase().replace(/[^a-z0-9]/g, '') === normKey;
+      const normResub = resubKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return normResub === normKey || (normKey.includes('manuscript') && normResub.includes('manuscript'));
     });
     return !isResub;
   });
 
   // Action is required from the student ONLY if there are document revisions not yet resubmitted,
-  // or if reviewStatus is revision and the student has not yet resubmitted
-  const isRevision = hasRevisionEntries
-    ? hasPendingDocRevisions
-    : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !submission?.hasResubmittedAll && Object.keys(docResubmissions).length === 0);
+  // and student has not yet resubmitted all
+  const isRevision = submission?.hasResubmittedAll
+    ? false
+    : (hasRevisionEntries
+      ? hasPendingDocRevisions
+      : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && Object.keys(docResubmissions).length === 0));
 
   const isResubmittedAwaitingReview = (reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !isRevision;
   const isDeanRevision = (reviewStatus === 'dean_revision' || !!submission?.deanComments) && isRevision;

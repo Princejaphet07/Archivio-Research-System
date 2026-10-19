@@ -44,6 +44,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [previousRevisions, setPreviousRevisions] = useState({});
   const [previousAnnotations, setPreviousAnnotations] = useState({});
   const [documentRevisionReplies, setDocumentRevisionReplies] = useState({});
+  const [hasResubmittedAll, setHasResubmittedAll] = useState(false);
   const [reviewStatus, setReviewStatus] = useState('in_progress');
   const [adviserUid, setAdviserUid] = useState(null);
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '', reqId: null });
@@ -189,6 +190,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setPreviousRevisions(subData.previousRevisions || {});
             setPreviousAnnotations(subData.previousAnnotations || {});
             setDocumentRevisionReplies(subData.documentRevisionReplies || {});
+            setHasResubmittedAll(Boolean(subData.hasResubmittedAll));
             setReviewStatus(subData.reviewStatus || subData.status || 'in_progress');
           } else {
             setSubmissionDocId(null);
@@ -200,6 +202,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
             setPreviousRevisions({});
             setPreviousAnnotations({});
             setDocumentRevisionReplies({});
+            setHasResubmittedAll(false);
             setReviewStatus('in_progress');
           }
           setLoadingData(false);
@@ -560,7 +563,17 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     }
     const subRef = collection(db, 'submissions');
     const itemTitle = requirements.find(r => r.id === itemId)?.title || 'Document';
-    const hadRevision = !!documentRevisions?.[itemId] || !!documentResubmissions?.[itemId] || !!documentRevisions?.[itemTitle];
+    const normId = (itemId || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normTitle = (itemTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const hasSpecificDocRevision = Object.entries(documentRevisions || {}).some(([k, note]) => {
+      if (!note || (typeof note === 'string' && !note.trim())) return false;
+      const normK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return normK === normId || normK === normTitle || (normTitle.includes('manuscript') && normK.includes('manuscript'));
+    });
+
+    const isGeneralRevision = (reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !hasSpecificDocRevision;
+    const hadRevision = hasSpecificDocRevision || isGeneralRevision || !!documentRevisions?.[itemId] || !!documentResubmissions?.[itemId] || !!documentRevisions?.[itemTitle];
 
     let currentDocId = submissionDocId;
     if (!currentDocId) {
@@ -585,12 +598,20 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       };
       if (meta.pageCount) updatePayload.pageCount = meta.pageCount;
 
-      // If this item had a revision request, mark it as resubmitted and archive previous notes/annotations
-      if (hadRevision) {
+      // If this item had a revision request or submission is under revision, mark as resubmitted
+      if (hadRevision || reviewStatus === 'revision' || reviewStatus === 'dean_revision') {
         updatePayload[`documentResubmissions.${itemId}`] = true;
         if (itemTitle && itemTitle !== itemId) {
           updatePayload[`documentResubmissions.${itemTitle}`] = true;
         }
+        // Also tag any matching revision entry key in documentRevisions
+        Object.keys(documentRevisions || {}).forEach(k => {
+          const normK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normK === normId || normK === normTitle || (normTitle.includes('manuscript') && normK.includes('manuscript'))) {
+            updatePayload[`documentResubmissions.${k}`] = true;
+          }
+        });
+
         if (documentRevisions?.[itemId]) {
           updatePayload[`previousRevisions.${itemId}`] = documentRevisions[itemId];
         } else if (documentRevisions?.[itemTitle]) {
@@ -610,6 +631,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           [itemId]: true,
           ...(itemTitle ? { [itemTitle]: true } : {})
         };
+        Object.keys(documentRevisions || {}).forEach(k => {
+          const normK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normK === normId || normK === normTitle || (normTitle.includes('manuscript') && normK.includes('manuscript'))) {
+            nextDocResubmissions[k] = true;
+          }
+        });
+
         const hasRemainingRevisions = Object.entries(documentRevisions || {}).some(([k, note]) => {
           if (!note || (typeof note === 'string' && !note.trim())) return false;
           if (nextDocResubmissions[k]) return false;
@@ -617,10 +645,13 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           return !Object.entries(nextDocResubmissions).some(([rk, done]) => done && rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normK);
         });
 
-        if (!hasRemainingRevisions) {
+        if (!hasRemainingRevisions || isGeneralRevision) {
           updatePayload.hasResubmittedAll = true;
           updatePayload.resubmittedAt = new Date().toISOString();
+          setHasResubmittedAll(true);
         }
+
+        setDocumentResubmissions(nextDocResubmissions);
       }
 
       await updateDoc(docRef, updatePayload);
@@ -797,9 +828,19 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const missingCount = Math.max(0, totalCount - uploadedCount);
   const progressPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
 
-  const hasPendingRevisions = requirements.some(item => {
-    const hasRev = !!(documentRevisions?.[item.id] || documentRevisions?.[item.title]);
-    const isResub = !!(documentResubmissions?.[item.id] || documentResubmissions?.[item.title]);
+  const hasPendingRevisions = !hasResubmittedAll && requirements.some(item => {
+    const normId = item.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normTitle = (item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isResub = !!(
+      documentResubmissions?.[item.id] ||
+      documentResubmissions?.[item.title] ||
+      Object.entries(documentResubmissions || {}).some(([rk, done]) => done && (rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normId || rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normTitle))
+    );
+    const hasRev = !!(
+      documentRevisions?.[item.id] ||
+      documentRevisions?.[item.title] ||
+      Object.entries(documentRevisions || {}).some(([rk, note]) => note && typeof note === 'string' && note.trim() && (rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normId || rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normTitle))
+    );
     return hasRev && !isResub;
   });
   
@@ -922,7 +963,19 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
-                  const hasRevision = !!(documentRevisions?.[item.id] || documentRevisions?.[item.title]) && !(documentResubmissions?.[item.id] || documentResubmissions?.[item.title]);
+                  const normId = item.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const normTitle = (item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const isItemResub = !!(
+                    documentResubmissions?.[item.id] ||
+                    documentResubmissions?.[item.title] ||
+                    Object.entries(documentResubmissions || {}).some(([rk, done]) => done && (rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normId || rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normTitle))
+                  );
+                  const itemHasRev = !!(
+                    documentRevisions?.[item.id] ||
+                    documentRevisions?.[item.title] ||
+                    Object.entries(documentRevisions || {}).some(([rk, note]) => note && typeof note === 'string' && note.trim() && (rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normId || rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normTitle))
+                  );
+                  const hasRevision = itemHasRev && !isItemResub && !hasResubmittedAll;
                   return (
                     <Card key={item.id} hover className={`flex flex-col h-full ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
                       {/* top accent */}
