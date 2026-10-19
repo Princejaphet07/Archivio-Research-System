@@ -588,6 +588,9 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
       // If this item had a revision request, mark it as resubmitted and archive previous notes/annotations
       if (hadRevision) {
         updatePayload[`documentResubmissions.${itemId}`] = true;
+        if (itemTitle && itemTitle !== itemId) {
+          updatePayload[`documentResubmissions.${itemTitle}`] = true;
+        }
         if (documentRevisions?.[itemId]) {
           updatePayload[`previousRevisions.${itemId}`] = documentRevisions[itemId];
         } else if (documentRevisions?.[itemTitle]) {
@@ -599,6 +602,24 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
         if (documentAnnotations?.[itemId] && Object.keys(documentAnnotations[itemId]).length > 0) {
           updatePayload[`previousAnnotations.${itemId}`] = documentAnnotations[itemId];
           updatePayload[`documentAnnotations.${itemId}`] = {}; // Clean slate on newly resubmitted file
+        }
+
+        // Check if all document revisions are now resubmitted
+        const nextDocResubmissions = {
+          ...(documentResubmissions || {}),
+          [itemId]: true,
+          ...(itemTitle ? { [itemTitle]: true } : {})
+        };
+        const hasRemainingRevisions = Object.entries(documentRevisions || {}).some(([k, note]) => {
+          if (!note || (typeof note === 'string' && !note.trim())) return false;
+          if (nextDocResubmissions[k]) return false;
+          const normK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return !Object.entries(nextDocResubmissions).some(([rk, done]) => done && rk.toLowerCase().replace(/[^a-z0-9]/g, '') === normK);
+        });
+
+        if (!hasRemainingRevisions) {
+          updatePayload.hasResubmittedAll = true;
+          updatePayload.resubmittedAt = new Date().toISOString();
         }
       }
 
@@ -676,6 +697,11 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     if (!uploadedDocs.includes(itemId)) setUploadedDocs(prev => [...prev, itemId]);
     setDocumentsMeta(prev => ({ ...prev, [itemId]: meta }));
     if (hadRevision) {
+      setDocumentResubmissions(prev => ({
+        ...prev,
+        [itemId]: true,
+        ...(itemTitle ? { [itemTitle]: true } : {})
+      }));
       setDocumentRevisions(prev => { const n = { ...prev }; delete n[itemId]; delete n[itemTitle]; return n; });
       if (studentReply) {
         setDocumentRevisionReplies(prev => ({ ...prev, [itemId]: studentReply }));
@@ -771,7 +797,11 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const missingCount = Math.max(0, totalCount - uploadedCount);
   const progressPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
 
-  const hasPendingRevisions = requirements.some(item => !!documentRevisions[item.id] && !documentResubmissions[item.id]);
+  const hasPendingRevisions = requirements.some(item => {
+    const hasRev = !!(documentRevisions?.[item.id] || documentRevisions?.[item.title]);
+    const isResub = !!(documentResubmissions?.[item.id] || documentResubmissions?.[item.title]);
+    return hasRev && !isResub;
+  });
   
   let displayStatus = reviewStatus;
   if (missingCount === 0) {
@@ -892,7 +922,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
 
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
-                  const hasRevision = !!documentRevisions[item.id] && !documentResubmissions[item.id];
+                  const hasRevision = !!(documentRevisions?.[item.id] || documentRevisions?.[item.title]) && !(documentResubmissions?.[item.id] || documentResubmissions?.[item.title]);
                   return (
                     <Card key={item.id} hover className={`flex flex-col h-full ${isUploadingThis ? 'opacity-70 pointer-events-none' : ''}`}>
                       {/* top accent */}

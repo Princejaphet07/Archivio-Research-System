@@ -162,9 +162,33 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   const allDocsSubmitted = (missingCount === 0 && uploadedCount > 0) || (uploadedCount >= totalRequired && totalRequired > 0);
   
   // Real logic based on the actual Firestore fields used by Adviser & Dean systems
-  const reviewStatus  = submission?.reviewStatus || submission?.status || '';
-  const isRevision    = reviewStatus === 'revision' || reviewStatus === 'dean_revision' || (submission?.documentRevisions && Object.keys(submission.documentRevisions).length > 0 && !Object.values(submission.documentResubmissions || {}).every(Boolean));
-  const isDeanRevision = reviewStatus === 'dean_revision' || !!submission?.deanComments;
+  const reviewStatus   = submission?.reviewStatus || submission?.status || '';
+  const docRevisions   = submission?.documentRevisions || {};
+  const docResubmissions = submission?.documentResubmissions || {};
+
+  // Check if any specific document revision requested by adviser/dean is still pending student resubmission
+  const hasRevisionEntries = Object.keys(docRevisions).length > 0;
+  const hasPendingDocRevisions = hasRevisionEntries && Object.entries(docRevisions).some(([key, note]) => {
+    if (!note || (typeof note === 'string' && !note.trim())) return false;
+    // Already marked as resubmitted by exact key
+    if (docResubmissions[key]) return false;
+    // Check normalized key/title match (e.g. 'approval-sheet' vs 'Approval Sheet')
+    const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isResub = Object.entries(docResubmissions).some(([resubKey, isDone]) => {
+      if (!isDone) return false;
+      return resubKey.toLowerCase().replace(/[^a-z0-9]/g, '') === normKey;
+    });
+    return !isResub;
+  });
+
+  // Action is required from the student ONLY if there are document revisions not yet resubmitted,
+  // or if reviewStatus is revision and the student has not yet resubmitted
+  const isRevision = hasRevisionEntries
+    ? hasPendingDocRevisions
+    : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !submission?.hasResubmittedAll && Object.keys(docResubmissions).length === 0);
+
+  const isResubmittedAwaitingReview = (reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !isRevision;
+  const isDeanRevision = (reviewStatus === 'dean_revision' || !!submission?.deanComments) && isRevision;
   const isReviewed    = reviewStatus === 'approved' || reviewStatus === 'published' || submission?.status === 'approved' || submission?.status === 'published';
   const isPublished   = reviewStatus === 'published';
 
@@ -179,29 +203,33 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
   // What's next text
   const whatsNextTitle = isRevision
     ? (isDeanRevision ? "Address Dean's Revision Directive" : "Address Adviser Revision Notes")
-    : currentStep === 1
-      ? 'Upload your manuscript'
-      : currentStep === 2
-        ? `Upload your missing documents`
-        : currentStep === 3
-          ? 'Waiting for adviser review'
-          : currentStep === 4
-            ? 'Your research is under review'
-            : 'Congratulations — research published!';
+    : isResubmittedAwaitingReview
+      ? 'Revisions Submitted — Awaiting Review'
+      : currentStep === 1
+        ? 'Upload your manuscript'
+        : currentStep === 2
+          ? `Upload your missing documents`
+          : currentStep === 3
+            ? 'Waiting for adviser review'
+            : currentStep === 4
+              ? 'Your research is under review'
+              : 'Congratulations — research published!';
 
   const whatsNextDesc = isRevision
     ? 'Revisions are needed before your submission can be endorsed. Check requirement feedback and resubmit.'
-    : currentStep === 1
-      ? 'Start by uploading your research manuscript to proceed.'
-      : currentStep === 2
-        ? missingCount > 0
-          ? `You're missing ${missingCount} document${missingCount > 1 ? 's' : ''} — ${missingDocs.slice(0, 2).join(' and ')}${missingCount > 2 ? ` and ${missingCount - 2} more` : ''}.`
-          : 'All documents submitted! Awaiting review.'
-      : currentStep === 3
-        ? 'Your adviser will review your submission soon.'
-        : currentStep === 4
-          ? 'Your research has been approved and is being processed.'
-          : 'Your research is now publicly available in the archive.';
+    : isResubmittedAwaitingReview
+      ? 'You have resubmitted your revised files. Your adviser will review the updates soon.'
+      : currentStep === 1
+        ? 'Start by uploading your research manuscript to proceed.'
+        : currentStep === 2
+          ? missingCount > 0
+            ? `You're missing ${missingCount} document${missingCount > 1 ? 's' : ''} — ${missingDocs.slice(0, 2).join(' and ')}${missingCount > 2 ? ` and ${missingCount - 2} more` : ''}.`
+            : 'All documents submitted! Awaiting review.'
+        : currentStep === 3
+          ? 'Your adviser will review your submission soon.'
+          : currentStep === 4
+            ? 'Your research has been approved and is being processed.'
+            : 'Your research is now publicly available in the archive.';
 
   const showUploadButton = currentStep <= 2 || isRevision;
 
@@ -293,6 +321,7 @@ export default function StudentDashboard({ onLogout, studentName, initials, grou
                         ? 'Registration Declined'
                         : isPublished ? 'Published ✓'
                         : isRevision ? (isDeanRevision ? "Action Required: Dean's Revision Directive" : "Action Required: Manuscript Revision Requested")
+                        : isResubmittedAwaitingReview ? 'Revisions Resubmitted · Waiting for Review'
                         : isReviewed ? 'Under Review · Step 4 of 5'
                         : allDocsSubmitted ? 'Documents Complete · Step 3 of 5'
                         : hasManuscript ? 'In Progress · Step 2 of 5'

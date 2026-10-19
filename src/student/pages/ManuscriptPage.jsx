@@ -252,8 +252,11 @@ export default function ManuscriptPage({ onLogout, activeTab, setActiveTab, stud
   const hasManuscript = !!manuscript?.url;
   const isPublished = submission?.reviewStatus === 'published';
   
-  const hasRevision = !!submission?.documentRevisions?.['Final Manuscript'] && !documentResubmissions?.['Final Manuscript'];
-  const revisionNote = submission?.documentRevisions?.['Final Manuscript'];
+  const hasRevision = !!(
+    (submission?.documentRevisions?.['Final Manuscript'] || submission?.documentRevisions?.['final-manuscript']) &&
+    !(documentResubmissions?.['Final Manuscript'] || documentResubmissions?.['final-manuscript'])
+  );
+  const revisionNote = submission?.documentRevisions?.['Final Manuscript'] || submission?.documentRevisions?.['final-manuscript'];
 
   const researchTitle = studentData?.researchTitle || submission?.title || 'Research Title';
   const groupName = studentData?.groupName || submission?.groupName || 'Your Group';

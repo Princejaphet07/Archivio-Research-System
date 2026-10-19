@@ -212,8 +212,28 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
   const allDocsSubmitted  = (uploadedCount >= requiredCount && uploadedCount > 0) || (submission?.uploadedDocs?.length >= requiredCount && requiredCount > 0);
   const reviewStatus      = submission?.reviewStatus || submission?.status || '';
-  const isRevision        = reviewStatus === 'revision' || reviewStatus === 'dean_revision' || (submission?.documentRevisions && Object.keys(submission.documentRevisions).length > 0 && !Object.values(submission.documentResubmissions || {}).every(Boolean));
-  const isDeanRevision    = reviewStatus === 'dean_revision' || !!submission?.deanComments;
+  const docRevisions      = submission?.documentRevisions || {};
+  const docResubmissions   = submission?.documentResubmissions || {};
+
+  // Check if any specific document revision requested by adviser/dean is still pending student resubmission
+  const hasRevisionEntries = Object.keys(docRevisions).length > 0;
+  const hasPendingDocRevisions = hasRevisionEntries && Object.entries(docRevisions).some(([key, note]) => {
+    if (!note || (typeof note === 'string' && !note.trim())) return false;
+    if (docResubmissions[key]) return false;
+    const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isResub = Object.entries(docResubmissions).some(([resubKey, isDone]) => {
+      if (!isDone) return false;
+      return resubKey.toLowerCase().replace(/[^a-z0-9]/g, '') === normKey;
+    });
+    return !isResub;
+  });
+
+  const isRevision = hasRevisionEntries
+    ? hasPendingDocRevisions
+    : ((reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !submission?.hasResubmittedAll && Object.keys(docResubmissions).length === 0);
+
+  const isResubmittedAwaitingReview = (reviewStatus === 'revision' || reviewStatus === 'dean_revision') && !isRevision;
+  const isDeanRevision    = (reviewStatus === 'dean_revision' || !!submission?.deanComments) && isRevision;
   const isApproved        = reviewStatus === 'approved' || reviewStatus === 'reviewed' || reviewStatus === 'published';
   const isPublished       = reviewStatus === 'published';
 
@@ -228,6 +248,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
   const bannerTitle =
     isRevision ? (isDeanRevision ? "Revision Needed — Dean's Directive" : "Revision Needed — Step 3 of 5") :
+    isResubmittedAwaitingReview ? "Revisions Resubmitted — Step 3 of 5" :
     currentStep === 1 ? 'Getting Started — Step 1 of 5' :
     currentStep === 2 ? 'In Progress — Step 2 of 5' :
     currentStep === 3 ? 'Documents Complete — Step 3 of 5' :
@@ -236,6 +257,7 @@ export default function ProgressPage({ onLogout, activeTab, setActiveTab, studen
 
   const bannerSub =
     isRevision ? 'Please review your adviser or dean feedback, update the required files in Requirements, and resubmit.' :
+    isResubmittedAwaitingReview ? 'Your revised documents have been resubmitted and are currently awaiting adviser verification.' :
     currentStep === 1 ? 'Upload your manuscript to begin the process.' :
     currentStep === 2 ? `Submit your required documents. ${missingDocs.length} still missing.` :
     currentStep === 3 ? 'All documents submitted. Waiting for adviser review.' :
