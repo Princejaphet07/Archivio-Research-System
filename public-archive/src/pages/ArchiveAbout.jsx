@@ -7,6 +7,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import princePhoto from '../assets/team/prince.jpg';
 import jerikaPhoto from '../assets/team/jerika.jpg';
 import hyllaPhoto from '../assets/team/hylla.jpg';
+import andreaPhoto from '../assets/team/andrea.png';
 
 const AnimatedCounter = ({ target }) => {
   const [count, setCount] = useState(0);
@@ -92,7 +93,7 @@ const TEAM_MEMBERS = [
     iconEmoji: '🚀',
     badgeStyle: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/60',
     accentGradient: 'bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400',
-    image: null,
+    image: andreaPhoto,
     linkedin: null,
     github: 'https://github.com/andreavgdeywajk',
     email: 'mailto:andreaperote04@gmail.com',
