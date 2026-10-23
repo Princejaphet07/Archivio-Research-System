@@ -22,6 +22,12 @@ import {
 } from '../utils/analytics';
 import { getBackendUrl } from '../utils/backendUrl';
 import { streamAIChat } from '../services/aiService';
+import {
+  generateAllCitations,
+  cleanTitleText,
+  toTitleCase,
+  parseAuthors
+} from '../utils/citationFormatter';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -108,6 +114,9 @@ function SidebarThumbnailItem({
   );
 }
 
+// In-memory session cache so re-opening papers or switching tabs doesn't re-scan
+const tocGlobalCache = new Map();
+
 function ArchivePaperViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -148,19 +157,19 @@ function ArchivePaperViewer() {
   // Responsive PDF base width & zoom level
   const [pdfBaseWidth, setPdfBaseWidth] = useState(800);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [copiedFormat, setCopiedFormat] = useState(null);
 
   // PDF source state with Blob URL to eliminate Cross-Origin Range Request redirects
   const [pdfSource, setPdfSource] = useState(null);
   const [isPdfLoading, setIsPdfLoading] = useState(true);
 
-  // Accurate page destinations for each of the 5 canonical chapters
-  const [chapterPages, setChapterPages] = useState({
-    chap1: 1,
-    chap2: 5,
-    chap3: 10,
-    chap4: 15,
-    chap5: 20
-  });
+  // Nested Table of Contents hierarchy: [{ id, chapterNumber, label, page, sections: [{ id, title, page }] }]
+  const [tableOfContents, setTableOfContents] = useState([]);
+  const [expandedChapters, setExpandedChapters] = useState({});
+  const [isTocScanning, setIsTocScanning] = useState(false);
+  const [tocScanProgress, setTocScanProgress] = useState({ current: 0, total: 0, percent: 0 });
+  const [discoveredChapters, setDiscoveredChapters] = useState([]);
+  const scanAbortRef = useRef(0);
 
   // PDF.js options to disable range requests & streaming (which cause Firebase Storage redirect errors)
   const pdfOptions = useMemo(() => ({
@@ -171,13 +180,13 @@ function ArchivePaperViewer() {
 
   useEffect(() => {
     const rawUrl = paper?.documents?.['Final Manuscript']?.url;
-    setChapterPages({
-      chap1: 1,
-      chap2: 5,
-      chap3: 10,
-      chap4: 15,
-      chap5: 20
-    });
+    scanAbortRef.current += 1;
+    setTableOfContents([]);
+    setExpandedChapters({});
+    setIsTocScanning(false);
+    setTocScanProgress({ current: 0, total: 0, percent: 0 });
+    setDiscoveredChapters([]);
+
     if (!rawUrl || rawUrl === '#') {
       setPdfSource(null);
       setIsPdfLoading(false);
@@ -216,6 +225,7 @@ function ArchivePaperViewer() {
 
     return () => {
       isCancelled = true;
+      scanAbortRef.current += 1;
       if (localBlobUrl) {
         URL.revokeObjectURL(localBlobUrl);
       }
@@ -243,150 +253,270 @@ function ArchivePaperViewer() {
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, +(prev - 0.25).toFixed(2)));
   const handleResetZoom = () => setZoomLevel(1);
 
-  // Deep detection: scan PDF outline and chapter headings to accurately find page numbers
-  const detectChapters = useCallback(async (pdfDoc) => {
+  // Fast Front-Matter Table of Contents Scanner (~1.5s):
+  // Instead of scanning all 100+ pages (which saturated memory and caused Chrome 'Page Unresponsive'),
+  // we scan only preliminary pages (1 to Math.min(14, total)) where the author's Table of Contents is located.
+  const detectTableOfContents = useCallback(async (pdfDoc) => {
     if (!pdfDoc) return;
     const total = pdfDoc.numPages || 1;
-    const detected = {};
 
-    // Helper: recursively flatten outline tree so all bookmarks are examined
-    const flattenOutline = (items) => {
-      let list = [];
-      if (!items || !Array.isArray(items)) return list;
-      for (const it of items) {
-        list.push(it);
-        if (it.items && Array.isArray(it.items) && it.items.length > 0) {
-          list = list.concat(flattenOutline(it.items));
-        }
+    // Check in-memory cache first for instant 0-second re-loads
+    const cacheKey = paper?.id || paper?.documents?.['Final Manuscript']?.url || 'current_paper';
+    if (tocGlobalCache.has(cacheKey)) {
+      const cached = tocGlobalCache.get(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setTableOfContents(cached);
+        setExpandedChapters({ [cached[0]?.id]: true });
+        setIsTocScanning(false);
+        return;
       }
-      return list;
-    };
-
-    // 1. Check embedded PDF outline/bookmarks first
-    try {
-      const rawOutline = await pdfDoc.getOutline();
-      const outline = flattenOutline(rawOutline);
-      if (outline && outline.length > 0) {
-        for (const item of outline) {
-          if (!item.title || !item.title.trim()) continue;
-          const cleanTitle = item.title.trim().toLowerCase();
-
-          // Skip generic or non-chapter outline bookmarks
-          if (cleanTitle.includes('table of contents') || cleanTitle.includes('title page') || cleanTitle.includes('approval') || cleanTitle.includes('acknowledgement') || cleanTitle.includes('dedication')) {
-            continue;
-          }
-
-          let pageNum = null;
-          try {
-            if (typeof item.dest === 'string') {
-              const dest = await pdfDoc.getDestination(item.dest);
-              if (dest && dest[0]) {
-                const pageIdx = await pdfDoc.getPageIndex(dest[0]);
-                pageNum = pageIdx + 1;
-              }
-            } else if (Array.isArray(item.dest) && item.dest[0]) {
-              const pageIdx = await pdfDoc.getPageIndex(item.dest[0]);
-              pageNum = pageIdx + 1;
-            }
-          } catch (_) {}
-
-          if (pageNum && pageNum >= 1 && pageNum <= total) {
-            if (!detected.chap1 && (cleanTitle.includes('chapter 1') || cleanTitle.includes('chapter i') || cleanTitle === 'introduction' || cleanTitle.startsWith('introduction') || cleanTitle.includes('the problem'))) {
-              detected.chap1 = pageNum;
-            } else if (!detected.chap2 && (cleanTitle.includes('chapter 2') || cleanTitle.includes('chapter ii') || cleanTitle.includes('review of related literature') || cleanTitle.includes('review of literature') || cleanTitle.includes('literature'))) {
-              detected.chap2 = pageNum;
-            } else if (!detected.chap3 && (cleanTitle.includes('chapter 3') || cleanTitle.includes('chapter iii') || cleanTitle.includes('methodology') || cleanTitle.includes('research method') || cleanTitle.includes('methods of research'))) {
-              detected.chap3 = pageNum;
-            } else if (!detected.chap4 && (cleanTitle.includes('chapter 4') || cleanTitle.includes('chapter iv') || cleanTitle.includes('results') || cleanTitle.includes('presentation') || cleanTitle.includes('analysis of data') || cleanTitle.includes('findings'))) {
-              detected.chap4 = pageNum;
-            } else if (!detected.chap5 && (cleanTitle.includes('chapter 5') || cleanTitle.includes('chapter v') || cleanTitle.includes('conclusion') || cleanTitle.includes('summary') || cleanTitle.includes('recommendation'))) {
-              detected.chap5 = pageNum;
-            }
-          }
-        }
-      }
-    } catch (_) {}
-
-    // 2. Background batch text scan for any chapter not found in outline
-    const missingKeys = ['chap1', 'chap2', 'chap3', 'chap4', 'chap5'].filter(k => !detected[k]);
-    if (missingKeys.length > 0) {
-      try {
-        const batchSize = 10;
-        for (let i = 1; i <= total; i += batchSize) {
-          const batch = [];
-          for (let j = i; j < i + batchSize && j <= total; j++) {
-            batch.push((async (pNum) => {
-              try {
-                const page = await pdfDoc.getPage(pNum);
-                const tc = await page.getTextContent();
-                const text = tc.items.map(it => it.str).join(' ');
-                return { pNum, text };
-              } catch (_) {
-                return { pNum, text: '' };
-              }
-            })(j));
-          }
-
-          const results = await Promise.all(batch);
-          for (const { pNum, text } of results) {
-            if (!text) continue;
-
-            // Skip Table of Contents list pages that list multiple chapters together
-            let mentionCount = 0;
-            if (/\bCHAPTER\s*[:.-]?\s*(?:1|I|ONE)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*[:.-]?\s*(?:2|II|TWO)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*[:.-]?\s*(?:3|III|THREE)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*[:.-]?\s*(?:4|IV|FOUR)\b/i.test(text)) mentionCount++;
-            if (/\bCHAPTER\s*[:.-]?\s*(?:5|V|FIVE)\b/i.test(text)) mentionCount++;
-            if (mentionCount >= 2 || /\bTABLE\s+OF\s+CONTENTS\b/i.test(text)) continue;
-
-            if (!detected.chap1 && (/\bCHAPTER\s*[:.-]?\s*(?:1|I|ONE)\b/i.test(text) || (pNum > 2 && pNum < total * 0.35 && /\bINTRODUCTION\b/i.test(text)))) {
-              detected.chap1 = pNum;
-            }
-            if (!detected.chap2 && pNum > (detected.chap1 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:2|II|TWO)\b/i.test(text) || /\bREVIEW\s+OF\s+(?:RELATED\s+)?LITERATURE\b/i.test(text))) {
-              detected.chap2 = pNum;
-            }
-            if (!detected.chap3 && pNum > (detected.chap2 || detected.chap1 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:3|III|THREE)\b/i.test(text) || /\b(?:RESEARCH\s+)?METHODOLOGY\b/i.test(text) || /\bMETHODS?\s+OF\s+RESEARCH\b/i.test(text))) {
-              detected.chap3 = pNum;
-            }
-            if (!detected.chap4 && pNum > (detected.chap3 || detected.chap2 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:4|IV|FOUR)\b/i.test(text) || /\bRESULTS?\s+(?:AND|&)\s+DISCUSSION\b/i.test(text) || /\bPRESENTATION(?:,\s*ANALYSIS)?\s+(?:AND|&)\s+(?:INTERPRETATION\s+OF\s+)?DATA\b/i.test(text))) {
-              detected.chap4 = pNum;
-            }
-            if (!detected.chap5 && pNum > (detected.chap4 || detected.chap3 || 0) && (/\bCHAPTER\s*[:.-]?\s*(?:5|V|FIVE)\b/i.test(text) || /\b(?:SUMMARY\s+(?:OF\s+FINDINGS)?,\s*)?CONCLUSIONS?(?:\s+(?:AND|&)\s+RECOMMENDATIONS)?\b/i.test(text))) {
-              detected.chap5 = pNum;
-            }
-          }
-
-          if (detected.chap1 && detected.chap2 && detected.chap3 && detected.chap4 && detected.chap5) {
-            break;
-          }
-        }
-      } catch (_) {}
     }
 
-    // Set accurate destination pages with guaranteed strictly ascending order
-    const c1 = detected.chap1 || (total > 15 ? Math.max(1, Math.round(total * 0.08)) : 1);
-    const c2 = Math.max(c1 + 1, detected.chap2 || (total > 15 ? Math.round(total * 0.22) : 5));
-    const c3 = Math.max(c2 + 1, detected.chap3 || (total > 15 ? Math.round(total * 0.45) : 10));
-    const c4 = Math.max(c3 + 1, detected.chap4 || (total > 15 ? Math.round(total * 0.65) : 15));
-    const c5 = Math.min(total, Math.max(c4 + 1, detected.chap5 || (total > 15 ? Math.round(total * 0.82) : 20)));
+    const currentScanId = ++scanAbortRef.current;
+    setIsTocScanning(true);
+    // Limit scan strictly to preliminary front-matter pages (max 14 pages)
+    const scanLimit = Math.min(14, total);
+    setTocScanProgress({ current: 0, total: scanLimit, percent: 0 });
+    setDiscoveredChapters([]);
 
-    setChapterPages({
-      chap1: c1,
-      chap2: c2,
-      chap3: c3,
-      chap4: c4,
-      chap5: c5,
-    });
-  }, []);
+    const CANONICAL_TITLES = {
+      1: 'Chapter 1: Introduction',
+      2: 'Chapter 2: Review of Literature',
+      3: 'Chapter 3: Methodology',
+      4: 'Chapter 4: Results & Discussion',
+      5: 'Chapter 5: Conclusion',
+    };
+
+    const ROMAN_MAP = {
+      i: 1, ii: 2, iii: 3, iv: 4, v: 5,
+      1: 1, 2: 2, 3: 3, 4: 4, 5: 5
+    };
+
+    const yieldMain = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+
+    try {
+      // 1. Fast sequential scan of preliminary front-matter pages
+      const frontMatterPages = [];
+      let chap1PhysicalPage = null;
+
+      for (let pNum = 1; pNum <= scanLimit; pNum++) {
+        if (scanAbortRef.current !== currentScanId) return;
+
+        try {
+          const page = await pdfDoc.getPage(pNum);
+          const tc = await page.getTextContent();
+
+          // Group text items into visual lines by Y coordinate
+          const linesMap = new Map();
+          for (let itemIdx = 0; itemIdx < tc.items.length; itemIdx++) {
+            const it = tc.items[itemIdx];
+            if (!it.str || !it.str.trim()) continue;
+            const y = it.transform[5];
+            const x = it.transform[4];
+            const bucketKey = Math.round(y / 4.0) * 4;
+            if (!linesMap.has(bucketKey)) linesMap.set(bucketKey, []);
+            linesMap.get(bucketKey).push({ str: it.str, x });
+          }
+
+          const sortedY = Array.from(linesMap.keys()).sort((a, b) => b - a);
+          const lines = sortedY.map(yKey => {
+            const items = linesMap.get(yKey).sort((a, b) => a.x - b.x);
+            return items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+          }).filter(Boolean);
+
+          const fullText = tc.items.map(it => it.str).join(' ');
+
+          frontMatterPages.push({
+            pNum,
+            lines,
+            fullText
+          });
+
+          // Detect where Chapter 1 physically opens
+          if (!chap1PhysicalPage && (
+            /^\s*CHAPTER\s*(?:1|I)\b/im.test(fullText) ||
+            lines.some(l => /^\s*CHAPTER\s*[:.-]?\s*(?:1|I)\b/i.test(l))
+          )) {
+            chap1PhysicalPage = pNum;
+          }
+        } catch (_) {
+          // Non-fatal page read error
+        }
+
+        // Cooperative yield keeps UI completely responsive
+        await yieldMain(20);
+
+        if (scanAbortRef.current === currentScanId) {
+          setTocScanProgress({
+            current: pNum,
+            total: scanLimit,
+            percent: Math.min(100, Math.round((pNum / scanLimit) * 100))
+          });
+        }
+      }
+
+      if (scanAbortRef.current !== currentScanId) return;
+
+      // 2. Identify Table of Contents pages
+      const tocPages = [];
+      for (const p of frontMatterPages) {
+        if (/\bTABLE\s+OF\s+CONTENTS\b/i.test(p.fullText) || (/\bCONTENTS\b/i.test(p.fullText) && p.pNum <= 8)) {
+          tocPages.push(p);
+          // Look at immediate subsequent pages for continuation
+          let nextPNum = p.pNum + 1;
+          while (nextPNum <= scanLimit) {
+            const nextP = frontMatterPages.find(fp => fp.pNum === nextPNum);
+            if (!nextP) break;
+            if (/\bLIST\s+OF\s+TABLES\b/i.test(nextP.fullText) || /\bLIST\s+OF\s+FIGURES\b/i.test(nextP.fullText) || /^\s*CHAPTER\s*(?:1|I)\b/im.test(nextP.fullText)) {
+              break;
+            }
+            if (/\bCHAPTER\b/i.test(nextP.fullText) || /\d{1,4}/.test(nextP.fullText)) {
+              tocPages.push(nextP);
+              nextPNum++;
+            } else {
+              break;
+            }
+          }
+          break;
+        }
+      }
+
+      // 3. Parse chapters & sub-sections directly from the manuscript's Table of Contents
+      const parsedChapters = [];
+      let currentChapter = null;
+
+      for (const tocP of tocPages) {
+        for (const rawLine of tocP.lines) {
+          const line = (rawLine || '').trim();
+          if (!line || /^(?:TABLE\s+OF\s+CONTENTS|CONTENTS|CHAPTER|PAGE|TITLE)\b/i.test(line)) continue;
+
+          // Match line ending with page number: "Background of the Study ... 9" or "1 INTRODUCTION ... 8"
+          const pageMatch = line.match(/^(.*?)(?:(?:\s*[.·•_]\s*)+|\s{2,}|\t|\s+)\s*(\d{1,4})\s*$/);
+          if (!pageMatch) continue;
+
+          const titlePart = pageMatch[1].trim();
+          const claimedPage = parseInt(pageMatch[2], 10);
+
+          // Check if this is a Chapter line
+          const chapMatch = titlePart.match(/^(?:CHAPTER\s+)?([1-5]|I|II|III|IV|V)(?:\s*[:.\s-–—]|\s+)\s*(.*)$/i)
+            || (/^CHAPTER\s+([1-5]|I|II|III|IV|V)$/i.test(titlePart) ? [null, titlePart.match(/^CHAPTER\s+([1-5]|I|II|III|IV|V)$/i)[1], ''] : null);
+
+          if (chapMatch) {
+            const numStr = chapMatch[1].toLowerCase();
+            const num = ROMAN_MAP[numStr] || parseInt(numStr, 10);
+            let subtitle = chapMatch[2] ? chapMatch[2].trim() : '';
+
+            let label = CANONICAL_TITLES[num] || `Chapter ${num}`;
+            if (subtitle) {
+              const lower = subtitle.toLowerCase();
+              if (lower.includes('introduction')) label = 'Chapter 1: Introduction';
+              else if (lower.includes('review')) label = 'Chapter 2: Review of Literature';
+              else if (lower.includes('method') || lower.includes('development')) label = 'Chapter 3: Methodology';
+              else if (lower.includes('result') || lower.includes('discussion')) label = 'Chapter 4: Results & Discussion';
+              else if (lower.includes('conclusion') || lower.includes('summary')) label = 'Chapter 5: Conclusion';
+              else {
+                const capSub = subtitle.charAt(0).toUpperCase() + subtitle.slice(1).toLowerCase();
+                label = `Chapter ${num}: ${capSub}`;
+              }
+            }
+
+            currentChapter = {
+              id: `chap-${num}`,
+              chapterNumber: num,
+              label,
+              claimedPage,
+              sections: []
+            };
+            parsedChapters.push(currentChapter);
+          } else if (currentChapter) {
+            // Sub-section line
+            let cleanTitle = titlePart.replace(/[.·•_]+$/, '').replace(/^[0-9IVXLCDMivxlcdm]+[\s.:-–—]+/, '').trim();
+            if (cleanTitle && cleanTitle.length >= 3 && /[a-zA-Z]{3,}/.test(cleanTitle) && !/^(?:chapter|page|title|contents)$/i.test(cleanTitle)) {
+              currentChapter.sections.push({
+                title: cleanTitle,
+                claimedPage
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Calculate offset between manuscript printed page and PDF physical page
+      let pageOffset = 0;
+      const chap1 = parsedChapters.find(c => c.chapterNumber === 1);
+      if (chap1 && chap1PhysicalPage) {
+        pageOffset = chap1PhysicalPage - chap1.claimedPage;
+      }
+
+      let finalTOC = [];
+
+      if (parsedChapters.length > 0) {
+        finalTOC = parsedChapters.map(ch => ({
+          id: ch.id,
+          chapterNumber: ch.chapterNumber,
+          label: ch.label,
+          page: Math.min(total, Math.max(1, ch.claimedPage + pageOffset)),
+          displayPage: ch.claimedPage,
+          sections: ch.sections.map((sec, sIdx) => ({
+            id: `sec-${ch.id}-${sIdx + 1}`,
+            title: sec.title,
+            page: Math.min(total, Math.max(1, sec.claimedPage + pageOffset)),
+            displayPage: sec.claimedPage
+          }))
+        }));
+      } else {
+        // Fallback: If no TOC was found in preliminary pages, check front pages for chapter headers
+        const fallbackChapters = [];
+        for (const p of frontMatterPages) {
+          for (const line of p.lines) {
+            const chapMatch = line.match(/^\s*CHAPTER\s*[:.-]?\s*([1-5]|I|II|III|IV|V)(?:\s*[:.\s-–—]\s*(.+))?$/i);
+            if (chapMatch) {
+              const numStr = chapMatch[1].toLowerCase();
+              const num = ROMAN_MAP[numStr] || parseInt(numStr, 10);
+              if (!fallbackChapters.some(c => c.chapterNumber === num)) {
+                fallbackChapters.push({
+                  id: `chap-${num}`,
+                  chapterNumber: num,
+                  label: CANONICAL_TITLES[num] || `Chapter ${num}`,
+                  page: p.pNum,
+                  displayPage: p.pNum,
+                  sections: []
+                });
+              }
+            }
+          }
+        }
+        finalTOC = fallbackChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+      }
+
+      if (scanAbortRef.current === currentScanId) {
+        if (finalTOC.length > 0) {
+          tocGlobalCache.set(cacheKey, finalTOC);
+          setTableOfContents(finalTOC);
+          setExpandedChapters({ [finalTOC[0].id]: true });
+        } else {
+          setTableOfContents([]);
+        }
+      }
+    } catch (err) {
+      console.warn("Table of Contents detection error:", err);
+      if (scanAbortRef.current === currentScanId) {
+        setTableOfContents([]);
+      }
+    } finally {
+      if (scanAbortRef.current === currentScanId) {
+        setIsTocScanning(false);
+      }
+    }
+  }, [paper?.id, paper?.documents]);
 
   const onDocumentLoadSuccess = useCallback((pdfDoc) => {
     const pages = pdfDoc?.numPages || 0;
     setNumPages(pages);
     if (pdfDoc) {
-      detectChapters(pdfDoc);
+      detectTableOfContents(pdfDoc);
     }
-  }, [detectChapters]);
+  }, [detectTableOfContents]);
 
   const scrollToPage = useCallback((pg) => {
     const clamped = Math.max(1, Math.min(numPages || pg, pg));
@@ -824,6 +954,25 @@ function ArchivePaperViewer() {
     return { nodes, links };
   }, [paper, relatedPapers]);
 
+  // Formatted citations strictly adhering to official APA 7, MLA 9, and IEEE specifications (Top-level hook)
+  const citations = useMemo(() => {
+    if (!paper) {
+      return generateAllCitations({});
+    }
+    const pubYear = paper.publishedAt
+      ? (typeof paper.publishedAt?.toDate === 'function'
+          ? paper.publishedAt.toDate().getFullYear()
+          : new Date(paper.publishedAt).getFullYear())
+      : new Date().getFullYear();
+
+    return generateAllCitations({
+      title: paper.researchTitle || paper.title || 'Untitled Research',
+      authorDisplay: paper.authorDisplay || 'Unknown Author',
+      year: isNaN(pubYear) ? new Date().getFullYear() : pubYear,
+      institution: 'SWU PHINMA'
+    });
+  }, [paper]);
+
   const recordedViewsRef = useRef(new Set());
   const hasTrackedAnalytics = useRef(false);
 
@@ -1032,17 +1181,39 @@ function ArchivePaperViewer() {
     return () => window.removeEventListener('click', closePopup);
   }, [dictPopup.isOpen]);
 
+  const handleCopyCitation = (formatKey, textToCopy) => {
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedFormat(formatKey);
+    setTimeout(() => setCopiedFormat(null), 2000);
+    trackCitation(paper, formatKey.toUpperCase());
+    Swal.fire({
+      title: 'Copied to Clipboard!',
+      text: `${formatKey.toUpperCase()} citation copied according to official standards.`,
+      icon: 'success',
+      timer: 1200,
+      showConfirmButton: false,
+      toast: true,
+      position: 'bottom-start'
+    });
+  };
+
   const generateRIS = () => {
     if (!paper) return;
-    const titleStr = paper.researchTitle || paper.title || 'Untitled';
-    const authorStr = paper.authorDisplay || 'Unknown Author';
+    const cleanTitle = cleanTitleText(paper.researchTitle || paper.title || 'Untitled');
+    const parsedAuthors = parseAuthors(paper.authorDisplay || 'Unknown Author');
     const yearStr = new Date(paper.publishedAt || Date.now()).getFullYear();
+
+    const authorLines = parsedAuthors.length > 0
+      ? parsedAuthors.map(a => `AU  - ${a.isGroup ? a.fullName : (a.firstName ? `${a.lastName}, ${a.firstName}` : a.lastName)}`)
+      : ['AU  - Unknown Author'];
+
     const content = [
       'TY  - RPRT',
-      `TI  - ${titleStr}`,
-      `AU  - ${authorStr}`,
+      `TI  - ${cleanTitle}`,
+      ...authorLines,
       `PY  - ${yearStr}`,
-      `PB  - SWU PHINMA`,
+      'PB  - SWU PHINMA',
       `UR  - ${window.location.href}`,
       `AB  - ${paper.abstract || ''}`,
       'ER  - '
@@ -1051,7 +1222,7 @@ function ArchivePaperViewer() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${titleStr.replace(/\s+/g, '_')}.ris`;
+    a.download = `${cleanTitle.replace(/\s+/g, '_')}.ris`;
     a.click();
     URL.revokeObjectURL(url);
     trackCitation(paper, 'RIS');
@@ -1059,24 +1230,31 @@ function ArchivePaperViewer() {
 
   const generateBibTeX = () => {
     if (!paper) return;
-    const titleStr = paper.researchTitle || paper.title || 'Untitled';
-    const authorStr = paper.authorDisplay || 'Unknown Author';
+    const cleanTitle = toTitleCase(paper.researchTitle || paper.title || 'Untitled');
+    const parsedAuthors = parseAuthors(paper.authorDisplay || 'Unknown Author');
     const yearStr = new Date(paper.publishedAt || Date.now()).getFullYear();
-    const citationKey = `${authorStr.split(',')[0].replace(/\s+/g, '')}${yearStr}`;
+
+    const bibAuthors = parsedAuthors.length > 0
+      ? parsedAuthors.map(a => a.isGroup ? `{${a.fullName}}` : (a.firstName ? `${a.lastName}, ${a.firstName}` : a.lastName)).join(' and ')
+      : 'Unknown Author';
+
+    const firstLastName = parsedAuthors[0]?.lastName || 'Research';
+    const citationKey = `${firstLastName.replace(/\s+/g, '')}${yearStr}`;
+
     const content = [
       `@techreport{${citationKey},`,
-      `  title = {${titleStr}},`,
-      `  author = {${authorStr}},`,
+      `  title = {${cleanTitle}},`,
+      `  author = {${bibAuthors}},`,
       `  year = {${yearStr}},`,
-      `  institution = {SWU PHINMA},`,
+      '  institution = {SWU PHINMA},',
       `  url = {${window.location.href}}`,
-      `}`
+      '}'
     ].join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${titleStr.replace(/\s+/g, '_')}.bib`;
+    a.download = `${cleanTitle.replace(/\s+/g, '_')}.bib`;
     a.click();
     URL.revokeObjectURL(url);
     trackCitation(paper, 'BibTeX');
@@ -1094,11 +1272,25 @@ function ArchivePaperViewer() {
     });
   };
 
-  const handleChapterClick = (targetPage) => {
+  const handleChapterClick = (chap) => {
+    if (!chap) return;
+    // Toggle accordion state for this chapter
+    setExpandedChapters(prev => ({
+      ...prev,
+      [chap.id]: !prev[chap.id]
+    }));
+    // Jump to chapter page
+    const pageNum = typeof chap.page === 'number' ? chap.page : parseInt(chap.page, 10);
+    if (!isNaN(pageNum) && pageNum >= 1) {
+      scrollToPage(pageNum);
+    }
+  };
+
+  const handleSectionClick = (targetPage, isDrawer = false) => {
     const pageNum = typeof targetPage === 'number' ? targetPage : parseInt(targetPage, 10);
     if (!isNaN(pageNum) && pageNum >= 1) {
       scrollToPage(pageNum);
-      if (isMobile) {
+      if (isDrawer || isMobile) {
         setIsMobileDrawerOpen(false);
       }
     }
@@ -1243,12 +1435,10 @@ function ArchivePaperViewer() {
 
         {/* Main Workspace Skeleton */}
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-4 gap-4 flex-shrink-0 z-10 hidden md:flex">
-            <div className="w-10 h-10 rounded animate-shimmer"></div>
-            <div className="w-10 h-10 rounded animate-shimmer"></div>
-            <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
-            <div className="w-10 h-10 rounded animate-shimmer"></div>
-            <div className="w-10 h-10 rounded animate-shimmer"></div>
+          <div className="w-20 bg-[#faf8f5] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex flex-col items-center py-3 gap-2 flex-shrink-0 z-10 hidden md:flex">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="w-14 h-11 rounded-xl animate-shimmer" />
+            ))}
           </div>
 
           <div className="w-64 lg:w-72 bg-[#fdfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 p-4 flex flex-col hidden md:flex z-10">
@@ -1283,10 +1473,15 @@ function ArchivePaperViewer() {
     );
   }
 
-  const title = paper.researchTitle || 'Untitled Research';
+  const title = cleanTitleText(paper.researchTitle || paper.title || 'Untitled Research');
   const authorName = paper.authorDisplay;
   const adviser = paper.adviserName || 'Unknown Adviser';
-  const year = new Date(paper.publishedAt || Date.now()).getFullYear();
+  const pubYear = paper.publishedAt
+    ? (typeof paper.publishedAt?.toDate === 'function'
+        ? paper.publishedAt.toDate().getFullYear()
+        : new Date(paper.publishedAt).getFullYear())
+    : new Date().getFullYear();
+  const year = isNaN(pubYear) ? new Date().getFullYear() : pubYear;
 
   // Reusable Tab Content Renderer
   const renderTabContent = (isDrawer = false) => {
@@ -1363,13 +1558,21 @@ function ArchivePaperViewer() {
     }
 
     if (activeTab === 'toc') {
-      const chapters = [
-        { label: 'Chapter 1: Introduction', page: chapterPages.chap1 },
-        { label: 'Chapter 2: Review of Literature', page: chapterPages.chap2 },
-        { label: 'Chapter 3: Methodology', page: chapterPages.chap3 },
-        { label: 'Chapter 4: Results & Discussion', page: chapterPages.chap4 },
-        { label: 'Chapter 5: Conclusion', page: chapterPages.chap5 },
-      ];
+      const allExpanded =
+        tableOfContents.length > 0 &&
+        tableOfContents.every(c => expandedChapters[c.id]);
+
+      const toggleAllChapters = () => {
+        if (allExpanded) {
+          setExpandedChapters({});
+        } else {
+          const nextState = {};
+          tableOfContents.forEach(c => {
+            nextState[c.id] = true;
+          });
+          setExpandedChapters(nextState);
+        }
+      };
 
       return (
         <div className="p-4 flex flex-col h-full bg-[#fcfbf7] dark:bg-gray-800">
@@ -1377,39 +1580,186 @@ function ArchivePaperViewer() {
             <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">
               Table of Contents
             </h2>
+            {tableOfContents.length > 1 && (
+              <button
+                type="button"
+                onClick={toggleAllChapters}
+                className="text-[11px] font-medium text-stone-600 dark:text-stone-300 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] transition cursor-pointer"
+              >
+                {allExpanded ? 'Collapse All' : 'Expand All'}
+              </button>
+            )}
           </div>
-          <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
-            {chapters.map((chap, idx) => {
-              const nextPage = chapters[idx + 1]?.page;
-              const isCurrent =
-                currentPage >= chap.page && (!nextPage || currentPage < nextPage);
 
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    handleChapterClick(chap.page);
-                    if (isDrawer) setIsMobileDrawerOpen(false);
-                  }}
-                  className={`text-left px-3.5 py-2.5 text-xs font-medium rounded-lg shadow-sm transition active:scale-[0.98] cursor-pointer flex items-center justify-between group ${
-                    isCurrent
-                      ? 'bg-[#5a1528] text-white ring-2 ring-[#7a2039]'
-                      : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'
-                  }`}
-                >
-                  <span className="font-semibold">{chap.label}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] bg-black/25 px-2 py-0.5 rounded text-white/90 font-mono">
-                      p. {chap.page}
-                    </span>
-                    <span className="text-[11px] opacity-75 group-hover:translate-x-0.5 transition-transform">
-                      ›
-                    </span>
+          <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            {isTocScanning && tableOfContents.length === 0 ? (
+              <div className="py-6 px-3 flex flex-col items-center text-center">
+                {/* Animated Manuscript Book Loader */}
+                <div className="relative mb-3 flex items-center justify-center">
+                  <div className="w-16 h-12 relative flex items-center justify-center">
+                    <svg className="w-14 h-12 text-[#7a2039] dark:text-[#f3e5ab] drop-shadow-xs" viewBox="0 0 64 48" fill="none">
+                      {/* Left Cover & Spine */}
+                      <path d="M32 40C24 37 12 37 4 39V11C12 9 24 9 32 12V40Z" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+                      {/* Right Cover */}
+                      <path d="M32 40C40 37 52 37 60 39V11C52 9 40 9 32 12V40Z" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+                      {/* Book Center Line / Spine */}
+                      <line x1="32" y1="12" x2="32" y2="40" stroke="#f8d070" strokeWidth="2.5" strokeLinecap="round" />
+                      {/* Left Page Lines */}
+                      <line x1="10" y1="18" x2="26" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                      <line x1="10" y1="24" x2="26" y2="24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                      <line x1="10" y1="30" x2="22" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                      {/* Right Page Lines */}
+                      <line x1="38" y1="18" x2="54" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                      <line x1="38" y1="24" x2="54" y2="24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                      <line x1="38" y1="30" x2="50" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
+                    </svg>
+                    {/* Animated Turning Page */}
+                    <span className="absolute w-5 h-7 border-r-2 border-[#7a2039] dark:border-[#f3e5ab] animate-pulse origin-left"></span>
                   </div>
-                </button>
-              );
-            })}
+                </div>
+
+                <h4 className="text-xs font-bold text-stone-800 dark:text-stone-200">
+                  Reading Table of Contents
+                </h4>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
+                  Fast scanning manuscript outline (~2 seconds)
+                </p>
+
+                {/* Progress Bar */}
+                <div className="w-full max-w-[210px] mt-3.5 bg-stone-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden shadow-inner">
+                  <div
+                    className="bg-gradient-to-r from-[#7a2039] to-[#a83250] dark:from-[#f3e5ab] dark:to-[#d4af37] h-full transition-all duration-200 rounded-full"
+                    style={{ width: `${tocScanProgress.percent || 0}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between w-full max-w-[210px] mt-1.5 text-[10px] font-mono text-stone-500 dark:text-stone-400">
+                  <span>Page {tocScanProgress.current || 0} of {tocScanProgress.total || 14}</span>
+                  <span className="font-bold text-[#7a2039] dark:text-[#f3e5ab]">{tocScanProgress.percent || 0}%</span>
+                </div>
+
+                {/* Reassurance Notice */}
+                <div className="mt-4 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/50 text-left w-full">
+                  <div className="flex items-center gap-1.5 font-semibold text-[11px] text-amber-800 dark:text-amber-300 mb-1">
+                    <span>📖</span>
+                    <span>Instant Outline Detection</span>
+                  </div>
+                  <p className="text-[10px] text-stone-600 dark:text-stone-300 leading-normal">
+                    Directly parsing the author's Table of Contents from the preliminary pages for fast, accurate navigation.
+                  </p>
+                </div>
+              </div>
+            ) : tableOfContents.length === 0 ? (
+              <div className="py-12 px-3 text-center flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-stone-100 dark:bg-gray-700/50 flex items-center justify-center text-stone-400 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                  No Table of Contents Detected
+                </p>
+                <p className="text-[11px] text-stone-600 dark:text-gray-300 mt-1 max-w-[210px] leading-relaxed">
+                  Only chapters present in this manuscript are displayed. Use the Pages tab to navigate directly.
+                </p>
+              </div>
+            ) : (
+              tableOfContents.map((chap, idx) => {
+                const nextChap = tableOfContents[idx + 1];
+                const isCurrentChapter =
+                  currentPage >= chap.page && (!nextChap || currentPage < nextChap.page);
+                const isExpanded = !!expandedChapters[chap.id];
+                const hasSections = Array.isArray(chap.sections) && chap.sections.length > 0;
+
+                return (
+                  <div key={chap.id || idx} className="flex flex-col">
+                    {/* Top-Level Chapter Maroon Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleChapterClick(chap);
+                        if (!hasSections && isDrawer) {
+                          setIsMobileDrawerOpen(false);
+                        }
+                      }}
+                      className={`text-left px-3.5 py-2.5 text-xs font-medium rounded-xl shadow-sm transition-all duration-150 active:scale-[0.99] cursor-pointer flex items-center justify-between group ${
+                        isCurrentChapter
+                          ? 'bg-[#5a1528] text-white ring-2 ring-[#7a2039]'
+                          : 'bg-[#7a2039] hover:bg-[#5a1528] text-white'
+                      }`}
+                    >
+                      <span className="font-semibold tracking-tight pr-2 truncate">
+                        {chap.label}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] bg-black/25 px-2 py-0.5 rounded text-white/90 font-mono">
+                          p. {chap.displayPage || chap.page}
+                        </span>
+                        {hasSections ? (
+                          <svg
+                            className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 ${
+                              isExpanded ? 'rotate-90' : ''
+                            }`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        ) : (
+                          <span className="text-[11px] opacity-75 group-hover:translate-x-0.5 transition-transform">
+                            ›
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Sub-Level Sections: Plain Text Links Indented */}
+                    {isExpanded && hasSections && (
+                      <div className="mt-1.5 mb-2 ml-3 pl-3 sm:ml-3.5 sm:pl-3.5 border-l-2 border-stone-200 dark:border-gray-700 flex flex-col gap-0.5">
+                        {chap.sections.map((sec, sIdx) => {
+                          const nextSec = chap.sections[sIdx + 1];
+                          const isCurrentSection =
+                            currentPage >= sec.page &&
+                            (!nextSec
+                              ? !nextChap || currentPage < nextChap.page
+                              : currentPage < nextSec.page);
+
+                          return (
+                            <button
+                              key={sec.id || sIdx}
+                              type="button"
+                              onClick={() => {
+                                handleSectionClick(sec.page, isDrawer);
+                              }}
+                              className={`group/sec w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                                isCurrentSection
+                                  ? 'bg-[#7a2039]/10 dark:bg-[#7a2039]/25 text-[#7a2039] dark:text-[#f3e5ab] font-semibold'
+                                  : 'text-stone-600 dark:text-stone-300 hover:text-[#7a2039] dark:hover:text-[#f3e5ab] hover:bg-stone-200/50 dark:hover:bg-gray-700/50 font-normal'
+                              }`}
+                              title={sec.title}
+                            >
+                              <span className="truncate pr-1 leading-snug">
+                                {sec.title}
+                              </span>
+                              <span
+                                className={`shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                                  isCurrentSection
+                                    ? 'bg-[#7a2039]/20 text-[#7a2039] dark:text-[#f3e5ab] font-bold'
+                                    : 'text-stone-600 dark:text-gray-300 group-hover/sec:text-[#7a2039] dark:group-hover/sec:text-[#f3e5ab]'
+                                }`}
+                              >
+                                p. {sec.displayPage || sec.page}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       );
@@ -1447,62 +1797,92 @@ function ArchivePaperViewer() {
     if (activeTab === 'cite') {
       return (
         <div className="p-4 flex flex-col h-full bg-[#f4f1ea] dark:bg-gray-900 transition-colors">
-          <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200 mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">Citation Formats</h2>
-          <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-1">
+          <div className="flex items-center justify-between mb-4 border-b border-stone-200 dark:border-gray-700 pb-2">
+            <h2 className="font-serif font-bold text-base md:text-lg text-stone-800 dark:text-gray-200">Citation Formats</h2>
+            <span className="text-[10px] font-medium text-stone-500 dark:text-gray-400 bg-stone-200/60 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+              Standardized
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3.5 overflow-y-auto custom-scrollbar flex-1 pr-1">
             {/* APA Format */}
-            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-xl p-3.5 shadow-xs transition-shadow hover:shadow-sm">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">APA 7th Edition</h3>
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-stone-100 dark:bg-gray-700/80 text-stone-500 dark:text-gray-400">
+                    Sentence Case
+                  </span>
+                </div>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${authorName} (${year}). ${title}. SWU PHINMA.`);
-                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                  }}
-                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                  type="button"
+                  onClick={() => handleCopyCitation('apa', citations.apa.plainText)}
+                  className={`text-[10px] px-2.5 py-1 rounded transition cursor-pointer font-medium ${
+                    copiedFormat === 'apa'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-[#7a2039] text-white hover:bg-[#5a1528]'
+                  }`}
+                  title="Copy APA 7th Edition Citation"
                 >
-                  Copy
+                  {copiedFormat === 'apa' ? 'Copied ✓' : 'Copy'}
                 </button>
               </div>
-              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                {authorName} ({year}). <i>{title}</i>. SWU PHINMA.
+              <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed font-serif selection:bg-[#7a2039]/20 selection:text-[#7a2039]">
+                {citations.apa.author} ({citations.apa.year}). <i>{citations.apa.title}</i> {citations.apa.institution}.
               </p>
             </div>
 
             {/* MLA Format */}
-            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-xl p-3.5 shadow-xs transition-shadow hover:shadow-sm">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">MLA 9th Edition</h3>
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-stone-100 dark:bg-gray-700/80 text-stone-500 dark:text-gray-400">
+                    Title Case
+                  </span>
+                </div>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${authorName}. "${title}." SWU PHINMA, ${year}.`);
-                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                  }}
-                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                  type="button"
+                  onClick={() => handleCopyCitation('mla', citations.mla.plainText)}
+                  className={`text-[10px] px-2.5 py-1 rounded transition cursor-pointer font-medium ${
+                    copiedFormat === 'mla'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-[#7a2039] text-white hover:bg-[#5a1528]'
+                  }`}
+                  title="Copy MLA 9th Edition Citation"
                 >
-                  Copy
+                  {copiedFormat === 'mla' ? 'Copied ✓' : 'Copy'}
                 </button>
               </div>
-              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                {authorName}. "{title}." <i>SWU PHINMA</i>, {year}.
+              <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed font-serif selection:bg-[#7a2039]/20 selection:text-[#7a2039]">
+                {citations.mla.author}. "{citations.mla.title}" <i>{citations.mla.institution}</i>, {citations.mla.year}.
               </p>
             </div>
 
             {/* IEEE Format */}
-            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 rounded-xl p-3.5 shadow-xs transition-shadow hover:shadow-sm">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200">IEEE</h3>
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-stone-100 dark:bg-gray-700/80 text-stone-500 dark:text-gray-400">
+                    Initials Surname
+                  </span>
+                </div>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${authorName}, "${title}," SWU PHINMA, ${year}.`);
-                    Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false });
-                  }}
-                  className="bg-[#7a2039] text-white text-[10px] px-2.5 py-1 rounded hover:bg-[#5a1528] transition cursor-pointer"
+                  type="button"
+                  onClick={() => handleCopyCitation('ieee', citations.ieee.plainText)}
+                  className={`text-[10px] px-2.5 py-1 rounded transition cursor-pointer font-medium ${
+                    copiedFormat === 'ieee'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-[#7a2039] text-white hover:bg-[#5a1528]'
+                  }`}
+                  title="Copy IEEE Citation"
                 >
-                  Copy
+                  {copiedFormat === 'ieee' ? 'Copied ✓' : 'Copy'}
                 </button>
               </div>
-              <p className="text-[11px] text-stone-600 dark:text-gray-400 leading-relaxed font-serif">
-                {authorName}, "{title}," SWU PHINMA, {year}.
+              <p className="text-[11px] text-stone-600 dark:text-gray-300 leading-relaxed font-serif selection:bg-[#7a2039]/20 selection:text-[#7a2039]">
+                {citations.ieee.author}, "{citations.ieee.title}," {citations.ieee.institution}, {citations.ieee.year}.
               </p>
             </div>
 
@@ -1510,13 +1890,21 @@ function ArchivePaperViewer() {
             <div className="mt-2 border-t border-stone-200 dark:border-gray-700 pt-3">
               <h3 className="text-xs font-bold text-stone-800 dark:text-gray-200 mb-2 uppercase tracking-wider">Export Citation</h3>
               <div className="flex flex-col gap-2">
-                <button onClick={generateRIS} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
-                  <span>Download .RIS (Mendeley, EndNote)</span>
-                  <span className="text-[10px]">⬇</span>
+                <button
+                  type="button"
+                  onClick={generateRIS}
+                  className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2.5 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-xs text-left font-medium cursor-pointer flex justify-between items-center group"
+                >
+                  <span className="group-hover:text-[#7a2039] dark:group-hover:text-[#f3e5ab] transition-colors">Download .RIS (Mendeley, EndNote)</span>
+                  <span className="text-xs text-stone-400 group-hover:text-[#7a2039] transition-colors">⬇</span>
                 </button>
-                <button onClick={generateBibTeX} className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-sm text-left font-medium cursor-pointer flex justify-between items-center">
-                  <span>Download .BibTeX (LaTeX)</span>
-                  <span className="text-[10px]">⬇</span>
+                <button
+                  type="button"
+                  onClick={generateBibTeX}
+                  className="w-full bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-600 text-stone-700 dark:text-gray-300 px-3 py-2.5 rounded-lg text-xs hover:bg-stone-50 dark:hover:bg-gray-700 transition shadow-xs text-left font-medium cursor-pointer flex justify-between items-center group"
+                >
+                  <span className="group-hover:text-[#7a2039] dark:group-hover:text-[#f3e5ab] transition-colors">Download .BibTeX (LaTeX)</span>
+                  <span className="text-xs text-stone-400 group-hover:text-[#7a2039] transition-colors">⬇</span>
                 </button>
               </div>
             </div>
@@ -1686,72 +2074,281 @@ function ArchivePaperViewer() {
       {/* MAIN CONTENT WORKSPACE */}
       <div className="flex flex-1 overflow-hidden relative">
 
-        {/* THIN LEFT NAVIGATION (ICONS) - Hidden on mobile screens to give PDF 100% width */}
-        <div className={`w-14 md:w-16 bg-[#fcfbf7] dark:bg-gray-800 border-r border-stone-300 dark:border-gray-700 flex-col items-center py-4 gap-4 flex-shrink-0 z-10 transition-colors ${isFullscreen ? 'hidden' : 'hidden md:flex'}`}>
-          <button onClick={() => handleTabClick('abstract')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'abstract' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Abstract">
-            📝
-          </button>
-          <button onClick={() => handleTabClick('toc')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'toc' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Table of Contents">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-          </button>
-          <button onClick={() => handleTabClick('pages')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'pages' && !isFullscreen ? 'bg-[#f5ebed] text-[#7a2039]' : 'text-stone-500 hover:bg-stone-100'}`} title="Pages">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-          </button>
-
-          <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
-
-          <button onClick={toggleFullscreen} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Fullscreen">⛶</button>
-          <button
-            onClick={handleBookmarkToggle}
-            className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
-            title={isBookmarked ? "Remove Bookmark" : "Bookmark"}
-          >
-            {isBookmarked ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>}
-          </button>
-          <div className="flex flex-col items-center gap-1 mt-2">
+        {/* LEFT TOOLBAR / NAVIGATION RAIL - Master UI/UX Redesign */}
+        <div
+          className={`w-20 bg-[#faf8f5] dark:bg-[#181316] border-r border-[#e5dfd5] dark:border-white/10 flex-col items-center py-3 px-1 gap-1 flex-shrink-0 z-10 transition-all select-none overflow-y-auto scrollbar-none ${
+            isFullscreen ? 'hidden' : 'hidden md:flex'
+          }`}
+        >
+          {/* GROUP 1: READING & NAVIGATION */}
+          <div className="flex flex-col items-center gap-1 w-full shrink-0">
+            {/* 1. Abstract */}
             <button
-              onClick={handleLike}
-              className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer hover:bg-stone-100 dark:hover:bg-gray-700 ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400'}`}
-              title={paper.likes?.includes(currentUser?.uid) ? "Unlike" : "Like"}
+              type="button"
+              onClick={() => handleTabClick('abstract')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'abstract' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title="Research Abstract & Audio Reader"
             >
-              <svg className={`w-5 h-5 ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab] fill-current' : 'text-stone-500 dark:text-gray-400'}`} fill={paper.likes?.includes(currentUser?.uid) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={paper.likes?.includes(currentUser?.uid) ? "0" : "1.8"} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.7 0-1.357-.315-1.792-.861l-2.012-2.515a4.5 4.5 0 00-3.513-1.69h-.28c-.414 0-.75-.336-.75-.75V11.25c0-.414.336-.75.75-.75h.28z" />
-              </svg>
+              {activeTab === 'abstract' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Abstract
+              </span>
             </button>
-            <span className="text-[10px] font-bold text-stone-500 dark:text-gray-400">{paper.likes?.length || 0}</span>
-            <span className="flex items-center gap-1 text-[11px] font-bold text-stone-500 dark:text-gray-400 mt-2" title="Views">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
-              {paper.views || 0}
-            </span>
+
+            {/* 2. Outline */}
+            <button
+              type="button"
+              onClick={() => handleTabClick('toc')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'toc' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title="Table of Contents (Outline)"
+            >
+              {activeTab === 'toc' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10M4 18h14" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Outline
+              </span>
+            </button>
+
+            {/* 3. Pages */}
+            <button
+              type="button"
+              onClick={() => handleTabClick('pages')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'pages' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title={`Page Thumbnails (${numPages || '...'})`}
+            >
+              {activeTab === 'pages' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Pages
+              </span>
+            </button>
+
+            {/* 4. Full */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  {isFullscreen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 0l5-5m0 0l-5 0m5 0l0 5m-5 11l5 5m0 0l-5 0m5 0l0-5m-11 0l-5 5m0 0l5 0m-5 0l0-5" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  )}
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                {isFullscreen ? 'Exit' : 'Full'}
+              </span>
+            </button>
           </div>
 
-          <button onClick={() => handleTabClick('cite')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'cite' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Cite">❞</button>
+          {/* Section Divider */}
+          <div className="w-10 h-px bg-stone-200 dark:bg-white/10 my-1 shrink-0" />
 
-          <button onClick={() => handleTabClick('share')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'share' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Share">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-          </button>
+          {/* GROUP 2: ENGAGEMENT & METRICS */}
+          <div className="flex flex-col items-center gap-1 w-full shrink-0">
+            {/* 5. Save (Bookmark) */}
+            <button
+              type="button"
+              onClick={handleBookmarkToggle}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                isBookmarked
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title={isBookmarked ? 'Remove from Saved Bookmarks' : 'Save to Bookmarks'}
+            >
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg
+                  className={`w-5 h-5 transition-transform duration-150 group-hover:scale-110 ${
+                    isBookmarked ? 'fill-current text-[#7a2039] dark:text-[#f3e5ab]' : ''
+                  }`}
+                  fill={isBookmarked ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth={isBookmarked ? '0' : '2'}
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                {isBookmarked ? 'Saved' : 'Save'}
+              </span>
+            </button>
 
-          <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
+            {/* 6. Like */}
+            <button
+              type="button"
+              onClick={handleLike}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                paper.likes?.includes(currentUser?.uid)
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title={paper.likes?.includes(currentUser?.uid) ? 'Unlike this paper' : 'Like this paper'}
+            >
+              <div className="relative w-7 h-7 flex items-center justify-center">
+                <svg
+                  className={`w-5 h-5 transition-transform duration-150 group-hover:scale-110 ${
+                    paper.likes?.includes(currentUser?.uid) ? 'fill-current text-[#7a2039] dark:text-[#f3e5ab]' : ''
+                  }`}
+                  fill={paper.likes?.includes(currentUser?.uid) ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth={paper.likes?.includes(currentUser?.uid) ? '0' : '2'}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                  />
+                </svg>
+                {(paper.likes?.length || 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#7a2039] dark:bg-[#f3e5ab] text-white dark:text-[#4a1220] text-[9px] font-bold flex items-center justify-center leading-none shadow-xs">
+                    {paper.likes.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                {paper.likes?.includes(currentUser?.uid) ? 'Liked' : 'Like'}
+              </span>
+            </button>
 
-          <button onClick={() => handleTabClick('related')} className={`w-10 h-10 flex items-center justify-center rounded transition cursor-pointer ${activeTab === 'related' && !isFullscreen ? 'bg-[#f5ebed] dark:bg-gray-700 text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`} title="Related Researches">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-          </button>
+            {/* 7. Views Telemetry */}
+            <div
+              className="w-[70px] py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-stone-500 dark:text-stone-400 select-none"
+              title={`Total Archive Views: ${paper.views || 0}`}
+            >
+              <div className="w-6 h-6 flex items-center justify-center">
+                <svg className="w-4 h-4 text-stone-400 dark:text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-bold text-stone-700 dark:text-stone-300 leading-tight">
+                {paper.views || 0}
+              </span>
+              <span className="text-[8px] text-stone-400 dark:text-stone-500 uppercase tracking-tight">
+                Views
+              </span>
+            </div>
+          </div>
 
-          <div className="w-8 border-b border-stone-200 dark:border-gray-600 my-2"></div>
+          {/* Section Divider */}
+          <div className="w-10 h-px bg-stone-200 dark:bg-white/10 my-1 shrink-0" />
 
-          {/* ZEN MODE TOGGLE */}
-          <button
-            onClick={() => { setIsZenMode(!isZenMode); if (!isZenMode) { setIsFullscreen(true); } else { setIsFullscreen(false); } }}
-            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 cursor-pointer ${isZenMode ? 'bg-[#7a2039] text-white shadow-lg scale-110' : 'text-stone-500 dark:text-gray-400 hover:bg-stone-100 dark:hover:bg-gray-700'}`}
-            title={isZenMode ? 'Exit Zen Mode' : 'Zen Mode (Focus Reading)'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-            </svg>
-          </button>
+          {/* GROUP 3: RESEARCH TOOLS & SHARING */}
+          <div className="flex flex-col items-center gap-1 w-full shrink-0">
+            {/* 8. Cite */}
+            <button
+              type="button"
+              onClick={() => handleTabClick('cite')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'cite' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title="Generate Citation (APA 7th, IEEE, MLA)"
+            >
+              {activeTab === 'cite' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Cite
+              </span>
+            </button>
+
+            {/* 9. Related Studies */}
+            <button
+              type="button"
+              onClick={() => handleTabClick('related')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'related' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title="Related Research Studies"
+            >
+              {activeTab === 'related' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Related
+              </span>
+            </button>
+
+            {/* 10. Share & Copy Link */}
+            <button
+              type="button"
+              onClick={() => handleTabClick('share')}
+              className={`group relative w-[70px] py-2 px-1 flex flex-col items-center justify-center rounded-xl transition-all duration-150 cursor-pointer ${
+                activeTab === 'share' && !isFullscreen
+                  ? 'bg-[#7a2039]/10 dark:bg-[#f3e5ab]/15 text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-white/5'
+              }`}
+              title="Share Paper & Copy Link"
+            >
+              {activeTab === 'share' && !isFullscreen && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#7a2039] dark:bg-[#f3e5ab] rounded-r-full" />
+              )}
+              <div className="w-7 h-7 flex items-center justify-center">
+                <svg className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <span className="text-[10px] font-medium tracking-tight mt-0.5 leading-tight text-center">
+                Share
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* EXPANDABLE SIDEBAR PANEL - Desktop */}
@@ -1786,23 +2383,49 @@ function ArchivePaperViewer() {
                 </button>
               </div>
 
-              {/* Quick Actions (Bookmark, Like, Fullscreen, Zen) */}
-              <div className="p-3 grid grid-cols-4 gap-2 border-b border-stone-200 dark:border-gray-700 bg-stone-100 dark:bg-gray-900 shrink-0">
+              {/* Quick Actions (Bookmark, Like, Fullscreen) */}
+              <div className="p-3 grid grid-cols-3 gap-2 border-b border-stone-200 dark:border-gray-700 bg-stone-100 dark:bg-gray-900 shrink-0">
                 <button
                   type="button"
                   onClick={handleBookmarkToggle}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer transition-colors ${
+                    isBookmarked ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs' : 'text-stone-600 dark:text-gray-300'
+                  }`}
                 >
-                  <span className="text-base">{isBookmarked ? '🔖' : '📑'}</span>
-                  <span className="text-[10px] mt-1">{isBookmarked ? 'Saved' : 'Save'}</span>
+                  <svg
+                    className={`w-4 h-4 ${isBookmarked ? 'fill-[#7a2039] dark:fill-[#f3e5ab]' : 'text-stone-500'}`}
+                    fill={isBookmarked ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    strokeWidth={isBookmarked ? '0' : '2'}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span className="text-[10px] mt-1 font-medium">{isBookmarked ? 'Saved' : 'Save'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleLike}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
+                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer transition-colors ${
+                    paper.likes?.includes(currentUser?.uid) ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold shadow-xs' : 'text-stone-600 dark:text-gray-300'
+                  }`}
                 >
-                  <span className="text-base">👍</span>
-                  <span className="text-[10px] mt-1">{paper.likes?.length || 0}</span>
+                  <svg
+                    className={`w-4 h-4 ${paper.likes?.includes(currentUser?.uid) ? 'fill-current text-[#7a2039] dark:text-[#f3e5ab]' : 'text-stone-500'}`}
+                    fill={paper.likes?.includes(currentUser?.uid) ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    strokeWidth={paper.likes?.includes(currentUser?.uid) ? '0' : '2'}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                    />
+                  </svg>
+                  <span className="text-[10px] mt-1 font-medium">
+                    {paper.likes?.length ? `${paper.likes.length} Likes` : 'Like'}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1810,46 +2433,89 @@ function ArchivePaperViewer() {
                     toggleFullscreen();
                     setIsMobileDrawerOpen(false);
                   }}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs text-stone-600 dark:text-gray-300 cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs text-stone-600 dark:text-gray-300 cursor-pointer transition-colors"
                 >
-                  <span className="text-base">⛶</span>
-                  <span className="text-[10px] mt-1">Full</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsZenMode(!isZenMode);
-                    if (!isZenMode) setIsFullscreen(true);
-                    setIsMobileDrawerOpen(false);
-                  }}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-xs cursor-pointer ${isZenMode ? 'text-[#7a2039] dark:text-[#f3e5ab] font-bold' : 'text-stone-600 dark:text-gray-300'}`}
-                >
-                  <span className="text-base">🧘</span>
-                  <span className="text-[10px] mt-1">Zen</span>
+                  <svg className="w-4 h-4 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    {isFullscreen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 0l5-5m0 0l-5 0m5 0l0 5m-5 11l5 5m0 0l-5 0m5 0l0-5m-11 0l-5 5m0 0l5 0m-5 0l0-5" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    )}
+                  </svg>
+                  <span className="text-[10px] mt-1 font-medium">{isFullscreen ? 'Exit' : 'Full'}</span>
                 </button>
               </div>
 
               {/* Navigation Tabs List */}
               <div className="flex border-b border-stone-200 dark:border-gray-700 overflow-x-auto text-xs bg-white dark:bg-gray-800 shrink-0 custom-scrollbar">
                 {[
-                  { id: 'toc', label: 'TOC', icon: '📋' },
-                  { id: 'abstract', label: 'Abstract', icon: '📝' },
-                  { id: 'pages', label: 'Pages', icon: '📄' },
-                  { id: 'cite', label: 'Cite', icon: '❞' },
-                  { id: 'share', label: 'Share', icon: '🔗' },
-                  { id: 'related', label: 'Related', icon: '🕸️' }
+                  {
+                    id: 'abstract',
+                    label: 'Abstract',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )
+                  },
+                  {
+                    id: 'toc',
+                    label: 'Outline',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    )
+                  },
+                  {
+                    id: 'pages',
+                    label: 'Pages',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    )
+                  },
+                  {
+                    id: 'cite',
+                    label: 'Cite',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                      </svg>
+                    )
+                  },
+                  {
+                    id: 'related',
+                    label: 'Related',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    )
+                  },
+                  {
+                    id: 'share',
+                    label: 'Share',
+                    icon: (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    )
+                  }
                 ].map(tab => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 py-2.5 px-2 text-center whitespace-nowrap font-medium transition cursor-pointer border-b-2 text-[11px] ${
+                    className={`flex items-center gap-1.5 py-2.5 px-3 text-center whitespace-nowrap font-medium transition cursor-pointer border-b-2 text-[11px] ${
                       (activeTab === tab.id || (!activeTab && tab.id === 'toc'))
                         ? 'border-[#7a2039] text-[#7a2039] dark:text-[#f3e5ab] dark:border-[#f3e5ab] font-bold'
                         : 'border-transparent text-stone-500 dark:text-gray-400 hover:text-stone-700'
                     }`}
                   >
-                    <span className="mr-1">{tab.icon}</span>{tab.label}
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
                   </button>
                 ))}
               </div>

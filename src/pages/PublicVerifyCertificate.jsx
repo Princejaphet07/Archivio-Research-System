@@ -273,7 +273,7 @@ export default function PublicVerifyCertificate() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-stone-200 py-6 text-center text-xs text-stone-500">
+      <footer className="bg-white border-t border-stone-200 py-6 text-center text-sm text-stone-600 font-medium">
         <p>© 2026 Southwestern University PHINMA • ARCHIVIO Institutional Digital Repository</p>
       </footer>
     </div>

@@ -179,13 +179,21 @@ export default function PublishQueue({ activePage, onNavigate }) {
     })
     .filter(Boolean);
 
+  // Helper: determine if adviser has formally endorsed manuscript for Dean publication
+  const isEndorsedByAdviser = (s) => {
+    if (!s) return false;
+    if (s.reviewStatus === 'published' || s.reviewStatus === 'dean_revision') return false;
+    // 'reviewed' means adviser checked/verified individual files, but has NOT formally endorsed to Dean yet
+    return s.reviewStatus === 'approved' || s.reviewStatus === 'endorsed' || s.adviserEndorsed === true;
+  };
+
   // Status Counts
-  const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress').length;
-  const approvedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'reviewed').length;
+  const pendingCount = enrichedSubmissions.filter(s => s.reviewStatus === 'pending' || s.reviewStatus === 'in_progress' || s.reviewStatus === 'reviewed').length;
+  const approvedCount = enrichedSubmissions.filter(isEndorsedByAdviser).length;
   const publishedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'published').length;
   const returnedCount = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision').length;
 
-  const awaitingPublication = enrichedSubmissions.filter(s => s.reviewStatus === 'approved' || s.reviewStatus === 'reviewed');
+  const awaitingPublication = enrichedSubmissions.filter(isEndorsedByAdviser);
   const returnedItems = enrichedSubmissions.filter(s => s.reviewStatus === 'dean_revision');
   const publishedItems = enrichedSubmissions.filter(s => s.reviewStatus === 'published');
 
@@ -1041,7 +1049,7 @@ export default function PublishQueue({ activePage, onNavigate }) {
                   className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-500"
                 >
                   <Globe className="w-4 h-4" />
-                  <span>Publish {eligibleCount} Eligible Paper{eligibleCount !== 1 ? 's' : ''}</span>
+                  <span>PUBLISH</span>
                 </button>
               </div>
 

@@ -10,7 +10,7 @@ import { collection, query, where, getDocs, doc, updateDoc, setDoc } from 'fireb
 import { logActivity } from '../../firebase/logActivity';
 import Swal from 'sweetalert2';
 import { getDisplayInitials } from '../../utils/nameUtils';
-import { Calendar, ChevronDown, Check, Plus } from 'lucide-react';
+import { Calendar, ChevronDown, Check, Plus, Search, X } from 'lucide-react';
 
 const PAGE_TITLES = {
   'dashboard': { title: 'Dashboard', breadcrumb: '' },
@@ -23,7 +23,16 @@ const PAGE_TITLES = {
   'settings': { title: 'Settings', breadcrumb: 'ARCHIVIO > Settings' },
 };
 
-export default function Header({ activePage, onMenuClick }) {
+export default function Header({ 
+  activePage, 
+  onMenuClick,
+  showSearch = activePage === 'dashboard',
+  searchQuery = '',
+  onSearchChange = () => {},
+  searchResults = [],
+  onSelectSearchResult = () => {},
+  searchPlaceholder = "Search names, research title, group, categories, sections..."
+}) {
   const { deanData, deanSettings, user } = useUser();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const navigate = useNavigate();
@@ -31,8 +40,10 @@ export default function Header({ activePage, onMenuClick }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [syDropdownOpen, setSyDropdownOpen] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef(null);
   const syDropdownRef = useRef(null);
+  const searchContainerRef = useRef(null);
   const timeoutRef = useRef(null);
 
   const currentView = PAGE_TITLES[activePage] || { title: 'Dashboard', breadcrumb: '' };
@@ -119,11 +130,15 @@ export default function Header({ activePage, onMenuClick }) {
       if (syDropdownRef.current && !syDropdownRef.current.contains(e.target)) {
         setSyDropdownOpen(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchOpen(false);
+      }
     };
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setDropdownOpen(false);
         setSyDropdownOpen(false);
+        setIsSearchOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -198,24 +213,164 @@ export default function Header({ activePage, onMenuClick }) {
       <header className="bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 font-sans sticky top-0 z-10 transition-colors">
 
         {/* Left side: Mobile Toggle, Title, and Search */}
-        <div className="flex items-center gap-4 lg:gap-6">
+        <div className="flex items-center gap-3 lg:gap-4 flex-1 min-w-0 mr-3 lg:mr-6">
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 -ml-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg focus:outline-none"
+            className="lg:hidden p-2 -ml-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg focus:outline-none shrink-0"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
-          <div className="hidden sm:block">
+          <div className="hidden sm:block shrink-0">
             <h2 className="font-serif text-xl font-bold text-[#590000] dark:text-[#f8d070]">{currentView.title}</h2>
             {currentView.breadcrumb && (
               <p className="text-[10px] text-stone-400 -mt-1 font-medium">{currentView.breadcrumb}</p>
             )}
           </div>
 
-          <div className="hidden lg:block h-6 w-px bg-stone-200 dark:bg-stone-700 mx-2"></div>
+          <div className="hidden lg:block h-6 w-px bg-stone-200 dark:bg-stone-700 mx-1 shrink-0"></div>
+
+          {/* Search bar next to Dashboard | */}
+          {showSearch && (
+            <div ref={searchContainerRef} className="relative flex-1 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 absolute left-3 text-stone-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    onSearchChange(e.target.value);
+                    if (!isSearchOpen) setIsSearchOpen(true);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim().length > 0) setIsSearchOpen(true);
+                  }}
+                  placeholder={searchPlaceholder}
+                  className="w-full pl-9 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm bg-stone-100/90 dark:bg-[#1e1e1e] border border-stone-200/80 dark:border-stone-700/80 rounded-xl focus:border-[#770000] dark:focus:border-[#f8d070] focus:ring-2 focus:ring-[#770000]/15 dark:focus:ring-[#f8d070]/20 text-stone-800 dark:text-stone-100 placeholder:text-stone-400 outline-none transition-all shadow-xs"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSearchChange('');
+                      setIsSearchOpen(false);
+                    }}
+                    className="absolute right-2.5 p-1 rounded-full text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Search dropdown results */}
+              {isSearchOpen && searchQuery.trim().length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-scale-up max-h-[420px] flex flex-col font-sans">
+                  
+                  {/* Results Header */}
+                  <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      Search Results ({searchResults.length})
+                    </span>
+                    <span className="text-[10px] text-stone-400 hidden sm:inline">
+                      Names, titles, groups, categories, sections
+                    </span>
+                  </div>
+
+                  {/* Results List */}
+                  <div className="overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800/80 flex-1">
+                    {searchResults.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-stone-500 dark:text-stone-400">
+                        <Search className="w-6 h-6 mx-auto mb-2 text-stone-300 dark:text-stone-600" />
+                        <p className="font-medium text-stone-700 dark:text-stone-300">No matches found for "{searchQuery}"</p>
+                        <p className="text-[11px] text-stone-400 mt-1">Try searching by student/adviser name, research title, group, category, or section.</p>
+                      </div>
+                    ) : (
+                      searchResults.slice(0, 10).map((item, idx) => (
+                        <div
+                          key={item.id || idx}
+                          onClick={() => {
+                            onSelectSearchResult(item);
+                            setIsSearchOpen(false);
+                          }}
+                          className="p-3.5 px-4 hover:bg-stone-50 dark:hover:bg-[#242424] transition-colors cursor-pointer text-left flex flex-col gap-1.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="text-xs sm:text-sm font-bold text-stone-900 dark:text-stone-100 line-clamp-1 leading-snug">
+                              {item.title}
+                            </h4>
+                            <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              item.status === 'Published'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                                : item.status === 'For Completion'
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                                : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="font-bold text-stone-800 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md">
+                              {item.groupName}
+                            </span>
+                            {item.section && (
+                              <span className="font-semibold text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md">
+                                {item.section}
+                              </span>
+                            )}
+                            {item.category && (
+                              <span className="font-medium text-[#770000] dark:text-[#f8d070] bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded-md border border-red-200/50 dark:border-red-900/40">
+                                {item.category}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-500 dark:text-stone-400">
+                            {item.leaderName && (
+                              <span>
+                                Leader: <strong className="text-stone-700 dark:text-stone-300 font-semibold">{item.leaderName}</strong>
+                              </span>
+                            )}
+                            {item.adviserName && (
+                              <span>
+                                Adviser: <strong className="text-stone-700 dark:text-stone-300 font-semibold">{item.adviserName}</strong>
+                              </span>
+                            )}
+                            {item.matchedField && (
+                              <span className="text-[10px] text-stone-400 font-mono italic">
+                                Matched: {item.matchedField}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Dropdown Footer */}
+                  <div className="p-2.5 px-4 bg-stone-50 dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-stone-400">
+                      Press <kbd className="px-1.5 py-0.5 bg-stone-200 dark:bg-stone-800 rounded font-mono text-[10px] text-stone-600 dark:text-stone-300">Esc</kbd> to close
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        navigate(`/dean/research-records?q=${encodeURIComponent(searchQuery)}`);
+                      }}
+                      className="font-bold text-[#770000] dark:text-[#f8d070] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>View all in Research Records</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right side: Role tags, Year selector, Dark mode, Bell, User Profile Avatar Dropdown */}

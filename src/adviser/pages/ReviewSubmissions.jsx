@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, getDoc, addDoc, serverTimestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logActivity } from '../../firebase/logActivity';
@@ -14,6 +14,8 @@ import CertificateModal from '../../components/CertificateModal';
 import { validateSubmissionReadiness } from '../utils/approvalGating';
 import RequirementIcon from '../components/RequirementIcon';
 import { useAdviser } from '../context/AdviserContext';
+import PublishConfirmationModal from '../../dean/components/PublishConfirmationModal';
+import UndoPublishBanner from '../../dean/components/UndoPublishBanner';
 import { 
   Clock, 
   AlertCircle, 
@@ -36,12 +38,45 @@ import {
 
 function ReviewSubmissions() {
   const { adviserData, userRole } = useAdviser();
-  const isDualRole = userRole === 'dean+adviser' || adviserData?.role === 'dean+adviser';
+  const [dualRoleOverride, setDualRoleOverride] = useState(false);
+
+  useEffect(() => {
+    const checkDual = async () => {
+      if (!auth.currentUser) return;
+      try {
+        const deanDoc = await getDoc(doc(db, 'deans', auth.currentUser.uid));
+        if (deanDoc.exists() && (deanDoc.data().role === 'dean+adviser' || deanDoc.data().isDualRole)) {
+          setDualRoleOverride(true);
+          return;
+        }
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (userDoc.exists() && (userDoc.data().role === 'dean+adviser' || userDoc.data().isDualRole)) {
+          setDualRoleOverride(true);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    checkDual();
+  }, []);
+
+  const isDualRole = 
+    dualRoleOverride ||
+    userRole === 'dean+adviser' || 
+    adviserData?.role === 'dean+adviser' ||
+    (typeof userRole === 'string' && userRole.includes('dean') && userRole.includes('adviser')) ||
+    (typeof adviserData?.role === 'string' && adviserData.role.includes('dean') && adviserData.role.includes('adviser'));
+
   const location = useLocation();
   const [submissions, setSubmissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Publish & Undo states for Dual Role accounts (same functionality when Dean publishes)
+  const [publishModalItem, setPublishModalItem] = useState(null);
+  const [pendingUndoItem, setPendingUndoItem] = useState(null);
+  const undoTimeoutRef = useRef(null);
 
   // Document Viewer State
   const [viewerState, setViewerState] = useState({
@@ -62,6 +97,8 @@ function ReviewSubmissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState(location.state?.filterGroup || 'All Groups');
   const [filterYear, setFilterYear] = useState('All Year');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
@@ -220,6 +257,22 @@ function ReviewSubmissions() {
     const year = isNaN(dateObj.getTime()) ? '' : dateObj.getFullYear().toString();
     return year === filterYear;
   });
+
+  // Pagination (Maximum 10 items per page)
+  const totalPages = Math.max(1, Math.ceil(finalFiltered.length / itemsPerPage));
+  const paginatedItems = finalFiltered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset to first page when filtering or active tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, filterGroup, filterYear, revisionFilter]);
+
+  // Guard against out-of-range page when filtered list changes
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   // Available group names for filter
   const uniqueGroups = [...new Set(enrichedSubmissions.map(s => s.groupName))];
@@ -402,31 +455,27 @@ function ReviewSubmissions() {
       return;
     }
 
+    // 2. Dual Role Flow: Opens the PublishConfirmationModal (exact same modal and functionality when Dean publishes a paper)
+    if (isDualRole) {
+      setPublishModalItem(sub);
+      return;
+    }
+
+    // 3. Regular Adviser Flow: Endorse for Dean Publication
     const isDeanRev = sub.reviewStatus === 'dean_revision';
-    const dialogTitle = isDualRole 
-      ? 'Publish Research Paper?' 
-      : (isDeanRev ? 'Endorse Revised Manuscript to Dean?' : 'Endorse for Dean Publication?');
-
-    const dialogText = isDualRole
-      ? 'All required documents have been verified. Since you have dual role (Dean + Adviser), this will officially publish the manuscript directly to the live ARCHIVIO Public Archive.'
-      : (isDeanRev 
-        ? "All documents and revisions verified. This will forward the manuscript back to the Dean's Publish Queue."
-        : "All required documents have been verified. This will endorse the research and forward it to the Dean's Publish Queue.");
-
-    const confirmBtnText = isDualRole
-      ? 'Yes, Publish Live'
-      : (isDeanRev ? 'Yes, Endorse to Dean' : 'Yes, Endorse for Publication');
-
-    const loadingTitle = isDualRole
-      ? 'Publishing Research Paper...'
-      : (isDeanRev ? 'Endorsing to Dean...' : 'Endorsing for Publication...');
+    const dialogTitle = isDeanRev ? 'Endorse Revised Manuscript to Dean?' : 'Endorse for Dean Publication?';
+    const dialogText = isDeanRev 
+      ? "All documents and revisions verified. This will forward the manuscript back to the Dean's Publish Queue."
+      : "All required documents have been verified. This will endorse the research and forward it to the Dean's Publish Queue.";
+    const confirmBtnText = isDeanRev ? 'Yes, Endorse to Dean' : 'Yes, Endorse for Publication';
+    const loadingTitle = isDeanRev ? 'Endorsing to Dean...' : 'Endorsing for Publication...';
 
     const res = await Swal.fire({
       title: dialogTitle,
       text: dialogText,
       input: 'textarea',
-      inputLabel: isDualRole ? 'Dean & Adviser Remarks / Directives (Optional)' : 'Adviser Endorsement Remarks / Directives (Optional)',
-      inputPlaceholder: isDualRole ? 'E.g. Approved and verified for official publication...' : (isDeanRev ? 'E.g. Verified revisions requested by the Dean...' : 'E.g. Ready for final archival publishing...'),
+      inputLabel: 'Adviser Endorsement Remarks / Directives (Optional)',
+      inputPlaceholder: isDeanRev ? 'E.g. Verified revisions requested by the Dean...' : 'E.g. Ready for final archival publishing...',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#059669',
@@ -447,72 +496,76 @@ function ReviewSubmissions() {
       try {
         const nowIso = new Date().toISOString();
 
-        if (isDualRole) {
-          // Dual Role: Publish directly to live public archive
-          await updateDoc(doc(db, 'submissions', sub.id), {
-            reviewStatus: 'published',
-            publishedAt: nowIso,
-            reviewedAt: nowIso,
-            reviewedBy: auth.currentUser?.email,
-            adviserComments: comments,
-            researchTitle: sub.researchTitle || sub.title,
-            groupName: sub.groupName,
-            adviserName: sub.adviserName || adviserData?.fullName || auth.currentUser?.displayName || 'Dean & Adviser',
-            adviserUid: sub.adviserUid || auth.currentUser?.email,
-            program: sub.program || '',
-            authorDisplay: sub.authorDisplay || sub.leaderName || ''
+        await updateDoc(doc(db, 'submissions', sub.id), {
+          reviewStatus: 'approved',
+          adviserEndorsed: true,
+          endorsedAt: nowIso,
+          endorsedBy: auth.currentUser?.email || 'Adviser',
+          reviewedAt: nowIso,
+          reviewedBy: auth.currentUser?.email,
+          adviserComments: comments
+        });
+
+        await logActivity({
+          user: auth.currentUser?.email || 'Adviser',
+          role: 'Research Adviser',
+          action: 'Endorsed submission for Dean publication',
+          details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
+          status: 'Success'
+        });
+
+        if (sub.studentUid) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: sub.studentUid,
+            title: "Research Approved!",
+            message: "Congratulations! Your Research Adviser has approved your manuscript. It is now awaiting the Dean's final review.",
+            isRead: false,
+            createdAt: serverTimestamp()
           });
-
-          await logActivity({
-            user: auth.currentUser?.email || 'Dean & Adviser',
-            role: 'Dean + Adviser',
-            action: 'Published research to public archive',
-            details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
-            status: 'Success'
-          });
-
-          // Notify students (leader + members)
-          const recipientUids = new Set();
-          if (sub.studentUid) recipientUids.add(sub.studentUid);
-
-          const group = groups.find(g => 
-            (sub.groupId && g.id === sub.groupId) || 
-            (sub.groupName && g.groupName === sub.groupName)
-          );
-
-          if (group) {
-            if (group.leaderUid) recipientUids.add(group.leaderUid);
-            if (Array.isArray(group.members)) {
-              for (const member of group.members) {
-                if (typeof member === 'object' && member !== null) {
-                  if (member.uid) recipientUids.add(member.uid);
-                  else if (member.id) recipientUids.add(member.id);
-                }
+          
+          // Notify the Dean(s)
+          try {
+            const deansQuery = query(collection(db, 'users'), where('role', 'in', ['dean', 'dean+adviser']));
+            const deansSnap = await getDocs(deansQuery);
+            const batchPromises = [];
+            const notifiedUserIds = new Set();
+            deansSnap.docs.forEach(deanDoc => {
+              const dData = deanDoc.data();
+              const deanDept = (dData.department || '').toLowerCase().trim();
+              const subDept = (sub.group?.department || sub.department || '').toLowerCase().trim();
+              if (deanDept && subDept && deanDept !== subDept && !subDept.includes(deanDept) && !deanDept.includes(subDept)) {
+                return;
               }
-            }
-          }
-
-          const paperTitle = sub.researchTitle || sub.title || 'Research Paper';
-
-          for (const uid of recipientUids) {
-            await addDoc(collection(db, 'notifications'), {
-              userId: uid,
-              title: 'Research Paper Published! 🎉',
-              message: `Congratulations! Your manuscript "${paperTitle}" has been verified and published to the live ARCHIVIO public archive.`,
-              type: 'publication',
-              link: 'manuscript',
-              submissionId: sub.id,
-              isRead: false,
-              createdAt: serverTimestamp()
+              const notifPayload = {
+                title: "Manuscript Ready for Publishing",
+                message: `Adviser ${auth.currentUser?.email || 'assigned adviser'} has endorsed "${sub.researchTitle}". It is now in your Publish Queue.`,
+                submissionId: sub.id,
+                groupName: sub.groupName,
+                researchTitle: sub.researchTitle,
+                isRead: false,
+                link: '/dean/publish-queue',
+                createdAt: serverTimestamp()
+              };
+              if (!notifiedUserIds.has(deanDoc.id)) {
+                notifiedUserIds.add(deanDoc.id);
+                batchPromises.push(addDoc(collection(db, 'notifications'), { ...notifPayload, userId: deanDoc.id }));
+              }
+              if (dData.email && !notifiedUserIds.has(dData.email)) {
+                notifiedUserIds.add(dData.email);
+                batchPromises.push(addDoc(collection(db, 'notifications'), { ...notifPayload, userId: dData.email }));
+              }
             });
+            await Promise.all(batchPromises);
+          } catch (notifyErr) {
+            console.error("Failed to notify Dean:", notifyErr);
           }
-
+          
           if (sub.leaderEmail) {
             try {
               await addDoc(collection(db, 'mail'), {
                 to: sub.leaderEmail,
                 message: {
-                  subject: `Congratulations! Your manuscript is now Published: ${paperTitle}`,
+                  subject: `Update on your submission: ${sub.researchTitle}`,
                   html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                       <div style="background-color: #590000; padding: 20px; text-align: center;">
@@ -520,12 +573,12 @@ function ReviewSubmissions() {
                         <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
                       </div>
                       <div style="padding: 30px; background-color: #ffffff;">
-                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName || 'Student'},</h2>
-                        <p style="color: #4a5568; line-height: 1.6;">Great news! Your research paper <strong>"${paperTitle}"</strong> has been approved and officially published in the ARCHIVIO live public archive by your Dean & Research Adviser.</p>
+                        <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
+                        <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
                         
                         ${comments ? `
                         <div style="background-color: #f7fafc; border-left: 4px solid #590000; padding: 15px; margin: 20px 0;">
-                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Remarks:</strong></p>
+                          <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
                           <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
                         </div>
                         ` : ''}
@@ -539,110 +592,185 @@ function ReviewSubmissions() {
                   `
                 }
               });
-            } catch (mailErr) {
-              console.error('Failed to dispatch publication email:', mailErr);
+            } catch (e) {
+              console.error('Failed to send status email', e);
             }
           }
-
-          Swal.fire({
-            icon: 'success',
-            title: 'Research Published! 🎉',
-            text: `${sub.groupName}'s manuscript has been published directly to the live ARCHIVIO Public Archive.`,
-            confirmButtonColor: '#059669',
-          });
-        } else {
-          // Standard Adviser Endorsement
-          await updateDoc(doc(db, 'submissions', sub.id), {
-            reviewStatus: 'approved',
-            reviewedAt: nowIso,
-            reviewedBy: auth.currentUser?.email,
-            adviserComments: comments
-          });
-
-          await logActivity({
-            user: auth.currentUser?.email || 'Adviser',
-            role: 'Research Adviser',
-            action: 'Endorsed submission for Dean publication',
-            details: `Group: ${sub.groupName} | Title: ${sub.researchTitle}`,
-            status: 'Success'
-          });
-
-          if (sub.studentUid) {
-            await addDoc(collection(db, 'notifications'), {
-              userId: sub.studentUid,
-              title: "Research Approved!",
-              message: "Congratulations! Your Research Adviser has approved your manuscript. It is now awaiting the Dean's final review.",
-              isRead: false,
-              createdAt: serverTimestamp()
-            });
-            
-            // Notify the Dean(s)
-            try {
-              const deansQuery = query(collection(db, 'users'), where('role', '==', 'dean'));
-              const deansSnap = await getDocs(deansQuery);
-              const batchPromises = deansSnap.docs.map(deanDoc => 
-                addDoc(collection(db, 'notifications'), {
-                  userId: deanDoc.id,
-                  title: "Manuscript Ready for Publishing",
-                  message: `Adviser ${auth.currentUser?.email} has approved "${sub.researchTitle}". It is now in your Publish Queue.`,
-                  isRead: false,
-                  createdAt: serverTimestamp()
-                })
-              );
-              await Promise.all(batchPromises);
-            } catch (notifyErr) {
-              console.error("Failed to notify Dean:", notifyErr);
-            }
-            
-            if (sub.leaderEmail) {
-              try {
-                await addDoc(collection(db, 'mail'), {
-                  to: sub.leaderEmail,
-                  message: {
-                    subject: `Update on your submission: ${sub.researchTitle}`,
-                    html: `
-                      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                        <div style="background-color: #590000; padding: 20px; text-align: center;">
-                          <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
-                          <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
-                        </div>
-                        <div style="padding: 30px; background-color: #ffffff;">
-                          <h2 style="color: #2d3748; margin-top: 0;">Hi ${sub.leaderName},</h2>
-                          <p style="color: #4a5568; line-height: 1.6;">The status of your submission <strong>"${sub.researchTitle}"</strong> has been updated to: <span style="background-color: #C6F6D5; color: #22543D; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">approved</span></p>
-                          
-                          ${comments ? `
-                          <div style="background-color: #f7fafc; border-left: 4px solid #590000; padding: 15px; margin: 20px 0;">
-                            <p style="margin: 0 0 10px 0; color: #4a5568;"><strong>Adviser Comments:</strong></p>
-                            <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${comments}</p>
-                          </div>
-                          ` : ''}
-                          
-                          <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">
-                            Best regards,<br>
-                            <strong>ARCHIVIO System</strong>
-                          </p>
-                        </div>
-                      </div>
-                    `
-                  }
-                });
-              } catch (e) {
-                console.error('Failed to send status email', e);
-              }
-            }
-          }
-
-          Swal.fire({
-            icon: 'success',
-            title: 'Endorsed for Publication!',
-            text: `${sub.groupName}'s manuscript has been verified and forwarded to the Dean.`,
-            confirmButtonColor: '#059669',
-          });
         }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Endorsed for Publication!',
+          text: `${sub.groupName}'s manuscript has been verified and forwarded to the Dean.`,
+          confirmButtonColor: '#059669',
+        });
       } catch (err) {
         console.error('Error approving:', err);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update. Please try again.', confirmButtonColor: '#770000' });
       }
+    }
+  };
+
+  // Notification Dispatcher for Published Manuscripts (Dual Role)
+  const notifyStudentsPublished = async (item) => {
+    try {
+      const recipientUids = new Set();
+      if (item.studentUid) recipientUids.add(item.studentUid);
+      if (item.leaderUid) recipientUids.add(item.leaderUid);
+
+      const group = groups.find(g => 
+        (item.groupId && g.id === item.groupId) ||
+        (item.studentUid && g.leaderUid === item.studentUid) ||
+        (item.leaderEmail && g.leaderEmail === item.leaderEmail) ||
+        (item.groupName && g.groupName === item.groupName)
+      );
+
+      if (group) {
+        if (group.leaderUid) recipientUids.add(group.leaderUid);
+        if (Array.isArray(group.members)) {
+          for (const member of group.members) {
+            if (typeof member === 'object' && member !== null) {
+              if (member.uid) recipientUids.add(member.uid);
+              else if (member.id) recipientUids.add(member.id);
+            }
+          }
+        }
+      }
+
+      const paperTitle = item.researchTitle || item.title || 'Research Paper';
+
+      for (const uid of recipientUids) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: uid,
+          title: 'Research Paper Published! 🎉',
+          message: `Congratulations! Your manuscript "${paperTitle}" is now live in the ARCHIVIO public archive.`,
+          type: 'publication',
+          link: 'manuscript',
+          submissionId: item.id,
+          isRead: false,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      if (item.leaderEmail) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: item.leaderEmail,
+            message: {
+              subject: `Congratulations! Your manuscript is now Published: ${paperTitle}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <div style="background-color: #590000; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-family: Georgia, serif;">ARCHIVIO</h1>
+                    <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Research Archive</p>
+                  </div>
+                  <div style="padding: 30px; background-color: #ffffff;">
+                    <h2 style="color: #2d3748; margin-top: 0;">Hi ${item.leaderName || 'Student'},</h2>
+                    <p style="color: #4a5568; line-height: 1.6;">Great news! Your research paper <strong>"${paperTitle}"</strong> has been approved by your Dean & Research Adviser and is now officially published in the ARCHIVIO live public archive.</p>
+                    <p style="color: #718096; font-size: 14px; margin-top: 30px; margin-bottom: 0;">Best regards,<br><strong>ARCHIVIO System</strong></p>
+                  </div>
+                </div>
+              `
+            }
+          });
+        } catch (mailErr) {
+          console.error('Failed to dispatch publication email:', mailErr);
+        }
+      }
+    } catch (notifErr) {
+      console.error('Failed to notify students of publication:', notifErr);
+    }
+  };
+
+  // High-Stakes Publish Workflow with Grace Period (Dual Role - identical to Dean Publish Queue)
+  const handleConfirmPublish = async (item) => {
+    try {
+      const nowIso = new Date().toISOString();
+
+      await updateDoc(doc(db, 'submissions', item.id), {
+        reviewStatus: 'published',
+        publishedAt: nowIso,
+        reviewedAt: nowIso,
+        reviewedBy: auth.currentUser?.email,
+        adviserEndorsed: true,
+        endorsedAt: nowIso,
+        endorsedBy: auth.currentUser?.email || 'Dean & Adviser',
+        researchTitle: item.researchTitle || item.title,
+        groupName: item.groupName,
+        adviserName: item.adviserName || adviserData?.fullName || auth.currentUser?.displayName || 'Dean & Adviser',
+        adviserUid: item.adviserUid || auth.currentUser?.email,
+        program: item.program || '',
+        authorDisplay: item.authorDisplay || item.leaderName || ''
+      });
+
+      await logActivity({
+        user: auth.currentUser?.email || 'Dean & Adviser',
+        role: 'Dean + Adviser',
+        action: 'Published research to public archive',
+        details: `Group: ${item.groupName} | Title: ${item.researchTitle || item.title}`,
+        status: 'Success'
+      });
+
+      // Activate 15-second Undo Grace Period Banner
+      setPendingUndoItem(item);
+
+      // Schedule final student notification dispatch after 15 seconds
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = setTimeout(async () => {
+        await notifyStudentsPublished(item);
+        setPendingUndoItem(null);
+      }, 15000);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Research Published! 🎉',
+        text: 'Paper published to public archive (15s undo active).',
+        showConfirmButton: false,
+        timer: 4000
+      });
+    } catch (err) {
+      console.error('Error publishing research:', err);
+      Swal.fire({ icon: 'error', title: 'Publication Error', text: 'Could not complete publication.', confirmButtonColor: '#590000' });
+    }
+  };
+
+  // Undo Publish Action (Dual Role)
+  const handleUndoPublish = async (item) => {
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+
+    try {
+      await updateDoc(doc(db, 'submissions', item.id), {
+        reviewStatus: 'in_progress',
+        publishedAt: null
+      });
+
+      await logActivity({
+        user: auth.currentUser?.email || 'Dean & Adviser',
+        role: 'Dean + Adviser',
+        action: 'Reverted publication (Undo)',
+        details: `Title: ${item.researchTitle || item.title}`,
+        status: 'Success'
+      });
+
+      setPendingUndoItem(null);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Publication Undone',
+        text: 'The paper publication has been reverted.',
+        showConfirmButton: false,
+        timer: 3000
+      });
+    } catch (err) {
+      console.error('Failed to undo publish:', err);
+      Swal.fire({ icon: 'error', title: 'Rollback Failed', text: 'Could not revert publication status.', confirmButtonColor: '#590000' });
     }
   };
 
@@ -1013,7 +1141,7 @@ function ReviewSubmissions() {
               </p>
             </Card>
           ) : (
-            finalFiltered.map((item, index) => {
+            paginatedItems.map((item, index) => {
               const verifiedDocsCount = Object.keys(item.documentApprovals || {}).filter(k => item.documentApprovals[k] === true).length;
               const isAllVerified = verifiedDocsCount >= item.requiredCount && item.requiredCount > 0;
 
@@ -1022,7 +1150,7 @@ function ReviewSubmissions() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-stone-500 uppercase tracking-wider block">
-                        #{String(index + 1).padStart(2, '0')} · {item.groupName} {item.section ? `(${item.section})` : ''}
+                        #{String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')} · {item.groupName} {item.section ? `(${item.section})` : ''}
                       </span>
                       <h3 className="font-bold text-sm text-gray-900 dark:text-stone-100 line-clamp-2 mt-0.5">
                         {item.researchTitle}
@@ -1111,26 +1239,50 @@ function ReviewSubmissions() {
                       </PremiumButton>
                     )}
 
-                    {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (
-                      <div className="grid grid-cols-2 gap-2 w-full">
-                        <PremiumButton 
-                          onClick={() => handleReject(item)}
-                          variant="outline"
-                          size="sm"
-                          className="justify-center text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
-                        >
-                          Forward
-                        </PremiumButton>
-                        <PremiumButton 
-                          onClick={() => handleApprove(item)}
-                          variant="primary"
-                          size="sm"
-                          className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1"
-                        >
-                          {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                          {isDualRole ? 'Publish' : 'Re-Approve'}
-                        </PremiumButton>
-                      </div>
+                    {activeTab === 'revisions' && (
+                      item.reviewStatus === 'dean_revision' ? (
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                          <PremiumButton 
+                            onClick={() => handleReject(item)}
+                            variant="outline"
+                            size="sm"
+                            className="justify-center text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                          >
+                            Forward
+                          </PremiumButton>
+                          <PremiumButton 
+                            onClick={() => handleApprove(item)}
+                            variant="primary"
+                            size="sm"
+                            className="justify-center bg-emerald-600 hover:bg-emerald-700 text-xs flex items-center gap-1"
+                          >
+                            {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                            {isDualRole ? 'Publish' : 'Re-Approve'}
+                          </PremiumButton>
+                        </div>
+                      ) : (() => {
+                        const readiness = validateSubmissionReadiness(item, requirements);
+                        const isReady = readiness.isReady;
+                        return (
+                          <PremiumButton 
+                            onClick={() => {
+                              if (!isReady) return;
+                              handleApprove(item);
+                            }}
+                            disabled={!isReady}
+                            variant="primary"
+                            size="sm"
+                            className={`w-full justify-center text-xs py-2 flex items-center gap-1.5 ${
+                              isReady 
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                                : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
+                            }`}
+                          >
+                            {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                            {isDualRole ? 'Publish' : 'Endorse'}
+                          </PremiumButton>
+                        );
+                      })()
                     )}
 
                     {activeTab === 'approved' && (
@@ -1149,42 +1301,97 @@ function ReviewSubmissions() {
               );
             })
           )}
+
+          {totalPages > 1 && (
+            <div className="flex md:hidden items-center justify-between p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl text-xs">
+              <span className="text-stone-500">
+                Showing {finalFiltered.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0}–{Math.min(currentPage * itemsPerPage, finalFiltered.length)} of {finalFiltered.length}
+              </span>
+              <div className="flex items-center gap-1 select-none">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1 rounded border border-stone-200 dark:border-stone-700 disabled:opacity-30 font-bold"
+                >
+                  ‹
+                </button>
+                <span className="px-2 font-bold text-[#590000] dark:text-[#f8d070]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1 rounded border border-stone-200 dark:border-stone-700 disabled:opacity-30 font-bold"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Submissions Table (Desktop Only) */}
-        <Card glass={true} className="hidden md:block mt-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+        {/* Submissions Table (Desktop Only - Fixed Width, Non-Slidable) */}
+        <Card glass={true} className="hidden md:block mt-6 overflow-hidden">
+          <div className="w-full overflow-hidden">
+            <table className="w-full text-left border-collapse text-xs table-fixed">
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                {activeTab === 'approved' ? (
+                  <>
+                    <col style={{ width: '25%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '23%' }} />
+                  </>
+                ) : activeTab === 'revisions' ? (
+                  <>
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '19%' }} />
+                    <col style={{ width: '25%' }} />
+                  </>
+                ) : (
+                  <>
+                    <col style={{ width: '24%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '22%' }} />
+                  </>
+                )}
+              </colgroup>
               <thead>
                 <tr className="bg-[#590000] dark:bg-stone-950 text-white dark:text-stone-300 dark:border-b dark:border-stone-800 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3.5 px-4 text-center w-12">No.</th>
-                  <th className="py-3.5 px-4">Research Title</th>
-                  <th className="py-3.5 px-4">Group</th>
+                  <th className="py-3.5 px-3 text-center">No.</th>
+                  <th className="py-3.5 px-3">Research Title</th>
+                  <th className="py-3.5 px-3">Group</th>
                   {activeTab === 'approved' ? (
                     <>
-                      <th className="py-3.5 px-4">Approved On</th>
-                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-3">Approved On</th>
+                      <th className="py-3.5 px-3 text-center">Status</th>
                     </>
                   ) : activeTab === 'revisions' ? (
                     <>
-                      <th className="py-3.5 px-4">Directive Date</th>
-                      <th className="py-3.5 px-4 text-center">Revision Source</th>
+                      <th className="py-3.5 px-3">Directive Date</th>
+                      <th className="py-3.5 px-3 text-center">Revision Source</th>
                     </>
                   ) : (
                     <>
-                      <th className="py-3.5 px-4">Submitted Date</th>
-                      <th className="py-3.5 px-4 text-center">Linear Gating Check</th>
+                      <th className="py-3.5 px-3">Submitted Date</th>
+                      <th className="py-3.5 px-3 text-center">Linear Gating Check</th>
                     </>
                   )}
-                  <th className="py-3.5 px-4 text-center">Action</th>
+                  <th className="py-3.5 px-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-stone-800 font-medium">
                 {loading ? (
                   <TableSkeleton columns={5} rows={5} />
-                ) : finalFiltered.length === 0 ? (
+                ) : paginatedItems.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-12 text-center text-gray-500 dark:text-stone-400">
+                    <td colSpan="6" className="py-12 text-center text-gray-500 dark:text-stone-400">
                       <FolderKanban className="w-10 h-10 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
                       <p className="font-bold text-sm text-gray-700 dark:text-stone-300">
                         {activeTab === 'needs_review' && 'No submissions currently waiting for review.'}
@@ -1199,22 +1406,27 @@ function ReviewSubmissions() {
                     </td>
                   </tr>
                 ) : (
-                  finalFiltered.map((item, index) => {
+                  paginatedItems.map((item, index) => {
                     const verifiedDocsCount = Object.keys(item.documentApprovals || {}).filter(k => item.documentApprovals[k] === true).length;
                     const isAllVerified = verifiedDocsCount >= item.requiredCount && item.requiredCount > 0;
 
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-stone-800/50 transition-colors">
-                        <td className="py-4 px-4 text-center text-gray-400 dark:text-stone-500 font-normal">
-                          {String(index + 1).padStart(2, '0')}
+                      <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-stone-800/50 transition-colors border-b border-gray-100 dark:border-stone-800/60">
+                        <td className="py-5 px-3 text-center text-gray-400 dark:text-stone-500 font-normal align-middle">
+                          {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
                         </td>
-                        <td className="py-4 px-4 font-bold text-gray-800 dark:text-stone-100 max-w-xs truncate">
-                          {item.researchTitle}
+                        <td className="py-5 px-3 font-bold text-gray-800 dark:text-stone-100 align-middle">
+                          <span 
+                            className="block font-semibold text-gray-900 dark:text-stone-100 text-xs leading-relaxed break-words whitespace-normal max-w-[210px] sm:max-w-[230px]" 
+                            title={item.researchTitle}
+                          >
+                            {item.researchTitle}
+                          </span>
                         </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
-                          <div className="font-semibold text-gray-800 dark:text-stone-200">{item.groupName}</div>
+                        <td className="py-5 px-3 text-gray-600 dark:text-stone-300 align-middle">
+                          <div className="font-semibold text-gray-800 dark:text-stone-200" title={item.groupName}>{item.groupName}</div>
                           {item.section && (
-                            <span className="text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded inline-block mt-0.5">
                               Sec: {item.section}
                             </span>
                           )}
@@ -1222,33 +1434,33 @@ function ReviewSubmissions() {
 
                         {activeTab === 'approved' ? (
                           <>
-                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
+                            <td className="py-5 px-3 text-gray-600 dark:text-stone-300 align-middle">
                               {item.reviewedAt ? new Date(item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-5 px-3 text-center align-middle">
                               {item.reviewStatus === 'published' ? (
-                                <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center w-max gap-1">
+                                <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50 inline-flex items-center gap-1">
                                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Published
                                 </span>
                               ) : (
-                                <span className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-100 flex items-center w-max gap-1">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Waiting for Dean Approval
+                                <span className="bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-100 dark:border-amber-800/50 inline-flex items-center gap-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Waiting for Dean
                                 </span>
                               )}
                             </td>
                           </>
                         ) : activeTab === 'revisions' ? (
                           <>
-                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300 text-xs">
+                            <td className="py-5 px-3 text-gray-600 dark:text-stone-300 text-xs align-middle">
                               {item.returnedAt || item.reviewedAt ? new Date(item.returnedAt || item.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
                             </td>
-                            <td className="py-4 px-4 text-center">
+                            <td className="py-5 px-3 text-center align-middle">
                               {item.reviewStatus === 'dean_revision' ? (
-                                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-300 dark:border-amber-700 inline-flex items-center gap-1">
+                                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-300 dark:border-amber-700 inline-flex items-center gap-1">
                                   <Landmark className="w-3 h-3" /> Dean Directive
                                 </span>
                               ) : (
-                                <span className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 px-3 py-1 rounded-full text-[10px] font-bold border border-orange-300 dark:border-orange-700 inline-flex items-center gap-1">
+                                <span className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-orange-300 dark:border-orange-700 inline-flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" /> Adviser Revision
                                 </span>
                               )}
@@ -1256,28 +1468,29 @@ function ReviewSubmissions() {
                           </>
                         ) : (
                           <>
-                            <td className="py-4 px-4 text-gray-600 dark:text-stone-300">
+                            <td className="py-5 px-3 text-gray-600 dark:text-stone-300 align-middle">
                               {item.submittedDate ? new Date(item.submittedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
                             </td>
-                            <td className="py-4 px-4 text-center">
+                            <td className="py-5 px-3 text-center align-middle">
                               {isAllVerified ? (
-                                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1 w-max mx-auto">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Verified & Ready
+                                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 inline-flex items-center justify-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Verified & Ready
                                 </span>
                               ) : (
-                                <span className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-200 dark:border-amber-800 flex items-center justify-center gap-1 w-max mx-auto">
-                                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> {verifiedDocsCount}/${item.requiredCount} Verified
+                                <span className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-200 dark:border-amber-800 inline-flex items-center justify-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-amber-600" /> {verifiedDocsCount}/{item.requiredCount} Checked
                                 </span>
                               )}
                             </td>
                           </>
                         )}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <td className="py-5 px-3 text-center align-middle">
+                          <div className="flex items-center justify-center gap-1.5 flex-nowrap">
                             <PremiumButton 
                               onClick={() => handleFullReview(item)}
                               variant="ghost"
                               size="sm"
+                              className="text-xs px-2.5 py-1"
                             >
                               Review
                             </PremiumButton>
@@ -1296,9 +1509,9 @@ function ReviewSubmissions() {
                                   disabled={!isReady}
                                   variant="primary"
                                   size="sm"
-                                  className={`text-xs flex items-center gap-1.5 transition-all ${
+                                  className={`text-xs px-2.5 py-1 flex items-center gap-1 transition-all ${
                                     isReady 
-                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs'
                                       : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
                                   }`}
                                   title={isReady ? (isDualRole ? "Publish this verified submission directly to live public archive" : "Endorse this verified submission for Dean publishing") : reasonText}
@@ -1308,23 +1521,51 @@ function ReviewSubmissions() {
                                 </PremiumButton>
                               );
                             })()}
-                            {activeTab === 'revisions' && item.reviewStatus === 'dean_revision' && (() => {
-                              const readiness = validateSubmissionReadiness(item, requirements);
-                              const isReady = readiness.isReady;
-                              const reasonText = !isReady && readiness.reasons.length > 0 
-                                ? `Incomplete: ${readiness.reasons[0]}` 
-                                : 'Re-verify all documents first';
-                              return (
-                                <>
-                                  <PremiumButton 
-                                    onClick={() => handleReject(item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs cursor-pointer"
-                                    title="Forward Dean feedback to student group to revise"
-                                  >
-                                    Forward to Student
-                                  </PremiumButton>
+                            {activeTab === 'revisions' && (
+                              item.reviewStatus === 'dean_revision' ? (() => {
+                                const readiness = validateSubmissionReadiness(item, requirements);
+                                const isReady = readiness.isReady;
+                                const reasonText = !isReady && readiness.reasons.length > 0 
+                                  ? `Incomplete: ${readiness.reasons[0]}` 
+                                  : 'Re-verify all documents first';
+                                return (
+                                  <>
+                                    <PremiumButton 
+                                      onClick={() => handleReject(item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs px-2 py-1 cursor-pointer"
+                                      title="Forward Dean feedback to student group to revise"
+                                    >
+                                      Forward
+                                    </PremiumButton>
+                                    <PremiumButton 
+                                      onClick={() => {
+                                        if (!isReady) return;
+                                        handleApprove(item);
+                                      }}
+                                      disabled={!isReady}
+                                      variant="primary"
+                                      size="sm"
+                                      className={`text-xs px-2.5 py-1 flex items-center gap-1 transition-all ${
+                                        isReady 
+                                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs'
+                                          : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
+                                      }`}
+                                      title={isReady ? (isDualRole ? "Publish revised manuscript directly to archive" : "Re-approve manuscript and return to Dean for publishing") : reasonText}
+                                    >
+                                      {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                                      {isDualRole ? 'Publish' : 'Re-Approve'}
+                                    </PremiumButton>
+                                  </>
+                                );
+                              })() : (() => {
+                                const readiness = validateSubmissionReadiness(item, requirements);
+                                const isReady = readiness.isReady;
+                                const reasonText = !isReady && readiness.reasons.length > 0 
+                                  ? `Incomplete: ${readiness.reasons[0]}` 
+                                  : 'Complete and verified for publication';
+                                return (
                                   <PremiumButton 
                                     onClick={() => {
                                       if (!isReady) return;
@@ -1333,27 +1574,27 @@ function ReviewSubmissions() {
                                     disabled={!isReady}
                                     variant="primary"
                                     size="sm"
-                                    className={`text-xs flex items-center gap-1.5 transition-all ${
+                                    className={`text-xs px-2.5 py-1 flex items-center gap-1 transition-all ${
                                       isReady 
-                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm'
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs'
                                         : 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed border border-stone-300 dark:border-stone-700 opacity-60'
                                     }`}
-                                    title={isReady ? (isDualRole ? "Publish revised manuscript directly to archive" : "Re-approve manuscript and return to Dean for publishing") : reasonText}
+                                    title={isReady ? (isDualRole ? "Publish this verified submission directly to live public archive" : "Endorse this verified submission for Dean publishing") : reasonText}
                                   >
                                     {isDualRole ? <Globe className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                                    {isDualRole ? 'Publish' : 'Re-Approve to Dean'}
+                                    {isDualRole ? 'Publish' : 'Endorse'}
                                   </PremiumButton>
-                                </>
-                              );
-                            })()}
+                                );
+                              })()
+                            )}
                             {activeTab === 'approved' && (
                               <PremiumButton 
                                 onClick={() => setCertModalItem(item)}
                                 variant="primary"
                                 size="sm"
-                                className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold flex items-center gap-1.5"
+                                className="bg-[#c9a227] hover:bg-[#b08d1e] text-[#1A1A1A] font-bold flex items-center gap-1 px-2.5 py-1 text-xs"
                               >
-                                <Award className="w-4 h-4" />
+                                <Award className="w-3.5 h-3.5" />
                                 <span>Certificate</span>
                               </PremiumButton>
                             )}
@@ -1367,13 +1608,60 @@ function ReviewSubmissions() {
             </table>
           </div>
           
-          <div className="p-4 border-t border-gray-100 dark:border-stone-800 flex items-center justify-between text-xs text-gray-500 dark:text-stone-400">
-            <span>Showing 1–{finalFiltered.length} of {finalFiltered.length} {activeTab}</span>
-            <div className="flex items-center gap-1">
-              <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">‹</button>
-              <button className="px-2.5 py-1 bg-[#770000] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded font-bold">1</button>
-              <button className="px-2 py-1 border border-gray-200 dark:border-stone-700 rounded hover:bg-gray-50 dark:hover:bg-stone-800">›</button>
-            </div>
+          {/* Pagination Footer */}
+          <div className="p-4 border-t border-gray-100 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 dark:text-stone-400 bg-stone-50/50 dark:bg-stone-900/30">
+            <span>
+              Showing {finalFiltered.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0}–{Math.min(currentPage * itemsPerPage, finalFiltered.length)} of {finalFiltered.length} submissions
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1 select-none">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-400 text-xs font-bold hover:bg-gray-100 dark:hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Previous Page"
+                >
+                  ‹
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  if (
+                    totalPages > 7 &&
+                    page !== 1 &&
+                    page !== totalPages &&
+                    Math.abs(page - currentPage) > 1
+                  ) {
+                    if (page === 2 || page === totalPages - 1) {
+                      return <span key={page} className="px-1 text-gray-400">...</span>;
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-[#590000] dark:bg-[#f8d070] text-white dark:text-stone-950 shadow-xs'
+                          : 'border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-400 hover:bg-gray-100 dark:hover:bg-stone-800'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 dark:border-stone-700 text-gray-600 dark:text-stone-400 text-xs font-bold hover:bg-gray-100 dark:hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Next Page"
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -1778,12 +2066,17 @@ function ReviewSubmissions() {
         let currentActiveNote = '';
         let currentActiveAnnotations = {};
 
+        const cleanDocTitle = viewerState.title?.split(' - ')[1]?.trim();
         if (isDocumentResubmitted) {
           if (selectedSubmission?.previousRevisions?.[activeReqKey]) {
             docPreviousNote = selectedSubmission.previousRevisions[activeReqKey];
-            currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || '';
+            currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || 
+                                selectedSubmission?.documentRevisions?.[viewerState.reqId] || 
+                                (cleanDocTitle ? selectedSubmission?.documentRevisions?.[cleanDocTitle] : '') || '';
           } else {
-            docPreviousNote = selectedSubmission?.documentRevisions?.[activeReqKey] || selectedSubmission?.documentRevisions?.[viewerState.reqId] || '';
+            docPreviousNote = selectedSubmission?.documentRevisions?.[activeReqKey] || 
+                              selectedSubmission?.documentRevisions?.[viewerState.reqId] || 
+                              (cleanDocTitle ? selectedSubmission?.documentRevisions?.[cleanDocTitle] : '') || '';
             currentActiveNote = '';
           }
 
@@ -1795,7 +2088,9 @@ function ReviewSubmissions() {
             currentActiveAnnotations = {};
           }
         } else {
-          currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || selectedSubmission?.documentRevisions?.[viewerState.reqId] || '';
+          currentActiveNote = selectedSubmission?.documentRevisions?.[activeReqKey] || 
+                              selectedSubmission?.documentRevisions?.[viewerState.reqId] || 
+                              (cleanDocTitle ? selectedSubmission?.documentRevisions?.[cleanDocTitle] : '') || '';
           currentActiveAnnotations = selectedSubmission?.documentAnnotations?.[activeReqKey] || selectedSubmission?.documentAnnotations?.[viewerState.reqId] || {};
         }
 
@@ -1833,7 +2128,7 @@ function ReviewSubmissions() {
                 Swal.fire('Error', 'Failed to save annotations.', 'error');
               }
             }}
-            onSaveNote={async (note, actionType) => {
+            onSaveNote={async (note, actionType, options = {}) => {
               if (!selectedSubmission || !viewerState.reqId) return;
               try {
                 const reqKey = activeReqKey || viewerState.reqId;
@@ -1848,6 +2143,27 @@ function ReviewSubmissions() {
                 }
 
                 if (actionType === 'revision') {
+                  const existing = (currentRevisions[reqKey] || (cleanDocTitle ? currentRevisions[cleanDocTitle] : '') || '').trim();
+                  let mergedNote = (note || '').trim();
+                  
+                  // If there is existing revision note and this is not an explicit replace
+                  if (!options?.replace && existing && !mergedNote.includes(existing)) {
+                    const existingLines = existing.split('\n').map(l => l.trim()).filter(Boolean);
+                    const newLines = mergedNote.split('\n').map(l => l.trim()).filter(Boolean);
+                    const combined = [...existingLines];
+                    for (const nl of newLines) {
+                      if (!combined.includes(nl)) {
+                        combined.push(nl);
+                      }
+                    }
+                    mergedNote = combined.join('\n');
+                  }
+
+                  newRevisions[reqKey] = mergedNote;
+                  if (cleanDocTitle && cleanDocTitle !== reqKey) {
+                    newRevisions[cleanDocTitle] = mergedNote;
+                  }
+                } else if (actionType === 'replace') {
                   newRevisions[reqKey] = note;
                   if (cleanDocTitle && cleanDocTitle !== reqKey) {
                     newRevisions[cleanDocTitle] = note;
@@ -1891,7 +2207,7 @@ function ReviewSubmissions() {
                   newStatus = 'revision';
                 } else if (isAllApproved && newStatus !== 'revision') {
                   newStatus = 'reviewed';
-                  statusChangedMsg = ' All documents checked, submission moved to Reviewed tab.';
+                  statusChangedMsg = ' All documents verified. Submission is verified and ready for your endorsement.';
                 }
 
                 const submissionUpdate = {
@@ -2110,6 +2426,26 @@ function ReviewSubmissions() {
         isOpen={!!certModalItem}
         onClose={() => setCertModalItem(null)}
         submission={certModalItem}
+      />
+
+      {/* ===== PRE-FLIGHT PUBLISH CONFIRMATION MODAL (FOR DUAL ROLE ADVISER) ===== */}
+      <PublishConfirmationModal
+        isOpen={!!publishModalItem}
+        item={publishModalItem}
+        onClose={() => setPublishModalItem(null)}
+        onConfirmPublish={handleConfirmPublish}
+      />
+
+      {/* ===== 15-SECOND UNDO PUBLISH BANNER (FOR DUAL ROLE ADVISER) ===== */}
+      <UndoPublishBanner
+        publishedItem={pendingUndoItem}
+        onUndo={handleUndoPublish}
+        onDismiss={() => {
+          if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+          if (pendingUndoItem) notifyStudentsPublished(pendingUndoItem);
+          setPendingUndoItem(null);
+        }}
+        duration={15}
       />
 
     </Layout>

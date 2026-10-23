@@ -96,9 +96,26 @@ function ResearchCategories() {
     setIsModalOpen(true);
   };
 
+  const trimmedCategoryName = categoryName.trim();
+  const isDuplicate = Boolean(
+    trimmedCategoryName && 
+    categories.some(c => c.id !== editingId && c.name?.trim() === trimmedCategoryName)
+  );
+
   const handleSaveCategory = async () => {
-    if (!categoryName.trim()) {
+    if (!trimmedCategoryName) {
       Swal.fire({ icon: 'error', title: 'Error', text: 'Category name is required' });
+      return;
+    }
+
+    // Case-sensitive duplicate check
+    if (isDuplicate) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Category Already Exists',
+        text: `A category named "${trimmedCategoryName}" already exists. Category names must be unique.`,
+        confirmButtonColor: '#590000'
+      });
       return;
     }
 
@@ -106,10 +123,10 @@ function ResearchCategories() {
       if (editingId) {
         // Edit existing
         await updateDoc(doc(db, 'categories', editingId), {
-          name: categoryName,
+          name: trimmedCategoryName,
           icon: categoryIcon,
           bgColor: selectedColor,
-          description: categoryDescription,
+          description: categoryDescription.trim(),
           updatedAt: serverTimestamp()
         });
         Swal.fire({ icon: 'success', title: 'Updated!', text: 'Category updated successfully.', timer: 1500, showConfirmButton: false });
@@ -118,7 +135,7 @@ function ResearchCategories() {
         const userUid = auth.currentUser?.uid || '';
 
         await addDoc(collection(db, 'categories'), {
-          name: categoryName.trim(),
+          name: trimmedCategoryName,
           icon: categoryIcon,
           bgColor: selectedColor,
           description: categoryDescription.trim(),
@@ -132,7 +149,7 @@ function ResearchCategories() {
           role: 'Adviser',
           action: 'Created new category',
           status: 'Success',
-          details: `Category: ${categoryName}`
+          details: `Category: ${trimmedCategoryName}`
         });
         
         Swal.fire({ icon: 'success', title: 'Created!', text: 'New category added.', timer: 1500, showConfirmButton: false });
@@ -271,8 +288,17 @@ function ResearchCategories() {
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="e.g. Blockchain Technology" 
                     list="standard-categories"
-                    className="w-full bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#770000] dark:focus:border-[#f8d070] text-gray-900 dark:text-stone-100"
+                    className={`w-full bg-white dark:bg-stone-900 border ${
+                      isDuplicate 
+                        ? 'border-red-500 dark:border-red-500 focus:border-red-500' 
+                        : 'border-gray-300 dark:border-stone-700 focus:border-[#770000] dark:focus:border-[#f8d070]'
+                    } rounded-lg px-4 py-2.5 text-sm focus:outline-none text-gray-900 dark:text-stone-100 transition-colors`}
                   />
+                  {isDuplicate && (
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1.5 flex items-center gap-1">
+                      <span>⚠️</span> Category "{trimmedCategoryName}" already exists.
+                    </p>
+                  )}
                   <datalist id="standard-categories">
                     <option value="Computer Science" />
                     <option value="Information Technology" />
@@ -380,7 +406,12 @@ function ResearchCategories() {
                 </button>
                 <button 
                   onClick={handleSaveCategory}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white dark:text-stone-900 bg-[#770000] dark:bg-[#f8d070] hover:bg-[#590000] dark:hover:bg-[#ffe090] transition text-center shadow-sm"
+                  disabled={isDuplicate}
+                  className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white dark:text-stone-900 transition text-center shadow-sm ${
+                    isDuplicate 
+                      ? 'bg-gray-400 dark:bg-stone-600 opacity-60 cursor-not-allowed' 
+                      : 'bg-[#770000] dark:bg-[#f8d070] hover:bg-[#590000] dark:hover:bg-[#ffe090] cursor-pointer'
+                  }`}
                 >
                   {editingId ? 'Save Changes' : 'Create Category'}
                 </button>

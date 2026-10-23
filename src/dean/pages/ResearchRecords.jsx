@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 import TableSkeleton from '../components/skeletons/TableSkeleton';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { Card, SectionTitle, PremiumButton } from '../../components/ui/Card';
-import { Download, Search, Eye, Sparkles, FolderArchive, Printer, X } from 'lucide-react';
+import { Download, Search, Eye, Sparkles, FolderArchive, Printer, X, Globe, ExternalLink } from 'lucide-react';
 
 const CATEGORY_COLORS = {
   ML: 'bg-purple-100 text-purple-700',
@@ -46,8 +46,10 @@ const formatStatus = (status) => {
     case 'revision':
       return 'Revision';
     case 'reviewed':
+      return 'Under Review';
     case 'approved':
-      return 'Approved';
+    case 'endorsed':
+      return 'Endorsed';
     case 'published':
       return 'Published';
     default:
@@ -55,12 +57,44 @@ const formatStatus = (status) => {
   }
 };
 
+const formatSYLabel = (raw) => {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  if (/^S\.?Y\.?\s*/i.test(str)) {
+    return str.replace(/^S\.?Y\.?\s*/i, 'S.Y. ');
+  }
+  if (/^\d{4}\s*[-–/]\s*\d{4}$/.test(str)) {
+    return `S.Y. ${str}`;
+  }
+  if (/^\d{4}$/.test(str)) {
+    const y = parseInt(str, 10);
+    return `S.Y. ${y}-${y + 1}`;
+  }
+  return `S.Y. ${str}`;
+};
+
+const extractSYClean = (raw) => {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  const match = str.match(/(\d{4})\s*[-–/]\s*(\d{4})/);
+  if (match) return `${match[1]}-${match[2]}`;
+  const single = str.match(/(\d{4})/);
+  if (single) {
+    const y = parseInt(single[1], 10);
+    return `${y}-${y + 1}`;
+  }
+  return str.replace(/^S\.?Y\.?\s*/i, '').trim();
+};
+
 export default function ResearchRecords() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { deanData } = useUser();
-  const [search, setSearch] = useState('');
+  const { deanData, deanSettings } = useUser();
+  const searchParams = new URLSearchParams(location.search);
+  const initialSearch = searchParams.get('q') || searchParams.get('search') || location.state?.searchQuery || '';
+  const [search, setSearch] = useState(initialSearch);
   const [filterYear, setFilterYear] = useState('All Years');
+  const [filterSection, setFilterSection] = useState('All Sections');
   const [filterAdviser, setFilterAdviser] = useState('All Advisers');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [filterCategory, setFilterCategory] = useState('All Categories');
@@ -69,7 +103,6 @@ export default function ResearchRecords() {
   const [loading, setLoading] = useState(true);
 
   // Highlighted adviser from navigation (e.g. Dashboard)
-  const searchParams = new URLSearchParams(location.search);
   const initialAdviser = location.state?.highlightAdviser || 
                          location.state?.selectedAdviser || 
                          searchParams.get('adviser') || 
@@ -85,6 +118,10 @@ export default function ResearchRecords() {
                    params.get('highlight');
     if (incAdv) {
       setHighlightAdviser(incAdv);
+    }
+    const incSearch = params.get('q') || params.get('search') || location.state?.searchQuery;
+    if (incSearch !== null && incSearch !== undefined && incSearch !== '') {
+      setSearch(incSearch);
     }
   }, [location.state, location.search]);
   
@@ -103,6 +140,7 @@ export default function ResearchRecords() {
 
   // Unique filter options based on dynamic data
   const [allYears, setAllYears] = useState(['All Years']);
+  const [allSections, setAllSections] = useState(['All Sections']);
   const [allAdvisers, setAllAdvisers] = useState(['All Advisers']);
   const [allStatuses, setAllStatuses] = useState(['All Statuses']);
   const [allCategories, setAllCategories] = useState(['All Categories']);
@@ -139,10 +177,30 @@ export default function ResearchRecords() {
           const mergedRecords = groupsData.map((g, index) => {
             const sub = subsData.find(s => s.studentUid === g.leaderUid && (s.groupName === g.groupName || (s.title || s.researchTitle) === g.researchTitle)) || {};
             const status = sub.reviewStatus || 'pending';
-            const submittedDate = sub.submittedDate || sub.createdAt || g.createdAt || '';
-            const year = submittedDate ? new Date(submittedDate).getFullYear().toString() : new Date().getFullYear().toString();
+            
+            // School Year resolution: prefer explicit SY, fallback to submitted date, fallback to active Dean SY
+            const rawSY = g.schoolYear || sub.schoolYear || g.academicYear || sub.academicYear;
+            let recordSY = '';
+            if (rawSY) {
+              recordSY = formatSYLabel(rawSY);
+            } else {
+              const submittedDate = sub.submittedDate || sub.createdAt || g.createdAt || '';
+              if (submittedDate) {
+                const d = new Date(submittedDate);
+                if (!isNaN(d.getTime())) {
+                  const startYear = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
+                  recordSY = `S.Y. ${startYear}-${startYear + 1}`;
+                }
+              }
+            }
+            if (!recordSY) {
+              const activeSY = deanSettings?.schoolYears?.find(s => s.status === 'Active')?.label || deanSettings?.schoolYear || '2026-2027';
+              recordSY = formatSYLabel(activeSY);
+            }
+
             const category = g.category || sub.category || 'Uncategorized';
-            const action = status === 'reviewed' ? 'Publish' : 'View';
+            const action = 'View';
+            const section = g.section || sub.section || g.studentSection || sub.studentSection || g.yearAndSection || '';
 
             // Calculate progress based on requirements
             const uploadedCount = (sub.documents || []).length;
@@ -155,10 +213,11 @@ export default function ResearchRecords() {
               subDocId: sub.id,
               title: sub.title || sub.researchTitle || g.researchTitle || 'Untitled Research',
               group: g.groupName || 'Unknown Group',
-              section: g.section || sub.section || '',
+              section,
               department: g.department || deanDept,
               adviser: g.adviserName || 'Not Assigned',
-              year,
+              year: recordSY,
+              schoolYear: recordSY,
               category,
               status,
               progress,
@@ -178,19 +237,18 @@ export default function ResearchRecords() {
           });
 
           setRecords(mergedRecords);
-          
-          // Update filter options
-          const years = [...new Set(mergedRecords.map(r => r.year))].filter(Boolean).sort().reverse();
-          setAllYears(['All Years', ...years]);
+
+          const sections = [...new Set(mergedRecords.map(r => r.section).filter(Boolean))].sort();
+          setAllSections(['All Sections', ...sections]);
           
           const advisers = [...new Set(mergedRecords.map(r => r.adviser))].filter(Boolean).sort();
           setAllAdvisers(['All Advisers', ...advisers]);
           
-          const ALLOWED_STATUSES = ['In Progress', 'Revision', 'Approved', 'Published'];
-          const availableStatuses = ALLOWED_STATUSES.filter(st =>
-            mergedRecords.some(r => formatStatus(r.status) === st)
-          );
-          setAllStatuses(['All Statuses', ...availableStatuses]);
+          const STATUS_ORDER = ['In Progress', 'Under Review', 'Endorsed', 'Revision', 'Published'];
+          const presentStatuses = new Set(mergedRecords.map(r => formatStatus(r.status)).filter(Boolean));
+          const availableStatuses = STATUS_ORDER.filter(st => presentStatuses.has(st));
+          const otherStatuses = [...presentStatuses].filter(st => !STATUS_ORDER.includes(st)).sort();
+          setAllStatuses(['All Statuses', ...availableStatuses, ...otherStatuses]);
 
           const categories = [...new Set(mergedRecords.map(r => r.category))].filter(Boolean).sort();
           setAllCategories(['All Categories', ...categories]);
@@ -213,20 +271,71 @@ export default function ResearchRecords() {
     });
 
     return () => unsubGroups();
-  }, [deanData]);
+  }, [deanData, deanSettings]);
+
+  // Dynamically compute school years from Dean Settings + database records
+  useEffect(() => {
+    const yearsSet = new Set();
+
+    // 1. Configured school years from Dean Settings (dynamically updates when Dean adds/modifies in Settings)
+    if (deanSettings?.schoolYears && Array.isArray(deanSettings.schoolYears)) {
+      deanSettings.schoolYears.forEach((sy) => {
+        if (sy?.label) {
+          yearsSet.add(formatSYLabel(sy.label));
+        }
+      });
+    }
+    if (deanSettings?.schoolYear) {
+      yearsSet.add(formatSYLabel(deanSettings.schoolYear));
+    }
+
+    // 2. Add school years from records
+    records.forEach((r) => {
+      if (r.schoolYear) yearsSet.add(formatSYLabel(r.schoolYear));
+      else if (r.year) yearsSet.add(formatSYLabel(r.year));
+    });
+
+    // 3. Fallback default if nothing configured yet
+    if (yearsSet.size === 0) {
+      yearsSet.add('S.Y. 2026-2027');
+    }
+
+    // Sort descending by start year
+    const sortedYears = Array.from(yearsSet).sort((a, b) => {
+      const cleanA = extractSYClean(a);
+      const cleanB = extractSYClean(b);
+      return cleanB.localeCompare(cleanA, undefined, { numeric: true });
+    });
+
+    setAllYears(['All Years', ...sortedYears]);
+  }, [deanSettings?.schoolYears, deanSettings?.schoolYear, records]);
 
   // ---- Filter logic ----
   const filtered = records.filter((r) => {
+    const sTerm = search.toLowerCase().trim();
     const matchSearch =
-      search === '' ||
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.group.toLowerCase().includes(search.toLowerCase()) ||
-      r.adviser.toLowerCase().includes(search.toLowerCase());
-    const matchYear = filterYear === 'All Years' || r.year === filterYear;
+      sTerm === '' ||
+      r.title.toLowerCase().includes(sTerm) ||
+      r.group.toLowerCase().includes(sTerm) ||
+      r.adviser.toLowerCase().includes(sTerm) ||
+      (r.category && r.category.toLowerCase().includes(sTerm)) ||
+      (r.section && r.section.toLowerCase().includes(sTerm));
+
+    const matchYear =
+      filterYear === 'All Years' ||
+      filterYear === 'All School Years' ||
+      extractSYClean(r.schoolYear) === extractSYClean(filterYear) ||
+      extractSYClean(r.year) === extractSYClean(filterYear) ||
+      r.schoolYear === filterYear ||
+      r.year === filterYear ||
+      formatSYLabel(r.schoolYear) === filterYear ||
+      formatSYLabel(r.year) === filterYear;
+
+    const matchSection = filterSection === 'All Sections' || r.section === filterSection;
     const matchAdviser = filterAdviser === 'All Advisers' || r.adviser === filterAdviser;
     const matchStatus = filterStatus === 'All Statuses' || formatStatus(r.status) === filterStatus;
     const matchCategory = filterCategory === 'All Categories' || r.category === filterCategory;
-    return matchSearch && matchYear && matchAdviser && matchStatus && matchCategory;
+    return matchSearch && matchYear && matchSection && matchAdviser && matchStatus && matchCategory;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -237,7 +346,16 @@ export default function ResearchRecords() {
     setCurrentPage(1);
   };
 
-
+  useEffect(() => {
+    if (filterYear !== 'All Years' && allYears.length > 1) {
+      const isPresent = allYears.some(y => 
+        y === filterYear || extractSYClean(y) === extractSYClean(filterYear)
+      );
+      if (!isPresent) {
+        setFilterYear('All Years');
+      }
+    }
+  }, [allYears, filterYear]);
 
   useEffect(() => {
     if (filterStatus !== 'All Statuses' && !allStatuses.includes(filterStatus)) {
@@ -275,27 +393,71 @@ export default function ResearchRecords() {
   }, [highlightAdviser, loading, currentPage]);
 
   const handleView = (record) => {
-    if (record.originalSub && record.originalSub.id) {
-      const requiredCount = record.applicableReqs.length;
-      const uploadedCount = record.originalSub.uploadedDocs?.length || 0;
-      const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : 0;
+    const sub = record.originalSub || {};
+    const group = record.originalGroup || {};
+    const requiredCount = (record.applicableReqs || []).length;
+    const uploadedDocsList = sub.uploadedDocs || (sub.documents ? Object.keys(sub.documents) : []);
+    const uploadedCount = uploadedDocsList.length;
+    const completionPercent = requiredCount > 0 ? Math.round((uploadedCount / requiredCount) * 100) : (record.progress || 0);
 
-      setSelectedSubmission({
-        ...record.originalSub,
-        groupName: record.group,
-        section: record.section || record.originalGroup?.section || '',
-        researchTitle: record.title,
-        leaderName: record.originalGroup.leaderName,
-        members: record.originalGroup.members,
-        uploadedCount,
-        requiredCount,
-        completionPercent,
-        applicableReqs: record.applicableReqs
-      });
-      setShowReviewModal(true);
-    } else {
-      Swal.fire('No Submission', 'This group has not started their submission yet.', 'info');
+    setSelectedSubmission({
+      ...sub,
+      id: sub.id || record.subDocId || record.id,
+      subDocId: sub.id || record.subDocId || record.id,
+      groupId: record.groupDocId || group.id,
+      groupName: record.group,
+      section: record.section || group.section || '',
+      researchTitle: record.title,
+      leaderName: group.leaderName || sub.leaderName || 'Group Leader',
+      members: group.members || sub.members || [],
+      uploadedCount,
+      requiredCount,
+      completionPercent,
+      applicableReqs: record.applicableReqs || [],
+      category: record.category || sub.category || 'General',
+      adviser: record.adviser,
+      year: record.year || record.schoolYear,
+      status: record.status || 'in_progress',
+      abstract: sub.abstract || record.abstract || '',
+      pageCount: sub.pageCount || record.pageCount || '—',
+      documents: sub.documents || {}
+    });
+    setShowReviewModal(true);
+  };
+
+  const handleOpenPublicWebsite = async (sub) => {
+    if (!sub) return;
+    const studyId = sub.id || sub.subDocId || sub.groupId || '';
+    const title = sub.researchTitle || sub.title || '';
+    const params = new URLSearchParams();
+    if (studyId) params.set('highlight', studyId);
+    if (title) params.set('title', title);
+
+    const isLocal = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    if (import.meta.env.VITE_PUBLIC_ARCHIVE_URL) {
+      const url = `${import.meta.env.VITE_PUBLIC_ARCHIVE_URL.replace(/\/$/, '')}/browse?${params.toString()}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
     }
+
+    if (isLocal) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 600);
+        await fetch('http://localhost:5174', { mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeoutId);
+        window.open(`http://localhost:5174/browse?${params.toString()}`, '_blank', 'noopener,noreferrer');
+        return;
+      } catch {
+        // Fallback to live public website
+        window.open(`https://archivio-public.web.app/browse?${params.toString()}`, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    }
+
+    window.open(`https://archivio-public.web.app/browse?${params.toString()}`, '_blank', 'noopener,noreferrer');
   };
 
   const escapeHtml = (str) => {
@@ -331,18 +493,19 @@ export default function ResearchRecords() {
       ['OFFICIAL RESEARCH RECORDS INVENTORY REPORT'],
       ['Department / College:', department],
       ['Date Generated:', dateFormatted],
-      ['Active Filters:', `Year: ${filterYear} | Category: ${filterCategory} | Adviser: ${filterAdviser} | Status: ${filterStatus} | Search: ${search || 'None'}`],
+      ['Active Filters:', `Year: ${filterYear} | Category: ${filterCategory} | Section: ${filterSection} | Adviser: ${filterAdviser} | Status: ${filterStatus} | Search: ${search || 'None'}`],
       ['Total Records:', `${filtered.length}`],
       [] // Blank separator
     ];
 
     // 2. Table Headers & Rows
-    const tableHeaders = ['No.', 'Record ID', 'Research Title', 'Group Name', 'Adviser', 'Category', 'Year', 'Status', 'Progress (%)'];
+    const tableHeaders = ['No.', 'Record ID', 'Research Title', 'Group Name', 'Section', 'Adviser', 'Category', 'Year', 'Status', 'Progress (%)'];
     const tableRows = filtered.map((r, index) => [
       index + 1,
       r.id || '',
       r.title || '',
       r.group || '',
+      r.section || '',
       r.adviser || '',
       r.category || '',
       r.year || '',
@@ -391,6 +554,16 @@ export default function ResearchRecords() {
 
     const { fullName, department, dateFormatted } = getDeanInfo();
 
+    const now = new Date();
+    const dateTimeFormatted = now.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       Swal.fire('Pop-up Blocked', 'Please allow pop-ups for this site to generate and print/export the PDF report.', 'warning');
@@ -403,9 +576,10 @@ export default function ResearchRecords() {
       const statusColor = statusLabel === 'Published' ? '#047857' : statusLabel === 'Approved' ? '#1d4ed8' : '#b45309';
       return `
         <tr style="background-color: ${bg};">
-          <td style="padding: 8px 8px; border: 1px solid #e7e5e4; text-align: center; font-size: 11px; color: #78716c;">${String(index + 1).padStart(2, '0')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; text-align: center; font-size: 11px; color: #78716c;">${String(index + 1).padStart(2, '0')}</td>
           <td style="padding: 8px 10px; border: 1px solid #e7e5e4; font-size: 11px; font-weight: 700; color: #1c1917; line-height: 1.35;">${escapeHtml(r.title || '')}</td>
-          <td style="padding: 8px 8px; border: 1px solid #e7e5e4; font-size: 11px; color: #44403c;">${escapeHtml(r.group || '')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; text-align: center; font-size: 11px; color: #44403c;">${escapeHtml(r.group || '')}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e7e5e4; text-align: center; font-size: 11px; font-weight: 700; color: #590000;">${escapeHtml(r.section || '—')}</td>
           <td style="padding: 8px 8px; border: 1px solid #e7e5e4; font-size: 11px; color: #44403c;">${escapeHtml(r.adviser || '')}</td>
           <td style="padding: 8px 6px; border: 1px solid #e7e5e4; font-size: 10px; text-align: center; color: #44403c; font-weight: 600;">${escapeHtml(r.category || 'N/A')}</td>
           <td style="padding: 8px 6px; border: 1px solid #e7e5e4; font-size: 11px; text-align: center; color: #44403c; font-weight: 600;">${escapeHtml(r.year || '')}</td>
@@ -423,7 +597,28 @@ export default function ResearchRecords() {
         <style>
           @page {
             size: A4 portrait;
-            margin: 12mm 10mm 14mm 10mm;
+            margin: 12mm 10mm 15mm 10mm;
+            @top-left { content: ""; }
+            @top-center { content: ""; }
+            @top-right { content: ""; }
+            @bottom-left {
+              content: "${dateTimeFormatted}";
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              font-size: 8.5pt;
+              color: #78716c;
+            }
+            @bottom-center {
+              content: "Archivio - Research Records Report";
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              font-size: 8.5pt;
+              color: #78716c;
+            }
+            @bottom-right {
+              content: counter(page) "/" counter(pages);
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              font-size: 8.5pt;
+              color: #78716c;
+            }
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -575,6 +770,7 @@ export default function ResearchRecords() {
         <div class="meta-box">
           <div class="meta-item"><strong>Academic Year:</strong> ${escapeHtml(filterYear)}</div>
           <div class="meta-item"><strong>Category:</strong> ${escapeHtml(filterCategory)}</div>
+          <div class="meta-item"><strong>Section:</strong> ${escapeHtml(filterSection)}</div>
           <div class="meta-item"><strong>Adviser:</strong> ${escapeHtml(filterAdviser)}</div>
           <div class="meta-item"><strong>Status:</strong> ${escapeHtml(filterStatus)}</div>
           <div class="meta-item"><strong>Total Records:</strong> ${filtered.length}</div>
@@ -583,13 +779,14 @@ export default function ResearchRecords() {
         <table>
           <thead>
             <tr>
-              <th style="width: 32px; text-align: center;">No.</th>
+              <th style="width: 30px; text-align: center;">No.</th>
               <th style="text-align: left;">Research Title</th>
-              <th style="text-align: left; width: 120px;">Group Name</th>
+              <th style="text-align: center; width: 80px;">Group</th>
+              <th style="text-align: center; width: 60px;">Section</th>
               <th style="text-align: left; width: 110px;">Adviser</th>
               <th style="width: 70px; text-align: center;">Category</th>
-              <th style="width: 50px; text-align: center;">Year</th>
-              <th style="width: 75px; text-align: center;">Status</th>
+              <th style="width: 45px; text-align: center;">Year</th>
+              <th style="width: 70px; text-align: center;">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -683,6 +880,7 @@ export default function ResearchRecords() {
                 {[
                   { value: filterCategory, setter: setFilterCategory, options: allCategories },
                   { value: filterYear, setter: setFilterYear, options: allYears },
+                  { value: filterSection, setter: setFilterSection, options: allSections },
                   { value: filterAdviser, setter: setFilterAdviser, options: allAdvisers },
                   { value: filterStatus, setter: setFilterStatus, options: allStatuses },
                 ].map(({ value, setter, options }, idx) => (
@@ -725,23 +923,33 @@ export default function ResearchRecords() {
             )}
 
             {/* ---- Table ---- */}
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-hidden">
               {loading ? (
                 <div className="mt-2 p-4">
                   <TableSkeleton rows={5} />
                 </div>
               ) : (
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs table-fixed">
+                <colgroup>
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '11%' }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-[#590000] dark:bg-stone-950 text-white font-bold uppercase tracking-wider text-[10px]">
-                    <th className="py-3.5 px-4 text-center w-12">No.</th>
-                    <th className="py-3.5 px-4">Research Title</th>
-                    <th className="py-3.5 px-4">Group</th>
-                    <th className="py-3.5 px-4">Adviser</th>
-                    <th className="py-3.5 px-4 text-center">Category</th>
-                    <th className="py-3.5 px-4 text-center">Year</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center">Action</th>
+                    <th style={{ width: '5%' }} className="py-3 px-2 text-center truncate">No.</th>
+                    <th style={{ width: '30%' }} className="py-3 px-2.5 text-left truncate">Research Title</th>
+                    <th style={{ width: '8%' }} className="py-3 px-2 text-center truncate">Group</th>
+                    <th style={{ width: '8%' }} className="py-3 px-2 text-center truncate">Section</th>
+                    <th style={{ width: '14%' }} className="py-3 px-2.5 text-left truncate">Adviser</th>
+                    <th style={{ width: '12%' }} className="py-3 px-2 text-center truncate">Category</th>
+                    <th style={{ width: '12%' }} className="py-3 px-2 text-center truncate">Status</th>
+                    <th style={{ width: '11%' }} className="py-3 px-2 text-center truncate">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 dark:divide-stone-700/60 font-medium">
@@ -753,7 +961,7 @@ export default function ResearchRecords() {
                             <FolderArchive className="w-7 h-7 text-stone-400" />
                           </div>
                           <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-1">No research records found</h3>
-                          <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">Try adjusting your search filters or selecting a different academic year to find what you're looking for.</p>
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">Try adjusting your search filters or selecting a different academic year or section to find what you're looking for.</p>
                         </div>
                       </td>
                     </tr>
@@ -778,107 +986,112 @@ export default function ResearchRecords() {
                               : 'hover:bg-stone-50 dark:hover:bg-stone-700'
                         }`}
                       >
-                        {/* No. */}
-                        <td className="py-4 px-4 text-center text-stone-400 font-normal">
+                        {/* No. (5% - center) */}
+                        <td style={{ width: '5%' }} className="py-3 px-2 text-center text-stone-400 font-mono text-[11px] truncate align-middle">
                           {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
                         </td>
 
-                        {/* Title */}
-                        <td className="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">
-                          {record.title}
+                        {/* Title (30% - left, full read with auto-adjusting row height) */}
+                        <td style={{ width: '30%' }} className="py-3 px-2.5 text-left font-bold text-stone-800 dark:text-stone-200 align-middle">
+                          <div 
+                            className="leading-snug break-words whitespace-normal text-xs text-stone-900 dark:text-stone-100 font-semibold"
+                            title={record.title}
+                          >
+                            {record.title}
+                          </div>
                         </td>
 
-                        {/* Group */}
-                        <td className="py-4 px-4 text-stone-600 dark:text-stone-400 font-medium">
-                          <div>{record.group}</div>
-                          {record.section && (
-                            <span className="inline-block mt-0.5 text-[10px] font-bold text-[#590000] dark:text-[#f8d070] bg-[#590000]/10 dark:bg-[#f8d070]/10 px-1.5 py-0.5 rounded">
-                              Sec: {record.section}
+                        {/* Group (8% - center, group code ONLY) */}
+                        <td style={{ width: '8%' }} className="py-3 px-2 text-center text-stone-600 dark:text-stone-300 font-semibold truncate text-[11px] align-middle">
+                          <span title={record.group} className="truncate block font-mono">
+                            {record.group}
+                          </span>
+                        </td>
+
+                        {/* Section (8% - center, section badge/text ONLY) */}
+                        <td style={{ width: '8%' }} className="py-3 px-2 text-center truncate align-middle">
+                          {record.section ? (
+                            <span 
+                              className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#590000]/10 text-[#590000] dark:bg-[#f8d070]/15 dark:text-[#f8d070] border border-[#590000]/20 dark:border-[#f8d070]/20 truncate max-w-full font-mono"
+                              title={`Section: ${record.section}`}
+                            >
+                              {record.section}
                             </span>
+                          ) : (
+                            <span className="text-stone-400 text-xs">—</span>
                           )}
                         </td>
 
-                        {/* Adviser */}
-                        <td className="py-4 px-4 text-stone-700 dark:text-stone-300">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                        {/* Adviser (14% - left) */}
+                        <td style={{ width: '14%' }} className="py-3 px-2.5 text-left truncate text-stone-700 dark:text-stone-300 align-middle">
+                          <div className="flex items-center gap-1.5 min-w-0" title={record.adviser}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
                               isHighlighted
-                                ? 'bg-[#590000] text-white dark:bg-[#d4af37] dark:text-[#590000] ring-2 ring-amber-400 shadow-xs'
+                                ? 'bg-[#590000] text-white dark:bg-[#d4af37] dark:text-[#590000] ring-2 ring-amber-400 shadow-2xs'
                                 : record.adviserSelf 
                                   ? 'bg-[#590000] text-white dark:bg-[#f8d070] dark:text-[#590000]' 
                                   : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'
                             }`}>
                               {record.adviser.charAt(0).toUpperCase()}
                             </div>
-                            <span className={isHighlighted || record.adviserSelf ? 'font-bold text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}>
+                            <span className={`truncate text-xs ${isHighlighted || record.adviserSelf ? 'font-bold text-[#590000] dark:text-[#f8d070]' : 'text-stone-700 dark:text-stone-300 font-medium'}`}>
                               {record.adviser}
                             </span>
                             {isHighlighted && (
-                              <span className="text-[9px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-xs animate-pulse">
+                              <span className="text-[8px] bg-amber-500 text-white font-extrabold px-1 py-0.2 rounded uppercase tracking-wider shadow-xs animate-pulse shrink-0">
                                 Highlighted
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {/* Category */}
-                        <td className="py-4 px-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold border ${
+                        {/* Category (12% - center) */}
+                        <td style={{ width: '12%' }} className="py-3 px-2 text-center truncate align-middle">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border truncate max-w-full ${
                             record.category === 'ML' ? 'bg-purple-50/50 text-purple-700 border-purple-200/50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800/30' :
                             record.category === 'IoT' ? 'bg-teal-50/50 text-teal-700 border-teal-200/50 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800/30' :
                             record.category === 'Security' ? 'bg-amber-50/50 text-amber-700 border-amber-200/50 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/30' :
                             record.category === 'Mobile' ? 'bg-blue-50/50 text-blue-700 border-blue-200/50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30' :
                             record.category === 'Web' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/30' :
                             'bg-stone-50/50 text-stone-600 border-stone-200/50 dark:bg-stone-800/40 dark:text-stone-400 dark:border-stone-700/30'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
+                          }`} title={record.category}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                               record.category === 'ML' ? 'bg-purple-500' :
                               record.category === 'IoT' ? 'bg-teal-500' :
                               record.category === 'Security' ? 'bg-amber-500' :
                               record.category === 'Mobile' ? 'bg-blue-500' :
                               record.category === 'Web' ? 'bg-emerald-500' : 'bg-stone-400'
                             }`}></span>
-                            {record.category}
+                            <span className="truncate">{record.category}</span>
                           </span>
                         </td>
 
-                        {/* Year */}
-                        <td className="py-4 px-4 text-center text-stone-500 dark:text-stone-400 font-bold">{record.year}</td>
-
-                        {/* Status */}
-                        <td className="py-4 px-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
+                        {/* Status (12% - center) */}
+                        <td style={{ width: '12%' }} className="py-3 px-2 text-center truncate align-middle">
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border truncate max-w-full ${
                             record.status === 'published' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' :
-                            (record.status === 'approved' || record.status === 'reviewed') ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400' :
+                            (record.status === 'approved' || record.status === 'endorsed') ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400' :
+                            record.status === 'reviewed' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/50 dark:text-purple-400' :
                             'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400'
-                          }`}>
-                            {record.status === 'published' ? '✓' : record.status === 'approved' || record.status === 'reviewed' ? '✦' : '•'} {formatStatus(record.status)}
+                          }`} title={formatStatus(record.status)}>
+                            <span className="shrink-0">{record.status === 'published' ? '✓' : (record.status === 'approved' || record.status === 'endorsed') ? '✦' : '•'}</span>
+                            <span className="truncate">{formatStatus(record.status)}</span>
                           </span>
                         </td>
 
-                        {/* Action */}
-                        <td className="py-4 px-4 text-center">
+                        {/* Action (11% - center) */}
+                        <td style={{ width: '11%' }} className="py-3 px-2 text-center truncate align-middle">
                           <button 
-                            className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300 shadow-sm inline-flex items-center gap-1.5 mx-auto ${
-                              record.action === 'Publish' || record.action === 'Review'
-                              ? 'bg-[#770000] dark:bg-[#d4af37] text-white dark:text-[#590000] hover:bg-[#590000] dark:hover:bg-[#f8d070] hover:shadow-md hover:-translate-y-0.5' 
-                              : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-200 hover:border-stone-300 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-700 hover:-translate-y-0.5'
-                            }`}
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (record.action === 'Publish') {
-                                navigate('/dean/publish-queue');
-                              } else {
-                                handleView(record);
-                              }
+                              handleView(record);
                             }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-2xs inline-flex items-center justify-center gap-1.5 mx-auto cursor-pointer bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-200 hover:border-[#770000] dark:hover:border-[#f8d070] hover:text-[#770000] dark:hover:text-[#f8d070] hover:bg-stone-50 dark:hover:bg-stone-700 hover:-translate-y-0.5"
+                            title="View Information & Public Link"
                           >
-                            {record.action === 'Publish' || record.action === 'Review' ? (
-                              <Sparkles className="w-3.5 h-3.5" />
-                            ) : (
-                              <Eye className="w-3.5 h-3.5 text-stone-500 dark:text-stone-300" />
-                            )}
-                            <span>{record.action}</span>
+                            <Eye className="w-3.5 h-3.5 text-[#590000] dark:text-[#f8d070]" />
+                            <span>View</span>
                           </button>
                         </td>
                       </tr>
@@ -954,23 +1167,49 @@ export default function ResearchRecords() {
 
       {/* ─── FULL REVIEW MODAL ─────────────────────────────────────────── */}
       {showReviewModal && selectedSubmission && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setShowReviewModal(false)}>
-          <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-xs" onClick={() => setShowReviewModal(false)}>
+          <div className="bg-white dark:bg-stone-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="bg-[#590000] dark:bg-stone-950 text-white p-6 rounded-t-2xl relative">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-white text-stone-800 dark:bg-stone-800/20 dark:text-white rounded-full flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800/30 transition text-lg"
+                className="absolute top-4 right-4 w-8 h-8 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition text-sm cursor-pointer"
+                title="Close modal"
               >
                 ✕
               </button>
-              <p className="text-white/70 text-xs tracking-widest uppercase font-bold mb-1">Dean Inspection</p>
-              <h2 className="text-2xl font-serif font-bold">{selectedSubmission.researchTitle}</h2>
-              <p className="text-white/80 text-sm mt-1">
-                Group: {selectedSubmission.groupName} {selectedSubmission.section ? `· Section: ${selectedSubmission.section}` : ''} · Leader: {selectedSubmission.leaderName}
+              
+              <div className="flex flex-wrap items-center justify-between gap-3 pr-10">
+                <div className="flex items-center gap-2">
+                  <p className="text-white/70 text-xs tracking-widest uppercase font-bold">Dean Inspection</p>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    selectedSubmission.status === 'published' 
+                      ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40' 
+                      : 'bg-amber-500/20 text-amber-200 border-amber-400/40'
+                  }`}>
+                    {selectedSubmission.status === 'published' ? '✓ Published in Archive' : `• Status: ${formatStatus(selectedSubmission.status)}`}
+                  </span>
+                </div>
+
+                {/* View in Public Website (Header Action) */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenPublicWebsite(selectedSubmission)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f8d070] hover:from-[#b09230] hover:to-[#e6c15c] text-[#590000] font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer shrink-0"
+                  title="Directly view this study on the public website with highlighted card edges"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>View in Public Website</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-serif font-bold mt-3 leading-snug">{selectedSubmission.researchTitle}</h2>
+              <p className="text-white/80 text-xs sm:text-sm mt-1">
+                Group: <span className="font-semibold text-white">{selectedSubmission.groupName}</span> {selectedSubmission.section ? `· Section: ${selectedSubmission.section}` : ''} · Leader: {selectedSubmission.leaderName}
               </p>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 flex-1">
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#590000]/10 dark:bg-[#f8d070]/10 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-[#590000] dark:text-[#f8d070]">{selectedSubmission.uploadedCount}/{selectedSubmission.requiredCount}</p>
@@ -1018,9 +1257,9 @@ export default function ResearchRecords() {
               <div>
                 <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm mb-3">Submitted Documents</h4>
                 <div className="space-y-3">
-                  {selectedSubmission.applicableReqs.map((req) => {
+                  {selectedSubmission.applicableReqs?.map((req) => {
                     const docMeta = selectedSubmission.documents?.[req.id];
-                    const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id);
+                    const isUploaded = selectedSubmission.uploadedDocs?.includes(req.id) || Boolean(docMeta);
 
                     return (
                       <div
@@ -1036,7 +1275,7 @@ export default function ResearchRecords() {
                           <div>
                             <p className={`text-sm font-bold ${isUploaded ? 'text-stone-800 dark:text-stone-200' : 'text-stone-500 dark:text-stone-400'}`}>{req.title}</p>
                             {isUploaded && docMeta ? (
-                              <p className="text-xs text-stone-500 dark:text-stone-400">{docMeta.name} · {docMeta.size}</p>
+                              <p className="text-xs text-stone-500 dark:text-stone-400">{docMeta.name} · {docMeta.size || 'Verified'}</p>
                             ) : (
                               <p className="text-xs text-red-500 font-medium">Missing Document</p>
                             )}
@@ -1049,12 +1288,9 @@ export default function ResearchRecords() {
                               url: docMeta.url,
                               title: docMeta.name || req.title
                             })}
-                            className="text-xs font-bold text-[#590000] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#590000]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#590000] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition flex items-center gap-1.5"
+                            className="text-xs font-bold text-[#590000] dark:text-[#f8d070] bg-white dark:bg-stone-800 border border-[#590000]/20 dark:border-[#f8d070]/30 px-3 py-1.5 rounded-lg hover:bg-[#590000] dark:hover:bg-[#f8d070] hover:text-white dark:hover:text-stone-900 transition flex items-center gap-1.5 cursor-pointer"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
+                            <Eye className="w-3.5 h-3.5" />
                             View File
                           </button>
                         )}
@@ -1062,6 +1298,31 @@ export default function ResearchRecords() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Modal Bottom Footer with Close and View in Public Website */}
+            <div className="p-4 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 rounded-b-2xl flex items-center justify-between gap-3">
+              <p className="text-xs text-stone-500 dark:text-stone-400 hidden sm:block">
+                Record ID: <span className="font-mono font-bold text-stone-700 dark:text-stone-300">{selectedSubmission.id || 'N/A'}</span>
+              </p>
+              <div className="flex items-center justify-end gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-300 text-xs font-semibold hover:bg-stone-100 dark:hover:bg-stone-800 transition cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPublicWebsite(selectedSubmission)}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#590000] dark:bg-[#d4af37] text-white dark:text-[#590000] hover:bg-[#770000] dark:hover:bg-[#b09230] font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>View in Public Website</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>

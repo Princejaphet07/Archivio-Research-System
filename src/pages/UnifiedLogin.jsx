@@ -538,30 +538,30 @@ function UnifiedLogin() {
 
           {/* IT Support Contact */}
           <div className="mt-3 lg:mt-4 text-center">
-            <a href="mailto:archivio.admin@gmail.com" className="text-[11px] lg:text-xs font-bold text-[#670319] hover:text-[#520214] flex items-center justify-center gap-1.5 hover:underline underline-offset-4 transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <a href="mailto:archivio.admin@gmail.com" className="text-xs lg:text-sm font-bold text-[#670319] hover:text-[#520214] flex items-center justify-center gap-2 hover:underline underline-offset-4 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
               Having trouble logging in? Contact IT Support (archivio.admin@gmail.com)
             </a>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="w-full text-center z-10 hidden md:block pt-2">
-          <div className="flex items-center justify-center gap-3 text-[#8c7a6b] text-[11px] lg:text-xs font-medium tracking-wide">
+        <div className="w-full text-center z-10 hidden md:block pt-3">
+          <div className="flex items-center justify-center gap-3.5 text-[#736355] text-xs lg:text-sm font-medium tracking-wide">
             <span>&copy; {new Date().getFullYear()} SWU PHINMA. All rights reserved.</span>
-            <span className="w-1 h-1 rounded-full bg-[#d2c9b6]"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#d2c9b6]"></span>
             <button 
               type="button" 
               onClick={() => { setPrivacyModalTab('terms'); setShowPrivacy(true); }} 
-              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer"
+              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer hover:underline underline-offset-4"
             >
               Terms and Conditions
             </button>
-            <span className="w-1 h-1 rounded-full bg-[#d2c9b6]"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#d2c9b6]"></span>
             <button 
               type="button" 
               onClick={() => { setPrivacyModalTab('privacy'); setShowPrivacy(true); }} 
-              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer"
+              className="hover:text-[#7a1f3d] transition-colors focus:outline-none cursor-pointer hover:underline underline-offset-4"
             >
               Privacy Policy
             </button>

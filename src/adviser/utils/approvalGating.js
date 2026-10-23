@@ -68,8 +68,16 @@ export const validateSubmissionReadiness = (submission, requirements = []) => {
     reasons.push(`Unverified Documents: ${unapprovedDocs.length} file(s) must be checked and approved individually in the Document Viewer.`);
   }
 
-  // 3. Check for pending revision requests
-  const pendingRevisionKeys = Object.keys(revisions).filter(key => Boolean(revisions[key]));
+  // 3. Check for pending revision requests on documents that haven't been approved yet
+  const pendingRevisionKeys = Object.keys(revisions).filter(key => {
+    if (!revisions[key]) return false;
+    // If this requirement is already approved, the revision was resolved
+    const isApproved = Boolean(
+      approvals[key] ||
+      (Array.isArray(requirements) && requirements.some(r => (r.id === key || r.title === key) && (approvals[r.id] || approvals[r.title])))
+    );
+    return !isApproved;
+  });
   const hasRevisionsPending = pendingRevisionKeys.length > 0;
   if (hasRevisionsPending) {
     reasons.push(`Pending Revisions: There are active revision requests that must be resolved first.`);

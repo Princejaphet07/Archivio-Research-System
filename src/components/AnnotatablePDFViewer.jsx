@@ -217,15 +217,26 @@ const AnnotatablePDFViewer = ({
 
   // Jump to specific page requested externally (e.g. clicking directive chip)
   useEffect(() => {
-    if (jumpPage && jumpPage >= 1 && (!numPages || jumpPage <= numPages)) {
+    const targetPage = typeof jumpPage === 'object' && jumpPage !== null ? jumpPage.page : jumpPage;
+    if (targetPage && targetPage >= 1 && (!numPages || targetPage <= numPages)) {
       if (readOnly) {
-        const el = pageRefsMap.current[jumpPage];
+        const el = pageRefsMap.current[targetPage];
         if (el && scrollContainerRef.current) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          setPageNumber(jumpPage);
+          el.classList.add('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+          }, 2000);
+          setPageNumber(targetPage);
         }
       } else {
-        setPageNumber(jumpPage);
+        setPageNumber(targetPage);
+        if (containerRef.current) {
+          containerRef.current.classList.add('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+          setTimeout(() => {
+            containerRef.current?.classList.remove('ring-4', 'ring-[#7a2e46]', 'dark:ring-[#f8d070]', 'ring-offset-2');
+          }, 1500);
+        }
       }
     }
   }, [jumpPage, numPages, readOnly]);

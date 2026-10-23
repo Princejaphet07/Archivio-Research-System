@@ -18,6 +18,7 @@ import bg from '../assets/parchment.png';
 import { useTheme } from '../context/ThemeContext';
 import ReCaptcha from '../components/ReCaptcha';
 import TermsAndConditionsModal from '../components/TermsAndConditionsModal';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 function ArchiveLogin() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -31,7 +32,7 @@ function ArchiveLogin() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [termsModalTab, setTermsModalTab] = useState('terms');
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
@@ -567,7 +568,7 @@ function ArchiveLogin() {
                   I agree to the{' '}
                   <button 
                     type="button" 
-                    onClick={() => { setTermsModalTab('terms'); setShowTermsModal(true); }} 
+                    onClick={() => setShowTermsModal(true)} 
                     className="text-[#7a2039] dark:text-[#f3e5ab] font-bold hover:underline cursor-pointer"
                   >
                     Terms and Conditions
@@ -575,7 +576,7 @@ function ArchiveLogin() {
                   and acknowledge the{' '}
                   <button 
                     type="button" 
-                    onClick={() => { setTermsModalTab('privacy'); setShowTermsModal(true); }} 
+                    onClick={() => setShowPrivacyModal(true)} 
                     className="text-[#7a2039] dark:text-[#f3e5ab] font-bold hover:underline cursor-pointer"
                   >
                     Privacy Policy
@@ -641,7 +642,7 @@ function ArchiveLogin() {
         </div>
       </div>
 
-      {/* TERMS & PRIVACY POLICY MODAL */}
+      {/* DESIGNATED TERMS MODAL (NO TABS) */}
       <TermsAndConditionsModal
         isOpen={showTermsModal}
         onClose={() => setShowTermsModal(false)}
@@ -649,7 +650,16 @@ function ArchiveLogin() {
           setAgreedToTerms(true);
           setShowTermsModal(false);
         }}
-        initialTab={termsModalTab}
+      />
+
+      {/* DESIGNATED PRIVACY POLICY MODAL (NO TABS) */}
+      <PrivacyPolicyModal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        onAccept={() => {
+          setAgreedToTerms(true);
+          setShowPrivacyModal(false);
+        }}
       />
     </div>
   );

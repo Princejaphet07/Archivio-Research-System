@@ -6,28 +6,34 @@ import AnnotatablePDFViewer from './AnnotatablePDFViewer';
 import Swal from 'sweetalert2';
 import { saveDraft, getDraft, clearDraft, formatDraftTime } from '../utils/draftStorage';
 
-// Helper to parse revision notes into structured quick page notes and general commentary
+// Helper to parse revision notes into structured directives and page notes
 const parseRevisionNote = (rawNote) => {
   if (!rawNote || typeof rawNote !== 'string') {
-    return { pageNotes: [], generalNote: '' };
+    return { pageNotes: [], generalLines: [], generalNote: '', allDirectives: [] };
   }
 
   const lines = rawNote.split('\n');
   const pageNotes = [];
   const generalLines = [];
+  const allDirectives = [];
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
     if (!trimmed) continue;
 
     // Pattern 1: [Page 2 - Part: General Objective]: comment or [Page 2 | General Objective]: comment or [Page 2 - General Objective]
     const p1 = trimmed.match(/^\[Page\s*(\d+)\s*(?:-|\||\/)\s*(?:Part:\s*)?([^\]]+)\]\s*(?::|-)?\s*(.*)$/i);
     if (p1) {
-      pageNotes.push({
+      const item = {
+        id: `p1-${i}`,
         page: p1[1].trim(),
         part: p1[2].trim(),
-        comment: p1[3]?.trim() || ''
-      });
+        comment: p1[3]?.trim() || '',
+        raw: trimmed,
+        isPageNote: true
+      };
+      pageNotes.push(item);
+      allDirectives.push(item);
       continue;
     }
 
@@ -36,70 +42,126 @@ const parseRevisionNote = (rawNote) => {
     if (p2) {
       const page = p2[1].trim();
       const rest = p2[2]?.trim() || '';
+      let item;
       if (!rest) {
-        pageNotes.push({
+        item = {
+          id: `p2-${i}`,
           page,
           part: 'Entire Page',
-          comment: ''
-        });
+          comment: '',
+          raw: trimmed,
+          isPageNote: true
+        };
       } else {
         const subParts = rest.split(/\s*(?::|-)\s*/);
         if (subParts.length >= 2) {
-          pageNotes.push({
+          item = {
+            id: `p2-${i}`,
             page,
             part: subParts[0].replace(/^Part:\s*/i, '').trim(),
-            comment: subParts.slice(1).join(' - ').trim()
-          });
+            comment: subParts.slice(1).join(' - ').trim(),
+            raw: trimmed,
+            isPageNote: true
+          };
         } else {
-          pageNotes.push({
+          item = {
+            id: `p2-${i}`,
             page,
-            part: rest.replace(/^Part:\s*/i, '').trim(),
-            comment: ''
-          });
+            part: '',
+            comment: rest.replace(/^Part:\s*/i, '').trim(),
+            raw: trimmed,
+            isPageNote: true
+          };
         }
       }
+      pageNotes.push(item);
+      allDirectives.push(item);
       continue;
     }
 
     // Pattern 3: Page 2: General Objective or Page 2 - Part: General Objective or Pg 2: General Objective
     const p3 = trimmed.match(/^(?:Page|Pg\.?)\s*(\d+)\s*(?::|-|\()\s*(?:Part:\s*)?([^:)\n]+)(?:\))?\s*(?::|-)?\s*(.*)$/i);
     if (p3) {
-      pageNotes.push({
+      const item = {
+        id: `p3-${i}`,
         page: p3[1].trim(),
         part: p3[2].trim(),
-        comment: p3[3]?.trim() || ''
-      });
+        comment: p3[3]?.trim() || '',
+        raw: trimmed,
+        isPageNote: true
+      };
+      pageNotes.push(item);
+      allDirectives.push(item);
       continue;
     }
 
     // Pattern 4: Page 2 alone: e.g. "Page 2"
     const p4 = trimmed.match(/^(?:Page|Pg\.?)\s*(\d+)\s*$/i);
     if (p4) {
-      pageNotes.push({
+      const item = {
+        id: `p4-${i}`,
         page: p4[1].trim(),
         part: 'Entire Page',
-        comment: ''
-      });
+        comment: '',
+        raw: trimmed,
+        isPageNote: true
+      };
+      pageNotes.push(item);
+      allDirectives.push(item);
       continue;
     }
 
     // Pattern 5: Non-document feedback or general directive: [Feedback: ...] or [Directive: ...] or [Part: ...]
     const p5 = trimmed.match(/^\[(?:Feedback|Directive|Section|Part):\s*([^\]]+)\]\s*(?::|-)?\s*(.*)$/i);
     if (p5) {
-      pageNotes.push({
+      const item = {
+        id: `p5-${i}`,
         page: '',
         part: p5[1].trim(),
-        comment: p5[2]?.trim() || ''
-      });
+        comment: p5[2]?.trim() || '',
+        raw: trimmed,
+        isPageNote: false
+      };
+      pageNotes.push(item);
+      allDirectives.push(item);
       continue;
     }
 
+    // Pattern 5.5: Numbered line e.g. "1. elaborate more this page" or "2. in research objectives..."
+    const pNum = trimmed.match(/^(\d+)(?:\.|\))\s+(.*)$/);
+    if (pNum) {
+      const seq = pNum[1].trim();
+      const commentText = pNum[2]?.trim() || trimmed;
+      const item = {
+        id: `pnum-${i}`,
+        seq,
+        page: '',
+        part: '',
+        comment: commentText,
+        raw: trimmed,
+        isPageNote: false
+      };
+      allDirectives.push(item);
+      continue;
+    }
+
+    // Pattern 6: General line (e.g. general remarks without explicit page)
     generalLines.push(trimmed);
+    allDirectives.push({
+      id: `gen-${i}`,
+      page: '',
+      part: '',
+      comment: trimmed,
+      raw: trimmed,
+      isPageNote: false
+    });
   }
 
   return {
     pageNotes,
-    generalNote: generalLines.join('\n')
+    generalLines,
+    generalNote: generalLines.join('\n'),
+    allDirectives
   };
 };
 
@@ -296,25 +358,26 @@ const DocumentViewerModal = ({
   // Active note string
   const activeNoteText = isResubmitted ? (note || previousNote) : (note || previousNote);
 
-  // Parsed quick page notes and general revision feedback
-  const { pageNotes, generalNote } = React.useMemo(() => {
+  // Parsed quick page notes, general notes, and all directives
+  const { pageNotes, generalLines, generalNote, allDirectives } = React.useMemo(() => {
     return parseRevisionNote(activeNoteText);
   }, [activeNoteText]);
 
-  // Only show Quick Page Notes when explicitly specified by the adviser (e.g. [Page 2 - Part: General Objective])
+  // Directives for student view
   const displayPageNotes = pageNotes || [];
+  const studentAllDirectives = allDirectives || [];
 
-  // For adviser view: parse current note to display added chips
-  const adviserPageNotes = React.useMemo(() => {
-    return parseRevisionNote(note).pageNotes;
+  // For adviser view: parse current note to display all added directives
+  const adviserAllDirectives = React.useMemo(() => {
+    return parseRevisionNote(note).allDirectives || [];
   }, [note]);
 
   // Scroll to specific page in PDF viewer
   const scrollToPage = (pageNum) => {
     if (!pageNum) return;
     const num = parseInt(pageNum, 10);
-    if (isNaN(num)) return;
-    setJumpPage(num);
+    if (isNaN(num) || num < 1) return;
+    setJumpPage({ page: num, ts: Date.now() });
     const pageEl = document.querySelector(`[data-page="${num}"]`);
     if (pageEl) {
       pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -347,19 +410,20 @@ const DocumentViewerModal = ({
     if (isDocument) setQuickPage(String(currentPage || 1));
   };
 
-  // Remove a specific page note chip from adviser's note text
-  const handleRemovePageNote = async (targetPn) => {
+  // Remove a specific directive item from adviser's note text
+  const handleRemoveDirective = async (targetItem) => {
     if (!note) return;
     const lines = note.split('\n');
     let removed = false;
     const remaining = lines.filter(l => {
       if (removed) return true;
-      const parsed = parseRevisionNote(l);
-      const isMatch = parsed.pageNotes.some(pn => 
-        String(pn.page) === String(targetPn.page) && 
-        (pn.part === targetPn.part || pn.comment === targetPn.comment)
-      );
-      if (isMatch) {
+      const trimmed = l.trim();
+      if (!trimmed) return false;
+      if (targetItem.raw && trimmed === targetItem.raw) {
+        removed = true;
+        return false;
+      }
+      if (targetItem.comment && (trimmed === targetItem.comment || trimmed.includes(targetItem.comment))) {
         removed = true;
         return false;
       }
@@ -371,13 +435,13 @@ const DocumentViewerModal = ({
       saveDraft(documentUrl, 'review_note', updated);
     }
     if (onSaveNote) {
-      await onSaveNote(updated, updated.trim() ? 'revision' : 'clear');
+      await onSaveNote(updated, updated.trim() ? 'replace' : 'clear', { replace: true });
     }
   };
 
   // Save revision directives and notify
   const handleRequestRevision = async () => {
-    let noteToSave = note.trim();
+    let noteToSave = (note && note.trim()) ? note.trim() : '';
 
     // If adviser has an un-added comment in the input box, bundle it in!
     if (quickComment.trim()) {
@@ -393,9 +457,24 @@ const DocumentViewerModal = ({
       if (!noteToSave.includes(tag)) {
         noteToSave = noteToSave ? `${noteToSave}\n${tag}` : tag;
       }
-      setNote(noteToSave);
       setQuickComment('');
       if (isDocument) setQuickPage(String(currentPage || 1));
+    }
+
+    // Auto-tag any directive lines with the active page where adviser commented it
+    if (isDocument && noteToSave) {
+      const activePg = quickPage?.trim() || String(currentPage || 1);
+      const lines = noteToSave.split('\n').map(l => l.trim()).filter(Boolean);
+      const taggedLines = lines.map(line => {
+        if (/^\[Page\s*\d+/i.test(line) || /^Page\s*\d+/i.test(line) || /^Pg\.?\s*\d+/i.test(line)) {
+          return line;
+        }
+        if (/^\[(?:Directive|Feedback|Part|Section):/i.test(line)) {
+          return line;
+        }
+        return `[Page ${activePg}]: ${line}`;
+      });
+      noteToSave = taggedLines.join('\n');
     }
 
     if (!noteToSave.trim()) {
@@ -406,6 +485,11 @@ const DocumentViewerModal = ({
         confirmButtonColor: '#7a2e46'
       });
       return;
+    }
+
+    setNote(noteToSave);
+    if (role === 'adviser' && documentUrl) {
+      saveDraft(documentUrl, 'review_note', noteToSave);
     }
 
     if (!onSaveNote) return;
@@ -736,72 +820,79 @@ const DocumentViewerModal = ({
                     </div>
 
                     {/* Saved Revision Directives for this document */}
-                    {adviserPageNotes.length > 0 && (
+                    {adviserAllDirectives.length > 0 && (
                       <div className="flex flex-col gap-2 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/70 rounded-xl shadow-xs">
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
                             <span>📋</span>
-                            <span>Saved Directives ({adviserPageNotes.length})</span>
+                            <span>Saved Directives ({adviserAllDirectives.length})</span>
                           </p>
                           <span className="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">
                             Visible to students
                           </span>
                         </div>
 
-                        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-                          {adviserPageNotes.map((pn, idx) => (
-                            <div 
-                              key={idx}
-                              className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg shadow-2xs hover:border-amber-400 transition-colors"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {pn.page && isDocument ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => scrollToPage(pn.page)}
-                                    className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-[#7a2e46] hover:text-white dark:hover:bg-[#f8d070] dark:hover:text-stone-950 rounded text-xs font-bold shrink-0 transition-colors cursor-pointer"
-                                    title={`Jump to Page ${pn.page}`}
+                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-0.5">
+                          {adviserAllDirectives.map((d, idx) => {
+                            const targetPage = d.page || (d.raw ? (d.raw.match(/\[Page\s*(\d+)\]/i)?.[1] || d.raw.match(/(?:Page|Pg\.?)\s*(\d+)/i)?.[1]) : null) || null;
+                            let cleanComment = d.comment || d.raw || '';
+                            cleanComment = cleanComment.replace(/^\[Page\s*\d+[^\]]*\]\s*(?::|-)?\s*/i, '');
+                            cleanComment = cleanComment.replace(/^(?:Page|Pg\.?)\s*\d+\s*(?::|-)?\s*/i, '');
+                            cleanComment = cleanComment.replace(/^\d+(?:\.|\))\s*/, '').trim();
+                            if (!cleanComment) cleanComment = d.raw || (targetPage ? `Directive on Page ${targetPage}` : `Remark #${idx + 1}`);
+
+                            return (
+                              <div 
+                                key={d.id || idx}
+                                onClick={() => {
+                                  if (targetPage) scrollToPage(targetPage);
+                                }}
+                                className="flex items-center justify-between gap-2.5 p-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl shadow-xs hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50/20 dark:hover:bg-amber-950/20 transition-all cursor-pointer group select-none"
+                                title={targetPage ? `Click to jump to Page ${targetPage}` : `Remark #${idx + 1}`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  {/* Yellow sequence order badge */}
+                                  <span 
+                                    className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200/90 dark:border-amber-800/60 shadow-2xs group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors"
+                                    title={`Remark #${idx + 1}${targetPage ? ` (Page ${targetPage})` : ''}`}
                                   >
-                                    Pg {pn.page}
-                                  </button>
-                                ) : (
-                                  <span className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-bold rounded shrink-0">
-                                    📌
+                                    {idx + 1}
                                   </span>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                  {pn.part && pn.part !== 'Entire Page' && pn.comment && (
-                                    <span className="text-[11px] font-bold text-stone-800 dark:text-stone-200 mr-1.5">
-                                      {pn.part}:
+
+                                  {/* Note comment text - fully clickable */}
+                                  <div className="min-w-0 flex-1">
+                                    {d.part && d.part !== 'Entire Page' && (
+                                      <span className="text-[11px] font-bold text-stone-800 dark:text-stone-200 mr-1.5">
+                                        {d.part}:
+                                      </span>
+                                    )}
+                                    <span className="text-xs text-stone-700 dark:text-stone-200 font-medium group-hover:text-stone-900 dark:group-hover:text-white transition-colors">
+                                      {cleanComment}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {targetPage && (
+                                    <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] transition-colors">
+                                      Pg {targetPage} →
                                     </span>
                                   )}
-                                  <span className="text-xs text-stone-600 dark:text-stone-300 font-medium">
-                                    {pn.comment || pn.part || 'Specific Directive'}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                {pn.page && isDocument && (
                                   <button
                                     type="button"
-                                    onClick={() => scrollToPage(pn.page)}
-                                    className="text-[10px] font-bold text-stone-400 hover:text-[#7a2e46] dark:hover:text-[#f8d070] px-1 py-0.5 cursor-pointer"
-                                    title={`Jump to Page ${pn.page}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveDirective(d);
+                                    }}
+                                    className="text-stone-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-bold cursor-pointer transition-colors"
+                                    title="Remove this directive"
                                   >
-                                    Jump →
+                                    ✕
                                   </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemovePageNote(pn)}
-                                  className="text-stone-400 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-bold cursor-pointer"
-                                  title="Remove this directive"
-                                >
-                                  ✕
-                                </button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -954,67 +1045,69 @@ const DocumentViewerModal = ({
                       </div>
                     )}
 
-                    {/* Quick Page Notes (What Page and What Part) */}
-                    {displayPageNotes.length > 0 && (
-                      <div className="flex flex-col gap-2.5 p-3.5 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 shadow-xs">
+                    {/* All Revision Directives / Notes from Adviser */}
+                    {studentAllDirectives.length > 0 && (
+                      <div className="flex flex-col gap-2.5 p-3.5 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-200/80 dark:border-amber-900/40 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <span>📍</span>
-                            <span>Quick Page Note</span>
+                          <p className="text-[10px] font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>💬</span>
+                            <span>{isResubmitted ? 'Previous Revision Directives' : 'Adviser Revision Note'}</span>
                           </p>
                           <span className="text-[9px] font-bold text-[#7a2e46] dark:text-[#f8d070] bg-[#7a2e46]/10 dark:bg-[#f8d070]/10 px-2 py-0.5 rounded-full">
-                            {displayPageNotes.length} Part{displayPageNotes.length !== 1 ? 's' : ''} to Revise
+                            {studentAllDirectives.length} Item{studentAllDirectives.length !== 1 ? 's' : ''}
                           </span>
                         </div>
 
                         <div className="flex flex-col gap-2">
-                          {displayPageNotes.map((pn, idx) => (
-                            <div 
-                              key={idx}
-                              onClick={() => {
-                                if (pn.page && isDocument) scrollToPage(pn.page);
-                              }}
-                              className={`p-2.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-xl shadow-xs hover:shadow-sm transition-all group ${
-                                pn.page && isDocument ? 'cursor-pointer hover:border-[#7a2e46] dark:hover:border-[#f8d070]' : ''
-                              }`}
-                              title={pn.page && isDocument ? `Click to jump to Page ${pn.page}` : undefined}
-                            >
-                              <div className="flex items-center gap-2">
-                                {pn.page && isDocument ? (
-                                  <div className="px-2.5 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors flex items-center justify-center gap-1">
-                                    <span className="text-[10px] text-stone-400 group-hover:text-white/80 dark:group-hover:text-stone-700 font-normal">Pg</span>
-                                    <span>{pn.page}</span>
-                                  </div>
-                                ) : (
-                                  <div className="px-2 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg text-xs font-bold text-stone-800 dark:text-stone-200 shrink-0 flex items-center justify-center">
-                                    <span>📌</span>
-                                  </div>
-                                )}
+                          {studentAllDirectives.map((d, idx) => {
+                            const targetPage = d.page || (d.raw ? (d.raw.match(/\[Page\s*(\d+)\]/i)?.[1] || d.raw.match(/(?:Page|Pg\.?)\s*(\d+)/i)?.[1]) : null) || null;
+                            let cleanComment = d.comment || d.raw || '';
+                            cleanComment = cleanComment.replace(/^\[Page\s*\d+[^\]]*\]\s*(?::|-)?\s*/i, '');
+                            cleanComment = cleanComment.replace(/^(?:Page|Pg\.?)\s*\d+\s*(?::|-)?\s*/i, '');
+                            cleanComment = cleanComment.replace(/^\d+(?:\.|\))\s*/, '').trim();
+                            if (!cleanComment) cleanComment = d.raw || (targetPage ? `Directive on Page ${targetPage}` : `Remark #${idx + 1}`);
 
-                                {pn.part && pn.comment ? (
-                                  <div className="flex-1 p-1.5 px-2.5 text-xs font-bold bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 truncate group-hover:border-[#7a2e46]/40 dark:group-hover:border-[#f8d070]/40 transition-colors">
-                                    {pn.part}
-                                  </div>
-                                ) : (
-                                  <div className="flex-1 text-xs text-stone-800 dark:text-stone-200 font-medium">
-                                    {pn.comment || pn.part || 'Specific Directive'}
-                                  </div>
-                                )}
+                            return (
+                              <div 
+                                key={d.id || idx}
+                                onClick={() => {
+                                  if (targetPage && isDocument) scrollToPage(targetPage);
+                                }}
+                                className={`flex items-center justify-between gap-2.5 p-2.5 bg-white dark:bg-stone-900 border border-amber-200/90 dark:border-amber-800/60 rounded-xl shadow-xs transition-all group select-none ${
+                                  isDocument && targetPage ? 'cursor-pointer hover:border-[#7a2e46] dark:hover:border-[#f8d070] hover:bg-amber-50/20 dark:hover:bg-amber-950/20' : ''
+                                }`}
+                                title={isDocument && targetPage ? `Click to jump to Page ${targetPage}` : `Remark #${idx + 1}`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  {/* Yellow sequence order badge */}
+                                  <span 
+                                    className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200/90 dark:border-amber-800/60 shadow-2xs group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors"
+                                    title={`Remark #${idx + 1}${targetPage ? ` (Page ${targetPage})` : ''}`}
+                                  >
+                                    {idx + 1}
+                                  </span>
 
-                                {pn.page && isDocument && (
-                                  <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0">
-                                    Jump →
+                                  {/* Note comment text - fully clickable */}
+                                  <div className="min-w-0 flex-1">
+                                    {d.part && d.part !== 'Entire Page' && (
+                                      <span className="text-[11px] font-bold text-stone-800 dark:text-stone-200 mr-1.5">
+                                        {d.part}:
+                                      </span>
+                                    )}
+                                    <span className="text-xs text-stone-800 dark:text-stone-200 font-medium leading-relaxed group-hover:text-stone-900 dark:group-hover:text-white transition-colors">
+                                      {cleanComment}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {isDocument && targetPage && (
+                                  <span className="text-[10px] font-bold text-stone-400 group-hover:text-[#7a2e46] dark:group-hover:text-[#f8d070] shrink-0 transition-colors">
+                                    Pg {targetPage} →
                                   </span>
                                 )}
                               </div>
-
-                              {pn.part && pn.comment && (
-                                <p className="text-xs text-stone-600 dark:text-stone-300 mt-2 font-medium pl-1 leading-relaxed">
-                                  "{pn.comment}"
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1055,24 +1148,13 @@ const DocumentViewerModal = ({
                       </div>
                     )}
 
-                    {/* General Adviser Revision Note */}
-                    {generalNote ? (
-                      <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 shadow-xs">
-                        <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
-                          <span>💬</span>
-                          <span>{isResubmitted ? 'Previous Revision Note' : 'Adviser Revision Note'}</span>
-                        </p>
-                        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
-                          {generalNote}
-                        </p>
-                      </div>
-                    ) : displayPageNotes.length === 0 && extractedCurrentNotes.length === 0 ? (
+                    {studentAllDirectives.length === 0 && extractedCurrentNotes.length === 0 && (
                       <div className="bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
                         <p className="text-xs text-stone-500 dark:text-stone-400 italic">
                           No revision notes provided for this document.
                         </p>
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 )}
               </div>
