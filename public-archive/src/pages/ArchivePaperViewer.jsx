@@ -36,6 +36,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 // Thumbnail component with on-scroll IntersectionObserver to dynamically load all page previews
 function SidebarThumbnailItem({
+  pdf,
   pageNum,
   currentPage,
   isMobile,
@@ -85,6 +86,7 @@ function SidebarThumbnailItem({
       >
         {isVisible ? (
           <Page
+            pdf={pdf}
             pageNumber={pageNum}
             width={isMobile ? 96 : 112}
             renderTextLayer={false}
@@ -117,6 +119,429 @@ function SidebarThumbnailItem({
 // In-memory session cache so re-opening papers or switching tabs doesn't re-scan
 const tocGlobalCache = new Map();
 
+// ---------------------------------------------------------------------------
+// Table of Contents detection helpers (pure functions, no React state)
+// Designed to work for manuscripts of ANY length without freezing the UI:
+//  - every PDF.js call is wrapped in a timeout so a slow page can never hang the scan
+//  - the whole scan has a hard time budget
+//  - PDF bookmarks are used first (instant + exact), then the printed TOC page,
+//    then a full-document chapter-heading scan as the last resort
+// ---------------------------------------------------------------------------
+const TOC_CACHE_VERSION = 'v3';
+const TOC_PAGE_TIMEOUT_MS = 4000;
+const TOC_TOTAL_BUDGET_MS = 30000;
+
+const ROMAN_NUMS = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
+const WORD_NUMS = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8, NINE: 9, TEN: 10 };
+const CANONICAL_CHAPTER_TITLES = {
+  1: 'Introduction',
+  2: 'Review of Literature',
+  3: 'Methodology',
+  4: 'Results & Discussion',
+  5: 'Conclusion',
+};
+const BACK_MATTER_LABELS = {
+  references: 'References',
+  bibliography: 'Bibliography',
+  literaturecited: 'Literature Cited',
+  appendices: 'Appendices',
+  curriculumvitae: 'Curriculum Vitae',
+};
+const SMALL_TITLE_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'the', 'to', 'vs', 'via', 'with']);
+
+const CHAPTER_TOKEN_SRC = '(\\d{1,2}|[IVX]{1,5}|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN)';
+// "CHAPTER I", "CHAPTER 1: INTRODUCTION ..... 1", "Chapter IV - Results 45"
+const CHAPTER_LINE_RE = new RegExp(`^CHAPTER\\s*[-:.]?\\s*${CHAPTER_TOKEN_SRC}(?![A-Za-z0-9])\\s*[-:.\u2013\u2014]?\\s*(.*)$`, 'i');
+// "<title><separators><page>" where separators are spaces / dot leaders / dashes
+const TRAILING_PAGE_RE = /^(.*?)[\s.\u00b7\u2022_\u2026\u2025\-\u2013\u2014]+(\d{1,3})$/;
+const DOT_LEADER_RE = /(?:\.\s?){4,}|[\u2026\u2025]{2,}|_{4,}/;
+
+const withTimeout = (promise, ms) => {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('timeout')), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+};
+
+const yieldToMain = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const clampPage = (pg, total) => Math.min(total, Math.max(1, Math.round(pg)));
+
+const chapterTokenToNumber = (token) => {
+  if (!token) return null;
+  const t = String(token).trim().toUpperCase();
+  if (/^\d{1,2}$/.test(t)) {
+    const n = parseInt(t, 10);
+    return n >= 1 && n <= 20 ? n : null;
+  }
+  return ROMAN_NUMS[t] || WORD_NUMS[t] || null;
+};
+
+const cleanTocTitle = (s) =>
+  String(s || '')
+    .replace(/[\s.\u00b7\u2022_\u2026\u2025\-\u2013\u2014:]+$/, '')
+    .replace(/^[\s.\u00b7\u2022_\-\u2013\u2014:]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const joinTitle = (a, b) => [a, b].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+// Convert ALL-CAPS headings to Title Case, keep author casing otherwise
+const prettifyHeading = (s) => {
+  const text = cleanTocTitle(s);
+  if (!text) return '';
+  const letters = text.replace(/[^A-Za-z]/g, '');
+  const upper = text.replace(/[^A-Z]/g, '');
+  if (letters.length === 0 || upper.length / letters.length < 0.7) return text;
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map((w, i) => (i > 0 && SMALL_TITLE_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+};
+
+const splitTrailingPage = (text) => {
+  const t = String(text || '').trim();
+  const m = t.match(TRAILING_PAGE_RE);
+  if (!m) return null;
+  return { title: cleanTocTitle(m[1]), page: parseInt(m[2], 10) };
+};
+
+const backMatterKey = (title) => {
+  const c = String(title || '').replace(/\s+/g, '').toUpperCase();
+  if (c.startsWith('REFERENCES')) return 'references';
+  if (c.startsWith('BIBLIOGRAPHY')) return 'bibliography';
+  if (c.startsWith('LITERATURECITED')) return 'literaturecited';
+  if (c.startsWith('APPENDICES') || c.startsWith('APPENDIX')) return 'appendices';
+  if (c.startsWith('CURRICULUMVITAE') || c.startsWith('CURRICULUMVITAE')) return 'curriculumvitae';
+  return null;
+};
+
+// Read a page's text and group it into visual lines (top -> bottom)
+const extractPageLines = async (pdfDoc, pNum) => {
+  const page = await withTimeout(pdfDoc.getPage(pNum), TOC_PAGE_TIMEOUT_MS);
+  const tc = await withTimeout(page.getTextContent(), TOC_PAGE_TIMEOUT_MS);
+  const items = [];
+  for (const it of tc?.items || []) {
+    if (!it || typeof it.str !== 'string' || !it.str.trim() || !it.transform) continue;
+    items.push({
+      str: it.str,
+      x: it.transform[4],
+      y: it.transform[5],
+      h: Math.abs(it.height || it.transform[3] || 10) || 10,
+    });
+  }
+  items.sort((a, b) => b.y - a.y || a.x - b.x);
+  const rows = [];
+  for (const it of items) {
+    const row = rows[rows.length - 1];
+    const tol = Math.max(2, Math.min(it.h, row ? row.h : it.h) * 0.5);
+    if (row && Math.abs(row.y - it.y) <= tol) {
+      row.items.push(it);
+    } else {
+      rows.push({ y: it.y, h: it.h, items: [it] });
+    }
+  }
+  return rows
+    .map((r) => r.items.sort((a, b) => a.x - b.x).map((i) => i.str).join(' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+};
+
+const isTocPage = (lines) =>
+  lines.slice(0, 12).some((l) => /^(TABLEOFCONTENTS|CONTENTS$)/i.test(l.replace(/\s+/g, '')));
+
+const isListPage = (lines) =>
+  lines.slice(0, 8).some((l) => /^LISTOF(TABLES|FIGURES|APPENDICES|ABBREVIATIONS|PLATES|ACRONYMS)/i.test(l.replace(/\s+/g, '')));
+
+const countEntryLines = (lines) => lines.filter((l) => splitTrailingPage(l)).length;
+
+// Detect an actual chapter opening page (heading near the top of the page)
+const detectChapterHeading = (lines) => {
+  const top = lines.slice(0, 10);
+  for (let i = 0; i < top.length; i++) {
+    const l = top[i];
+    if (!l || l.length > 80 || DOT_LEADER_RE.test(l)) continue;
+    const compact = l.replace(/\s+/g, '');
+
+    const m = l.match(CHAPTER_LINE_RE);
+    if (m) {
+      const num = chapterTokenToNumber(m[1]);
+      const rest = cleanTocTitle(m[2] || '');
+      // Sentences like "Chapter 2 presents ..." are body text, not headings
+      const looksLikeSentence = /[a-z]/.test(rest) && rest.split(' ').length > 8;
+      if (num && !looksLikeSentence && !/\s\d{1,3}$/.test(rest)) {
+        let title = rest;
+        if (!title && top[i + 1] && top[i + 1].length <= 90 && !DOT_LEADER_RE.test(top[i + 1])) {
+          title = top[i + 1];
+          if (top[i + 2] && /^[^a-z]{3,60}$/.test(top[i + 2]) && /^[^a-z]+$/.test(title)) {
+            title = joinTitle(title, top[i + 2]);
+          }
+        }
+        return { num, title: cleanTocTitle(title) };
+      }
+    }
+
+    // Letter-spaced "C H A P T E R  I"
+    const spaced = compact.match(/^CHAPTER(\d{1,2}|[IVX]{1,5})$/i);
+    if (spaced) {
+      const num = chapterTokenToNumber(spaced[1]);
+      if (num) return { num, title: cleanTocTitle(top[i + 1] || '') };
+    }
+
+    // "CHAPTER" on one line, numeral on the next
+    if (/^CHAPTER$/i.test(compact) && top[i + 1]) {
+      const num = chapterTokenToNumber(top[i + 1].trim().split(' ')[0]);
+      if (num) return { num, title: cleanTocTitle(top[i + 2] || '') };
+    }
+  }
+  return null;
+};
+
+const detectBackMatterHeading = (lines) => {
+  for (const l of lines.slice(0, 6)) {
+    if (!l || l.length > 40 || DOT_LEADER_RE.test(l)) continue;
+    const key = backMatterKey(l);
+    if (key) return key;
+  }
+  return null;
+};
+
+// Printed page number in header/footer, e.g. a lone "23" or "Page 23"
+const detectPrintedPageNumber = (lines) => {
+  const candidates = [lines[lines.length - 1], lines[lines.length - 2], lines[0], lines[1]];
+  for (const l of candidates) {
+    if (!l) continue;
+    const m = l.trim().match(/^(?:page\s+)?(\d{1,3})$/i);
+    if (m) return parseInt(m[1], 10);
+  }
+  return null;
+};
+
+// Parse the printed Table of Contents into chapters / back matter with sections
+const parseTocEntries = (allLines, total) => {
+  const entries = [];
+  const maxPage = total + 20;
+  let current = null;
+  let pending = null;
+  let carry = '';
+
+  const findChapter = (num) => entries.find((c) => c.kind === 'chapter' && c.num === num);
+  const lastChapterNum = () => {
+    for (let i = entries.length - 1; i >= 0; i--) if (entries[i].kind === 'chapter') return entries[i].num;
+    return 0;
+  };
+  const pushChapter = (num, title, page) => {
+    const existing = findChapter(num);
+    if (existing) {
+      current = existing;
+      return;
+    }
+    current = { kind: 'chapter', num, title: cleanTocTitle(title), claimedPage: page, sections: [] };
+    entries.push(current);
+  };
+  const addSection = (entry, title, page) => {
+    const clean = cleanTocTitle(
+      String(title || '').replace(/^(?:\d{1,2}(?:\.\d{1,2})*\.?|[A-Za-z][.)]|[IVXivx]{1,4}[.)])\s+/, '')
+    );
+    if (!clean || clean.length < 3 || !/[A-Za-z]{3,}/.test(clean)) return;
+    if (/^(chapter|page|pages|title|contents)$/i.test(clean)) return;
+    if (entry.sections.length >= 60) return;
+    if (entry.sections.some((s) => s.title === clean && s.claimedPage === page)) return;
+    entry.sections.push({ title: prettifyHeading(clean), claimedPage: page });
+  };
+
+  for (const raw of allLines) {
+    const line = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!line) continue;
+    const compact = line.replace(/\s+/g, '').toUpperCase();
+
+    if (!pending && /^(TABLEOFCONTENTS|CONTENTS|PAGE|PAGES|PAGENO\.?|TITLE|CHAPTER)$/.test(compact)) {
+      carry = '';
+      continue;
+    }
+
+    // Chapter line - may or may not include title and page on the same line
+    const chap = line.match(CHAPTER_LINE_RE);
+    if (chap) {
+      carry = '';
+      pending = null;
+      const num = chapterTokenToNumber(chap[1]);
+      if (!num) continue;
+      const rest = (chap[2] || '').trim();
+      if (/^\d{1,3}$/.test(rest)) {
+        pushChapter(num, '', parseInt(rest, 10));
+        continue;
+      }
+      const split = splitTrailingPage(rest);
+      if (split && split.page <= maxPage) {
+        pushChapter(num, split.title, split.page);
+      } else {
+        pending = { num, title: cleanTocTitle(rest) };
+      }
+      continue;
+    }
+
+    const bareNum = /^\d{1,3}$/.test(line) ? parseInt(line, 10) : null;
+    const split = bareNum === null ? splitTrailingPage(line) : null;
+
+    // Title / page of a "CHAPTER X" line that wrapped onto following lines
+    if (pending) {
+      if (bareNum !== null && bareNum <= maxPage) {
+        pushChapter(pending.num, pending.title, bareNum);
+        pending = null;
+      } else if (split && split.page <= maxPage) {
+        pushChapter(pending.num, joinTitle(pending.title, split.title), split.page);
+        pending = null;
+      } else if (/[A-Za-z]{2,}/.test(line) && pending.title.length < 120) {
+        pending.title = joinTitle(pending.title, cleanTocTitle(line));
+      }
+      continue;
+    }
+
+    if (!split || split.page > maxPage) {
+      // Possibly a long section title wrapped onto the next line
+      carry = bareNum === null && /[A-Za-z]{3,}/.test(line) && line.length < 120 ? line : '';
+      continue;
+    }
+
+    const title = carry ? joinTitle(carry, split.title) : split.title;
+    carry = '';
+    const hasChapters = entries.some((c) => c.kind === 'chapter');
+
+    // References / Appendices / Curriculum Vitae become their own top-level entries
+    const backKey = hasChapters ? backMatterKey(title) : null;
+    if (backKey) {
+      const existing = entries.find((c) => c.kind === 'back' && c.key === backKey);
+      if (existing) {
+        current = existing;
+        if (backKey === 'appendices') addSection(existing, title, split.page);
+        continue;
+      }
+      current = { kind: 'back', key: backKey, title: BACK_MATTER_LABELS[backKey], claimedPage: split.page, sections: [] };
+      entries.push(current);
+      if (backKey === 'appendices' && !/^APPENDI(CES|X)$/i.test(title.replace(/\s+/g, ''))) {
+        addSection(current, title, split.page);
+      }
+      continue;
+    }
+
+    // Chapters written without the word CHAPTER, e.g. "I. INTRODUCTION ..... 1"
+    const bare = title.match(/^([IVX]{1,4}|\d{1,2})(?:[.):]\s*|\s+)([A-Z][^a-z]{2,})$/);
+    if (bare && !entries.some((c) => c.kind === 'back')) {
+      const n = chapterTokenToNumber(bare[1]);
+      if (n && n === lastChapterNum() + 1) {
+        pushChapter(n, bare[2], split.page);
+        continue;
+      }
+    }
+
+    if (current) addSection(current, title, split.page);
+  }
+
+  return entries;
+};
+
+const buildEntryLabel = (entry) => {
+  if (entry.kind === 'back') return entry.title;
+  const title = prettifyHeading(entry.title) || CANONICAL_CHAPTER_TITLES[entry.num] || '';
+  return title ? `Chapter ${entry.num}: ${title}` : `Chapter ${entry.num}`;
+};
+
+const toFinalEntry = (entry, page, sectionOffset, total) => {
+  const id = entry.kind === 'chapter' ? `chap-${entry.num}` : `back-${entry.key}`;
+  return {
+    id,
+    chapterNumber: entry.kind === 'chapter' ? entry.num : null,
+    label: buildEntryLabel(entry),
+    page,
+    displayPage: entry.claimedPage ?? page,
+    sections: (entry.sections || []).map((sec, sIdx) => ({
+      id: `${id}-sec-${sIdx + 1}`,
+      title: sec.title,
+      page: Math.max(page, clampPage(sec.claimedPage + sectionOffset, total)),
+      displayPage: sec.claimedPage,
+    })),
+  };
+};
+
+// Build TOC from embedded PDF bookmarks (exact physical pages, instant)
+const buildTocFromOutline = async (pdfDoc, total) => {
+  const outline = await withTimeout(pdfDoc.getOutline(), TOC_PAGE_TIMEOUT_MS);
+  if (!Array.isArray(outline) || outline.length === 0) return [];
+
+  const resolvePage = async (dest) => {
+    try {
+      let explicit = dest;
+      if (typeof dest === 'string') explicit = await withTimeout(pdfDoc.getDestination(dest), TOC_PAGE_TIMEOUT_MS);
+      if (!Array.isArray(explicit) || explicit[0] == null) return null;
+      const ref = explicit[0];
+      if (typeof ref === 'number') return clampPage(ref + 1, total);
+      const idx = await withTimeout(pdfDoc.getPageIndex(ref), TOC_PAGE_TIMEOUT_MS);
+      return clampPage(idx + 1, total);
+    } catch {
+      return null;
+    }
+  };
+
+  const flat = [];
+  const walk = (items, depth) => {
+    for (const item of items || []) {
+      if (flat.length >= 300) return;
+      flat.push({ title: cleanTocTitle(item.title), dest: item.dest, depth });
+      if (depth < 3) walk(item.items, depth + 1);
+    }
+  };
+  walk(outline, 0);
+
+  const result = [];
+  let current = null;
+  let currentDepth = 0;
+  for (const node of flat) {
+    const chap = node.title.match(CHAPTER_LINE_RE);
+    const chapNum = chap ? chapterTokenToNumber(chap[1]) : null;
+    const backKey = result.length > 0 ? backMatterKey(node.title) : null;
+
+    if (chapNum && !result.some((r) => r.kind === 'chapter' && r.num === chapNum)) {
+      const page = await resolvePage(node.dest);
+      if (!page) continue;
+      current = { kind: 'chapter', num: chapNum, title: cleanTocTitle(chap[2] || ''), page, sections: [] };
+      currentDepth = node.depth;
+      result.push(current);
+    } else if (backKey && !result.some((r) => r.kind === 'back' && r.key === backKey)) {
+      const page = await resolvePage(node.dest);
+      if (!page) continue;
+      current = { kind: 'back', key: backKey, title: BACK_MATTER_LABELS[backKey], page, sections: [] };
+      currentDepth = node.depth;
+      result.push(current);
+    } else if (current && node.depth === currentDepth + 1 && node.title && current.sections.length < 60) {
+      const page = await resolvePage(node.dest);
+      if (page) current.sections.push({ title: prettifyHeading(node.title), page });
+    }
+  }
+
+  if (!result.some((r) => r.kind === 'chapter')) return [];
+
+  return result.map((entry) => {
+    const id = entry.kind === 'chapter' ? `chap-${entry.num}` : `back-${entry.key}`;
+    return {
+      id,
+      chapterNumber: entry.kind === 'chapter' ? entry.num : null,
+      label: buildEntryLabel(entry),
+      page: entry.page,
+      displayPage: entry.page,
+      sections: entry.sections.map((sec, sIdx) => ({
+        id: `${id}-sec-${sIdx + 1}`,
+        title: sec.title,
+        page: sec.page,
+        displayPage: sec.page,
+      })),
+    };
+  });
+};
+
 function ArchivePaperViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -139,6 +564,10 @@ function ArchivePaperViewer() {
   const scrollTimeoutRef = useRef(null);
   const pageRefsMap = useRef({});
   const scrollContainerRef = useRef(null);
+  // Programmatic jump guards: prevents IntersectionObserver from fighting TOC / page jumps
+  const currentPageRef = useRef(1);
+  const programmaticScrollRef = useRef(false);
+  const programmaticTimersRef = useRef([]);
   const [relatedPapers, setRelatedPapers] = useState([]);
   const [isMapView, setIsMapView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -170,6 +599,10 @@ function ArchivePaperViewer() {
   const [tocScanProgress, setTocScanProgress] = useState({ current: 0, total: 0, percent: 0 });
   const [discoveredChapters, setDiscoveredChapters] = useState([]);
   const scanAbortRef = useRef(0);
+  // Loaded PDF.js document (shared with the Pages tab thumbnails so the PDF is parsed only once)
+  const [pdfDocument, setPdfDocument] = useState(null);
+  // Real page height/width ratio of the manuscript (A4 = 1.414, Letter = 1.294)
+  const [pageAspect, setPageAspect] = useState(1.414);
 
   // PDF.js options to disable range requests & streaming (which cause Firebase Storage redirect errors)
   const pdfOptions = useMemo(() => ({
@@ -186,6 +619,8 @@ function ArchivePaperViewer() {
     setIsTocScanning(false);
     setTocScanProgress({ current: 0, total: 0, percent: 0 });
     setDiscoveredChapters([]);
+    setPdfDocument(null);
+    pageRefsMap.current = {};
 
     if (!rawUrl || rawUrl === '#') {
       setPdfSource(null);
@@ -247,7 +682,7 @@ function ArchivePaperViewer() {
   }, [isFullscreen]);
 
   const currentPdfWidth = Math.round(pdfBaseWidth * zoomLevel);
-  const currentPdfHeight = Math.round(currentPdfWidth * 1.414);
+  const currentPdfHeight = Math.round(currentPdfWidth * pageAspect);
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(2.5, +(prev + 0.25).toFixed(2)));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, +(prev - 0.25).toFixed(2)));
@@ -256,12 +691,19 @@ function ArchivePaperViewer() {
   // Fast Front-Matter Table of Contents Scanner (~1.5s):
   // Instead of scanning all 100+ pages (which saturated memory and caused Chrome 'Page Unresponsive'),
   // we scan only preliminary pages (1 to Math.min(14, total)) where the author's Table of Contents is located.
+  // Fast, freeze-proof Table of Contents scanner:
+  //  1. Instant cache check (memory + sessionStorage)
+  //  2. PDF bookmarks check (exact physical pages in <100ms)
+  //  3. Front-matter TOC page scanner with per-page timeouts & main thread cooperative yields
+  //  4. Verification of physical Chapter 1 offset
+  //  5. Full-document heading fallback if no printed TOC exists
   const detectTableOfContents = useCallback(async (pdfDoc) => {
     if (!pdfDoc) return;
     const total = pdfDoc.numPages || 1;
 
-    // Check in-memory cache first for instant 0-second re-loads
-    const cacheKey = paper?.id || paper?.documents?.['Final Manuscript']?.url || 'current_paper';
+    // 1. Check in-memory & session cache first for instant 0-second re-loads
+    const rawUrl = paper?.documents?.['Final Manuscript']?.url || '';
+    const cacheKey = `toc_${TOC_CACHE_VERSION}_${paper?.id || rawUrl.slice(-40) || 'doc'}`;
     if (tocGlobalCache.has(cacheKey)) {
       const cached = tocGlobalCache.get(cacheKey);
       if (Array.isArray(cached) && cached.length > 0) {
@@ -271,108 +713,95 @@ function ArchivePaperViewer() {
         return;
       }
     }
+    try {
+      const ssCached = sessionStorage.getItem(cacheKey);
+      if (ssCached) {
+        const parsed = JSON.parse(ssCached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          tocGlobalCache.set(cacheKey, parsed);
+          setTableOfContents(parsed);
+          setExpandedChapters({ [parsed[0]?.id]: true });
+          setIsTocScanning(false);
+          return;
+        }
+      }
+    } catch {
+      // sessionStorage read failure is non-fatal
+    }
 
     const currentScanId = ++scanAbortRef.current;
     setIsTocScanning(true);
-    // Limit scan strictly to preliminary front-matter pages (max 14 pages)
-    const scanLimit = Math.min(14, total);
+    const scanLimit = Math.min(25, total);
     setTocScanProgress({ current: 0, total: scanLimit, percent: 0 });
     setDiscoveredChapters([]);
 
-    const CANONICAL_TITLES = {
-      1: 'Chapter 1: Introduction',
-      2: 'Chapter 2: Review of Literature',
-      3: 'Chapter 3: Methodology',
-      4: 'Chapter 4: Results & Discussion',
-      5: 'Chapter 5: Conclusion',
-    };
-
-    const ROMAN_MAP = {
-      i: 1, ii: 2, iii: 3, iv: 4, v: 5,
-      1: 1, 2: 2, 3: 3, 4: 4, 5: 5
-    };
-
-    const yieldMain = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+    const startTime = Date.now();
+    const isAborted = () => scanAbortRef.current !== currentScanId;
 
     try {
-      // 1. Fast sequential scan of preliminary front-matter pages
-      const frontMatterPages = [];
-      let chap1PhysicalPage = null;
+      // 2. Check embedded PDF bookmarks first (instant & 100% exact)
+      try {
+        const outlineToc = await buildTocFromOutline(pdfDoc, total);
+        if (isAborted()) return;
+        if (outlineToc.length > 0) {
+          tocGlobalCache.set(cacheKey, outlineToc);
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(outlineToc)); } catch {}
+          setTableOfContents(outlineToc);
+          setExpandedChapters({ [outlineToc[0]?.id]: true });
+          return;
+        }
+      } catch (outlineErr) {
+        console.warn("PDF outline detection skipped:", outlineErr);
+      }
+
+      // 3. Scan preliminary front-matter pages (pages 1 to min(25, total))
+      const frontMatter = [];
+      let detectedChap1Physical = null;
 
       for (let pNum = 1; pNum <= scanLimit; pNum++) {
-        if (scanAbortRef.current !== currentScanId) return;
+        if (isAborted()) return;
+        if (Date.now() - startTime > TOC_TOTAL_BUDGET_MS) break;
 
         try {
-          const page = await pdfDoc.getPage(pNum);
-          const tc = await page.getTextContent();
+          const lines = await extractPageLines(pdfDoc, pNum);
+          frontMatter.push({ pNum, lines });
 
-          // Group text items into visual lines by Y coordinate
-          const linesMap = new Map();
-          for (let itemIdx = 0; itemIdx < tc.items.length; itemIdx++) {
-            const it = tc.items[itemIdx];
-            if (!it.str || !it.str.trim()) continue;
-            const y = it.transform[5];
-            const x = it.transform[4];
-            const bucketKey = Math.round(y / 4.0) * 4;
-            if (!linesMap.has(bucketKey)) linesMap.set(bucketKey, []);
-            linesMap.get(bucketKey).push({ str: it.str, x });
+          // Also check if this page directly opens Chapter 1
+          if (!detectedChap1Physical) {
+            const h = detectChapterHeading(lines);
+            if (h && h.num === 1) {
+              detectedChap1Physical = pNum;
+            }
           }
-
-          const sortedY = Array.from(linesMap.keys()).sort((a, b) => b - a);
-          const lines = sortedY.map(yKey => {
-            const items = linesMap.get(yKey).sort((a, b) => a.x - b.x);
-            return items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
-          }).filter(Boolean);
-
-          const fullText = tc.items.map(it => it.str).join(' ');
-
-          frontMatterPages.push({
-            pNum,
-            lines,
-            fullText
-          });
-
-          // Detect where Chapter 1 physically opens
-          if (!chap1PhysicalPage && (
-            /^\s*CHAPTER\s*(?:1|I)\b/im.test(fullText) ||
-            lines.some(l => /^\s*CHAPTER\s*[:.-]?\s*(?:1|I)\b/i.test(l))
-          )) {
-            chap1PhysicalPage = pNum;
-          }
-        } catch (_) {
-          // Non-fatal page read error
+        } catch {
+          // Timeout or page extract failure is non-fatal; continue to next page
         }
 
-        // Cooperative yield keeps UI completely responsive
-        await yieldMain(20);
+        await yieldToMain();
 
-        if (scanAbortRef.current === currentScanId) {
+        if (!isAborted()) {
           setTocScanProgress({
             current: pNum,
             total: scanLimit,
-            percent: Math.min(100, Math.round((pNum / scanLimit) * 100))
+            percent: Math.min(100, Math.round((pNum / scanLimit) * 100)),
           });
         }
       }
 
-      if (scanAbortRef.current !== currentScanId) return;
+      if (isAborted()) return;
 
-      // 2. Identify Table of Contents pages
-      const tocPages = [];
-      for (const p of frontMatterPages) {
-        if (/\bTABLE\s+OF\s+CONTENTS\b/i.test(p.fullText) || (/\bCONTENTS\b/i.test(p.fullText) && p.pNum <= 8)) {
+      // 4. Identify Table of Contents page(s)
+      let tocPages = [];
+      for (let i = 0; i < frontMatter.length; i++) {
+        const p = frontMatter[i];
+        if (isTocPage(p.lines)) {
           tocPages.push(p);
-          // Look at immediate subsequent pages for continuation
-          let nextPNum = p.pNum + 1;
-          while (nextPNum <= scanLimit) {
-            const nextP = frontMatterPages.find(fp => fp.pNum === nextPNum);
-            if (!nextP) break;
-            if (/\bLIST\s+OF\s+TABLES\b/i.test(nextP.fullText) || /\bLIST\s+OF\s+FIGURES\b/i.test(nextP.fullText) || /^\s*CHAPTER\s*(?:1|I)\b/im.test(nextP.fullText)) {
-              break;
-            }
-            if (/\bCHAPTER\b/i.test(nextP.fullText) || /\d{1,4}/.test(nextP.fullText)) {
+          // Accumulate continuation pages
+          for (let j = i + 1; j < frontMatter.length; j++) {
+            const nextP = frontMatter[j];
+            if (isListPage(nextP.lines) || detectChapterHeading(nextP.lines)) break;
+            if (countEntryLines(nextP.lines) >= 2 || nextP.lines.some(l => DOT_LEADER_RE.test(l))) {
               tocPages.push(nextP);
-              nextPNum++;
             } else {
               break;
             }
@@ -381,130 +810,105 @@ function ArchivePaperViewer() {
         }
       }
 
-      // 3. Parse chapters & sub-sections directly from the manuscript's Table of Contents
-      const parsedChapters = [];
-      let currentChapter = null;
-
-      for (const tocP of tocPages) {
-        for (const rawLine of tocP.lines) {
-          const line = (rawLine || '').trim();
-          if (!line || /^(?:TABLE\s+OF\s+CONTENTS|CONTENTS|CHAPTER|PAGE|TITLE)\b/i.test(line)) continue;
-
-          // Match line ending with page number: "Background of the Study ... 9" or "1 INTRODUCTION ... 8"
-          const pageMatch = line.match(/^(.*?)(?:(?:\s*[.·•_]\s*)+|\s{2,}|\t|\s+)\s*(\d{1,4})\s*$/);
-          if (!pageMatch) continue;
-
-          const titlePart = pageMatch[1].trim();
-          const claimedPage = parseInt(pageMatch[2], 10);
-
-          // Check if this is a Chapter line
-          const chapMatch = titlePart.match(/^(?:CHAPTER\s+)?([1-5]|I|II|III|IV|V)(?:\s*[:.\s-–—]|\s+)\s*(.*)$/i)
-            || (/^CHAPTER\s+([1-5]|I|II|III|IV|V)$/i.test(titlePart) ? [null, titlePart.match(/^CHAPTER\s+([1-5]|I|II|III|IV|V)$/i)[1], ''] : null);
-
-          if (chapMatch) {
-            const numStr = chapMatch[1].toLowerCase();
-            const num = ROMAN_MAP[numStr] || parseInt(numStr, 10);
-            let subtitle = chapMatch[2] ? chapMatch[2].trim() : '';
-
-            let label = CANONICAL_TITLES[num] || `Chapter ${num}`;
-            if (subtitle) {
-              const lower = subtitle.toLowerCase();
-              if (lower.includes('introduction')) label = 'Chapter 1: Introduction';
-              else if (lower.includes('review')) label = 'Chapter 2: Review of Literature';
-              else if (lower.includes('method') || lower.includes('development')) label = 'Chapter 3: Methodology';
-              else if (lower.includes('result') || lower.includes('discussion')) label = 'Chapter 4: Results & Discussion';
-              else if (lower.includes('conclusion') || lower.includes('summary')) label = 'Chapter 5: Conclusion';
-              else {
-                const capSub = subtitle.charAt(0).toUpperCase() + subtitle.slice(1).toLowerCase();
-                label = `Chapter ${num}: ${capSub}`;
-              }
-            }
-
-            currentChapter = {
-              id: `chap-${num}`,
-              chapterNumber: num,
-              label,
-              claimedPage,
-              sections: []
-            };
-            parsedChapters.push(currentChapter);
-          } else if (currentChapter) {
-            // Sub-section line
-            let cleanTitle = titlePart.replace(/[.·•_]+$/, '').replace(/^[0-9IVXLCDMivxlcdm]+[\s.:-–—]+/, '').trim();
-            if (cleanTitle && cleanTitle.length >= 3 && /[a-zA-Z]{3,}/.test(cleanTitle) && !/^(?:chapter|page|title|contents)$/i.test(cleanTitle)) {
-              currentChapter.sections.push({
-                title: cleanTitle,
-                claimedPage
-              });
-            }
-          }
-        }
-      }
-
-      // 4. Calculate offset between manuscript printed page and PDF physical page
-      let pageOffset = 0;
-      const chap1 = parsedChapters.find(c => c.chapterNumber === 1);
-      if (chap1 && chap1PhysicalPage) {
-        pageOffset = chap1PhysicalPage - chap1.claimedPage;
+      // 5. Parse entries from TOC pages
+      let parsedEntries = [];
+      if (tocPages.length > 0) {
+        const allTocLines = tocPages.flatMap((tp) => tp.lines);
+        parsedEntries = parseTocEntries(allTocLines, total);
       }
 
       let finalTOC = [];
 
-      if (parsedChapters.length > 0) {
-        finalTOC = parsedChapters.map(ch => ({
-          id: ch.id,
-          chapterNumber: ch.chapterNumber,
-          label: ch.label,
-          page: Math.min(total, Math.max(1, ch.claimedPage + pageOffset)),
-          displayPage: ch.claimedPage,
-          sections: ch.sections.map((sec, sIdx) => ({
-            id: `sec-${ch.id}-${sIdx + 1}`,
-            title: sec.title,
-            page: Math.min(total, Math.max(1, sec.claimedPage + pageOffset)),
-            displayPage: sec.claimedPage
-          }))
-        }));
-      } else {
-        // Fallback: If no TOC was found in preliminary pages, check front pages for chapter headers
-        const fallbackChapters = [];
-        for (const p of frontMatterPages) {
-          for (const line of p.lines) {
-            const chapMatch = line.match(/^\s*CHAPTER\s*[:.-]?\s*([1-5]|I|II|III|IV|V)(?:\s*[:.\s-–—]\s*(.+))?$/i);
-            if (chapMatch) {
-              const numStr = chapMatch[1].toLowerCase();
-              const num = ROMAN_MAP[numStr] || parseInt(numStr, 10);
-              if (!fallbackChapters.some(c => c.chapterNumber === num)) {
-                fallbackChapters.push({
-                  id: `chap-${num}`,
-                  chapterNumber: num,
-                  label: CANONICAL_TITLES[num] || `Chapter ${num}`,
-                  page: p.pNum,
-                  displayPage: p.pNum,
-                  sections: []
-                });
+      if (parsedEntries.length > 0) {
+        // 6. Calculate offset between manuscript printed page and PDF physical page
+        const chap1 = parsedEntries.find((c) => c.kind === 'chapter' && c.num === 1);
+        let pageOffset = 0;
+
+        if (detectedChap1Physical && chap1 && chap1.claimedPage) {
+          pageOffset = detectedChap1Physical - chap1.claimedPage;
+        } else {
+          // Probe physical pages near the expected Chapter 1 location to find exact offset
+          const lastTocPNum = tocPages[tocPages.length - 1]?.pNum || 10;
+          const claimedChap1 = chap1?.claimedPage || 1;
+          const probeStart = Math.max(lastTocPNum + 1, claimedChap1);
+          const probeEnd = Math.min(total, probeStart + 15);
+
+          for (let probeP = probeStart; probeP <= probeEnd; probeP++) {
+            if (isAborted()) return;
+            try {
+              const probeLines = await extractPageLines(pdfDoc, probeP);
+              const heading = detectChapterHeading(probeLines);
+              if (heading && heading.num === 1) {
+                pageOffset = probeP - claimedChap1;
+                break;
               }
-            }
+              const printedP = detectPrintedPageNumber(probeLines);
+              if (printedP && printedP === claimedChap1) {
+                pageOffset = probeP - claimedChap1;
+                break;
+              }
+            } catch {}
+            await yieldToMain();
+          }
+
+          // Fallback offset if probe could not find Chapter 1 heading:
+          // In standard university capstones, Chapter 1 immediately follows the front matter
+          if (pageOffset === 0 && lastTocPNum > 1 && chap1) {
+            pageOffset = Math.max(0, lastTocPNum);
           }
         }
-        finalTOC = fallbackChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+
+        finalTOC = parsedEntries.map((e) => {
+          const rawPhys = (e.claimedPage ?? 1) + pageOffset;
+          const phys = clampPage(rawPhys, total);
+          return toFinalEntry(e, phys, pageOffset, total);
+        });
+      } else {
+        // 7. Fallback: No printed TOC found; sweep pages to detect chapter headings directly
+        const fallbackChapters = [];
+        const sweepBudget = Math.min(total, 60);
+
+        for (let pNum = 1; pNum <= sweepBudget; pNum++) {
+          if (isAborted()) return;
+          if (Date.now() - startTime > TOC_TOTAL_BUDGET_MS) break;
+
+          try {
+            const lines = frontMatter.find((f) => f.pNum === pNum)?.lines || (await extractPageLines(pdfDoc, pNum));
+            const heading = detectChapterHeading(lines);
+            if (heading && !fallbackChapters.some((c) => c.num === heading.num)) {
+              fallbackChapters.push({
+                kind: 'chapter',
+                num: heading.num,
+                title: heading.title || CANONICAL_CHAPTER_TITLES[heading.num] || '',
+                claimedPage: pNum,
+                sections: [],
+              });
+            }
+          } catch {}
+          await yieldToMain();
+        }
+
+        fallbackChapters.sort((a, b) => a.num - b.num);
+        finalTOC = fallbackChapters.map((e) => toFinalEntry(e, e.claimedPage, 0, total));
       }
 
-      if (scanAbortRef.current === currentScanId) {
+      if (!isAborted()) {
         if (finalTOC.length > 0) {
           tocGlobalCache.set(cacheKey, finalTOC);
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(finalTOC)); } catch {}
           setTableOfContents(finalTOC);
-          setExpandedChapters({ [finalTOC[0].id]: true });
+          setExpandedChapters({ [finalTOC[0]?.id]: true });
         } else {
           setTableOfContents([]);
         }
       }
     } catch (err) {
       console.warn("Table of Contents detection error:", err);
-      if (scanAbortRef.current === currentScanId) {
+      if (!isAborted()) {
         setTableOfContents([]);
       }
     } finally {
-      if (scanAbortRef.current === currentScanId) {
+      if (!isAborted()) {
         setIsTocScanning(false);
       }
     }
@@ -513,6 +917,21 @@ function ArchivePaperViewer() {
   const onDocumentLoadSuccess = useCallback((pdfDoc) => {
     const pages = pdfDoc?.numPages || 0;
     setNumPages(pages);
+    setPdfDocument(pdfDoc);
+
+    // Measure true page aspect ratio to prevent layout shifting on non-A4 documents
+    if (pdfDoc && typeof pdfDoc.getPage === 'function') {
+      pdfDoc.getPage(1).then((firstPage) => {
+        const viewport = firstPage.getViewport({ scale: 1 });
+        if (viewport?.width && viewport?.height) {
+          const ratio = +(viewport.height / viewport.width).toFixed(3);
+          if (ratio >= 0.8 && ratio <= 2.2) {
+            setPageAspect(ratio);
+          }
+        }
+      }).catch(() => {});
+    }
+
     if (pdfDoc) {
       detectTableOfContents(pdfDoc);
     }
@@ -520,7 +939,18 @@ function ArchivePaperViewer() {
 
   const scrollToPage = useCallback((pg) => {
     const clamped = Math.max(1, Math.min(numPages || pg, pg));
+    currentPageRef.current = clamped;
     setCurrentPage(clamped);
+
+    // Suppress IntersectionObserver during smooth scrolling to prevent cascade re-renders
+    programmaticScrollRef.current = true;
+    programmaticTimersRef.current.forEach(clearTimeout);
+    programmaticTimersRef.current = [
+      setTimeout(() => {
+        programmaticScrollRef.current = false;
+      }, 750),
+    ];
+
     const el = pageRefsMap.current[clamped];
     if (el && scrollContainerRef.current) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -541,6 +971,7 @@ function ArchivePaperViewer() {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (programmaticScrollRef.current) return;
         let bestEntry = null;
         let maxRatio = 0;
         entries.forEach((entry) => {
@@ -551,7 +982,8 @@ function ArchivePaperViewer() {
         });
         if (bestEntry && bestEntry.intersectionRatio > 0.05) {
           const pg = parseInt(bestEntry.target.dataset.page, 10);
-          if (!isNaN(pg)) {
+          if (!isNaN(pg) && pg !== currentPageRef.current) {
+            currentPageRef.current = pg;
             setCurrentPage(pg);
           }
         }
@@ -1274,10 +1706,10 @@ function ArchivePaperViewer() {
 
   const handleChapterClick = (chap) => {
     if (!chap) return;
-    // Toggle accordion state for this chapter
+    // Open chapter accordion on first click so user sees subsections immediately, toggle on subsequent clicks
     setExpandedChapters(prev => ({
       ...prev,
-      [chap.id]: !prev[chap.id]
+      [chap.id]: prev[chap.id] === undefined ? true : !prev[chap.id]
     }));
     // Jump to chapter page
     const pageNum = typeof chap.page === 'number' ? chap.page : parseInt(chap.page, 10);
@@ -1773,10 +2205,11 @@ function ArchivePaperViewer() {
           </div>
           <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 items-center custom-scrollbar">
             {numPages && pdfSource ? (
-              <Document file={pdfSource} options={pdfOptions}>
-                {Array.from({ length: numPages }).map((_, idx) => (
+              pdfDocument ? (
+                Array.from({ length: numPages }).map((_, idx) => (
                   <SidebarThumbnailItem
                     key={idx}
+                    pdf={pdfDocument}
                     pageNum={idx + 1}
                     currentPage={currentPage}
                     isMobile={isMobile}
@@ -1784,8 +2217,23 @@ function ArchivePaperViewer() {
                     isDrawer={isDrawer}
                     setIsMobileDrawerOpen={setIsMobileDrawerOpen}
                   />
-                ))}
-              </Document>
+                ))
+              ) : (
+                <Document file={pdfSource} options={pdfOptions}>
+                  {Array.from({ length: numPages }).map((_, idx) => (
+                    <SidebarThumbnailItem
+                      key={idx}
+                      pdf={null}
+                      pageNum={idx + 1}
+                      currentPage={currentPage}
+                      isMobile={isMobile}
+                      scrollToPage={scrollToPage}
+                      isDrawer={isDrawer}
+                      setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+                    />
+                  ))}
+                </Document>
+              )
             ) : (
               <div className="text-stone-400 text-xs p-4 text-center">Loading pages...</div>
             )}
