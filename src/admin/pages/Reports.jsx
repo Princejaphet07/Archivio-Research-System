@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { useAcademicYear } from '../context/AcademicYearContext';
+import { useUser } from '../context/UserContext';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { Building2, Trash2, Printer, Download, FileText, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
@@ -180,6 +181,7 @@ export default function Reports() {
   const [activeUsersTab, setActiveUsersTab] = useState(0);
 
   const { selectedYear, filterByAcademicYear } = useAcademicYear();
+  const { currentUser } = useUser();
 
   useEffect(() => {
     const unsubSub = onSnapshot(collection(db, 'submissions'), (snap) => {
@@ -361,8 +363,688 @@ export default function Reports() {
     return { yearlyData, deptData };
   }, [submissions, departments, programs]);
 
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const generateOfficialReport = (mode = 'print') => {
+    if (!selected) {
+      Swal.fire({
+        title: 'Select a Report First',
+        text: 'Please choose a report category above (Published Papers, User Accounts, or Department Performance) before printing or exporting to PDF.',
+        icon: 'info',
+        confirmButtonColor: '#801e38'
+      });
+      return;
+    }
+
+    const currentData = selected === 'published' ? publishedData : selected === 'users' ? usersData : selected === 'dept' ? deptData : [];
+    if (!currentData || currentData.length === 0) {
+      Swal.fire({
+        title: 'No Data Available',
+        text: 'There are no records to print or export for the selected category and school year.',
+        icon: 'warning',
+        confirmButtonColor: '#801e38'
+      });
+      return;
+    }
+
+    const adminName = currentUser?.displayName || currentUser?.email || 'System Administrator';
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const timeFormatted = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const refCode = `ARC-REP-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const reportTitles = {
+      published: 'Official Registry of Published Research Manuscripts',
+      users: 'Official Directory of Registered System Users & Academic Participants',
+      dept: 'Institutional Department Performance & Publication Compliance Audit'
+    };
+
+    const reportSubtitles = {
+      published: `Comprehensive institutional record of all peer-reviewed research manuscripts formally published to the ARCHIVIO digital archive. Covering: ${selectedYear || 'All School Years'}.`,
+      users: `Official census of active academic participants, faculty research advisers, college deans, and student researchers across all departments. School Year: ${selectedYear || 'All School Years'}.`,
+      dept: `Audit of student research submissions, published capstones, dean endorsements, and approval rates across all colleges. Academic Year: ${selectedYear || 'All School Years'}.`
+    };
+
+    const docTitle = reportTitles[selected] || 'System Report';
+    const docSubtitle = reportSubtitles[selected] || '';
+
+    // Summary Metric Badges for the print header
+    let kpisHtml = '';
+    if (selected === 'published') {
+      const syCount = publishedData.filter(p => selectedYear !== 'All' ? p.sy.includes(selectedYear.replace(/^SY\s*/, '')) : true).length;
+      const catCount = new Set(publishedData.map(p => p.cat)).size;
+      kpisHtml = `
+        <div class="kpi-card">
+          <span class="kpi-label">Total Published Papers</span>
+          <span class="kpi-value">${publishedData.length}</span>
+          <span class="kpi-sub">All-time archival records</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Published in ${selectedYear || 'Current SY'}</span>
+          <span class="kpi-value">${syCount}</span>
+          <span class="kpi-sub">Active academic period</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Research Categories</span>
+          <span class="kpi-value">${catCount}</span>
+          <span class="kpi-sub">Disciplines represented</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Status</span>
+          <span class="kpi-value" style="color: #047857; font-size: 16px;">Verified Active</span>
+          <span class="kpi-sub">Public digital access</span>
+        </div>
+      `;
+    } else if (selected === 'users') {
+      const deansCount = usersData.filter(u => u.role === 'Dean').length;
+      const advCount = usersData.filter(u => u.role === 'Advisor').length;
+      const studCount = usersData.filter(u => u.role === 'Student').length;
+      kpisHtml = `
+        <div class="kpi-card">
+          <span class="kpi-label">Total Registered Users</span>
+          <span class="kpi-value">${usersData.length}</span>
+          <span class="kpi-sub">Verified accounts</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Academic Deans</span>
+          <span class="kpi-value">${deansCount}</span>
+          <span class="kpi-sub">College leadership</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Research Advisers</span>
+          <span class="kpi-value">${advCount}</span>
+          <span class="kpi-sub">Faculty mentors</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Student Researchers</span>
+          <span class="kpi-value">${studCount}</span>
+          <span class="kpi-sub">Active investigators</span>
+        </div>
+      `;
+    } else if (selected === 'dept') {
+      const totalSub = deptData.reduce((acc, curr) => acc + curr.sub, 0);
+      const totalPub = deptData.reduce((acc, curr) => acc + curr.pub, 0);
+      const totalEnd = deptData.reduce((acc, curr) => acc + curr.end, 0);
+      const totalPend = deptData.reduce((acc, curr) => acc + curr.pend, 0);
+      const overallRate = totalSub > 0 ? ((totalPub / totalSub) * 100).toFixed(1) + '%' : '0%';
+      kpisHtml = `
+        <div class="kpi-card">
+          <span class="kpi-label">Total Submissions</span>
+          <span class="kpi-value">${totalSub}</span>
+          <span class="kpi-sub">All departments</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Published Manuscripts</span>
+          <span class="kpi-value" style="color: #047857;">${totalPub}</span>
+          <span class="kpi-sub">${overallRate} publication rate</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Endorsed to Dean</span>
+          <span class="kpi-value" style="color: #1d4ed8;">${totalEnd}</span>
+          <span class="kpi-sub">Awaiting dean review</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Pending Approval</span>
+          <span class="kpi-value" style="color: #b45309;">${totalPend}</span>
+          <span class="kpi-sub">In review process</span>
+        </div>
+      `;
+    }
+
+    // Build Table Headers and Rows
+    let tableHeadersHtml = '';
+    let tableRowsHtml = '';
+
+    if (selected === 'published') {
+      tableHeadersHtml = `
+        <tr>
+          <th style="width: 36px; text-align: center;">#</th>
+          <th style="text-align: left;">Research Title</th>
+          <th style="width: 230px; text-align: left;">Department / College</th>
+          <th style="width: 140px; text-align: left;">Category</th>
+          <th style="width: 100px; text-align: center;">School Year</th>
+          <th style="width: 110px; text-align: center;">Date Published</th>
+        </tr>
+      `;
+      tableRowsHtml = publishedData.map((row, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#fcfbf9';
+        return `
+          <tr style="background-color: ${bg};">
+            <td style="text-align: center; color: #78716c; font-weight: 700; font-size: 11px;">${String(idx + 1).padStart(2, '0')}</td>
+            <td style="font-weight: 700; color: #1c1917; font-size: 11.5px; line-height: 1.4;">${escapeHtml(row.title)}</td>
+            <td style="font-size: 11px;"><span class="badge-dept">${escapeHtml(row.dept)}</span></td>
+            <td style="color: #44403c; font-size: 11px; font-weight: 500;">${escapeHtml(row.cat)}</td>
+            <td style="text-align: center; font-weight: 600; color: #57534e; font-size: 11px;">${escapeHtml(row.sy)}</td>
+            <td style="text-align: center; font-weight: 700; color: #801e38; font-size: 11px;">${escapeHtml(row.date)}</td>
+          </tr>
+        `;
+      }).join('');
+    } else if (selected === 'users') {
+      tableHeadersHtml = `
+        <tr>
+          <th style="width: 36px; text-align: center;">#</th>
+          <th style="text-align: left;">Name</th>
+          <th style="width: 100px; text-align: center;">Role</th>
+          <th style="text-align: left;">Department / College</th>
+          <th style="width: 110px; text-align: left;">Program</th>
+          <th style="width: 125px; text-align: center;">Date Registered</th>
+          <th style="width: 85px; text-align: center;">Status</th>
+        </tr>
+      `;
+      tableRowsHtml = usersData.map((row, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#fcfbf9';
+        const roleBg = row.role === 'Dean' ? '#fee2e2' : row.role === 'Advisor' ? '#fef3c7' : '#dbeafe';
+        const roleColor = row.role === 'Dean' ? '#991b1b' : row.role === 'Advisor' ? '#92400e' : '#1e40af';
+        const isAct = String(row.status || '').toLowerCase() === 'active';
+        return `
+          <tr style="background-color: ${bg};">
+            <td style="text-align: center; color: #78716c; font-weight: 700; font-size: 11px;">${String(idx + 1).padStart(2, '0')}</td>
+            <td style="font-weight: 700; color: #1c1917; font-size: 11.5px;">${escapeHtml(row.name)}</td>
+            <td style="text-align: center;"><span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: ${roleBg}; color: ${roleColor};">${escapeHtml(row.role)}</span></td>
+            <td style="color: #44403c; font-size: 11px;">${escapeHtml(row.dept)}</td>
+            <td style="color: #57534e; font-weight: 600; font-size: 11px;">${escapeHtml(row.prog)}</td>
+            <td style="text-align: center; color: #78716c; font-size: 11px;">${escapeHtml(row.date)}</td>
+            <td style="text-align: center;"><span style="font-size: 10.5px; font-weight: 700; color: ${isAct ? '#047857' : '#78716c'};">${escapeHtml(row.status)}</span></td>
+          </tr>
+        `;
+      }).join('');
+    } else if (selected === 'dept') {
+      tableHeadersHtml = `
+        <tr>
+          <th style="text-align: left;">Department / College</th>
+          <th style="width: 115px; text-align: center;">Total Submissions</th>
+          <th style="width: 100px; text-align: center;">Published</th>
+          <th style="width: 120px; text-align: center;">Endorsed to Dean</th>
+          <th style="width: 115px; text-align: center;">Pending Approval</th>
+          <th style="width: 115px; text-align: center;">Publication Rate</th>
+          <th style="width: 95px; text-align: center;">Status</th>
+        </tr>
+      `;
+      tableRowsHtml = deptData.map((row, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#fcfbf9';
+        const isTrack = row.status === 'On Track';
+        return `
+          <tr style="background-color: ${bg};">
+            <td style="font-weight: 700; color: #1c1917; font-size: 12px;">${escapeHtml(row.dept)}</td>
+            <td style="text-align: center; font-weight: 700; color: #292524; font-size: 12px;">${row.sub}</td>
+            <td style="text-align: center; font-weight: 700; color: #047857; font-size: 12px;">${row.pub}</td>
+            <td style="text-align: center; font-weight: 700; color: #1d4ed8; font-size: 12px;">${row.end}</td>
+            <td style="text-align: center; font-weight: 700; color: ${row.pend > 0 ? '#b45309' : '#78716c'}; font-size: 12px;">${row.pend}</td>
+            <td style="text-align: center;"><span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10.5px; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">${row.rate}</span></td>
+            <td style="text-align: center;"><span style="font-size: 10.5px; font-weight: 700; color: ${isTrack ? '#047857' : '#78716c'};">${escapeHtml(row.status)}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      Swal.fire({
+        title: 'Pop-up Blocked',
+        text: 'Please allow pop-ups for this site so the official PDF/Print report can open.',
+        icon: 'warning',
+        confirmButtonColor: '#801e38'
+      });
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>ARCHIVIO Official Report - ${escapeHtml(docTitle)}</title>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm 12mm 14mm 12mm;
+            @bottom-left {
+              content: "ARCHIVIO Official Institutional Report • ${escapeHtml(refCode)}";
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-size: 8pt;
+              color: #78716c;
+            }
+            @bottom-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-size: 8pt;
+              color: #78716c;
+            }
+          }
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1c1917;
+            background: #ffffff;
+            margin: 0;
+            padding: 12px 16px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Floating Action Bar (Hidden on Print / PDF) */
+          .no-print.action-bar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #801e38;
+            color: #ffffff;
+            padding: 12px 20px;
+            margin: -12px -16px 20px -16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-bottom: 2px solid #5a1427;
+          }
+          .action-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+          }
+          .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .btn {
+            appearance: none;
+            border: none;
+            cursor: pointer;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .btn-primary {
+            background: #ffffff;
+            color: #801e38;
+          }
+          .btn-primary:hover {
+            background: #fdf2f4;
+            transform: translateY(-1px);
+          }
+          .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+          }
+          .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+
+          /* Formal Institutional Header */
+          .institution-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px double #801e38;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+          }
+          .inst-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+          .inst-logo-badge {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: #801e38;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+            box-shadow: 0 2px 6px rgba(128, 30, 56, 0.25);
+          }
+          .inst-titles h1 {
+            font-size: 15px;
+            font-weight: 900;
+            color: #801e38;
+            margin: 0;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+          }
+          .inst-titles h2 {
+            font-size: 12px;
+            font-weight: 700;
+            color: #292524;
+            margin: 2px 0 0 0;
+          }
+          .inst-titles p {
+            font-size: 10px;
+            color: #78716c;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+          .inst-right {
+            text-align: right;
+            border-left: 2px solid #e7e5e4;
+            padding-left: 16px;
+          }
+          .doc-badge {
+            display: inline-block;
+            background: #801e38;
+            color: #ffffff;
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+          }
+          .doc-meta {
+            font-size: 10px;
+            color: #57534e;
+            margin-top: 4px;
+            line-height: 1.4;
+          }
+          .doc-meta strong {
+            color: #1c1917;
+          }
+
+          /* Report Title Banner */
+          .report-banner {
+            background: #faf6f7;
+            border-left: 4px solid #801e38;
+            border-top: 1px solid #ebd7dc;
+            border-right: 1px solid #ebd7dc;
+            border-bottom: 1px solid #ebd7dc;
+            border-radius: 4px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+          }
+          .report-banner h2 {
+            font-size: 16px;
+            font-weight: 900;
+            color: #801e38;
+            margin: 0;
+            letter-spacing: 0.2px;
+          }
+          .report-banner p {
+            font-size: 11px;
+            color: #57534e;
+            margin: 3px 0 0 0;
+            line-height: 1.4;
+          }
+
+          /* Executive KPI Summary Cards */
+          .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+          }
+          .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e7e5e4;
+            border-top: 2.5px solid #801e38;
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+          }
+          .kpi-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #78716c;
+            letter-spacing: 0.4px;
+          }
+          .kpi-value {
+            font-size: 20px;
+            font-weight: 900;
+            color: #801e38;
+            margin: 2px 0;
+          }
+          .kpi-sub {
+            font-size: 9.5px;
+            color: #78716c;
+          }
+
+          /* Official Institutional Table */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            page-break-after: auto;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          thead {
+            display: table-header-group;
+          }
+          tfoot {
+            display: table-footer-group;
+          }
+          th {
+            background-color: #801e38 !important;
+            color: #ffffff !important;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 8px 10px;
+            border: 1px solid #801e38;
+          }
+          td {
+            padding: 7px 10px;
+            border: 1px solid #e7e5e4;
+            vertical-align: middle;
+          }
+          .badge-dept {
+            display: inline-block;
+            background: #fdf2f4;
+            color: #801e38;
+            border: 1px solid #f2cdd6;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            white-space: nowrap;
+          }
+
+          /* Certification and Signatures */
+          .signatures-container {
+            margin-top: 32px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+            gap: 24px;
+          }
+          .sig-box {
+            flex: 1;
+            text-align: left;
+          }
+          .sig-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #78716c;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 42px;
+          }
+          .sig-line {
+            border-bottom: 1.5px solid #1c1917;
+            margin-bottom: 5px;
+          }
+          .sig-name {
+            font-size: 12px;
+            font-weight: 800;
+            color: #1c1917;
+            margin: 0;
+          }
+          .sig-role {
+            font-size: 10px;
+            font-weight: 600;
+            color: #57534e;
+            margin: 2px 0 0 0;
+          }
+          .sig-dept {
+            font-size: 9.5px;
+            color: #78716c;
+            margin: 1px 0 0 0;
+          }
+
+          /* Official Document Footer */
+          .official-footer {
+            margin-top: 28px;
+            padding-top: 10px;
+            border-top: 1px solid #e7e5e4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #a8a29e;
+          }
+
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+            body {
+              padding: 0 !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+
+        <!-- Action Bar (Hidden on Print) -->
+        <div class="no-print action-bar">
+          <div class="action-info">
+            <strong>ARCHIVIO Official Document Preview</strong>
+            <span>• Generated on ${dateFormatted} at ${timeFormatted}</span>
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-primary" onclick="window.print()">
+              🖨️ Print or Save as PDF
+            </button>
+            <button class="btn btn-secondary" onclick="window.close()">
+              ✕ Close Preview
+            </button>
+          </div>
+        </div>
+
+        <!-- Official Institutional Letterhead -->
+        <div class="institution-header">
+          <div class="inst-left">
+            <div class="inst-logo-badge">A</div>
+            <div class="inst-titles">
+              <h1>Southwestern University PHINMA</h1>
+              <h2>Center for Research, Innovation & Academic Archiving</h2>
+              <p>ARCHIVIO Research Management & Digital Repository System</p>
+            </div>
+          </div>
+          <div class="inst-right">
+            <span class="doc-badge">Official Administrative Report</span>
+            <div class="doc-meta">
+              <div>Ref: <strong>${escapeHtml(refCode)}</strong></div>
+              <div>School Year: <strong>${escapeHtml(selectedYear || 'All School Years')}</strong></div>
+              <div>Date: <strong>${escapeHtml(dateFormatted)}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report Title Banner -->
+        <div class="report-banner">
+          <h2>${escapeHtml(docTitle)}</h2>
+          <p>${escapeHtml(docSubtitle)} Total Records in Inventory: <strong>${currentData.length}</strong>.</p>
+        </div>
+
+        <!-- Executive KPI Cards -->
+        <div class="kpi-container">
+          ${kpisHtml}
+        </div>
+
+        <!-- Official Data Table -->
+        <table>
+          <thead>
+            ${tableHeadersHtml}
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <!-- 3-Tier Official Signature Block -->
+        <div class="signatures-container">
+          <div class="sig-box">
+            <div class="sig-label">Prepared by:</div>
+            <div class="sig-line"></div>
+            <p class="sig-name">${escapeHtml(adminName)}</p>
+            <p class="sig-role">System Administrator / Data Custodian</p>
+            <p class="sig-dept">ARCHIVIO System Administration</p>
+          </div>
+          <div class="sig-box">
+            <div class="sig-label">Verified & Endorsed by:</div>
+            <div class="sig-line"></div>
+            <p class="sig-name">______________________________________</p>
+            <p class="sig-role">University Research Coordinator</p>
+            <p class="sig-dept">Center for Academic Research & Publication</p>
+          </div>
+          <div class="sig-box">
+            <div class="sig-label">Noted & Approved by:</div>
+            <div class="sig-line"></div>
+            <p class="sig-name">______________________________________</p>
+            <p class="sig-role">Dean / Vice President for Academic Affairs</p>
+            <p class="sig-dept">Southwestern University PHINMA</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="official-footer">
+          <span>CONFIDENTIAL & PROPRIETARY — Official ARCHIVIO Institutional Document • Verified for Academic Integrity</span>
+          <span>System Generated • ${escapeHtml(dateFormatted)} ${escapeHtml(timeFormatted)}</span>
+        </div>
+
+        <script>
+          // Automatically trigger the print/PDF dialog once document resources are ready
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              window.focus();
+              window.print();
+            }, 300);
+          });
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const handlePrint = () => {
-    window.print();
+    generateOfficialReport('print');
+  };
+
+  const handleExportPDF = () => {
+    generateOfficialReport('pdf');
   };
 
   const handleDeleteResearch = async (docId, title) => {
@@ -602,7 +1284,7 @@ export default function Reports() {
                   <PremiumButton onClick={handlePrint} variant="ghost" icon={<Printer className="w-4 h-4" />}>
                     Print
                   </PremiumButton>
-                  <PremiumButton onClick={handlePrint} variant="primary" icon={<FileText className="w-4 h-4" />}>
+                  <PremiumButton onClick={handleExportPDF} variant="primary" icon={<FileText className="w-4 h-4" />}>
                     Export PDF
                   </PremiumButton>
                   <PremiumButton onClick={handleExportCSV} variant="primary" icon={<Download className="w-4 h-4" />}>
