@@ -23,11 +23,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // YOUR ADMIN CREDENTIALS
-const ADMIN_EMAIL = 'japhetvender00@gmail.com';
-const ADMIN_PASSWORD = '19991125';
+const ADMIN_EMAIL = 'archivio.admin@gmail.com';
+const ADMIN_PASSWORD = '#Archivio_2026';
 const ADMIN_NAME = 'Pronce Japhet Vender';
 const ADMIN_DEPARTMENT = 'Information Technology';
-const ADMIN_UID = 'liA76ttD3vZaNtw13vsJ89IV87i2';
+const ADMIN_UID = 'TY4PB8vPQoYJ4FpO0brLAT4lRNT2';
 async function addAdminProfile() {
   console.log('🔥 Adding Admin Profile to Firestore');
   console.log('====================================\n');

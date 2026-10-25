@@ -42,6 +42,7 @@ export function UserProvider({ children }) {
                 role = 'super-admin';
               } else if (
                 user.email?.toLowerCase().includes('admin') ||
+                user.email === 'archivio.admin@gmail.com' ||
                 user.email === 'japhetvender00@gmail.com' ||
                 user.email === 'venderadmin@gmail.com'
               ) {

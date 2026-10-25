@@ -311,16 +311,16 @@ async function seedDatabase(options = { resetData: false }) {
   
   // Guarantee Admin Account exists in Auth
   try {
-    await auth.getUserByEmail('japhetvender00@gmail.com');
+    await auth.getUserByEmail('archivio.admin@gmail.com');
   } catch (e) {
     if (e.code === 'auth/user-not-found') {
       await auth.createUser({
-        email: 'japhetvender00@gmail.com',
-        password: '23571113V!!!',
+        email: 'archivio.admin@gmail.com',
+        password: '#Archivio_2026',
         displayName: 'Prince Japhet Vender (Administrator)',
         emailVerified: true
       });
-      console.log('   + Auto-created admin account in Firebase Auth: japhetvender00@gmail.com');
+      console.log('   + Auto-created admin account in Firebase Auth: archivio.admin@gmail.com');
     }
   }
 
@@ -328,7 +328,7 @@ async function seedDatabase(options = { resetData: false }) {
   
   for (const user of authUsers.users) {
     const email = (user.email || '').toLowerCase().trim();
-    const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin');
+    const isAdmin = email === 'archivio.admin@gmail.com' || email === 'japhetvender00@gmail.com' || email.includes('admin');
     
     // Check users collection
     const userDocRef = db.collection('users').doc(user.uid);
@@ -336,7 +336,7 @@ async function seedDatabase(options = { resetData: false }) {
     let assignedRole = isAdmin ? 'admin' : 'student';
     let displayName = user.displayName || user.email?.split('@')[0] || 'User';
 
-    if (email === 'japhetvender00@gmail.com') displayName = 'Prince Japhet Vender (Administrator)';
+    if (email === 'archivio.admin@gmail.com' || email === 'japhetvender00@gmail.com') displayName = 'Prince Japhet Vender (Administrator)';
     if (email.startsWith('prdo.vender')) displayName = 'Pronce Japhet Vender';
     if (email.startsWith('jemi.zamoras')) displayName = 'Jerika Zamoras';
 
