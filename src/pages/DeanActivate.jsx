@@ -166,11 +166,33 @@ function DeanActivate() {
       // Update dean Firestore record: mark as fully activated
       await updateDoc(doc(db, 'deans', activationData.deanId), {
         accountStatus: 'activated',
+        status: 'active',
         temporaryPassword: null,   // Clear temp password from DB
         activatedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
       console.log('✅ Dean accountStatus set to activated');
+
+      // Also update any dual-role adviser record so it is fully activated and synchronized
+      try {
+        const normalizedEmail = (activationData.email || '').toLowerCase().trim();
+        if (normalizedEmail) {
+          const advQ = query(collection(db, 'advisers'), where('email', '==', normalizedEmail));
+          const advSnap = await getDocs(advQ);
+          for (const advDoc of advSnap.docs) {
+            await updateDoc(advDoc.ref, {
+              accountStatus: 'activated',
+              status: 'active',
+              temporaryPassword: null,
+              activatedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+          console.log('✅ Dual-role adviser record(s) synchronized to activated');
+        }
+      } catch (advErr) {
+        console.warn('Notice: Could not sync dual-role adviser activation:', advErr);
+      }
 
       // Ensure users collection profile exists
       const userDocRef = doc(db, 'users', user.uid);

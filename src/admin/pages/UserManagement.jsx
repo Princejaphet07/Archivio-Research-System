@@ -819,6 +819,7 @@ export default function UserManagement() {
         if (formValues.role === 'dean+adviser' && user.email) {
           const advQ = query(collection(db, 'advisers'), where('email', '==', user.email.toLowerCase().trim()));
           const advSnap = await getDocs(advQ);
+          const currentAccountStatus = user.accountStatus || (user.status === 'active' ? 'activated' : 'pending_activation');
           if (advSnap.empty) {
             await addDoc(collection(db, 'advisers'), {
               firstName: user.firstName || user.displayName?.split(' ')[0] || 'Dean',
@@ -828,7 +829,8 @@ export default function UserManagement() {
               department: formValues.department,
               programs: user.programs || [],
               role: 'dean+adviser',
-              status: 'active',
+              status: user.status || 'active',
+              accountStatus: currentAccountStatus,
               userId: targetUid,
               uid: targetUid,
               createdAt: new Date().toISOString(),
@@ -838,9 +840,19 @@ export default function UserManagement() {
             await updateDoc(advSnap.docs[0].ref, {
               department: formValues.department,
               role: 'dean+adviser',
-              status: 'active'
+              status: user.status || 'active',
+              accountStatus: currentAccountStatus
             });
           }
+        } else if (formValues.role === 'dean' && user.email) {
+          // If reverted from dual role to single dean role, remove duplicate advisers entry
+          try {
+            const advQ = query(collection(db, 'advisers'), where('email', '==', user.email.toLowerCase().trim()));
+            const advSnap = await getDocs(advQ);
+            for (const d of advSnap.docs) {
+              await deleteDoc(d.ref).catch(() => {});
+            }
+          } catch (_) {}
         }
 
         // If assigned super-admin, ensure super_admins record exists
@@ -913,6 +925,17 @@ export default function UserManagement() {
         const newStatus = isInactive ? 'active' : 'inactive';
         await updateDoc(doc(db, user._collection, user.id), { status: newStatus });
         if (user.uid) await updateDoc(doc(db, 'users', user.uid), { status: newStatus });
+
+        // If user has an associated advisers record, keep its status synchronized
+        if (user.email) {
+          try {
+            const advQ = query(collection(db, 'advisers'), where('email', '==', user.email.toLowerCase().trim()));
+            const advSnap = await getDocs(advQ);
+            for (const d of advSnap.docs) {
+              await updateDoc(d.ref, { status: newStatus });
+            }
+          } catch (_) {}
+        }
 
         if (user.uid || user.email) {
           try {

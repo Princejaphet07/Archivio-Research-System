@@ -210,16 +210,90 @@ function Dashboard() {
   const quickStats = useMemo(() => {
     const totalDepartments = departments.length;
     const totalPrograms = programs.length;
-    const totalUsers = filteredDeans.length + filteredAdvisers.length + filteredStudents.length;
-    
-    // Dynamically calculate pending invitations
-    const pendingDeans = filteredDeans.filter(d => d.status === 'pending' || d.accountStatus === 'pending_activation').length;
-    const pendingAdvisers = filteredAdvisers.filter(a => a.status === 'pending' || a.accountStatus === 'pending_activation').length;
-    const totalPending = pendingDeans + pendingAdvisers;
-    
+
+    // Helper to test if a user document record is pending activation
+    const isPendingDoc = (u) => {
+      const st = (u?.status || '').toLowerCase().trim();
+      const ast = (u?.accountStatus || '').toLowerCase().trim();
+      return st === 'pending' || st === 'pending_activation' || ast === 'pending' || ast === 'pending_activation';
+    };
+
+    // Helper to test if a user document record is fully active / activated
+    const isActiveDoc = (u) => {
+      const st = (u?.status || '').toLowerCase().trim();
+      const ast = (u?.accountStatus || '').toLowerCase().trim();
+      return (st === 'active' || ast === 'activated') && !isPendingDoc(u);
+    };
+
+    // Deduplicate unique user records across deans, advisers, and students by email (or UID)
+    const userMap = new Map();
+
+    (filteredDeans || []).forEach(d => {
+      const key = (d.email || d.uid || d.id || '').toLowerCase().trim();
+      if (!key) return;
+      userMap.set(key, {
+        key,
+        isActive: isActiveDoc(d),
+        isPending: isPendingDoc(d),
+        role: d.role || 'dean',
+        record: d
+      });
+    });
+
+    (filteredAdvisers || []).forEach(a => {
+      const key = (a.email || a.uid || a.id || '').toLowerCase().trim();
+      if (!key) return;
+      if (userMap.has(key)) {
+        // Dual-role account (e.g., Dean + Adviser)
+        const existing = userMap.get(key);
+        // An account is active if active in ANY of its roles; pending only if pending in ALL roles
+        const isUserActive = existing.isActive || isActiveDoc(a);
+        const isUserPending = !isUserActive && (existing.isPending || isPendingDoc(a));
+        userMap.set(key, {
+          ...existing,
+          isActive: isUserActive,
+          isPending: isUserPending,
+          hasDualRole: true
+        });
+      } else {
+        userMap.set(key, {
+          key,
+          isActive: isActiveDoc(a),
+          isPending: isPendingDoc(a),
+          role: a.role || 'adviser',
+          record: a
+        });
+      }
+    });
+
+    (filteredStudents || []).forEach(s => {
+      const key = (s.email || s.uid || s.id || '').toLowerCase().trim();
+      if (!key) return;
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          key,
+          isActive: isActiveDoc(s),
+          isPending: isPendingDoc(s),
+          role: 'student',
+          record: s
+        });
+      }
+    });
+
+    // 1. Registered Users: exactly count unique registered accounts
+    const totalUsers = userMap.size;
+
+    // 2. Pending Invitations: count unique accounts that are still pending activation and not yet active
+    let totalPending = 0;
+    userMap.forEach(u => {
+      if (u.isPending && !u.isActive) {
+        totalPending++;
+      }
+    });
+
     const publishedCount = filteredSubmissions.filter(s => s.reviewStatus === 'published').length;
     return [totalDepartments, totalPrograms, totalUsers, totalPending, publishedCount];
-  }, [filteredSubmissions, filteredDeans, filteredAdvisers, filteredStudents]);
+  }, [filteredSubmissions, filteredDeans, filteredAdvisers, filteredStudents, departments, programs]);
 
   const yearlyChartData = useMemo(() => {
     // Generate labels strictly from existing academic years that actually exist in real data
@@ -503,7 +577,7 @@ function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard icon={<Building2 />} label="Total Departments" value={quickStats[0]} sub="Active" color="maroon" />
             <StatCard icon={<GraduationCap />} label="Total Programs" value={quickStats[1]} sub="Across all departments" color="blue" />
-            <StatCard icon={<Users />} label="Registered Users" value={quickStats[2]} sub="Advisers + Students" color="green" />
+            <StatCard icon={<Users />} label="Registered Users" value={quickStats[2]} sub="Deans, Advisers & Students" color="green" />
             <StatCard icon={<UserPlus />} label="Pending Invitations" value={quickStats[3]} sub="Needs activation" color="amber" />
             <StatCard icon={<BookOpen />} label="Published Research" value={quickStats[4]} sub="Across all departments" color="maroon" />
           </div>
