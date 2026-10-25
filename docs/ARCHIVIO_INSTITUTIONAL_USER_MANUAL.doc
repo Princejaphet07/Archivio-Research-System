@@ -1,0 +1,448 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' 
+      xmlns:w='urn:schemas-microsoft-com:office:word' 
+      xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='utf-8'>
+<title>ARCHIVIO Institutional User Manual</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+  @page {
+    size: 8.5in 11in;
+    margin: 1.0in;
+    mso-header-margin: 0.5in;
+    mso-footer-margin: 0.5in;
+  }
+  body {
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1c1917;
+  }
+  .header-box {
+    text-align: center;
+    border-bottom: 3px double #7B1F35;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+  }
+  .inst-name {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #7B1F35;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+  }
+  .sub-name {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #57534e;
+    margin: 4px 0 0 0;
+  }
+  .doc-title {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #1c1917;
+    margin: 12px 0 0 0;
+    text-transform: uppercase;
+  }
+  .version-tag {
+    font-size: 9.5pt;
+    color: #78716c;
+    font-style: italic;
+  }
+  h1 {
+    font-size: 14pt;
+    color: #7B1F35;
+    border-bottom: 1.5pt solid #7B1F35;
+    padding-bottom: 4px;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+    text-transform: uppercase;
+  }
+  h2 {
+    font-size: 12pt;
+    color: #44403c;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    color: #7B1F35;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  p, li {
+    font-size: 10.5pt;
+    color: #292524;
+    text-align: justify;
+  }
+  ul, ol {
+    margin-top: 4px;
+    margin-bottom: 10px;
+    padding-left: 25px;
+  }
+  li {
+    margin-bottom: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 10pt;
+  }
+  th {
+    background-color: #7B1F35;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 8px 10px;
+    border: 1px solid #5a1425;
+    text-align: left;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #d6d3d1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td {
+    background-color: #f5f5f4;
+  }
+  .callout-box {
+    background-color: #fdf8f6;
+    border-left: 4px solid #7B1F35;
+    padding: 10px 14px;
+    margin: 15px 0;
+    font-size: 10pt;
+  }
+  .callout-title {
+    font-weight: bold;
+    color: #7B1F35;
+    margin-bottom: 4px;
+  }
+  .workflow-box {
+    background-color: #f5f5f4;
+    border: 1px solid #e7e5e4;
+    padding: 12px;
+    margin: 15px 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    line-height: 1.4;
+    color: #1c1917;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 8.5pt;
+    font-weight: bold;
+  }
+  .sig-table {
+    width: 100%;
+    margin-top: 40px;
+    border: none;
+    page-break-inside: avoid;
+  }
+  .sig-table td {
+    border: none;
+    background: transparent;
+    padding: 20px 15px 5px 15px;
+    width: 50%;
+  }
+  .sig-line {
+    border-top: 1.5px solid #1c1917;
+    margin-top: 50px;
+    padding-top: 4px;
+    text-align: center;
+  }
+  .sig-name {
+    font-weight: bold;
+    font-size: 10pt;
+    color: #1c1917;
+  }
+  .sig-title {
+    font-size: 9pt;
+    color: #57534e;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <div class="inst-name">South-Western University PHINMA</div>
+  <div class="sub-name">Center for Research, Innovation & Academic Archiving</div>
+  <div class="doc-title">ARCHIVIO: Institutional Research Archival & Repository System</div>
+  <div class="version-tag">Official Comprehensive User Manual & Standard Operating Procedures (SOP) — AY 2026–2027</div>
+</div>
+
+<h1>1. Executive Summary & System Overview</h1>
+<p><strong>ARCHIVIO</strong> is the institutional capstone management, research preservation, and digital archival repository of South-Western University PHINMA. It replaces paper-based research defense submissions with a high-integrity, cloud-secured digital evaluation and archiving pipeline.</p>
+
+<div class="callout-box">
+  <div class="callout-title">Core Academic Objectives</div>
+  <ul>
+    <li><strong>Zero Paper Wastage:</strong> Replaces physical hardbound manuscripts with tamper-proof digital archiving.</li>
+    <li><strong>Strict Approval Hierarchy:</strong> Student Researcher &rarr; Faculty Research Adviser &rarr; College Dean.</li>
+    <li><strong>Compliance & Accreditation:</strong> Real-time institutional telemetry, PDF reports, and automated archival certificates.</li>
+    <li><strong>Public Knowledge Transfer:</strong> Global open-access research repository with automatic multi-standard citation generator.</li>
+  </ul>
+</div>
+
+<div class="workflow-box">
+[ STUDENT GROUP ] &rarr; (Uploads 7 Defense Deliverables)
+        &darr;
+[ RESEARCH ADVISER ] &rarr; (Evaluates, Checks Plagiarism, Requests Revisions)
+        &darr;
+[ ADVISER ENDORSEMENT ] &rarr; (Elevates to College Leadership)
+        &darr;
+[ COLLEGE DEAN ] &rarr; (Inspects All Deliverables & Grants Institutional Approval)
+        &darr;
+[ ARCHIVIO REPOSITORY ] &rarr; (Generates QR-Coded Certificate & Publishes to Open Archive)
+</div>
+
+<h1>2. Stakeholder Roles & Permission Matrix</h1>
+<table>
+  <thead>
+    <tr>
+      <th>System Feature</th>
+      <th>Student</th>
+      <th>Adviser</th>
+      <th>College Dean</th>
+      <th>Dean + Adviser (Dual Role)</th>
+      <th>Administrator</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Group Setup & Members</strong></td>
+      <td>Manage Own</td>
+      <td>View Assigned</td>
+      <td>View College</td>
+      <td>View College & Manage Own</td>
+      <td>Full Access</td>
+    </tr>
+    <tr>
+      <td><strong>Upload Defense Deliverables</strong></td>
+      <td>Upload 7 Milestones</td>
+      <td>View Only</td>
+      <td>View Only</td>
+      <td>View Only</td>
+      <td>Governance</td>
+    </tr>
+    <tr>
+      <td><strong>Milestone Evaluation & Revisions</strong></td>
+      <td>View Feedback</td>
+      <td>Review & Return</td>
+      <td>Review & Return</td>
+      <td>Full Dual Review</td>
+      <td>Audit View</td>
+    </tr>
+    <tr>
+      <td><strong>Endorsement to Dean</strong></td>
+      <td>No</td>
+      <td>Formal Endorse</td>
+      <td>N/A</td>
+      <td>Formal Endorse</td>
+      <td>Override</td>
+    </tr>
+    <tr>
+      <td><strong>Final Approval & Seal</strong></td>
+      <td>No</td>
+      <td>No</td>
+      <td>Final Approval</td>
+      <td>Final Approval</td>
+      <td>Override</td>
+    </tr>
+    <tr>
+      <td><strong>Accreditation Reports & Analytics</strong></td>
+      <td>No</td>
+      <td>Group Level</td>
+      <td>College Level</td>
+      <td>College Level</td>
+      <td>Institutional Level</td>
+    </tr>
+    <tr>
+      <td><strong>Certificate of Archival</strong></td>
+      <td>Download Own</td>
+      <td>Verify</td>
+      <td>Sign & Verify</td>
+      <td>Sign & Verify</td>
+      <td>Master Verify</td>
+    </tr>
+    <tr>
+      <td><strong>User & Faculty Management</strong></td>
+      <td>No</td>
+      <td>No</td>
+      <td>College Faculty</td>
+      <td>College Faculty</td>
+      <td>Full Management</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>3. Getting Started & Authentication Protocol</h1>
+<p>All stakeholders access ARCHIVIO via the unified authentication portal:</p>
+<ol>
+  <li>Open the ARCHIVIO web URL (<code>https://archivio.ph/</code>).</li>
+  <li>Enter your institutional email address (e.g. <code>@phinmaed.com</code> or <code>@swu.phinmaed.com</code>).</li>
+  <li>Enter your secure password and complete the Google reCAPTCHA v2 verification.</li>
+  <li>Click <strong>Sign In</strong>. The system automatically routes you to your designated portal.</li>
+</ol>
+
+<h2>Dean First-Time Activation Gateway (<code>/dean-activate</code>)</h2>
+<p>When provisioned by the Administrator, the Dean receives an official email with temporary credentials:</p>
+<ul>
+  <li>Log in with your temporary credentials to automatically reach the <strong>Dean Activation Gateway</strong>.</li>
+  <li>Review and accept the university <strong>Privacy Policy</strong> and <strong>Terms & Conditions</strong>.</li>
+  <li>Define your permanent secure password (minimum 8 characters, combining uppercase, numbers, and symbols).</li>
+  <li>Click <strong>Activate Account</strong>. Your Dean profile and any associated Adviser privileges are synchronized instantly across the institution.</li>
+</ul>
+
+<h1>4. Dean & Academic Leadership Operations Manual</h1>
+<div class="callout-box">
+  <div class="callout-title">Notice for College Deans</div>
+  As College Dean, you hold the supreme academic approval authority for all scholarly works within your college. No paper is archived or released to the public without your institutional seal.
+</div>
+
+<h2>4.1 College Telemetry & Research Dashboard</h2>
+<p>Upon logging into <code>/dean/dashboard</code>, you can review live academic indicators:</p>
+<ul>
+  <li><strong>Total Submissions:</strong> Real-time volume of ongoing and completed capstone projects.</li>
+  <li><strong>Publish Queue:</strong> Submissions officially endorsed by faculty advisers awaiting your final decision.</li>
+  <li><strong>Active Research Advisers:</strong> Faculty members currently guiding student teams.</li>
+  <li><strong>Departmental Specialization Chart:</strong> Distribution of research topics across Artificial Intelligence, Health Informatics, Cybersecurity, EdTech, and Mobile/Web Computing.</li>
+</ul>
+
+<h2>4.2 The 1-Click Dual-Role Switcher (Dean + Adviser)</h2>
+<p>If you also directly mentor student research groups, ARCHIVIO eliminates the need for separate accounts:</p>
+<ul>
+  <li>Locate the <strong>Dean + Adviser</strong> badge at the upper-right corner of your screen.</li>
+  <li>Click <strong>Switch to Adviser Portal</strong> to enter mentor mode (reviewing student drafts, submitting chapter feedback, tracking group milestones).</li>
+  <li>Click <strong>Switch to Dean Portal</strong> to return to college-level executive governance.</li>
+</ul>
+
+<h2>4.3 Evaluating & Archiving Manuscripts (Publish Queue)</h2>
+<ol>
+  <li>Navigate to <strong>Publish Queue</strong> (<code>/dean/publish-queue</code>).</li>
+  <li>Click any paper flagged as <strong>Endorsed by Adviser</strong> to open the full evaluation modal.</li>
+  <li><strong>Inspect the 7 Institutional Defense Deliverables:</strong>
+    <ul>
+      <li><strong>Final Manuscript (PDF):</strong> View the complete paper inside the built-in reader.</li>
+      <li><strong>Approval Sheet (PDF):</strong> Verify panelist and adviser signatures.</li>
+      <li><strong>Research Dataset:</strong> Check uploaded CSV, XLSX, or ZIP research data.</li>
+      <li><strong>Video Pitch:</strong> Watch the recorded functional system demonstration.</li>
+      <li><strong>System User Manual:</strong> Verify technical guide completeness.</li>
+      <li><strong>Production URL / Repository:</strong> Verify the live system or source code.</li>
+      <li><strong>Institutional Signature Page:</strong> Confirm ethics and anti-plagiarism compliance.</li>
+    </ul>
+  </li>
+  <li><strong>Take Action:</strong>
+    <ul>
+      <li><strong>Approve for Archival (Green):</strong> Issues the institutional digital seal, generates the verification certificate, and publishes the paper to the open-access repository.</li>
+      <li><strong>Request Revisions (Amber):</strong> Type precise instructions. The paper is returned to the student group and adviser for correction.</li>
+    </ul>
+  </li>
+</ol>
+
+<h1>5. Research Adviser Operations Manual</h1>
+<h2>5.1 Monitoring Assigned Research Groups</h2>
+<p>Navigate to <strong>My Groups</strong> (<code>/adviser/my-groups</code>) to view student teams assigned to you. Track individual milestone status from Proposal to Final Defense.</p>
+
+<h2>5.2 Reviewing Deliverables & Formal Endorsement</h2>
+<ol>
+  <li>Navigate to <strong>Review Submissions</strong> (<code>/adviser/review-submissions</code>).</li>
+  <li>Review the 7 milestone deliverables uploaded by the student researchers.</li>
+  <li>If corrections are needed, click <strong>Send Revisions</strong> with structured feedback.</li>
+  <li>When all deliverables satisfy academic standards, click <strong>Endorse to Dean</strong>. This forwards the paper to the Dean's Publish Queue.</li>
+</ol>
+
+<h1>6. Student Researcher Operations Manual</h1>
+<h2>6.1 Group Registration & Adviser Selection</h2>
+<ul>
+  <li>Register your student account using your official <code>@phinmaed.com</code> email.</li>
+  <li>Under <strong>Group Registration</strong>, enter your Project Title and list all team members with their student IDs.</li>
+  <li>Select your designated faculty adviser from the college directory.</li>
+</ul>
+
+<h2>6.2 Uploading the 7 Defense Deliverables</h2>
+<p>Navigate to <strong>Milestones</strong> (<code>/student/requirements</code>) and upload:</p>
+<ol>
+  <li><strong>Final Manuscript</strong> (PDF format, max 50 MB)</li>
+  <li><strong>Signed Approval Sheet</strong> (PDF scan)</li>
+  <li><strong>Research Dataset</strong> (CSV, XLSX, or ZIP)</li>
+  <li><strong>Video Pitch / System Demo</strong> (MP4 format or cloud link)</li>
+  <li><strong>User Manual</strong> (PDF or DOCX documentation)</li>
+  <li><strong>Production Upload URL</strong> (Active link to hosted project or GitHub repository)</li>
+  <li><strong>University Signature Page</strong> (PDF compliance certificate)</li>
+</ol>
+
+<h2>6.3 Generating Your Official Certificate of Archival</h2>
+<p>Once the Dean grants final approval, your dashboard status updates to <span class="badge" style="background:#d1fae5; color:#065f46;">Archived &amp; Published</span>. Click <strong>Download Archival Certificate</strong> to obtain your official, QR-coded certificate suitable for graduation clearance.</p>
+
+<h1>7. System Administrator Operations Manual</h1>
+<ul>
+  <li><strong>User Management:</strong> Provision Deans, assign Dual Roles (<code>Dean + Adviser</code>), and dispatch invitation emails.</li>
+  <li><strong>Storage Governance:</strong> Monitor real-time cloud storage metrics (30 GB quota) and toggle milestone availability.</li>
+  <li><strong>Institutional Reports:</strong> Export formal PDF executive reports complete with university letterhead, department metrics, and signature blocks.</li>
+  <li><strong>Security Audit Trails:</strong> Inspect real-time activity logs recording actor, IP address, and timestamp for all actions.</li>
+</ul>
+
+<h1>8. Public Open-Access Archive &amp; QR Verification</h1>
+<p>Accessible worldwide at <code>https://archive.archivio.ph/</code>:</p>
+<ul>
+  <li><strong>Search &amp; Discovery:</strong> Filter works by College, Academic Year, Author, or Keyword.</li>
+  <li><strong>Document Reader:</strong> In-browser distraction-free viewer with zoom and page controls.</li>
+  <li><strong>Instant Citation Engine:</strong> 1-click citation export in <strong>APA 7th, MLA 9th, IEEE, and Chicago</strong> formats.</li>
+  <li><strong>QR Code Verification (<code>/verify/:id</code>):</strong> Scanning a certificate QR code reveals the real-time authenticity record directly from Cloud Firestore.</li>
+</ul>
+
+<br><br>
+<h1>9. Institutional Approval &amp; Sign-Off Sheet</h1>
+<p>This document serves as the official operational guide and standard operating procedure for capstone defense archival under the ARCHIVIO system.</p>
+
+<table class="sig-table">
+  <tr>
+    <td>
+      <div class="sig-line">
+        <div class="sig-name">DR. ANDREA PEROTE</div>
+        <div class="sig-title">Dean, College of Nursing<br>South-Western University PHINMA</div>
+      </div>
+    </td>
+    <td>
+      <div class="sig-line">
+        <div class="sig-name">PROF. JERIKA ZAMORAS</div>
+        <div class="sig-title">Dean, College of Information Technology<br>South-Western University PHINMA</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div class="sig-line">
+        <div class="sig-name">SYSTEM ADMINISTRATOR</div>
+        <div class="sig-title">ARCHIVIO Institutional Governance<br>South-Western University PHINMA</div>
+      </div>
+    </td>
+    <td>
+      <div class="sig-line">
+        <div class="sig-name">VICE PRESIDENT FOR ACADEMIC AFFAIRS</div>
+        <div class="sig-title">Office of Academic Affairs<br>South-Western University PHINMA</div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<p style="text-align: center; margin-top: 30px; font-size: 8.5pt; color: #a8a29e;">
+  ARCHIVIO Institutional Research System &copy; 2026. All Rights Reserved. South-Western University PHINMA.
+</p>
+
+</body>
+</html>
