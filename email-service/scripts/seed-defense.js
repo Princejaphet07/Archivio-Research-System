@@ -209,7 +209,7 @@ async function seedDatabase(options = { resetData: false }) {
     for (const d of userSnap.docs) {
       const data = d.data();
       const email = (data.email || '').toLowerCase().trim();
-      const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin') || data.role === 'admin' || data.role === 'super-admin';
+      const isAdmin = email === 'archivio.admin@gmail.com' || email.includes('admin') || data.role === 'admin' || data.role === 'super-admin';
       if (!isAdmin) {
         await d.ref.delete().catch(() => {});
       }
@@ -219,7 +219,7 @@ async function seedDatabase(options = { resetData: false }) {
     const listAuth = await auth.listUsers(500);
     for (const u of listAuth.users) {
       const email = (u.email || '').toLowerCase().trim();
-      const isAdmin = email === 'japhetvender00@gmail.com' || email.includes('admin');
+      const isAdmin = email === 'archivio.admin@gmail.com' || email.includes('admin');
       if (!isAdmin) {
         await auth.deleteUser(u.uid).catch(() => {});
         console.log(`   - Purged auth user: ${u.email}`);
@@ -328,7 +328,7 @@ async function seedDatabase(options = { resetData: false }) {
   
   for (const user of authUsers.users) {
     const email = (user.email || '').toLowerCase().trim();
-    const isAdmin = email === 'archivio.admin@gmail.com' || email === 'japhetvender00@gmail.com' || email.includes('admin');
+    const isAdmin = email === 'archivio.admin@gmail.com' || email.includes('admin');
     
     // Check users collection
     const userDocRef = db.collection('users').doc(user.uid);
@@ -336,7 +336,7 @@ async function seedDatabase(options = { resetData: false }) {
     let assignedRole = isAdmin ? 'admin' : 'student';
     let displayName = user.displayName || user.email?.split('@')[0] || 'User';
 
-    if (email === 'archivio.admin@gmail.com' || email === 'japhetvender00@gmail.com') displayName = 'Prince Japhet Vender (Administrator)';
+    if (email === 'archivio.admin@gmail.com') displayName = 'Prince Japhet Vender (Administrator)';
     if (email.startsWith('prdo.vender')) displayName = 'Pronce Japhet Vender';
     if (email.startsWith('jemi.zamoras')) displayName = 'Jerika Zamoras';
 
