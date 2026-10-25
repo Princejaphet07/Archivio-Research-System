@@ -26,7 +26,24 @@ export function UserProvider({ children }) {
             role = userData.role;
           }
 
-          if (role !== 'admin' && role !== 'super-admin') {
+          // Primary System Administrator (Full Admin Privileges, NOT View-Only Super Admin)
+          if (user.email === 'archivio.admin@gmail.com') {
+            role = 'admin';
+            userData = {
+              displayName: userData?.displayName || 'Prince Japhet Vender',
+              role: 'admin',
+              department: userData?.department || 'Information Technology',
+              permissions: {
+                manageDeans: true,
+                manageAdvisers: true,
+                manageStudents: true,
+                manageDepartments: true,
+                viewReports: true,
+                systemSettings: true,
+                userManagement: true
+              }
+            };
+          } else if (role !== 'admin' && role !== 'super-admin') {
             // Check super_admins collection by uid
             const saQuery = query(collection(db, 'super_admins'), where('uid', '==', user.uid));
             const saSnap = await getDocs(saQuery);
@@ -40,19 +57,6 @@ export function UserProvider({ children }) {
               if (!saEmailSnap.empty) {
                 userData = saEmailSnap.docs[0].data();
                 role = 'super-admin';
-              } else if (
-                user.email?.toLowerCase().includes('admin') ||
-                user.email === 'archivio.admin@gmail.com' ||
-                user.email === 'japhetvender00@gmail.com' ||
-                user.email === 'venderadmin@gmail.com'
-              ) {
-                // Self-healing: Recognized Super Admin email restored automatically
-                role = 'super-admin';
-                userData = {
-                  displayName: 'Prince Japhet Vender',
-                  role: 'super-admin',
-                  moduleAccess: { dashboard: true, reports: true, allUsers: true, activityLogs: true }
-                };
               }
             }
           }
