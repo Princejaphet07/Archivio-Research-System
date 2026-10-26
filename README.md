@@ -5,9 +5,14 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![Swagger](https://img.shields.io/badge/Swagger_UI-OpenAPI_3.1.0-85EA2D?logo=swagger&logoColor=black)](https://archivio-public.web.app/docs)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Gemini AI](https://img.shields.io/badge/Google_Gemini-AI_Integration-8E75B2?logo=google&logoColor=white)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-Proprietary_Academic-blue)](#license)
+
+> 📖 **Interactive REST API Documentation (Swagger UI):**  
+> 🌐 **Live Documentation:** [https://archivio-public.web.app/docs](https://archivio-public.web.app/docs)  
+> ⚡ **Cloud Microservice:** [https://archivio-email-service.onrender.com/docs](https://archivio-email-service.onrender.com/docs)
 
 **ARCHIVIO** is a modern, cloud-native research archival and capstone workflow management platform engineered for higher education institutions. Designed specifically to modernize academic repository workflows, ARCHIVIO replaces fragmented manual processes with an end-to-end digital lifecycle: from team creation and proposal drafting to adviser peer review, dean endorsements, and centralized institutional archiving.
 

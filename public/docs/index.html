@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interactive REST API Documentation for ARCHIVIO - Institutional Digital Research & Capstone Repository System at Southwestern University PHINMA." />
+    <title>ARCHIVIO API Documentation | SWU PHINMA</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
+    <style>
+      :root {
+        color-scheme: light;
+        --swu-maroon: #7A2039;
+        --swu-maroon-dark: #4d1020;
+        --swu-maroon-light: #9e2a4a;
+        --swu-gold: #e89228;
+        --swu-gold-hover: #f59e0b;
+        --ink-dark: #18181b;
+        --ink-muted: #71717a;
+        --bg-canvas: #f8fafc;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg-canvas);
+        color: var(--ink-dark);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Premium Branded Header */
+      .docs-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px clamp(16px, 4vw, 48px);
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--swu-maroon-dark) 0%, var(--swu-maroon) 55%, var(--swu-maroon-light) 100%);
+        box-shadow: 0 4px 20px rgba(77, 16, 32, 0.28);
+        border-bottom: 2px solid rgba(232, 146, 40, 0.4);
+      }
+      .docs-header-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-decoration: none;
+        color: inherit;
+      }
+      .brand-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        background: #ffffff;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 1.25rem;
+        color: var(--swu-maroon);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+      }
+      .docs-header-titles h1 {
+        margin: 0;
+        font-size: clamp(1.1rem, 2vw, 1.35rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .docs-header-titles h1 .version-tag {
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: rgba(232, 146, 40, 0.25);
+        color: #fed7aa;
+        border: 1px solid rgba(232, 146, 40, 0.5);
+        padding: 2px 8px;
+        border-radius: 999px;
+        letter-spacing: normal;
+      }
+      .docs-header-titles p {
+        margin: 2px 0 0;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.84);
+        font-weight: 500;
+      }
+
+      /* Live status badge */
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.12);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 8px #22c55e;
+        animation: pulseDot 2s infinite ease-in-out;
+      }
+      @keyframes pulseDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+      }
+
+      /* Navigation Actions */
+      .docs-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn-portal {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 8px;
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.08);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+      .btn-portal:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.6);
+        transform: translateY(-1px);
+      }
+      .btn-portal.primary {
+        background: var(--swu-gold);
+        border-color: var(--swu-gold);
+        color: #ffffff;
+      }
+      .btn-portal.primary:hover {
+        background: var(--swu-gold-hover);
+        box-shadow: 0 4px 14px rgba(232, 146, 40, 0.35);
+      }
+
+      /* Swagger UI Overrides */
+      #swagger-ui {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 16px clamp(12px, 3vw, 36px) 64px;
+      }
+      .swagger-ui {
+        font-family: 'Inter', system-ui, sans-serif !important;
+        color: var(--ink-dark);
+      }
+      .swagger-ui .topbar { display: none !important; }
+      .swagger-ui .info { margin: 24px 0 20px !important; }
+      .swagger-ui .info .title {
+        font-size: 1.9rem !important;
+        font-weight: 800 !important;
+        color: var(--swu-maroon-dark) !important;
+        letter-spacing: -0.02em;
+      }
+      .swagger-ui .info a {
+        color: var(--swu-maroon) !important;
+        font-weight: 600;
+      }
+      .swagger-ui .scheme-container {
+        border-radius: 12px !important;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+        background: #ffffff !important;
+        padding: 16px 20px !important;
+        margin-bottom: 24px !important;
+      }
+      .swagger-ui .btn.authorize {
+        color: var(--swu-maroon) !important;
+        border-color: var(--swu-maroon) !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        transition: all 0.2s ease;
+      }
+      .swagger-ui .btn.authorize svg { fill: var(--swu-maroon) !important; }
+      .swagger-ui .btn.authorize:hover {
+        background: rgba(122, 32, 57, 0.06) !important;
+      }
+      .swagger-ui .opblock-tag {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: var(--swu-maroon-dark) !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        padding-bottom: 8px !important;
+      }
+      .swagger-ui .opblock {
+        border-radius: 10px !important;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+        border: 1px solid #e2e8f0 !important;
+        margin-bottom: 14px !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .swagger-ui .opblock:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08) !important;
+      }
+      .swagger-ui .opblock .opblock-summary-method {
+        border-radius: 6px !important;
+        font-weight: 800 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+      }
+      .swagger-ui .model-box { border-radius: 8px !important; }
+
+      .docs-error {
+        max-width: 640px;
+        margin: 60px auto;
+        padding: 24px;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #991b1b;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      }
+
+      @media (max-width: 768px) {
+        .docs-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .docs-actions {
+          width: 100%;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="docs-header">
+      <a href="https://archivio-public.web.app" class="docs-header-brand" aria-label="ARCHIVIO Home">
+        <div class="brand-badge">A</div>
+        <div class="docs-header-titles">
+          <h1>
+            ARCHIVIO REST API
+            <span class="version-tag">v1.0.0</span>
+          </h1>
+          <p>Institutional Research Archive & Capstone Repository — Southwestern University PHINMA</p>
+        </div>
+      </a>
+
+      <div class="status-pill" title="Cloud microservice is live and responsive">
+        <span class="status-dot"></span>
+        Microservice Active
+      </div>
+
+      <div class="docs-actions">
+        <a href="https://archivio-public.web.app" class="btn-portal primary" target="_blank" rel="noopener">
+          🌐 Public Archive
+        </a>
+        <a href="https://github.com/Princejaphet07/Archivio-Research-System" class="btn-portal" target="_blank" rel="noopener">
+          💻 GitHub Repo
+        </a>
+      </div>
+    </header>
+
+    <main id="swagger-ui" aria-label="Interactive API Documentation"></main>
+
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js" crossorigin="anonymous"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function () {
+        if (!window.SwaggerUIBundle) {
+          document.getElementById('swagger-ui').innerHTML =
+            '<div class="docs-error"><strong>Documentation assets could not be loaded.</strong><br />Please check your internet connection and reload the page.</div>';
+          return;
+        }
+
+        window.ui = SwaggerUIBundle({
+          url: './openapi.json',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          displayRequestDuration: true,
+          filter: true,
+          persistAuthorization: true,
+          requestSnippetsEnabled: true,
+          tryItOutEnabled: true,
+          validatorUrl: null,
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          layout: 'StandaloneLayout'
+        });
+      });
+    </script>
+  </body>
+</html>

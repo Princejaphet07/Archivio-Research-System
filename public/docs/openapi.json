@@ -1,0 +1,900 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ARCHIVIO REST API Reference",
+    "version": "1.0.0",
+    "description": "Interactive REST API documentation for **ARCHIVIO: Institutional Digital Research & Capstone Repository System** at **Southwestern University PHINMA**.<br><br>Developed by the SWU PHINMA BSIT Capstone Development Team:<br>• **Prince Japhet Vender** — Lead Programmer & Full-Stack Developer<br>• **Jerika Zamoras** — UI/UX Designer<br>• **Hylla Mae Tejada** — Project Manager<br>• **Andrea Cañete Perote** — Assistant Programmer<br><br>This microservice powers institutional thesis archival workflows, Google Gemini AI research intelligence, student & adviser invitations, automated OTP verification, status email dispatches, and PDF security watermarking.",
+    "contact": {
+      "name": "ARCHIVIO Technical Support Team",
+      "email": "archivio.noreply@gmail.com",
+      "url": "https://archivio-public.web.app"
+    },
+    "license": {
+      "name": "Proprietary Academic License - Southwestern University PHINMA",
+      "url": "https://swu.phinma.edu.ph"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://archivio-email-service.onrender.com",
+      "description": "Production Cloud Microservice (Render)"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Microservice Development (Node/Express on Port 3001)"
+    },
+    {
+      "url": "https://archivio-public.web.app",
+      "description": "Firebase Public Archive Hosting"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System & Diagnostics",
+      "description": "Microservice uptime, health telemetry, database bootstrap, and defense state resets."
+    },
+    {
+      "name": "Authentication & Password Recovery",
+      "description": "Cryptographic 6-digit OTP verification, SHA-256 validation, and password recovery."
+    },
+    {
+      "name": "User & Access Governance",
+      "description": "Account provisioning, status toggles, Firebase Auth synchronization, and cascading deletion."
+    },
+    {
+      "name": "Invitations & Member Onboarding",
+      "description": "Adviser, Dean, and Student research co-author invitations, acceptance, and automated credential setup."
+    },
+    {
+      "name": "Messaging & Review Notifications",
+      "description": "Formal chapter review comments, revision notifications, and status email dispatches."
+    },
+    {
+      "name": "AI & Research Intelligence",
+      "description": "Google Gemini 2.5 & Groq AI research assistant, manuscript pre-defense checks, abstract/keyword extraction, PDF summaries, and similarity analysis."
+    },
+    {
+      "name": "Document & Media Processing",
+      "description": "Dynamic institutional PDF security watermarking and Cloudinary asset management."
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["System & Diagnostics"],
+        "summary": "Microservice Health Telemetry",
+        "description": "Returns operational status and server timestamp. Used by Render keep-alive monitors and uptime health checks.",
+        "operationId": "getHealthStatus",
+        "responses": {
+          "200": {
+            "description": "Service is operational",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time", "example": "2026-10-26T12:00:00.000Z" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/debug-smtp": {
+      "get": {
+        "tags": ["System & Diagnostics"],
+        "summary": "Email Provider Connectivity Diagnostic",
+        "description": "Tests connectivity across configured cloud dispatch tiers (Brevo HTTPS API, Resend API, Google Apps Script Webhook, and Nodemailer SMTP).",
+        "operationId": "getSmtpDiagnostics",
+        "responses": {
+          "200": {
+            "description": "Diagnostics report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpDiagnosticsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/bootstrap": {
+      "post": {
+        "tags": ["System & Diagnostics"],
+        "summary": "Initialize System Foundation",
+        "description": "Seeds initial departments, programs, and system configuration in Firestore if missing without altering live student records.",
+        "operationId": "bootstrapSystem",
+        "responses": {
+          "200": {
+            "description": "Bootstrap completed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Initialization failure",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/defense-reset": {
+      "post": {
+        "tags": ["System & Diagnostics"],
+        "summary": "Reset Pristine Defense State",
+        "description": "Resets demonstration capstone and student evaluation records to a clean baseline specifically for oral defense presentations.",
+        "operationId": "resetDefenseState",
+        "responses": {
+          "200": {
+            "description": "Defense state reset",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/send-otp": {
+      "post": {
+        "tags": ["Authentication & Password Recovery"],
+        "summary": "Request 6-Digit Password Reset OTP",
+        "description": "Generates a cryptographically random 6-digit OTP, stores a SHA-256 hash in Firestore with a 5-minute expiry, and dispatches an email via the zero-failure dispatch engine.",
+        "operationId": "sendOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "prince.vender@swu.phinma.edu.ph",
+                    "description": "Registered institutional email address"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP dispatched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Verification code sent to your email" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required email",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "No user account exists with this email",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-otp": {
+      "post": {
+        "tags": ["Authentication & Password Recovery"],
+        "summary": "Verify 6-Digit Password Reset OTP",
+        "description": "Hashes the candidate OTP with SHA-256 and compares it against the active record stored in the `password_resets` collection.",
+        "operationId": "verifyOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "otp"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "prince.vender@swu.phinma.edu.ph" },
+                  "otp": { "type": "string", "example": "589214", "description": "6-digit numeric verification code" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Verification code confirmed" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired OTP",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reset-password": {
+      "post": {
+        "tags": ["Authentication & Password Recovery"],
+        "summary": "Reset Password with Verified OTP",
+        "description": "Verifies OTP code and immediately commits the new password to Firebase Authentication using Firebase Admin SDK.",
+        "operationId": "resetPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "otp", "newPassword"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "prince.vender@swu.phinma.edu.ph" },
+                  "otp": { "type": "string", "example": "589214" },
+                  "newPassword": { "type": "string", "format": "password", "example": "NewPass2026!#" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Verification or update failure",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/send-invitation-email": {
+      "post": {
+        "tags": ["Invitations & Member Onboarding"],
+        "summary": "Dispatch Research Adviser Invitation",
+        "description": "Emails a formal academic appointment invitation to a faculty Research Adviser with a secure single-click onboarding link.",
+        "operationId": "sendAdviserInvitation",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "name"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "adviser@swu.phinma.edu.ph" },
+                  "name": { "type": "string", "example": "Engr. Roberto Cruz, MSIT" },
+                  "department": { "type": "string", "example": "College of Information Technology" },
+                  "invitedBy": { "type": "string", "example": "College Dean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Adviser invitation dispatched",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid Bearer Token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/send-student-invitation-email": {
+      "post": {
+        "tags": ["Invitations & Member Onboarding"],
+        "summary": "Invite Student Co-Author to Group",
+        "description": "Sends an invitation email to a student co-author with details of the research title, lead researcher name, and acceptance token.",
+        "operationId": "sendStudentInvitation",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["studentEmail", "leaderName", "groupName", "researchTitle"],
+                "properties": {
+                  "studentEmail": { "type": "string", "format": "email", "example": "jerika.zamoras@swu.phinma.edu.ph" },
+                  "studentName": { "type": "string", "example": "Jerika Zamoras" },
+                  "leaderName": { "type": "string", "example": "Prince Japhet Vender" },
+                  "groupName": { "type": "string", "example": "Group 7 - ARCHIVIO" },
+                  "researchTitle": { "type": "string", "example": "ARCHIVIO: Institutional Digital Research & Capstone Repository System" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Student invitation dispatched",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accept-student-invitation": {
+      "post": {
+        "tags": ["Invitations & Member Onboarding"],
+        "summary": "Confirm Student Invitation Acceptance",
+        "description": "Synchronizes student status to 'accepted' across `studentInvitations`, `students`, and `groups` collections in Firestore.",
+        "operationId": "acceptStudentInvitation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "jerika.zamoras@swu.phinma.edu.ph" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation recorded and group synchronized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/create-group-member-account": {
+      "post": {
+        "tags": ["Invitations & Member Onboarding"],
+        "summary": "Provision Group Member Account",
+        "description": "Provisions a Firebase Auth user with a secure temporary password and updates the user profile record in Firestore.",
+        "operationId": "createGroupMemberAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["leaderUid", "email"],
+                "properties": {
+                  "leaderUid": { "type": "string", "example": "h9YqU7x2..." },
+                  "leaderEmail": { "type": "string", "format": "email", "example": "prince.vender@swu.phinma.edu.ph" },
+                  "email": { "type": "string", "format": "email", "example": "andrea.perote@swu.phinma.edu.ph" },
+                  "firstName": { "type": "string", "example": "Andrea" },
+                  "lastName": { "type": "string", "example": "Perote" },
+                  "studentId": { "type": "string", "example": "04-2122-09871" },
+                  "groupName": { "type": "string", "example": "Group 7 - ARCHIVIO" },
+                  "researchTitle": { "type": "string", "example": "ARCHIVIO Research System" },
+                  "department": { "type": "string", "example": "Computer Studies" },
+                  "program": { "type": "string", "example": "BS Information Technology" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account provisioned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "memberUid": { "type": "string", "example": "k8X2uL0..." },
+                    "temporaryPassword": { "type": "string", "example": "SWU#A9B28371!" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-school-email": {
+      "post": {
+        "tags": ["Invitations & Member Onboarding"],
+        "summary": "Validate Institutional Email Domain",
+        "description": "Checks whether the email string complies with the `@swu.phinma.edu.ph` institutional pattern and executes DNS MX record verification.",
+        "operationId": "verifySchoolEmail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "hylla.tejada@swu.phinma.edu.ph" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": { "type": "boolean", "example": true },
+                    "domain": { "type": "string", "example": "swu.phinma.edu.ph" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/send-student-message": {
+      "post": {
+        "tags": ["Messaging & Review Notifications"],
+        "summary": "Send Adviser Review Remarks",
+        "description": "Delivers formalized revision feedback or consultation messages from the Research Adviser to the student group.",
+        "operationId": "sendStudentMessage",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["toEmail", "adviserName", "message", "researchTitle"],
+                "properties": {
+                  "toEmail": { "type": "string", "format": "email", "example": "prince.vender@swu.phinma.edu.ph" },
+                  "studentName": { "type": "string", "example": "Prince Japhet Vender" },
+                  "adviserName": { "type": "string", "example": "Engr. Roberto Cruz" },
+                  "message": { "type": "string", "example": "Please elaborate the System Architecture diagram in Chapter 3 before our next defense dry-run." },
+                  "researchTitle": { "type": "string", "example": "ARCHIVIO System" },
+                  "chapter": { "type": "string", "example": "Chapter 3 - Methodology" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message dispatched",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/send-status-email": {
+      "post": {
+        "tags": ["Messaging & Review Notifications"],
+        "summary": "Notify Authors of Manuscript Status Change",
+        "description": "Dispatches automated notification when a manuscript moves to 'Under Review', 'Revision Required', 'Endorsed for Defense', or 'Archived'.",
+        "operationId": "sendStatusEmail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["toEmail", "researchTitle", "status"],
+                "properties": {
+                  "toEmail": { "type": "string", "format": "email", "example": "prince.vender@swu.phinma.edu.ph" },
+                  "studentName": { "type": "string", "example": "Prince Japhet Vender" },
+                  "researchTitle": { "type": "string", "example": "ARCHIVIO: Institutional Digital Research & Capstone Repository System" },
+                  "status": { "type": "string", "enum": ["Under Review", "Revision Required", "Endorsed for Defense", "Archived"], "example": "Endorsed for Defense" },
+                  "remarks": { "type": "string", "example": "Endorsed by College Dean. Scheduled for Final Oral Defense." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status email sent",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/chat": {
+      "post": {
+        "tags": ["AI & Research Intelligence"],
+        "summary": "Interactive Research Assistant Q&A",
+        "description": "Grounded AI query interface leveraging Google Gemini 2.5 / Flash and Groq fallback. Restricts responses strictly to academic methodology and the provided thesis manuscript.",
+        "operationId": "aiChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userMessage"],
+                "properties": {
+                  "paper": {
+                    "type": "object",
+                    "properties": {
+                      "researchTitle": { "type": "string", "example": "ARCHIVIO: Institutional Digital Research & Capstone Repository System" },
+                      "authorDisplay": { "type": "string", "example": "Prince Japhet Vender, Jerika Zamoras, Hylla Mae Tejada, Andrea Cañete Perote" },
+                      "abstract": { "type": "string", "example": "This research addresses manual capstone archiving..." },
+                      "keywords": { "type": "array", "items": { "type": "string" }, "example": ["Research Archive", "Cloud Repository", "Academic Management"] }
+                    }
+                  },
+                  "userMessage": { "type": "string", "example": "What theoretical framework and methodology did the researchers use?" },
+                  "pdfUrl": { "type": "string", "format": "uri", "example": "https://res.cloudinary.com/..." },
+                  "chatHistory": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": { "type": "string", "enum": ["user", "model"] },
+                        "content": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI academic response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": { "type": "string", "example": "The study employs an Agile Development Methodology combined with a Cloud-Native Client-Server Architecture..." },
+                    "model": { "type": "string", "example": "gemini-2.5-flash" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/chat/stream": {
+      "post": {
+        "tags": ["AI & Research Intelligence"],
+        "summary": "Streaming Research AI Chat (SSE)",
+        "description": "Streams real-time response tokens using Server-Sent Events (SSE) for fluid UI rendering in the public thesis document viewer.",
+        "operationId": "aiChatStream",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userMessage"],
+                "properties": {
+                  "paper": { "type": "object" },
+                  "userMessage": { "type": "string", "example": "Explain the major findings of Chapter 4." },
+                  "pdfUrl": { "type": "string" },
+                  "chatHistory": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "example": "data: {\"text\":\"According to\"}\n\ndata: {\"text\":\" the findings...\"}\n\ndata: [DONE]\n\n"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/precheck": {
+      "post": {
+        "tags": ["AI & Research Intelligence"],
+        "summary": "Manuscript Pre-Defense AI Rubric Evaluation",
+        "description": "Performs an automated pre-evaluation of a thesis draft against institutional defense criteria (problem definition, methodology completeness, literature relevance, and formatting standards).",
+        "operationId": "aiPrecheck",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "abstract"],
+                "properties": {
+                  "title": { "type": "string", "example": "ARCHIVIO: Institutional Digital Research & Capstone Repository System" },
+                  "abstract": { "type": "string", "example": "Abstract text here..." },
+                  "pdfText": { "type": "string", "description": "Optional parsed excerpt from the manuscript" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comprehensive pre-defense assessment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "overallScore": { "type": "number", "example": 92 },
+                    "status": { "type": "string", "example": "Ready for Pre-Oral Defense" },
+                    "strengths": { "type": "array", "items": { "type": "string" }, "example": ["Clear problem statement", "Well-defined user personas"] },
+                    "recommendations": { "type": "array", "items": { "type": "string" }, "example": ["Expand sample size description in Section 3.2"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/extract-keywords": {
+      "post": {
+        "tags": ["AI & Research Intelligence"],
+        "summary": "Automated Academic Keyword & Tag Extraction",
+        "description": "Analyzes title and abstract text using Gemini AI to generate standardized academic keywords for indexing and semantic discovery.",
+        "operationId": "aiExtractKeywords",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "abstract"],
+                "properties": {
+                  "title": { "type": "string", "example": "ARCHIVIO: Institutional Digital Research & Capstone Repository System" },
+                  "abstract": { "type": "string", "example": "Abstract content..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of extracted keywords",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "keywords": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "example": ["Digital Archiving", "Capstone Management", "Cloud Firestore", "Higher Education IT"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/similarity-check": {
+      "post": {
+        "tags": ["AI & Research Intelligence"],
+        "summary": "Research Duplication & Plagiarism Screen",
+        "description": "Scans proposed thesis titles, objectives, and scopes against all active and archived papers in Southwestern University PHINMA to prevent topic redundancy.",
+        "operationId": "aiSimilarityCheck",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "abstract"],
+                "properties": {
+                  "title": { "type": "string", "example": "ARCHIVIO Research System" },
+                  "abstract": { "type": "string", "example": "Abstract text..." },
+                  "existingPapers": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Similarity scoring report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "similarityScore": { "type": "number", "example": 8.4 },
+                    "isDuplicate": { "type": "boolean", "example": false },
+                    "verdict": { "type": "string", "example": "Highly Unique — Proceed with Proposal" },
+                    "matchedTheses": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/watermark-pdf": {
+      "post": {
+        "tags": ["Document & Media Processing"],
+        "summary": "Apply Institutional Security Watermark to PDF",
+        "description": "Downloads PDF buffer, applies diagonal institutional verification stamps ('OFFICIAL REPOSITORY COPY — SWU PHINMA ARCHIVIO') with tamper-evident timestamp using `pdf-lib`, and outputs base64 data.",
+        "operationId": "watermarkPdf",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pdfUrl"],
+                "properties": {
+                  "pdfUrl": { "type": "string", "format": "uri", "example": "https://res.cloudinary.com/..." },
+                  "watermarkText": { "type": "string", "example": "SOUTHWESTERN UNIVERSITY PHINMA - ARCHIVIO" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Watermarked PDF generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "pdfBase64": { "type": "string", "description": "Base64 encoded watermarked PDF document" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/delete-cloudinary": {
+      "post": {
+        "tags": ["Document & Media Processing"],
+        "summary": "Delete Cloudinary Asset",
+        "description": "Removes rejected manuscript revisions or obsolete files from Cloudinary storage to conserve institutional storage quotas.",
+        "operationId": "deleteCloudinaryAsset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["publicId"],
+                "properties": {
+                  "publicId": { "type": "string", "example": "archivio/manuscripts/v1_draft_7812" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your Firebase ID Token obtained after authenticating with Firebase Client SDK."
+      }
+    },
+    "schemas": {
+      "StandardSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string", "example": "Operation completed successfully" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Invalid or expired token" },
+          "details": { "type": "string", "example": "Specific error context" }
+        }
+      },
+      "SmtpDiagnosticsResponse": {
+        "type": "object",
+        "properties": {
+          "brevoKeyConfigured": { "type": "boolean", "example": true },
+          "resendKeyConfigured": { "type": "boolean", "example": false },
+          "googleWebhookConfigured": { "type": "boolean", "example": true },
+          "primaryProvider": { "type": "string", "example": "Brevo HTTPS API (Port 443 - Cloud Unblocked)" }
+        }
+      }
+    }
+  }
+}

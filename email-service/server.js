@@ -3412,13 +3412,21 @@ app.post('/api/verify-school-email', async (req, res) => {
   }
 });
 
+// Interactive Swagger UI API Documentation
+const path = require('path');
+app.use('/docs', express.static(path.join(__dirname, 'docs')));
+app.get('/docs/openapi.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'docs', 'openapi.json'));
+});
+app.get('/api-docs', (req, res) => res.redirect('/docs'));
+
 // Health check endpoints for monitoring and cloud platforms (e.g. Render)
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.get('/', (req, res) => {
-  res.status(200).send('ARCHIVIO Backend Microservice is running');
+  res.status(200).send('ARCHIVIO Backend Microservice is running. Interactive documentation available at /docs');
 });
 
 // ==========================================
@@ -3633,6 +3641,7 @@ if (require.main === module) {
 ╚═══════════════════════════════════════╝
     `);
     console.log('Endpoints:');
+    console.log('  GET  /docs (Interactive Swagger UI Documentation)');
     console.log('  GET  /api/health');
     console.log('  POST /api/send-invitation-email');
     console.log('  POST /api/send-student-invitation-email');
