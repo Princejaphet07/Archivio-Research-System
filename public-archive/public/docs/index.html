@@ -53,18 +53,15 @@
         text-decoration: none;
         color: inherit;
       }
-      .brand-badge {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
+      .brand-logo {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
         background: #ffffff;
-        border-radius: 12px;
-        font-weight: 900;
-        font-size: 1.25rem;
-        color: var(--swu-maroon);
-        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        border-radius: 50%;
+        padding: 2px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+        border: 2px solid rgba(232, 146, 40, 0.7);
         flex-shrink: 0;
       }
       .docs-header-titles h1 {
@@ -221,6 +218,45 @@
       }
       .swagger-ui .model-box { border-radius: 8px !important; }
 
+      /* High Contrast & Dark Mode Support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-canvas: #0f172a;
+          --ink-dark: #f8fafc;
+        }
+        body {
+          background: #0f172a !important;
+          color: #f8fafc !important;
+        }
+        .swagger-ui {
+          color: #e2e8f0 !important;
+        }
+        .swagger-ui .info .title {
+          color: #fb7185 !important;
+        }
+        .swagger-ui .info p, .swagger-ui .info li, .swagger-ui .info table {
+          color: #cbd5e1 !important;
+        }
+        .swagger-ui .opblock-tag {
+          color: #f1f5f9 !important;
+          border-bottom-color: #334155 !important;
+        }
+        .swagger-ui .scheme-container {
+          background: #1e293b !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+        }
+        .swagger-ui select {
+          background: #0f172a !important;
+          color: #f8fafc !important;
+          border-color: #475569 !important;
+        }
+        .swagger-ui .filter .operation-filter-input {
+          background: #1e293b !important;
+          color: #f8fafc !important;
+          border-color: #475569 !important;
+        }
+      }
+
       .docs-error {
         max-width: 640px;
         margin: 60px auto;
@@ -250,7 +286,7 @@
   <body>
     <header class="docs-header">
       <a href="https://archivio-public.web.app" class="docs-header-brand" aria-label="ARCHIVIO Home">
-        <div class="brand-badge">A</div>
+        <img src="./logo.png" alt="ARCHIVIO SWU PHINMA Logo" class="brand-logo" onerror="this.onerror=null; this.src='/logo.png';" />
         <div class="docs-header-titles">
           <h1>
             ARCHIVIO REST API
