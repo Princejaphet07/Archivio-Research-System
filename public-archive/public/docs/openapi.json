@@ -16,16 +16,16 @@
   },
   "servers": [
     {
-      "url": "https://archivio-email-service.onrender.com",
-      "description": "Production Cloud Microservice (Render)"
-    },
-    {
-      "url": "http://localhost:3001",
-      "description": "Local Microservice Development (Node/Express on Port 3001)"
+      "url": "https://archivio-research-system.web.app",
+      "description": "Production API (Firebase Cloud Functions v2 - us-central1)"
     },
     {
       "url": "https://archivio-public.web.app",
-      "description": "Firebase Public Archive Hosting"
+      "description": "Firebase Public Archive Proxy"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Development Server (Node/Express on Port 3001)"
     }
   ],
   "tags": [

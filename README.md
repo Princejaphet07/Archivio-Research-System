@@ -11,8 +11,8 @@
 [![License](https://img.shields.io/badge/License-Proprietary_Academic-blue)](#license)
 
 > 📖 **Interactive REST API Documentation (Swagger UI):**  
-> 🌐 **Live Documentation:** [https://archivio-public.web.app/docs](https://archivio-public.web.app/docs)  
-> ⚡ **Cloud Microservice:** [https://archivio-email-service.onrender.com/docs](https://archivio-email-service.onrender.com/docs)
+> 🌐 **Public Archive Documentation:** [https://archivio-public.web.app/docs](https://archivio-public.web.app/docs)  
+> 🏛️ **Main System Documentation:** [https://archivio-research-system.web.app/docs](https://archivio-research-system.web.app/docs)
 
 **ARCHIVIO** is a modern, cloud-native research archival and capstone workflow management platform engineered for higher education institutions. Designed specifically to modernize academic repository workflows, ARCHIVIO replaces fragmented manual processes with an end-to-end digital lifecycle: from team creation and proposal drafting to adviser peer review, dean endorsements, and centralized institutional archiving.
 

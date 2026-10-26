@@ -5,11 +5,11 @@
 [![Swagger](https://img.shields.io/badge/Swagger_UI-OpenAPI_3.1.0-85EA2D?logo=swagger&logoColor=black)](https://swagger.io/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-8E75B2?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Firebase Admin](https://img.shields.io/badge/Firebase_Admin-v14-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Render](https://img.shields.io/badge/Render-Hosted_Live-46E3B7?logo=render&logoColor=black)](https://render.com/)
+[![Firebase Functions](https://img.shields.io/badge/Firebase_Functions-v2_(Cloud_Run)-039BE5?logo=firebase&logoColor=white)](https://firebase.google.com/docs/functions)
 
 > **Interactive API Documentation:**  
-> 🌐 **[https://archivio-email-service.onrender.com/docs](https://archivio-email-service.onrender.com/docs)**  
-> 🌐 **[https://archivio-public.web.app/docs](https://archivio-public.web.app/docs)**
+> 🌐 **[https://archivio-public.web.app/docs](https://archivio-public.web.app/docs)**  
+> 🌐 **[https://archivio-research-system.web.app/docs](https://archivio-research-system.web.app/docs)**
 
 ---
 
@@ -143,12 +143,14 @@ Once started, open your browser and visit:
 ---
 
 ## ☁️ Deployment
-
-This service is deployed on **Render** as a Web Service:
-- **Build Command:** `npm install`
-- **Start Command:** `node server.js`
-- **Health Check Path:** `/api/health`
-- **Production URL:** `https://archivio-email-service.onrender.com`
+ 
+ This service is deployed as a **2nd Generation Firebase Cloud Function** (`api`) running on Google Cloud in region `us-central1`:
+ - **Runtime:** Node.js 20
+ - **Memory Allocation:** 1 GiB (optimized for PDF parsing and manuscript analysis)
+ - **Timeout:** 300 seconds (5 minutes)
+ - **Trigger:** HTTPS Request / Cloud Run
+ - **Production Endpoint:** `https://archivio-research-system.web.app/api/**` (rewritten via Firebase Hosting)
+ - **Public Archive Endpoint:** `https://archivio-public.web.app/api/**`
 
 ---
 
