@@ -976,8 +976,8 @@ const handlePasswordReset = async (req, res) => {
     } catch (smtpErr) {
       console.warn('⚠️ SMTP sendMail failed (likely port blocked by cloud host), falling back to Google Identity Platform:', smtpErr.message);
       try {
-        const apiKey = process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY;
-        if (!apiKey) throw new Error('Missing FIREBASE_API_KEY in environment variables');
+        const apiKey = process.env.WEB_API_KEY || process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY;
+        if (!apiKey) throw new Error('Missing WEB_API_KEY in environment variables');
         const gRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
