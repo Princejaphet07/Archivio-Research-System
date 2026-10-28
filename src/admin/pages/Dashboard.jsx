@@ -121,7 +121,7 @@ function Dashboard() {
     });
 
     filteredStudents.forEach(st => {
-      const dName = courseToDeptMap[st.course] || st.course || 'Unknown';
+      const dName = courseToDeptMap[st.course] || courseToDeptMap[st.program] || courseToDeptMap[st.programCode] || st.department || st.course || 'Unknown';
       if (!deptsMap[dName]) deptsMap[dName] = { name: dName, advisers: 0, students: 0, uploaded: 0, approved: 0, published: 0, pending: false };
       deptsMap[dName].students++;
     });
