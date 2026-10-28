@@ -30,7 +30,7 @@ export function UserProvider({ children }) {
           if (user.email === 'archivio.admin@gmail.com') {
             role = 'admin';
             userData = {
-              displayName: userData?.displayName || 'Prince Japhet Vender',
+              displayName: userData?.displayName || user.displayName || 'System Administrator',
               role: 'admin',
               department: userData?.department || 'Information Technology',
               permissions: {

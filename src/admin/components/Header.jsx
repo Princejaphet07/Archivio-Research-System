@@ -65,8 +65,8 @@ export default function Header({ title, breadcrumbs, searchQuery, onSearchChange
       const email = auth.currentUser?.email;
       if (email) {
         await logActivity({
-          user: currentUser?.displayName || email,
-          role: currentUser?.role || 'Admin',
+          user: email,
+          role: currentUser?.role === 'super-admin' ? 'Super Admin' : 'System Admin',
           action: 'Log out',
           status: 'Success'
         });
