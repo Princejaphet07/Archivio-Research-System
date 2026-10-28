@@ -1,6 +1,6 @@
-# Dean System Login - Firebase Integration Guide
+﻿# Dean System Login - Firebase Integration Guide
 
-## ✅ What's Updated
+## âœ… What's Updated
 
 ### Dean Login Page (`dean-system/src/pages/Login.jsx`)
 - **Firebase Authentication** - Sign in with @phinmaed.com emails
@@ -11,11 +11,11 @@
 
 ---
 
-## 🔄 Complete Flow
+## ðŸ”„ Complete Flow
 
 ### Step 1: Admin Creates Dean Account
 ```
-System Administrator → Dean Onboarding → Create Dean Account
+System Administrator â†’ Dean Onboarding â†’ Create Dean Account
 ```
 - Admin fills in dean information
 - Email MUST be @phinmaed.com (e.g., `test.dean@phinmaed.com`)
@@ -23,36 +23,36 @@ System Administrator → Dean Onboarding → Create Dean Account
 
 ### Step 2: Dean Activates Account
 ```
-Dean → Clicks "Activate Account" on login page
+Dean â†’ Clicks "Activate Account" on login page
 ```
 - Dean enters their email (same as invitation email)
 - Dean creates a strong password:
-  - ✓ At least 8 characters
-  - ✓ Contains a number
-  - ✓ Contains uppercase letter  
-  - ✓ Contains special character
+  - âœ“ At least 8 characters
+  - âœ“ Contains a number
+  - âœ“ Contains uppercase letter  
+  - âœ“ Contains special character
 - Dean clicks "Activate Account"
 
 **What Happens:**
 1. Creates Firebase Auth account
-2. Updates dean record: status → "active", adds UID
+2. Updates dean record: status â†’ "active", adds UID
 3. Creates user profile in `users` collection
 4. Shows success message and redirects to login
 
 ### Step 3: Dean Logs In
 ```
-Dean → Login with email + password → Dashboard
+Dean â†’ Login with email + password â†’ Dashboard
 ```
 - Dean enters email (@phinmaed.com) and password
 - System verifies:
   1. User exists in Firebase Auth
   2. User exists in `deans` collection
   3. Account status is "active"
-- Success → Navigate to Dean Dashboard
+- Success â†’ Navigate to Dean Dashboard
 
 ---
 
-## 🧪 Testing Guide
+## ðŸ§ª Testing Guide
 
 ### Test 1: Create Dean Account (System Administrator)
 1. Login as admin: `japhetvender00@gmail.com` / `23571113`
@@ -68,8 +68,8 @@ Dean → Login with email + password → Dashboard
    Role: Dean + Research Adviser
    ```
 5. Click **"Send Invite & Create Account"**
-6. ✅ Success message appears
-7. Verify in Firestore Console → `deans` collection
+6. âœ… Success message appears
+7. Verify in Firestore Console â†’ `deans` collection
 
 ### Test 2: Activate Dean Account
 1. Start dean-system: `npm run dev` (in dean-system folder)
@@ -82,10 +82,10 @@ Dean → Login with email + password → Dashboard
    Confirm Password: TestDean123!
    ```
 5. Click **"Activate Account"**
-6. ✅ Success message appears
+6. âœ… Success message appears
 7. Verify in Firestore:
-   - `deans` collection → status changed to "active"
-   - `users` collection → new user created
+   - `deans` collection â†’ status changed to "active"
+   - `users` collection â†’ new user created
 
 ### Test 3: Login as Dean
 1. On dean login page
@@ -95,11 +95,11 @@ Dean → Login with email + password → Dashboard
    Password: TestDean123!
    ```
 3. Click **"Sign In to ARCHIVIO"**
-4. ✅ Should navigate to Dean Dashboard
+4. âœ… Should navigate to Dean Dashboard
 
 ---
 
-## 📊 Database Structure
+## ðŸ“Š Database Structure
 
 ### Firestore Collections
 
@@ -139,14 +139,14 @@ Dean → Login with email + password → Dashboard
 
 ---
 
-## 🔒 Email Validation
+## ðŸ”’ Email Validation
 
-### ✅ Valid Emails
+### âœ… Valid Emails
 - `test.dean@phinmaed.com`
 - `prdo.vender.swu@phinmaed.com`
 - `maria.santos@phinmaed.com`
 
-### ❌ Invalid Emails (Will Show Error)
+### âŒ Invalid Emails (Will Show Error)
 - `dean@swu.phinma.edu.ph` - Wrong domain
 - `test@gmail.com` - Wrong domain
 - `dean@phinma.com` - Wrong domain
@@ -155,11 +155,11 @@ Dean → Login with email + password → Dashboard
 
 ---
 
-## 🚨 Common Errors & Solutions
+## ðŸš¨ Common Errors & Solutions
 
 ### Error: "No invitation found for this email address"
 **Cause:** Dean account not created by admin yet
-**Solution:** Admin must create dean account first in System Administrator → Dean Onboarding
+**Solution:** Admin must create dean account first in System Administrator â†’ Dean Onboarding
 
 ### Error: "This account is already activated. Please login instead."
 **Cause:** Dean already activated their account
@@ -183,17 +183,17 @@ Dean → Login with email + password → Dashboard
 
 ---
 
-## 🎯 Next Steps
+## ðŸŽ¯ Next Steps
 
-### Already Working ✅
+### Already Working âœ…
 - [x] Admin creates dean accounts
 - [x] Dean activation flow
 - [x] Dean login with Firebase
 - [x] Email validation (@phinmaed.com)
 - [x] Password strength requirements
-- [x] Status verification (pending → active)
+- [x] Status verification (pending â†’ active)
 
-### Coming Soon 🔜
+### Coming Soon ðŸ”œ
 - [ ] Email invitation system (send actual emails)
 - [ ] Forgot password functionality
 - [ ] Dean dashboard with real data
@@ -202,7 +202,7 @@ Dean → Login with email + password → Dashboard
 
 ---
 
-## 🏃 Quick Start Commands
+## ðŸƒ Quick Start Commands
 
 ### Start System Administrator
 ```powershell
@@ -218,21 +218,22 @@ npm run dev
 
 ---
 
-## 📝 Notes
+## ðŸ“ Notes
 
 1. **One Firebase Project** - All systems share the same Firebase project (`archivio-research-system`)
 2. **Role-Based Access** - Access control via `role` field in Firestore
 3. **Email Domain** - All dean emails must be @phinmaed.com
-4. **Status Flow** - pending (invitation) → active (after password setup)
+4. **Status Flow** - pending (invitation) â†’ active (after password setup)
 5. **Dual Roles** - Deans can also be research advisers (role: "dean+adviser")
 
 ---
 
-## 🎉 Ready to Test!
+## ðŸŽ‰ Ready to Test!
 
 Your Dean System is now ready! Follow the testing guide above to try the complete flow:
 1. Create dean account as admin
 2. Activate dean account
 3. Login as dean
 
-Good luck! 🚀
+Good luck! ðŸš€
+

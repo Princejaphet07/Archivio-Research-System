@@ -63,7 +63,7 @@
       "get": {
         "tags": ["System & Diagnostics"],
         "summary": "Microservice Health Telemetry",
-        "description": "Returns operational status and server timestamp. Used by Render keep-alive monitors and uptime health checks.",
+        "description": "Returns operational status and server timestamp. Used by uptime monitors and Cloud Functions health telemetry.",
         "operationId": "getHealthStatus",
         "responses": {
           "200": {

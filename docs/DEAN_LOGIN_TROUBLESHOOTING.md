@@ -1,18 +1,18 @@
-# Dean Login Troubleshooting Guide
+﻿# Dean Login Troubleshooting Guide
 
 ## Issue
-Dean cannot login with randomized temporary password in Dean System at localhost:5174
+Dean cannot login with randomized temporary password in Dean System at localhost:5173
 
 ## Root Causes Fixed
 
-### 1. ✅ Email Template Missing Temporary Password
+### 1. âœ… Email Template Missing Temporary Password
 **Problem:** Email service was sending dean invitation emails WITHOUT the temporary password in the body.
 **Fix:** Updated `/api/send-dean-invitation-email` endpoint to:
 - Accept `temporaryPassword` parameter from UserManagement
 - Display credentials in a formatted box in the email template
 - Show email and password clearly for copy-paste
 
-### 2. ✅ Enhanced Debug Logging in Dean Login
+### 2. âœ… Enhanced Debug Logging in Dean Login
 **Problem:** Generic error messages didn't indicate what was actually failing
 **Fix:** Added detailed console logging at each step:
 - Email input validation
@@ -21,7 +21,7 @@ Dean cannot login with randomized temporary password in Dean System at localhost
 - Firestore dean record lookup
 - Dean status verification
 
-### 3. ✅ Login Error Codes Expanded
+### 3. âœ… Login Error Codes Expanded
 **Problem:** Some Firebase error codes weren't handled
 **Fix:** Added handling for:
 - `auth/invalid-credential` (new error code)
@@ -30,7 +30,7 @@ Dean cannot login with randomized temporary password in Dean System at localhost
 ## Test Flow: Step-by-Step
 
 ### Step 1: Create Dean Account
-1. Go to System Administrator: `http://localhost:5174`
+1. Go to System Administrator: `http://localhost:5173`
 2. Login as admin (if not already logged in)
 3. Navigate to **User Management**
 4. Click **Add New Dean**
@@ -40,10 +40,10 @@ Dean cannot login with randomized temporary password in Dean System at localhost
    - Email: `test.dean@phinmaed.com`
    - Department: `IT Department`
 6. Click **Create Dean Account**
-7. **Expected:** Success message "✅ Dean invitation sent"
+7. **Expected:** Success message "âœ… Dean invitation sent"
 8. **Check console (F12):** You should see:
    ```
-   ✅ Firebase Auth account created for: test.dean@phinmaed.com UID: xxx
+   âœ… Firebase Auth account created for: test.dean@phinmaed.com UID: xxx
    ```
 
 ### Step 2: Check Email
@@ -59,7 +59,7 @@ Dean cannot login with randomized temporary password in Dean System at localhost
 
 ### Step 3: Login as Dean
 1. **Important:** Open Dean System in PRIVATE/INCOGNITO window (or clear cookies)
-2. Go to: `http://localhost:5174`
+2. Go to: `http://localhost:5173`
 3. You should see Dean Portal Login form
 4. Enter:
    - Email: `test.dean@phinmaed.com`
@@ -71,15 +71,15 @@ Dean cannot login with randomized temporary password in Dean System at localhost
 Open browser **Developer Console (F12)** and look for:
 
 #### Scenario A: "Firebase auth successful"
-- If you see ✅ in console, then Firebase Auth worked
+- If you see âœ… in console, then Firebase Auth worked
 - Problem is in Firestore: Dean record not found or status != 'active'
 - Check Firestore: `deans` collection for email
 
 #### Scenario B: Firebase auth fails
-- Error code: `auth/wrong-password` → Password is incorrect
-- Error code: `auth/user-not-found` → Email doesn't exist in Auth
-- Error code: `auth/invalid-login-credentials` → Email/password combo wrong
-- Error code: Other → See console for details
+- Error code: `auth/wrong-password` â†’ Password is incorrect
+- Error code: `auth/user-not-found` â†’ Email doesn't exist in Auth
+- Error code: `auth/invalid-login-credentials` â†’ Email/password combo wrong
+- Error code: Other â†’ See console for details
 
 ## Key Points
 
@@ -174,3 +174,4 @@ Email account should exist in Firebase Console:
 
 **Last Updated:** July 23, 2026
 **Status:** Ready for testing
+

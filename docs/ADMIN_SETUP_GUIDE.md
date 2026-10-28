@@ -1,21 +1,21 @@
-# 👨‍💼 System Administrator Account Setup Guide
+﻿# ðŸ‘¨â€ðŸ’¼ System Administrator Account Setup Guide
 
-## 🎯 Goal
+## ðŸŽ¯ Goal
 Create your personal System Administrator account to manage the entire ARCHIVIO system.
 
 ---
 
-## 📋 Prerequisites Checklist
+## ðŸ“‹ Prerequisites Checklist
 
 Before starting, make sure:
-- ✅ Firebase project created: `archivio-research-system`
-- ✅ Firebase installed in system-administrator folder
-- ✅ Firebase config file updated with your credentials
-- ✅ Internet connection
+- âœ… Firebase project created: `archivio-research-system`
+- âœ… Firebase installed in system-administrator folder
+- âœ… Firebase config file updated with your credentials
+- âœ… Internet connection
 
 ---
 
-## 🔥 Step 1: Enable Firebase Authentication
+## ðŸ”¥ Step 1: Enable Firebase Authentication
 
 1. Go to Firebase Console: https://console.firebase.google.com/
 2. Select your project: **archivio-research-system**
@@ -25,25 +25,25 @@ Before starting, make sure:
 6. **Enable** the first toggle (Email/Password)
 7. Click **"Save"**
 
-**✅ Screenshot:** You should see "Email/Password" status as "Enabled"
+**âœ… Screenshot:** You should see "Email/Password" status as "Enabled"
 
 ---
 
-## 🔥 Step 2: Create Firestore Database
+## ðŸ”¥ Step 2: Create Firestore Database
 
 1. Click **"Firestore Database"** in left sidebar
 2. Click **"Create database"**
-3. Select **"Start in test mode"** ✅
+3. Select **"Start in test mode"** âœ…
 4. Click **"Next"**
 5. Choose location: **asia-southeast1** (Singapore - closest to Philippines)
 6. Click **"Enable"**
 7. Wait 1-2 minutes for creation
 
-**✅ You should see:** Empty database with "Start collection" button
+**âœ… You should see:** Empty database with "Start collection" button
 
 ---
 
-## 🔥 Step 3: Create Firestore Collections
+## ðŸ”¥ Step 3: Create Firestore Collections
 
 Click **"Start collection"** and create these collections:
 
@@ -72,7 +72,7 @@ Click **"Start collection"** and create these collections:
 
 ---
 
-## 🔥 Step 4: Enable Firebase Storage
+## ðŸ”¥ Step 4: Enable Firebase Storage
 
 1. Click **"Storage"** in left sidebar
 2. Click **"Get started"**
@@ -83,11 +83,11 @@ Click **"Start collection"** and create these collections:
 
 ---
 
-## 👨‍💼 Step 5: Create Your Admin Account
+## ðŸ‘¨â€ðŸ’¼ Step 5: Create Your Admin Account
 
 ### **Option A: Using Firebase Console (Recommended for First Admin)**
 
-1. Go to **Authentication** → **Users** tab
+1. Go to **Authentication** â†’ **Users** tab
 2. Click **"Add user"** button
 3. Fill in your details:
    ```
@@ -115,14 +115,14 @@ Click **"Start collection"** and create these collections:
    ```
 4. You should see:
    ```
-   ✅ Auth account created! UID: abc123...
-   ✅ User profile created in Firestore!
-   🎉 Admin account setup complete!
+   âœ… Auth account created! UID: abc123...
+   âœ… User profile created in Firestore!
+   ðŸŽ‰ Admin account setup complete!
    ```
 
 ---
 
-## 🔥 Step 6: Add Admin Profile to Firestore
+## ðŸ”¥ Step 6: Add Admin Profile to Firestore
 
 1. Go to **Firestore Database**
 2. Click on **"users"** collection
@@ -131,19 +131,19 @@ Click **"Start collection"** and create these collections:
 5. Add these fields:
 
 ```
-uid:          string    → Your User UID (same as document ID)
-email:        string    → your-admin-email@example.com
-displayName:  string    → Your Full Name
-role:         string    → admin
-status:       string    → active
-createdAt:    timestamp → Click "Set to current time"
+uid:          string    â†’ Your User UID (same as document ID)
+email:        string    â†’ your-admin-email@example.com
+displayName:  string    â†’ Your Full Name
+role:         string    â†’ admin
+status:       string    â†’ active
+createdAt:    timestamp â†’ Click "Set to current time"
 ```
 
 6. Click **"Save"**
 
 ---
 
-## 🎉 Step 7: Test Your Admin Login
+## ðŸŽ‰ Step 7: Test Your Admin Login
 
 1. Go to your System Administrator folder:
    ```cmd
@@ -165,11 +165,11 @@ createdAt:    timestamp → Click "Set to current time"
 
 ---
 
-## 🔐 Security Rules (Important!)
+## ðŸ” Security Rules (Important!)
 
 After creating your admin account, update Firestore rules:
 
-1. Go to **Firestore Database** → **Rules** tab
+1. Go to **Firestore Database** â†’ **Rules** tab
 2. Replace with these rules:
 
 ```javascript
@@ -206,7 +206,7 @@ service cloud.firestore {
 
 ---
 
-## ✅ Verification Checklist
+## âœ… Verification Checklist
 
 After completing all steps, verify:
 
@@ -221,13 +221,13 @@ After completing all steps, verify:
 
 ---
 
-## 🆘 Troubleshooting
+## ðŸ†˜ Troubleshooting
 
 ### Issue: "Firebase: Error (auth/user-not-found)"
 **Solution:** Your email is not in Firebase Authentication. Go back to Step 5.
 
 ### Issue: "Firebase: Error (auth/wrong-password)"
-**Solution:** Check your password. Reset it in Firebase Console → Authentication → Users → Click user → Reset password.
+**Solution:** Check your password. Reset it in Firebase Console â†’ Authentication â†’ Users â†’ Click user â†’ Reset password.
 
 ### Issue: "Permission denied" in Firestore
 **Solution:** Update security rules in Step "Security Rules"
@@ -237,30 +237,30 @@ After completing all steps, verify:
 
 ---
 
-## 📞 Your Firebase Project Info
+## ðŸ“ž Your Firebase Project Info
 
 ```
 Project Name: archivio-research-system
 Project ID: archivio-research-system
 ```
 
-Your config is already set in all 5 systems! ✅
+Your config is already set in all 5 systems! âœ…
 
 ---
 
-## 🎯 What's Next?
+## ðŸŽ¯ What's Next?
 
 After creating your admin account:
 
-1. ✅ Login to System Administrator
-2. ✅ Create your first Dean account
-3. ✅ Test the invitation email system
-4. ✅ Configure department settings
-5. ✅ Start onboarding users!
+1. âœ… Login to System Administrator
+2. âœ… Create your first Dean account
+3. âœ… Test the invitation email system
+4. âœ… Configure department settings
+5. âœ… Start onboarding users!
 
 ---
 
-## 💾 Save Your Credentials Securely!
+## ðŸ’¾ Save Your Credentials Securely!
 
 **Admin Email:** ___________________________
 
@@ -268,8 +268,9 @@ After creating your admin account:
 
 **User UID:** ___________________________
 
-**⚠️ Keep this information safe and secure!**
+**âš ï¸ Keep this information safe and secure!**
 
 ---
 
-**Good luck with your ARCHIVIO Research Management System! 🚀**
+**Good luck with your ARCHIVIO Research Management System! ðŸš€**
+

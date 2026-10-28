@@ -254,23 +254,32 @@ The auxiliary email and verification service is located in the `email-service/` 
 
 ### 4. Running the Application
 
-For full system functionality (including email invitations and OTP verification), run **both** the frontend development server and the email microservice:
+ARCHIVIO consists of two client applications and an auxiliary backend API (which is also live in production via Firebase Cloud Functions):
 
-#### Terminal 1 — Start the Frontend (Port 5173):
+#### Terminal 1 — Start the Unified Academic Portal (Port 5173):
 ```bash
 # In the root project folder:
 npm run dev
 ```
-Open your browser and navigate to: **`http://localhost:5173`**
+Open your browser and navigate to: **`http://localhost:5173`**  
+*(Handles Student, Adviser, Dean, and Administrator portals)*
 
-#### Terminal 2 — Start the Email & Backend Service (Port 3001):
+#### Terminal 2 — Start the Public Research Archive (Port 5174):
+```bash
+# In a new terminal window:
+cd public-archive
+npm run dev
+```
+Open your browser and navigate to: **`http://localhost:5174`**  
+*(Open-access repository for students, faculty, and public visitors)*
+
+#### Terminal 3 (Optional) — Start the Local Backend API (Port 3001):
 ```bash
 # In a new terminal window:
 cd email-service
-node server.js
-# Or with nodemon for auto-reloading:
 npm run dev
 ```
+> 💡 **Developer Tip:** Running `email-service` locally is **optional** during frontend development. ARCHIVIO's `backendUrl.js` automatically routes API requests directly to the live Firebase Cloud Function (`https://archivio-research-system.web.app`) when developing on localhost unless `VITE_USE_LOCAL_BACKEND=true` is set.
 
 ---
 
@@ -294,19 +303,44 @@ ARCHIVIO implements a multi-layer defense strategy to safeguard institutional ac
 ---
 
 ## Deployment
-
-### Frontend (Vercel / Netlify / Firebase Hosting)
-The frontend is optimized for static hosting platforms. Build the production bundle:
+ 
+ARCHIVIO is fully deployed and hosted on **Google Cloud / Firebase Platform**:
+ 
+### 1. Build Both Frontend Applications
 ```bash
+# Build the main Unified Academic Portal (dist/)
 npm run build
+ 
+# Build the Public Research Archive (public-archive/dist/)
+cd public-archive
+npm run build
+cd ..
 ```
-The output will be generated in the `dist/` directory, ready to deploy to **Vercel**, **Netlify**, or **Firebase Hosting**.
-
-### Email Microservice (Render / Railway / VPS / Cloud Run)
-The Node.js `email-service` can be deployed independently as a microservice on platforms like **Render**, **Railway**, or any standard Linux VPS using a process manager like PM2:
+ 
+### 2. Deploy Everything via Firebase CLI
+Deploying the complete stack (Hosting targets, Cloud Functions, and Security Rules) takes a single command:
 ```bash
-pm2 start server.js --name "archivio-email-service"
+firebase deploy
 ```
+ 
+Or deploy individual layers as needed:
+```bash
+# Deploy only the two frontend hosting targets (main & public-archive)
+firebase deploy --only hosting
+ 
+# Deploy the Express microservice as a 2nd Gen Cloud Function
+firebase deploy --only functions
+ 
+# Deploy database and storage security rules
+firebase deploy --only firestore:rules,storage:rules
+```
+ 
+### Production Infrastructure Specifications
+- **Unified Academic Portal:** [https://archivio-research-system.web.app](https://archivio-research-system.web.app)
+- **Public Open-Access Archive:** [https://archivio-public.web.app](https://archivio-public.web.app)
+- **Backend API & Swagger Docs:** [https://archivio-research-system.web.app/docs](https://archivio-research-system.web.app/docs)
+- **Serverless Compute:** Firebase Cloud Functions (Gen 2 / Cloud Run) with 1 GiB memory and 300s timeout in `us-central1`.
+- **Database Engine:** Google Cloud Firestore (NoSQL, `nam5`) with real-time listeners and multi-tier security rules.
 
 ---
 

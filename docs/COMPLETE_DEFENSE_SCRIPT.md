@@ -98,7 +98,7 @@
 > 2. ***Dean's Final Review:** Basahon ug susihon sa Dean ang endorsement remarks sa adviser, research format compliance, ug ethics approvals.*
 > 3. ***Electronic Archival Sign-off:** Sa higayon nga i-click sa Dean ang 'Approve & Publish', tulo ka mahinungdanong butang ang awtomatikong mahitabo sa background:*
 >    - *Una: Mo-generate ang sistema og unique **Reference ID** (e.g., `ARCH-SWU-XXXXXX`), nga nagsilbing official institutional DOI o catalog number.*
->    - *Ikaduha: Mo-trigger ang atong Render email microservice og live email notification sa mga estudyante nga approved na ang ilang research.*
+>    - *Ikaduha: Mo-trigger ang atong Firebase Cloud Function email microservice og live email notification sa mga estudyante nga approved na ang ilang research.*
 >    - *Ikatulo: Awtomatikong ma-index ang papel padulong sa **Public Research Archive**.*
 > 4. *Dugang pa niini, makita usab sa Dean ang official **Certificate of Archiving** nga may Dean electronic seal para sa institutional accreditation records."*
 
@@ -196,7 +196,7 @@
 >    - *Cloud Firestore: Naghatag og sub-second real-time sync tali sa estudyante ug adviser.*
 >    - *Firebase Authentication: Nagdumala sa salted-hash password encryption ug session security.*
 >    - *Cloud Storage: Nag-host sa mga bug-at nga PDF manuscripts pinaagi sa Google CDN.*
-> 2. ***Resilient Multi-Model AI Microservice (Hosted on Render):**
+> 2. ***Resilient Multi-Model AI Microservice (Serverless Google Cloud Functions Gen 2 / Cloud Run):**
 >    - *Wala kami mosalig sa usa lang ka AI model. Ang among Express backend naggamit og **Multi-Model Cascading Architecture**.*
 >    - *Gi-prioritize niini ang high-speed nga **Google Gemini Flash**; ug kon pananglitan ma-busy, ma-traffic, o ma-rate limit ang Google API, **awtomatiko kining mo-cascade ug mo-switch sa Groq SDK** isip failover backup.*
 >    - *Tungod niini, ang atong AI Chatbot, Abstract Summarizer, ug Transactional Email Service kay nagpabiling 99.9% online ug walay downtime."*
@@ -215,7 +215,7 @@
 > 3. ***Anti-Forgery Verification:** Pinaagi sa Reference ID ug QR code nga naka-tether sa among live ledger, mapugngan ang paghimo og peke nga clearance certificates.*
 > 4. ***Data Privacy Act of 2012 (RA 10173) Compliance:** Scholarly metadata lamang (Title, Authors, Abstract, Department) ang makita sa public. Ang personal phone numbers, student ID numbers, ug unapproved draft remarks kay estriktorong gitagoan sa backend.*
 > 5. ***Anti-Scraping & IP Protection:** Ang PDF manuscripts giprotektahan gamit ang Canvas rendering ug view-only restrictions aron malikayan ang automated web scraping.*
-> 6. ***Environment Secret Isolation:** Ang tanang API keys, service accounts (`firebase-service-account.json`), ug SMTP credentials kay encrypted sa server environment variables sa Render ug gitagoan sa `.gitignore`.*
+> 6. ***Environment Secret Isolation:** Ang tanang API keys, service accounts (`firebase-service-account.json`), ug SMTP credentials kay encrypted sa secure environment variables sa Firebase Cloud Functions / Google Cloud ug gitagoan sa `.gitignore`.*
 > 7. ***Network Rate Limiting & CORS:** Gipanalipdan ang atong API batok sa bot flooding ug Denial of Service (DoS) attacks gamit ang CORS whitelist ug express rate-limiters."*
 
 ---
@@ -240,7 +240,7 @@
 
 ### Q5: "Unsay mahitabo kon ma-down o ma-rate limit ang Gemini AI API?"
 > **Tubag (Bislish):**
-> *"Nindot kaayo na nga pangutana Sir/Ma'am. Sa among backend sa Render, nag-implement mi og **Multi-Model Cascading Failover Gateway**. Kon pananglitan ma-quota o ma-busy ang Google Gemini, ang among server awtomatikong mo-cascade sa secondary models ug mo-shift sa **Groq SDK** isip backup. Busa, 99.9% ang uptime sa atong AI assistant."*
+> *"Nindot kaayo na nga pangutana Sir/Ma'am. Sa among backend sa Firebase Cloud Functions, nag-implement mi og **Multi-Model Cascading Failover Gateway**. Kon pananglitan ma-quota o ma-busy ang Google Gemini, ang among server awtomatikong mo-cascade sa secondary models ug mo-shift sa **Groq SDK** isip backup. Busa, 99.9% ang uptime sa atong AI assistant."*
 
 ### Q6: "Unsaon pagsiguro nga mosunod ang sistema sa Data Privacy Act of 2012 (RA 10173)?"
 > **Tubag (Bislish):**

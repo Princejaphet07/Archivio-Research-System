@@ -1,237 +1,86 @@
-# 🚀 Complete Startup Guide - ALL Projects
+﻿# 🚀 ARCHIVIO: Complete Startup & Local Development Guide
 
-## You Need 5 Terminal Windows Total
+## 🏛️ System Architecture Overview
+The current ARCHIVIO architecture is divided into two responsive frontend applications and a high-performance backend microservice (deployed as a 2nd Gen Firebase Cloud Function):
 
-### **All Must Run!**
+1. **Unified Academic Portal (`/`)** — Handles all authenticated institutional roles:
+   - 🎓 Student Portal (`/student`)
+   - 👨‍🏫 Research Adviser Portal (`/adviser`)
+   - 🏛️ College Dean Portal (`/dean`)
+   - ⚙️ System Administrator Portal (`/admin`)
+2. **Public Research Archive (`public-archive/`)** — Open-access repository for searching, citing, and viewing watermarked research manuscripts.
+3. **Backend REST API (`email-service/`)** — Node.js & Express microservice powering Google Gemini AI, PDF watermarking, invitations, and OTP password recovery.
 
 ---
 
-## Terminal 1: Email Service
+## 💻 Running the System Locally
+
+### **Terminal 1: Unified Academic Portal (Port 5173)**
 ```bash
+# In the root ARCHIVIO folder:
+npm install
+npm run dev
+```
+- **Local URL:** `http://localhost:5173`
+- **Handles:** Student, Adviser, Dean, and Admin logins.
+
+---
+
+### **Terminal 2: Public Research Archive (Port 5174)**
+```bash
+# In a new terminal window:
+cd public-archive
+npm install
+npm run dev
+```
+- **Local URL:** `http://localhost:5174`
+- **Handles:** Public search, document viewing with institutional watermark, and citation generator.
+
+---
+
+### **Terminal 3 (Optional): Local Backend API (Port 3001)**
+```bash
+# In a new terminal window:
 cd email-service
-npm start
-```
-
-**Output Should Show:**
-```
-╔═══════════════════════════════════════╗
-║   ARCHIVIO Email Service Running      ║
-║   Port: 3001                          ║
-║   ✅ Ready to send invitations         ║
-╚═══════════════════════════════════════╝
-```
-
-✅ **Leave running**
-
----
-
-## Terminal 2: Research Adviser System
-```bash
-cd research-adviser-system
+npm install
 npm run dev
 ```
+- **Local URL:** `http://localhost:3001`
+- **Swagger Documentation:** `http://localhost:3001/docs`
 
-**Output Should Show:**
-```
-➜ Local: http://localhost:5176/
-```
-
-✅ **Leave running**
+> 💡 **Developer Note:** Running Terminal 3 locally is **optional**! ARCHIVIO's centralized `src/utils/backendUrl.js` automatically proxies API calls directly to the live Firebase Cloud Function (`https://archivio-research-system.web.app`) when testing on localhost, unless `VITE_USE_LOCAL_BACKEND=true` is explicitly set in `.env.local`.
 
 ---
 
-## Terminal 3: Student Portal (Archivio)
-```bash
-npm run dev
-```
+## 🌐 Production Cloud URLs
 
-(From root ARCHIVIO folder)
-
-**Output Should Show:**
-```
-➜ Local: http://localhost:5178/
-```
-
-✅ **Leave running**
+| Component | Production Cloud URL | Hosting Platform |
+| :--- | :--- | :--- |
+| **Unified Academic Portal** | [https://archivio-research-system.web.app](https://archivio-research-system.web.app) | Firebase Hosting (`main` target) |
+| **Public Research Archive** | [https://archivio-public.web.app](https://archivio-public.web.app) | Firebase Hosting (`public-archive` target) |
+| **Backend API & Swagger Docs** | [https://archivio-research-system.web.app/docs](https://archivio-research-system.web.app/docs) | Firebase Cloud Functions Gen 2 (`api`) |
+| **Cloud Database** | Cloud Firestore (`archivio-research-system`, `nam5`) | Google Cloud Platform |
 
 ---
 
-## Terminal 4: Dean System (Optional but Good to Have)
-```bash
-cd dean-system
-npm run dev
-```
+## 🧪 Testing Role Portals & Workflows
 
-**Output Should Show:**
-```
-➜ Local: http://localhost:5173/
-```
+### 1. Student Submission Flow
+1. Navigate to `http://localhost:5173` (or production).
+2. Register or log in with your institutional `@swu.phinma.edu.ph` account.
+3. Form a capstone team, select your research adviser, and upload defense milestone chapters.
 
-✅ **Leave running**
+### 2. Adviser Review Flow
+1. Log in with adviser credentials at `http://localhost:5173`.
+2. Access the **Adviser Dashboard** (`/adviser`).
+3. Inspect advisee submissions, provide rubric feedback, request revisions, or formally endorse the paper to the Dean.
 
----
+### 3. Dean Approval Flow
+1. Log in with Dean credentials at `http://localhost:5173`.
+2. Access the **Dean Portal** (`/dean`).
+3. Verify department endorsements, review manuscripts, and click **Approve for Archival**.
 
-## Terminal 5: System Administrator (Optional but Good to Have)
-```bash
-cd system-administrator
-npm run dev
-```
-
-**Output Should Show:**
-```
-➜ Local: http://localhost:5174/
-```
-
-✅ **Leave running**
-
----
-
-## 📊 All 5 Projects Running
-
-| # | Terminal | Command | Port | URL |
-|---|----------|---------|------|-----|
-| 1 | Terminal 1 | `npm start` (email-service) | 3001 | Backend |
-| 2 | Terminal 2 | `npm run dev` (research-adviser-system) | 5176 | http://localhost:5176 |
-| 3 | Terminal 3 | `npm run dev` (root) | 5178 | http://localhost:5178 |
-| 4 | Terminal 4 | `npm run dev` (dean-system) | 5173 | http://localhost:5173 |
-| 5 | Terminal 5 | `npm run dev` (system-administrator) | 5174 | http://localhost:5174 |
-
----
-
-## 🎯 For Testing Student Invitation:
-
-**Minimum (3 Terminals):**
-1. Email Service (3001)
-2. Research Adviser System (5176)
-3. Student Portal (5178)
-
-**Full Setup (5 Terminals):**
-1. Email Service (3001)
-2. Research Adviser System (5176)
-3. Student Portal (5178)
-4. Dean System (5173)
-5. System Administrator (5174)
-
----
-
-## Browser - Test Flow
-
-### Step 1: Open Research Adviser (5176)
-```
-http://localhost:5176
-```
-
-### Step 2: Login & Send Invitation
-- Email: adviser@phinmaed.com
-- Password: (your adviser password)
-- Go to: "Send Invitations"
-- Enter: prdo.vender.swu@phinmaed.com
-- Click: "Send Link"
-
-### Step 3: Check Email & Click Link
-- Email: prdo.vender.swu@phinmaed.com
-- Find: ARCHIVIO email
-- Click: Activation link
-
-### Step 4: Student Portal Opens (5178)
-- Auto-redirects to activation page
-- Fill form:
-  - First Name: John
-  - Last Name: Doe
-  - Password: SecurePass@123
-  - Confirm: SecurePass@123
-- Click: "Activate Account"
-
-### Step 5: Login to Student Portal
-- Email: prdo.vender.swu@phinmaed.com
-- Password: SecurePass@123
-- ✅ Dashboard loads!
-
----
-
-## ✅ Verification Checklist
-
-- [ ] Terminal 1: Email Service ready (shows "✅ Ready to send invitations")
-- [ ] Terminal 2: Research Adviser running (shows port 5176)
-- [ ] Terminal 3: Student Portal running (shows port 5178)
-- [ ] Terminal 4: Dean System running (shows port 5173) - optional
-- [ ] Terminal 5: System Admin running (shows port 5174) - optional
-- [ ] Browser can access http://localhost:5176
-- [ ] Can send invitation from 5176
-- [ ] Email received
-- [ ] Can click link
-- [ ] Student Portal (5178) opens
-- [ ] Can activate account
-- [ ] Can login
-
----
-
-## 🆘 If Something Stops Working
-
-**1. Check All Terminals Are Running:**
-```
-Email Service:      Terminal 1 ✅
-Research Adviser:   Terminal 2 ✅
-Student Portal:     Terminal 3 ✅
-Dean System:        Terminal 4 ✅ (optional)
-System Admin:       Terminal 5 ✅ (optional)
-```
-
-**2. If a Terminal Stopped:**
-- Close that terminal window
-- Open a new terminal
-- Navigate to the correct folder
-- Run the command again
-
-**3. If Port Already in Use:**
-```bash
-# Windows PowerShell
-Get-Process -Name node | Stop-Process -Force
-```
-
-Then start again.
-
----
-
-## 📝 Terminal Commands Quick Copy
-
-```bash
-# Terminal 1 - Email Service
-cd email-service
-npm start
-
-# Terminal 2 - Research Adviser System
-cd research-adviser-system
-npm run dev
-
-# Terminal 3 - Student Portal
-npm run dev
-
-# Terminal 4 - Dean System (optional)
-cd dean-system
-npm run dev
-
-# Terminal 5 - System Administrator (optional)
-cd system-administrator
-npm run dev
-```
-
----
-
-## 🎉 Once All Running
-
-You have:
-- ✅ Email sending (3001)
-- ✅ Adviser system (5176)
-- ✅ Student portal (5178)
-- ✅ Dean system (5173)
-- ✅ Admin system (5174)
-
-Everything works together!
-
----
-
-**Answer to your question:** 
-**YES! All other projects also need `npm run dev`**
-- Email Service uses: `npm start`
-- Everything else uses: `npm run dev`
+### 4. Public Discovery
+1. Open `http://localhost:5174` (or `https://archivio-public.web.app`).
+2. Search for the approved thesis title.
+3. Read the watermarked manuscript and generate APA/MLA/IEEE citations.

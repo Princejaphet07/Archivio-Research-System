@@ -1,99 +1,24 @@
-# 🎯 Quick Reference Card
+﻿# 📌 ARCHIVIO Quick Reference Card
 
-## The Perfect Order (Copy This!)
+## 🌐 System URLs & Ports
 
-### **DO THIS FIRST:**
-
-**Terminal 1:**
-```bash
-cd email-service && npm start
-```
-
-**Terminal 2:**
-```bash
-cd research-adviser-system && npm run dev
-```
-
-**Terminal 3:**
-```bash
-npm run dev
-```
+| System | Port | URL |
+| :--- | :---: | :--- |
+| **Unified Academic Portal** (Student, Adviser, Dean, Admin) | **5173** | `http://localhost:5173` |
+| **Public Research Archive** | **5174** | `http://localhost:5174` |
+| **Backend REST API** | **3001** | `http://localhost:3001` (Docs: `/docs`) |
 
 ---
 
-## **Browser Order (IMPORTANT!):**
-
-### **1️⃣ FIRST Browser Tab - Open ONLY This:**
-```
-http://localhost:5176
-```
-
-✅ Login → Send Invitation → Check Email
-
-### **2️⃣ SECOND - Click Email Link**
-
-Email will have:
-```
-http://localhost:5178/student-activate?token=xxxxx
-```
-
-⚠️ Click link = Port 5178 opens automatically
-
-### **3️⃣ Fill Form → Activate → Login → Dashboard**
+## ☁️ Production Cloud Links
+- **Unified Portal:** [https://archivio-research-system.web.app](https://archivio-research-system.web.app)
+- **Public Archive:** [https://archivio-public.web.app](https://archivio-public.web.app)
+- **Interactive REST API Documentation:** [https://archivio-research-system.web.app/docs](https://archivio-research-system.web.app/docs)
 
 ---
 
-## ❌ WHAT NOT TO DO
-
-❌ Open http://localhost:5178 manually before email link
-❌ Open both 5176 and 5178 at the same time
-❌ Refresh or navigate away from activation page
-❌ Click back button before activation completes
-
----
-
-## ✅ What SHOULD Happen
-
-✅ Open 5176 only
-✅ Send invitation from 5176
-✅ Click email link
-✅ 5178 opens automatically
-✅ Activation page loads
-✅ Complete flow works perfectly
-
----
-
-## 📧 Email Link Format
-
-```
-http://localhost:5178/student-activate?token=RANDOM_TOKEN_HERE
-```
-
-This link:
-- ✅ Opens Student Portal automatically
-- ✅ Loads activation page
-- ✅ Shows student email
-- ✅ Ready to create account
-
----
-
-## 🚀 Complete Flow (Copy/Paste Order)
-
-```
-Terminal 1: cd email-service && npm start
-Terminal 2: cd research-adviser-system && npm run dev
-Terminal 3: npm run dev
-Browser:   http://localhost:5176
-Action:    Login → Send Invitation
-Check:     Email inbox
-Click:     Link from email
-See:       http://localhost:5178 opens
-Fill:      First Name, Last Name, Password
-Click:     Activate Account
-Login:     Email + Password
-Done:      ✅ Student Dashboard
-```
-
----
-
-**Key:** Open 5176 first, then let email link open 5178!
+## 👥 Role Gated Routes
+- **Student Portal:** `/student`
+- **Adviser Portal:** `/adviser`
+- **Dean Portal:** `/dean`
+- **Super Administrator Portal:** `/admin`

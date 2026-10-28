@@ -1,4 +1,4 @@
-# Complete Dean Login Flow - Step by Step
+﻿# Complete Dean Login Flow - Step by Step
 
 ## Overview
 This guide walks through the complete process of:
@@ -12,13 +12,13 @@ This guide walks through the complete process of:
 ## PART 1: ADMIN CREATES DEAN ACCOUNT
 
 ### Step 1.1: Login to System Administrator
-- **URL:** `http://localhost:5174`
+- **URL:** `http://localhost:5173`
 - **Port:** 5174
 - **What you see:** System Administrator dashboard if already logged in, or login page
 - **Action:** Login as super admin if needed
 
 ### Step 1.2: Navigate to User Management
-1. Click **Accounts** → **User Management**
+1. Click **Accounts** â†’ **User Management**
 2. Or use sidebar: **Accounts** section
 
 ### Step 1.3: Click "Add New Dean"
@@ -43,15 +43,15 @@ Role:              dean+adviser (default)
 
 ### Step 1.5: Click "Create Dean Account"
 1. Button will show "Creating..." while processing
-2. Wait for success message: "✅ Dean invitation sent to john.smith@phinmaed.com!"
+2. Wait for success message: "âœ… Dean invitation sent to john.smith@phinmaed.com!"
 3. Modal closes automatically
 
 ### Step 1.6: Verify in Console (Optional)
-1. Open browser Developer Tools: **F12** or **Right-click → Inspect**
+1. Open browser Developer Tools: **F12** or **Right-click â†’ Inspect**
 2. Go to **Console** tab
 3. Look for logs like:
    ```
-   ✅ Firebase Auth account created for: john.smith@phinmaed.com UID: xyz123abc
+   âœ… Firebase Auth account created for: john.smith@phinmaed.com UID: xyz123abc
    ```
 
 ---
@@ -61,7 +61,7 @@ Role:              dean+adviser (default)
 ### Step 2.1: Check Mailtrap (Development/Testing)
 - **URL:** https://mailtrap.io/
 - **Login:** Use your Mailtrap account
-- **Go to:** Inboxes → Select project → View emails
+- **Go to:** Inboxes â†’ Select project â†’ View emails
 
 ### Step 2.2: Find Email to Dean
 - **From:** ARCHIVIO (noreply email)
@@ -108,13 +108,13 @@ Temporary Password: MpM%pdr%!&q5
    - Safari: `Cmd+Shift+N`
 
 2. **Option B:** Clear browser cookies/cache
-   - Chrome: Settings → Privacy → Clear browsing data
-   - Firefox: Preferences → Privacy → Clear Data
+   - Chrome: Settings â†’ Privacy â†’ Clear browsing data
+   - Firefox: Preferences â†’ Privacy â†’ Clear Data
 
 3. **Why:** Prevents Firefox cached auth tokens from interfering
 
 ### Step 3.2: Navigate to Dean System
-1. **URL:** `http://localhost:5174`
+1. **URL:** `http://localhost:5173`
 2. **Port:** 5174 (or 5173 depending on your configuration)
 3. **What you see:** Dean Portal Login form
 
@@ -143,7 +143,7 @@ Password: [Paste from Mailtrap email]
   - Calendar or reports (depends on modules)
 
 ### Step 3.6: Verify It Worked
-1. **Check URL:** Should be `http://localhost:5174/dashboard` or similar
+1. **Check URL:** Should be `http://localhost:5173/dashboard` or similar
 2. **Check sidebar:** Should show dean menu items
 3. **Try a page:** Click "Profile" or "Settings" to verify navigation works
 
@@ -156,7 +156,7 @@ Password: [Paste from Mailtrap email]
 **Step 1: Check Browser Console**
 1. Press **F12** to open Developer Tools
 2. Go to **Console** tab (not Elements)
-3. Look for logs starting with 🔍 or ❌
+3. Look for logs starting with ðŸ” or âŒ
 4. **Copy the error message**
 
 **Step 2: Verify Email**
@@ -170,7 +170,7 @@ Password: [Paste from Mailtrap email]
 **Step 3: Clear Everything and Try Again**
 1. Close the browser tab completely
 2. Open a NEW incognito window
-3. Navigate to localhost:5174
+3. Navigate to localhost:5173
 4. **Carefully re-enter credentials**
 5. Try login again
 
@@ -180,14 +180,14 @@ Password: [Paste from Mailtrap email]
 3. Find **deans** collection
 4. Look for dean document with email: `john.smith@phinmaed.com`
 5. Check fields:
-   - **status:** Should be "active" ✓
+   - **status:** Should be "active" âœ“
    - **email:** Should match exactly (lowercase)
    - **uid:** Should have a Firebase UID value
    - **temporaryPassword:** Should match what's in email
 
 **Step 5: Check Firebase Auth (Advanced)**
 1. Open Firebase Console
-2. Go to **Authentication** → **Users**
+2. Go to **Authentication** â†’ **Users**
 3. Look for user with email: `john.smith@phinmaed.com`
 4. Verify:
    - Email is enabled (not disabled)
@@ -238,8 +238,8 @@ Password: [Paste from Mailtrap email]
 
 ## COMPLETE FLOW CHECKLIST
 
-### ✅ Admin Side
-- [ ] Logged into System Administrator (localhost:5174)
+### âœ… Admin Side
+- [ ] Logged into System Administrator (localhost:5173)
 - [ ] Navigated to User Management
 - [ ] Clicked "Add New Dean"
 - [ ] Filled all required fields
@@ -248,7 +248,7 @@ Password: [Paste from Mailtrap email]
 - [ ] Saw success message
 - [ ] Checked console for UID confirmation
 
-### ✅ Email Side
+### âœ… Email Side
 - [ ] Went to Mailtrap
 - [ ] Found email to dean
 - [ ] Opened email body
@@ -257,9 +257,9 @@ Password: [Paste from Mailtrap email]
 - [ ] Found Temporary Password: (12-char string)
 - [ ] Copied password to clipboard
 
-### ✅ Dean Side
+### âœ… Dean Side
 - [ ] Opened new incognito window
-- [ ] Navigated to localhost:5174
+- [ ] Navigated to localhost:5173
 - [ ] Saw Dean Portal Login form
 - [ ] Entered email: john.smith@phinmaed.com
 - [ ] Pasted temporary password
@@ -269,8 +269,8 @@ Password: [Paste from Mailtrap email]
 - [ ] Verified sidebar menu appears
 - [ ] Clicked on profile/settings to confirm it works
 
-### ✅ Verification
-- [ ] Browser console shows ✅ logs (F12)
+### âœ… Verification
+- [ ] Browser console shows âœ… logs (F12)
 - [ ] Firestore `deans` collection has entry
 - [ ] Firebase Auth shows account as enabled
 - [ ] Can navigate between dean system pages
@@ -282,7 +282,7 @@ Password: [Paste from Mailtrap email]
 
 | Mistake | Solution |
 |---------|----------|
-| Using same browser tab → cached auth | Open new INCOGNITO window |
+| Using same browser tab â†’ cached auth | Open new INCOGNITO window |
 | Typing password instead of copy-paste | Use Ctrl+C / Cmd+C to copy from email |
 | Missing special characters in password | Copy directly from Mailtrap email |
 | Email uppercase (John@phinmaed.com) | Must be lowercase: john@phinmaed.com |
@@ -300,8 +300,8 @@ Password: [Paste from Mailtrap email]
 - Email Service: 3001
 
 ### Key URLs
-- System Admin: `http://localhost:5174`
-- Dean Login: `http://localhost:5174`
+- System Admin: `http://localhost:5173`
+- Dean Login: `http://localhost:5173`
 - Mailtrap: `https://mailtrap.io`
 - Firebase: `https://console.firebase.google.com`
 
@@ -336,7 +336,7 @@ Password: [Paste from Mailtrap email]
 
 ### If You Get Stuck:
 
-1. **Check browser console** (F12 → Console tab)
+1. **Check browser console** (F12 â†’ Console tab)
 2. **Check Mailtrap** for email content
 3. **Check Firestore** for dean record
 4. **Check Firebase Auth** for account status
@@ -354,5 +354,6 @@ Password: [Paste from Mailtrap email]
 ---
 
 **Version:** 1.0 - July 23, 2026  
-**Status:** Complete Dean Login System ✅  
+**Status:** Complete Dean Login System âœ…  
 **Ready for:** Production Testing
+

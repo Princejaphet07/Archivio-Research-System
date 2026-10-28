@@ -165,12 +165,12 @@ Giunsa pagpanalipod sa ARCHIVIO ang graduation clearances batok sa pamemeke (cou
 | **A02: Cryptographic Failures** | Exposing sensitive data in transit or rest | Forced HTTPS/TLS 1.3, AES-256 cloud encryption, salted scrypt password hashing. |
 | **A03: Injection (SQL / NoSQL)** | Malicious SQL/NoSQL query payloads | Firestore uses a parameterized object document model. No raw SQL query string concatenation exists. |
 | **A04: Insecure Design** | Self-assigning clearance without adviser review | Linear workflow pipeline gating: Student Upload ➔ Adviser Endorsement ➔ Dean Approval ➔ Cataloged. |
-| **A05: Security Misconfiguration** | Leaked secrets, default credentials | All API keys and Firebase Service Accounts are isolated in `.env` and Render backend environment variables. |
+| **A05: Security Misconfiguration** | Leaked secrets, default credentials | All API keys and Firebase Service Accounts are isolated in server-side `.env` and Google Cloud / Firebase Functions environment configurations. |
 | **A06: Vulnerable Components** | Outdated libraries with known exploits | Modern dependencies managed via npm, audited through Vite build pipelines. |
 | **A07: Identification & Auth Failures** | Brute force login, session hijacking | Firebase Auth session management, token expiry, rate-limited login attempts. |
 | **A08: Software & Data Integrity** | Tampered certificate images or PDF files | Institutional Reference ID cross-referenced with database ledger; public download of certificates disabled. |
 | **A09: Security Logging & Monitoring** | Undetected unauthorized operations | Real-time `activity_logs` collection recording timestamps, actor UIDs, actions, and entities. |
-| **A10: Server-Side Request Forgery** | Attacking internal microservices | Restricted CORS whitelist and internal authorization tokens for the Express/Render microservice. |
+| **A10: Server-Side Request Forgery** | Attacking internal microservices | Restricted CORS whitelist and internal authorization tokens for the Express API / Firebase Cloud Functions. |
 
 ---
 
@@ -232,12 +232,12 @@ Giunsa pagpanalipod sa ARCHIVIO ang graduation clearances batok sa pamemeke (cou
 
 ---
 
-### Q6: "Asa man ninyo gitago ang inyong mga API Keys ug database credentials aron dili makita sa publiko?"
+#### Q6: "Asa man ninyo gitago ang inyong mga API Keys ug database credentials aron dili makita sa publiko?"
 > **Winning Answer (Bislish):**  
 > *"Nagsunod kami sa **Twelve-Factor App Security Methodology**:*  
-> *Ang tanang sensitibong credentials—sama sa among Gemini AI API keys, Groq API keys, Render service secrets, ug email SMTP passwords—kay **gitagoan sa server-side Environment Variables (`.env`)** ug gi-deploy sa secured container environment sa Render.*  
+> *Ang tanang sensitibong credentials—sama sa among Gemini AI API keys, Groq API keys, cloud service secrets, ug email SMTP passwords—kay **gitagoan sa server-side Environment Variables (`.env`)** ug gi-deploy sa secured serverless container environment sa Firebase Cloud Functions / Google Cloud Run.*  
 >  
-> *Kini nga mga files kay apil sa `.gitignore`, busa **wala gayod kini ma-commit o ma-push sa public GitHub repository**. Dugang pa, ang among frontend Firebase config kay nagbaton og restricted API keys nga giprotektahan pinaagi sa among Firestore Rules."*
+> *Kini nga mga files kay apil sa `.gitignore`, busa **wala gayod kini ma-commit o ma-push sa public GitHub repository**. Dugang pa, ang among frontend Firebase config kay nagbaton og restricted API keys nga giprotektahan pinaagi sa among Firestore Rules."*  
 
 ---
 
@@ -252,7 +252,7 @@ Giunsa pagpanalipod sa ARCHIVIO ang graduation clearances batok sa pamemeke (cou
 
 ### Q8: "Unsaon pagpanalipod sa inyong AI Microservice batok sa Denial of Service (DoS) o API Flooding?"
 > **Winning Answer (Bislish):**  
-> *"Sa among Express backend sa Render, nagpatuman kami og duha ka layer sa depensa:*  
+> *"Sa among Express backend sa Firebase Cloud Functions, nagpatuman kami og duha ka layer sa depensa:*  
 > 1. ***Network Rate Limiting:** Gigamit namo ang `express-rate-limit` aron limitahan ang gidaghanon sa requests nga pwedeng ipadala sa usa ka IP address sulod sa usa ka minuto.*  
 > 2. ***CORS (Cross-Origin Resource Sharing) Whitelist:** Ang among backend microservice modawat lamang og requests nga naggikan sa among official frontend domains (`https://archivio-research-system.web.app` ug verified localhost ports). Ang bisan unsang request gikan sa unauthorized third-party domains awtomatikong i-block sa CORS policy."*
 
@@ -289,7 +289,7 @@ Giunsa pagpanalipod sa ARCHIVIO ang graduation clearances batok sa pamemeke (cou
 | **Data Privacy** | PII leakage, RA 10173 violation | Metadata redaction, need-to-know | Public view shows abstract/citations only |
 | **Accountability** | Repudiation, unauthorized edits | Activity logs with server timestamps | Immutable `activity_logs` collection |
 | **Network Security** | Packet sniffing, MitM attacks | Enforced HTTPS, TLS 1.3 | Google SSL Certificate |
-| **API Protection** | DoS, spamming, key theft | Rate-limiting, CORS, `.env` shielding | Express rate limiter, Render secrets |
+| **API Protection** | DoS, spamming, key theft | Rate-limiting, CORS, `.env` shielding | Express rate limiter, Cloud Function secrets |
 
 ---
 *Prepared by the ARCHIVIO Capstone Development Team — College of Information Technology, Southwestern University PHINMA.*

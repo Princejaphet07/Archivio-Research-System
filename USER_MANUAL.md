@@ -13,8 +13,9 @@
 * **Document Classification:** Official Institutional Operations Manual
 * **Effective Date:** Academic Year 2026–2027
 * **Access Portals:**
-  - **Unified Portal:** `https://archivio.ph/` (or `http://localhost:5173/`)
-  - **Public Open-Access Archive:** `https://archive.archivio.ph/` (or `http://localhost:5174/`)
+  - **Unified Portal:** `https://archivio-research-system.web.app/` (or `http://localhost:5173/`)
+  - **Public Open-Access Archive:** `https://archivio-public.web.app/` (or `http://localhost:5174/`)
+  - **Interactive API Documentation:** `https://archivio-research-system.web.app/docs` (or `http://localhost:3001/docs`)
 
 ---
 
@@ -287,7 +288,7 @@ Monitor the real-time status banner on your dashboard:
 ## 8. Public Open-Access Archive & Verification Engine
 
 ### 8.1 Public Research Discovery (`/`)
-The Public Archive is accessible without logging in at `https://archive.archivio.ph/`:
+The Public Archive is accessible without logging in at `https://archivio-public.web.app/`:
 * **Universal Search Bar:** Instant keyword search across paper titles, abstracts, authors, and categories.
 * **Department Filter:** Browse by College (e.g., College of IT, College of Nursing).
 * **School Year Filter:** Filter published works by academic batch.
