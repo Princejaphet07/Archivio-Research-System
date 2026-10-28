@@ -1,30 +1,19 @@
 // CREATE ADMIN PROFILE IN FIRESTORE
-// Run this to create the Firestore profile for your existing admin account
-// Command: node src/createAdminProfile.js
+// Usage: ADMIN_UID=... ADMIN_EMAIL=... node src/admin/createAdminProfile.js
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { firebaseConfig } from '../firebase/config.js';
 
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA",
-  authDomain: "archivio-research-system.firebaseapp.com",
-  projectId: "archivio-research-system",
-  storageBucket: "archivio-research-system.firebasestorage.app",
-  messagingSenderId: "798013707409",
-  appId: "1:798013707409:web:59f945fa69fe5321265b30",
-  measurementId: "G-8LNQMPEYC4"
-};
-
-// Initialize Firebase
+// Initialize Firebase using centralized config
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// YOUR ADMIN DETAILS
-const ADMIN_UID = 'USLjA9IilNPfWA5VOcMBuT0XCxW2'; // Your Firebase Auth UID
-const ADMIN_EMAIL = 'prdo.vender.swu@phinmaed.com';
-const ADMIN_NAME = 'Pronce Japhet Vender';
-const ADMIN_DEPARTMENT = 'Information Technology';
+// ADMIN DETAILS (Loaded securely from env)
+const ADMIN_UID = process.env.ADMIN_UID || '';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@swu.phinma.edu.ph';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'ARCHIVIO System Administrator';
+const ADMIN_DEPARTMENT = process.env.ADMIN_DEPARTMENT || 'Information Technology';
 
 async function createAdminProfile() {
   console.log('🔥 Creating Admin Profile in Firestore');

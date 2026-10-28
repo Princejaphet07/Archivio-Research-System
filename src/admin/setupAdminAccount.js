@@ -1,35 +1,23 @@
-// HARDCODED ADMIN ACCOUNT SETUP
-// Run this script ONCE to create your admin account and Firestore collections
-// Command: node src/setupAdminAccount.js
+// ADMIN ACCOUNT SETUP UTILITY
+// Usage: ADMIN_EMAIL=... ADMIN_PASSWORD=... node src/admin/setupAdminAccount.js
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc, collection } from 'firebase/firestore';
+import { firebaseConfig } from '../firebase/config.js';
 
-// Firebase Config (hardcoded)
-const firebaseConfig = {
-  apiKey: "AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA",
-  authDomain: "archivio-research-system.firebaseapp.com",
-  projectId: "archivio-research-system",
-  storageBucket: "archivio-research-system.firebasestorage.app",
-  messagingSenderId: "798013707409",
-  appId: "1:798013707409:web:59f945fa69fe5321265b30",
-  measurementId: "G-8LNQMPEYC4"
-};
-
-// Initialize Firebase
+// Initialize Firebase using centralized config
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ============================================
-// HARDCODED ADMIN CREDENTIALS
-// ⚠️ CHANGE THESE TO YOUR DETAILS!
+// ADMIN CREDENTIALS (Loaded securely from env)
 // ============================================
-const ADMIN_EMAIL = 'prdo.vender.swu@phinmaed.com';
-const ADMIN_PASSWORD = '23571113';
-const ADMIN_NAME = 'Pronce Japhet Vender';
-const ADMIN_DEPARTMENT = 'Information Technology';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@swu.phinma.edu.ph';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ArchivioAdmin_2026!';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'ARCHIVIO System Administrator';
+const ADMIN_DEPARTMENT = process.env.ADMIN_DEPARTMENT || 'Information Technology';
 
 async function setupAdminAccount() {
   console.log('🔥 ARCHIVIO Admin Account Setup');

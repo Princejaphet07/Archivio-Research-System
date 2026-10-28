@@ -1,15 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, setDoc } from 'firebase/firestore';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBWU7Mlk0Xykqtvb_gpuweLOv3VEtAp-AA",
-  authDomain: "archivio-research-system.firebaseapp.com",
-  projectId: "archivio-research-system",
-  storageBucket: "archivio-research-system.firebasestorage.app",
-  messagingSenderId: "798013707409",
-  appId: "1:798013707409:web:59f945fa69fe5321265b30",
-  measurementId: "G-8LNQMPEYC4"
-};
+import { firebaseConfig } from '../src/firebase/config.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
