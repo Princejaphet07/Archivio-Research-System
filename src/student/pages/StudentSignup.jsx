@@ -167,14 +167,23 @@ export default function StudentSignup({ onSwitchPage }) {
           const q = query(invitationsRef, where('studentEmail', '==', cleanEmail), where('status', '==', 'pending'));
           const snapshot = await getDocs(q);
           if (!snapshot.empty) {
+            const parseDate = (v) => v?.toDate ? v.toDate() : new Date(v || 0);
             const sortedDocs = snapshot.docs.sort((a, b) => {
-              const dateA = new Date(a.data().createdAt || 0);
-              const dateB = new Date(b.data().createdAt || 0);
+              const dateA = parseDate(a.data().invitationSentAt || a.data().createdAt);
+              const dateB = parseDate(b.data().invitationSentAt || b.data().createdAt);
               return dateB - dateA;
             });
             const invData = sortedDocs[0].data();
             invData.id = sortedDocs[0].id;
-            setInvitationData(invData);
+
+            const sentDate = parseDate(invData.invitationSentAt || invData.createdAt);
+            const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (!isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7) {
+              setError('❌ This invitation link has expired (valid for 7 days). Please ask your Research Adviser to resend your invitation.');
+              setFormErrors({ schoolEmail: 'Invitation link has expired (7 days limit)' });
+            } else {
+              setInvitationData(invData);
+            }
           }
         } catch (e) {
           console.warn('Early invitation pre-fetch notice:', e);
@@ -301,14 +310,27 @@ export default function StudentSignup({ onSwitchPage }) {
         return;
       }
       
+      const parseDate = (v) => v?.toDate ? v.toDate() : new Date(v || 0);
       const sortedDocs = snapshot.docs.sort((a, b) => {
-        const dateA = new Date(a.data().createdAt || 0);
-        const dateB = new Date(b.data().createdAt || 0);
+        const dateA = parseDate(a.data().invitationSentAt || a.data().createdAt);
+        const dateB = parseDate(b.data().invitationSentAt || b.data().createdAt);
         return dateB - dateA;
       });
 
       const invData = sortedDocs[0].data();
       invData.id = sortedDocs[0].id; // store id for later use
+
+      // Check if invitation link has expired (7 days)
+      const sentDate = parseDate(invData.invitationSentAt || invData.createdAt);
+      const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (!isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7) {
+        setError('❌ This invitation link has expired (valid for 7 days). Please ask your Research Adviser to resend your invitation.');
+        setFormErrors({ schoolEmail: 'Invitation link has expired (7 days limit)' });
+        document.getElementById('signup-schoolEmail')?.focus();
+        setLoading(false);
+        return;
+      }
+
       setInvitationData(invData);
 
       if (invData.invitedByLeader) {
@@ -389,6 +411,15 @@ export default function StudentSignup({ onSwitchPage }) {
       const email = personalInfo.schoolEmail.trim().toLowerCase();
       if (!invitationData) {
         setError('Invitation data missing. Please go back to step 1.');
+        setLoading(false);
+        return;
+      }
+
+      const parseDate = (v) => v?.toDate ? v.toDate() : new Date(v || 0);
+      const sentDate = parseDate(invitationData.invitationSentAt || invitationData.createdAt);
+      const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (!isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7) {
+        setError('❌ This invitation link has expired (valid for 7 days). Please ask your Research Adviser to resend your invitation.');
         setLoading(false);
         return;
       }

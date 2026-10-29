@@ -84,13 +84,22 @@ function DeanActivate() {
           navigate('/dean/');
           return;
         }
+
+        const rawDate = data.invitationDate || data.createdAt;
+        const sentDate = rawDate?.toDate ? rawDate.toDate() : new Date(rawDate || 0);
+        const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+        const isExpired = !isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7;
+        if (isExpired) {
+          setError('This invitation has expired (valid for 7 days). Please ask the System Administrator to resend your invitation.');
+        }
         
         setActivationData({
           email: data.email,
           deanId: deanDoc.id,
           displayName: data.displayName,
           department: data.department,
-          role: data.role
+          role: data.role,
+          isExpired
         });
       } catch (err) {
         console.error('Failed to fetch dean data:', err);
@@ -146,6 +155,11 @@ function DeanActivate() {
 
     if (!activationData) {
       setError('Session data missing. Please sign in again.');
+      return;
+    }
+
+    if (activationData.isExpired) {
+      setError('This invitation has expired (valid for 7 days). Please ask the System Administrator to resend your invitation.');
       return;
     }
 

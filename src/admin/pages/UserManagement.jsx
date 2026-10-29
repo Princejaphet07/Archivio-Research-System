@@ -1214,6 +1214,7 @@ export default function UserManagement() {
           invitationLink: invitationLink,
           invitationSent: true,
           invitationDate: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           createdAt: new Date().toISOString(),
           createdBy: 'admin',
         };
@@ -1285,6 +1286,7 @@ export default function UserManagement() {
               invitationLink: invitationLink,
               invitationSent: true,
               invitationDate: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
               createdAt: new Date().toISOString(),
               createdBy: 'admin',
             };
@@ -1576,6 +1578,7 @@ export default function UserManagement() {
       if (targetDocRef) {
         await updateDoc(targetDocRef, {
           invitationDate: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           invitationSent: true
         });
       }

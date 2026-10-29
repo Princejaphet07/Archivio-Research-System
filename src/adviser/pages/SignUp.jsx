@@ -36,7 +36,16 @@ function SignUp() {
           const q = query(collection(db, 'advisers'), where('email', '==', emailParam.toLowerCase()), where('status', '==', 'pending'));
           const snap = await getDocs(q);
           if (!snap.empty) {
-            const data = snap.docs[0].data();
+            const parseDate = (v) => v?.toDate ? v.toDate() : new Date(v || 0);
+            const sortedDocs = snap.docs.sort((a, b) => {
+              const dA = parseDate(a.data().invitationSentAt || a.data().createdAt);
+              const dB = parseDate(b.data().invitationSentAt || b.data().createdAt);
+              return dB - dA;
+            });
+            const data = sortedDocs[0].data();
+            const sentDate = parseDate(data.invitationSentAt || data.createdAt);
+            const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+
             setFormData(prev => ({
               ...prev,
               email: data.email,
@@ -44,6 +53,11 @@ function SignUp() {
               lastName: data.lastName || ''
             }));
             setIsPrefilled(true);
+
+            if (!isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7) {
+              setError('This invitation link has expired (valid for 7 days). Please ask your Dean to resend the invitation.');
+              setFormErrors({ email: 'Invitation link has expired (7 days limit)' });
+            }
           }
         } catch (err) {
           console.error("Failed to fetch invitation:", err);
@@ -167,8 +181,25 @@ function SignUp() {
         return;
       }
 
-      const invitationDoc = snapshot.docs[0];
+      const parseDate = (v) => v?.toDate ? v.toDate() : new Date(v || 0);
+      const sortedDocs = snapshot.docs.sort((a, b) => {
+        const dA = parseDate(a.data().invitationSentAt || a.data().createdAt);
+        const dB = parseDate(b.data().invitationSentAt || b.data().createdAt);
+        return dB - dA;
+      });
+      const invitationDoc = sortedDocs[0];
       const invitationData = invitationDoc.data();
+
+      // Check if invitation link has expired (7 days)
+      const sentDate = parseDate(invitationData.invitationSentAt || invitationData.createdAt);
+      const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (!isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7) {
+        setError('This invitation link has expired (valid for 7 days). Please ask your Dean to resend the invitation.');
+        setFormErrors({ email: 'Invitation link has expired (7 days limit)' });
+        document.getElementById('adviser-signup-email')?.focus();
+        setLoading(false);
+        return;
+      }
 
       // 2. Create Firebase Auth account
       const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);

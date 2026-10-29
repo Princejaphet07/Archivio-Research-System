@@ -76,6 +76,10 @@ function SendInvitations() {
           const enriched = myInvites.map(inv => {
             const sEmail = (inv.studentEmail || '').toLowerCase().trim();
             const isRegistered = inv.status === 'active' || inv.status === 'registered' || inv.status === 'accepted' || registeredEmailSet.has(sEmail);
+            const rawSentDate = inv.invitationSentAt || inv.createdAt;
+            const sentDate = rawSentDate?.toDate ? rawSentDate.toDate() : new Date(rawSentDate || 0);
+            const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+            const isExpired = !isRegistered && !isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7;
 
             // Auto-heal Firestore record if already registered in system
             if (isRegistered && inv.status === 'pending') {
@@ -87,6 +91,8 @@ function SendInvitations() {
 
             return {
               ...inv,
+              isExpired,
+              computedStatus: isRegistered ? 'active' : isExpired ? 'expired' : 'pending',
               status: isRegistered ? 'active' : 'pending'
             };
           });
@@ -201,17 +207,29 @@ function SendInvitations() {
       const snapInvite = await getDocs(qInvite);
 
       if (!snapInvite.empty) {
-        const myPendingInvite = snapInvite.docs.find(d => {
+        const myPendingInvites = snapInvite.docs.filter(d => {
           const data = d.data();
           const invSentBy = (data.sentBy || '').toLowerCase().trim();
           return invSentBy === adviserEmail || data.adviserId === adviserId;
         });
 
-        if (myPendingInvite) {
+        const activePendingInvite = myPendingInvites.find(d => {
+          const pData = d.data();
+          const pDate = pData.invitationSentAt?.toDate ? pData.invitationSentAt.toDate() : new Date(pData.invitationSentAt || pData.createdAt || 0);
+          const days = (Date.now() - pDate.getTime()) / (1000 * 60 * 60 * 24);
+          return isNaN(pDate.getTime()) || pDate.getTime() <= 0 || days <= 7;
+        });
+
+        if (activePendingInvite) {
           Swal.close();
           setError('This email already has a pending invitation from you. You can resend or remove it in the table below.');
           setLoading(false);
           return;
+        } else if (myPendingInvites.length > 0) {
+          // Expired pending invitation(s) from this adviser: clean up old expired doc(s) so fresh invite proceeds cleanly
+          for (const expDoc of myPendingInvites) {
+            await deleteDoc(expDoc.ref).catch(() => {});
+          }
         }
       }
 
@@ -221,6 +239,8 @@ function SendInvitations() {
       const invitationLink = `${studentPortalUrl}/student/signup?email=${encodeURIComponent(studentEmail.toLowerCase().trim())}`;
 
       // Create student invitation in Firestore
+      const nowMs = Date.now();
+      const expiresAtIso = new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString();
       const invitationData = {
         studentEmail: studentEmail.toLowerCase().trim(),
         adviserId: adviserData.userId || adviserData.id || '',
@@ -230,8 +250,9 @@ function SendInvitations() {
         status: 'pending',
         invitationToken: invitationToken || '',
         invitationLink: invitationLink || '',
-        invitationSentAt: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        invitationSentAt: new Date(nowMs).toISOString(),
+        expiresAt: expiresAtIso,
+        createdAt: new Date(nowMs).toISOString()
       };
 
       await addDoc(collection(db, 'studentInvitations'), invitationData);
@@ -275,6 +296,11 @@ function SendInvitations() {
             
             <div style="text-align: center; margin: 40px 0 10px 0;">
               <a href="${invitationLink}" target="_blank" style="background-color: #770000 !important; background: linear-gradient(135deg, #770000 0%, #590000 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none !important; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(119, 0, 0, 0.25);"><span style="color: #ffffff !important; text-decoration: none !important; font-weight: 700;">Create Your Account</span></a>
+            </div>
+
+            <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 24px 0; display: flex; align-items: flex-start; gap: 10px;">
+              <span style="font-size: 16px;">⏰</span>
+              <p style="margin: 0;"><strong>Important:</strong> This invitation link will expire in 7 days. Please create your account as soon as possible.</p>
             </div>
             
             <p style="color: #718096; font-size: 14px; margin-top: 40px; border-top: 1px solid #eaeaea; padding-top: 20px;">
@@ -352,9 +378,12 @@ function SendInvitations() {
     });
 
     try {
-      // Update invitation sent time
+      // Update invitation sent time and renew 7-day expiration
+      const nowMs = Date.now();
       await updateDoc(doc(db, 'studentInvitations', invitationId), {
-        invitationSentAt: new Date().toISOString()
+        invitationSentAt: new Date(nowMs).toISOString(),
+        expiresAt: new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending'
       });
 
       // Get invitation data
@@ -476,7 +505,7 @@ function SendInvitations() {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     const email = (inv.studentEmail || '').toLowerCase();
-    const status = (inv.status === 'active' ? 'registered active' : 'pending').toLowerCase();
+    const status = (inv.status === 'active' ? 'registered active' : inv.computedStatus === 'expired' ? 'expired link expired' : 'pending').toLowerCase();
     const date = inv.invitationSentAt ? new Date(inv.invitationSentAt).toLocaleDateString().toLowerCase() : '';
     return email.includes(q) || status.includes(q) || date.includes(q);
   });
@@ -621,10 +650,12 @@ function SendInvitations() {
                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                       invitation.status === 'active' 
                         ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
-                        : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
+                        : invitation.computedStatus === 'expired'
+                          ? 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60'
+                          : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                      {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : invitation.computedStatus === 'expired' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                      {invitation.status === 'active' ? 'Registered' : invitation.computedStatus === 'expired' ? 'Link Expired' : 'Pending'}
                     </span>
                   </div>
 
@@ -748,10 +779,12 @@ function SendInvitations() {
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
                           invitation.status === 'active' 
                             ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60' 
-                            : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
+                            : invitation.computedStatus === 'expired'
+                              ? 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60'
+                              : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                          {invitation.status === 'active' ? 'Registered' : 'Pending'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${invitation.status === 'active' ? 'bg-emerald-500' : invitation.computedStatus === 'expired' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                          {invitation.status === 'active' ? 'Registered' : invitation.computedStatus === 'expired' ? 'Link Expired' : 'Pending'}
                         </span>
                       </td>
                       <td className="py-4 px-6">

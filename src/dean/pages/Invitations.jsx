@@ -98,9 +98,10 @@ Please click the button below to activate your account and set up your credentia
     const unsubscribe = onSnapshot(advisersQuery, (snapshot) => {
       const advisersData = snapshot.docs.map(doc => {
         const data = doc.data();
-        const sentDate = new Date(data.invitationSentAt || data.createdAt || 0);
+        const rawSentDate = data.invitationSentAt || data.createdAt;
+        const sentDate = rawSentDate?.toDate ? rawSentDate.toDate() : new Date(rawSentDate || 0);
         const daysSinceSent = (Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
-        const isExpired = data.status === 'pending' && daysSinceSent > 7;
+        const isExpired = data.status === 'pending' && !isNaN(sentDate.getTime()) && sentDate.getTime() > 0 && daysSinceSent > 7;
 
         return {
           id: doc.id,
@@ -226,15 +227,28 @@ Please click the button below to activate your account and set up your credentia
       const qAdvPending = query(
         collection(db, 'advisers'),
         where('email', '==', targetEmail),
-        where('status', '==', 'pending'),
-        limit(1)
+        where('status', '==', 'pending')
       );
       const snapAdvPending = await getDocs(qAdvPending);
       if (!snapAdvPending.empty) {
-        Swal.close();
-        setError('This email already has a pending invitation in the Sent Invitations table.');
-        setLoading(false);
-        return;
+        const hasActivePending = snapAdvPending.docs.some(d => {
+          const pData = d.data();
+          const pDate = pData.invitationSentAt?.toDate ? pData.invitationSentAt.toDate() : new Date(pData.invitationSentAt || pData.createdAt || 0);
+          const days = (Date.now() - pDate.getTime()) / (1000 * 60 * 60 * 24);
+          return isNaN(pDate.getTime()) || pDate.getTime() <= 0 || days <= 7;
+        });
+
+        if (hasActivePending) {
+          Swal.close();
+          setError('This email already has a pending invitation in the Sent Invitations table.');
+          setLoading(false);
+          return;
+        } else {
+          // Expired pending invitation(s): remove old expired record(s) so fresh invite proceeds cleanly
+          for (const expDoc of snapAdvPending.docs) {
+            await deleteDoc(expDoc.ref).catch(() => {});
+          }
+        }
       }
 
       // Check existing adviser record if any exists but is orphaned (not in Auth)
@@ -265,6 +279,9 @@ Please click the button below to activate your account and set up your credentia
       const resolvedSenderName = deanData?.displayName || deanData?.name || 'Dean';
       const resolvedDepartment = deanData?.department || 'SWU Phinma';
 
+      const nowMs = Date.now();
+      const expiresAtIso = new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString();
+
       const adviserData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
@@ -277,8 +294,9 @@ Please click the button below to activate your account and set up your credentia
         invitationToken,
         invitationLink,
         message: formData.message || defaultMessage || '',
-        invitationSentAt: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        invitationSentAt: new Date(nowMs).toISOString(),
+        expiresAt: expiresAtIso,
+        createdAt: new Date(nowMs).toISOString()
       };
 
       await addDoc(collection(db, 'advisers'), adviserData);
@@ -399,9 +417,12 @@ Please click the button below to activate your account and set up your credentia
     });
 
     try {
-      const nowIso = new Date().toISOString();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
+      const expiresAtIso = new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString();
       await updateDoc(doc(db, 'advisers', adviserId), {
         invitationSentAt: nowIso,
+        expiresAt: expiresAtIso,
         status: 'pending'
       });
 

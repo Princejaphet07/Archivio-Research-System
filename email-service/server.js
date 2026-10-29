@@ -1459,6 +1459,11 @@ app.post('/api/send-dean-invitation-email', verifyToken, async (req, res) => {
     <div style="text-align: center; margin: 40px 0 10px 0;">
       <a href="${invitationLink}" style="background: linear-gradient(135deg, #541b2f 0%, #7a2744 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(84, 27, 47, 0.25);">Access Portal</a>
     </div>
+
+    <div style="background-color: #fffaf0; border: 1px solid #feebc8; color: #c05621; padding: 15px; border-radius: 6px; font-size: 13px; margin: 30px 0 0 0; display: flex; align-items: flex-start; gap: 10px;">
+      <span style="font-size: 16px;">⏰</span>
+      <p style="margin: 0;"><strong>Important:</strong> This invitation will expire in 7 days. Please sign in and activate your account as soon as possible.</p>
+    </div>
   </div>
   
   <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
