@@ -600,9 +600,20 @@ export default function SettingsPage({ onLogout, studentName, initials, activeTa
                 {settingsTabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => {
+                    onClick={async () => {
                       if (tab.id === 'Log out' && onLogout) {
-                        onLogout();
+                        const result = await Swal.fire({
+                          title: 'Log out',
+                          text: 'Are you sure you want to log out?',
+                          icon: 'question',
+                          showCancelButton: true,
+                          confirmButtonColor: '#801e38',
+                          cancelButtonColor: '#d33',
+                          confirmButtonText: 'Yes, log out'
+                        });
+                        if (result.isConfirmed) {
+                          onLogout();
+                        }
                       } else {
                         setActiveSettingsTab(tab.id);
                       }
