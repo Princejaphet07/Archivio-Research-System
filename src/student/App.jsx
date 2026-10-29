@@ -32,6 +32,7 @@ function App() {
   const [showAbstractSuccess, setShowAbstractSuccess] = useState(false);
   const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
   const prevGeneratingRef = React.useRef(false);
+  const abstractSuccessTimerRef = React.useRef(null);
 
   React.useEffect(() => {
     // Listen to settings/system_preferences (master doc)
@@ -129,23 +130,34 @@ function App() {
           updateDoc(doc(db, 'submissions', latest.id), { abstractGenerating: false }).catch(() => {});
         }
 
-        // Show brief success alert when generation transitions from active to finished
-        if (prevGeneratingRef.current && !isGenerating && hasValidAbstract) {
-          setShowAbstractSuccess(true);
-          const t = setTimeout(() => setShowAbstractSuccess(false), 5000);
-          return () => clearTimeout(t);
-        }
-
+        const wasGenerating = prevGeneratingRef.current;
         prevGeneratingRef.current = isGenerating;
         setIsGeneratingAbstract(isGenerating);
+
+        // Show brief success alert when generation transitions from active to finished
+        if (wasGenerating && !isGenerating && hasValidAbstract) {
+          setShowAbstractSuccess(true);
+          if (abstractSuccessTimerRef.current) {
+            clearTimeout(abstractSuccessTimerRef.current);
+          }
+          abstractSuccessTimerRef.current = setTimeout(() => {
+            setShowAbstractSuccess(false);
+          }, 5000);
+        }
       } else {
+        prevGeneratingRef.current = false;
         setIsGeneratingAbstract(false);
       }
     }, (err) => {
       console.warn('Submissions listener notice in App.jsx:', err.message);
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      if (abstractSuccessTimerRef.current) {
+        clearTimeout(abstractSuccessTimerRef.current);
+      }
+    };
   }, [studentInfo?.uid, studentInfo?.leaderUid, studentInfo?.role]);
 
   // Check if URL has activation token or signup path
@@ -528,7 +540,7 @@ function App() {
           </div>
 
           {/* PERSISTENT FLOATING AI ABSTRACT GENERATION INDICATOR (naas ubos) */}
-          {isGeneratingAbstract && (
+          {isGeneratingAbstract && !showAbstractSuccess && (
             <div className="fixed bottom-6 right-6 z-[9999] bg-[#7B1F35] dark:bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/20 dark:border-stone-700 flex items-center gap-3 animate-fade-in pointer-events-auto">
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0"></div>
               <div>
