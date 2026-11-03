@@ -11,7 +11,7 @@ import {
   deleteDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAdviser } from '../context/AdviserContext';
 import { Card, SectionTitle, StatusBadge } from '../../components/ui/Card';
 import BookLoader from '../../components/BookLoader';
@@ -160,6 +160,8 @@ export default function UploadManuscript() {
   const [isGeneratingAbstract, setIsGeneratingAbstract] = useState(false);
   const [isExtractingKeywords, setIsExtractingKeywords] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishProgress, setPublishProgress] = useState(0);
+  const [publishStatusText, setPublishStatusText] = useState('Uploading PDF to cloud storage...');
   const [isDragging, setIsDragging] = useState(false);
 
   // Document Viewer Modal State
@@ -542,6 +544,8 @@ export default function UploadManuscript() {
 
     // Trigger full-screen BookLoader
     setIsPublishing(true);
+    setPublishProgress(0);
+    setPublishStatusText('Preparing manuscript upload...');
 
     try {
       const currentUser = auth.currentUser;
@@ -549,13 +553,35 @@ export default function UploadManuscript() {
       const userEmail = currentUser?.email?.toLowerCase().trim() || '';
       const adviserDisplayName = adviserData?.name || currentUser?.displayName || 'Research Adviser';
 
-      // 1. Upload PDF to Firebase Storage
+      // 1. Upload PDF to Firebase Storage with live progress
       const fileExt = file.name.split('.').pop() || 'pdf';
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const storagePath = `legacy_manuscripts/${userUid}/${Date.now()}_${cleanFileName}`;
       const storageRef = ref(storage, storagePath);
 
-      await uploadBytes(storageRef, file);
+      setPublishStatusText('Uploading PDF to Cloud Storage (0%)...');
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            if (snapshot.totalBytes > 0) {
+              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+              setPublishProgress(progress);
+              setPublishStatusText(`Uploading PDF to Cloud Storage (${progress}%)...`);
+            }
+          },
+          (error) => {
+            reject(error);
+          },
+          () => {
+            resolve();
+          }
+        );
+      });
+
+      setPublishStatusText('Indexing metadata and publishing to ARCHIVIO Public Archive...');
       const downloadUrl = await getDownloadURL(storageRef);
 
       const sizeStr = file.size > 1024 * 1024
@@ -736,8 +762,8 @@ export default function UploadManuscript() {
         <BookLoader
           fullScreen={true}
           size="lg"
-          text="UPLOADING & PUBLISHING MANUSCRIPT..."
-          subtext="Uploading PDF to cloud storage, indexing metadata, and releasing to the ARCHIVIO Public Archive..."
+          text={publishProgress < 100 ? `UPLOADING MANUSCRIPT (${publishProgress}%)...` : "PUBLISHING TO ARCHIVE..."}
+          subtext={publishStatusText}
         />
       )}
 

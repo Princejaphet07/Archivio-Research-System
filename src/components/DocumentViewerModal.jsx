@@ -506,7 +506,7 @@ const DocumentViewerModal = ({
       setResolvedUrl('');
       return;
     }
-    if (documentUrl.startsWith('http') || documentUrl.startsWith('data:')) {
+    if (documentUrl.startsWith('http') || documentUrl.startsWith('data:') || documentUrl.startsWith('blob:')) {
       setResolvedUrl(documentUrl);
     } else {
       getDownloadURL(ref(storage, documentUrl))
