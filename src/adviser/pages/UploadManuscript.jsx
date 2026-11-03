@@ -13,7 +13,9 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdviser } from '../context/AdviserContext';
-import { Card, CardBody, CardHeader, SectionTitle, PremiumButton, StatusBadge } from '../../components/ui/Card';
+import { Card, SectionTitle, StatusBadge } from '../../components/ui/Card';
+import BookLoader from '../../components/BookLoader';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { 
   extractPdfText, 
   generateAbstractWithAI, 
@@ -29,13 +31,11 @@ import {
   Trash2, 
   ExternalLink, 
   Tag, 
-  Calendar, 
   Building2, 
-  Users, 
   BookOpen, 
-  AlertCircle,
-  RefreshCw,
-  Search
+  Search,
+  Eye,
+  RotateCcw
 } from 'lucide-react';
 
 const ACADEMIC_YEARS = [
@@ -62,21 +62,97 @@ const DEFAULT_CATEGORIES = [
   'General'
 ];
 
+const DRAFT_STORAGE_KEY = 'archivio_adviser_upload_draft';
+
+// In-memory draft singleton that persists across route changes in the same browser session
+let inMemoryDraft = {
+  file: null,
+  fileName: '',
+  fileSize: '',
+  pageCount: null,
+  extractedPdfText: '',
+  title: '',
+  authors: '',
+  department: '',
+  category: 'General',
+  academicYear: '2024-2025',
+  abstract: '',
+  keywords: []
+};
+
+const saveDraftToStorage = (data) => {
+  try {
+    const toSave = {
+      title: data.title || '',
+      authors: data.authors || '',
+      department: data.department || '',
+      category: data.category || 'General',
+      academicYear: data.academicYear || '2024-2025',
+      abstract: data.abstract || '',
+      keywords: data.keywords || [],
+      fileName: data.file?.name || data.fileName || '',
+      fileSize: data.file?.size
+        ? (data.file.size > 1024 * 1024
+            ? (data.file.size / (1024 * 1024)).toFixed(2) + ' MB'
+            : (data.file.size / 1024).toFixed(1) + ' KB')
+        : (data.fileSize || ''),
+      pageCount: data.pageCount || null,
+      extractedPdfText: data.extractedPdfText || ''
+    };
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    console.warn('Draft save notice:', e);
+  }
+};
+
+const loadDraftFromStorage = () => {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const clearDraftStorage = () => {
+  inMemoryDraft = {
+    file: null,
+    fileName: '',
+    fileSize: '',
+    pageCount: null,
+    extractedPdfText: '',
+    title: '',
+    authors: '',
+    department: '',
+    category: 'General',
+    academicYear: '2024-2025',
+    abstract: '',
+    keywords: []
+  };
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch (e) {}
+};
+
 export default function UploadManuscript() {
   const { adviserData } = useAdviser();
   const fileInputRef = useRef(null);
 
+  // Restore from memory or session on initial render
+  const storedDraft = loadDraftFromStorage();
+  const initialFile = inMemoryDraft.file || null;
+
   // Form State
-  const [file, setFile] = useState(null);
-  const [extractedPdfText, setExtractedPdfText] = useState('');
-  const [pageCount, setPageCount] = useState(null);
-  const [title, setTitle] = useState('');
-  const [authors, setAuthors] = useState('');
-  const [department, setDepartment] = useState(adviserData?.department || adviserData?.program || '');
-  const [category, setCategory] = useState('General');
-  const [academicYear, setAcademicYear] = useState('2024-2025');
-  const [abstract, setAbstract] = useState('');
-  const [keywords, setKeywords] = useState([]);
+  const [file, setFile] = useState(initialFile);
+  const [extractedPdfText, setExtractedPdfText] = useState(inMemoryDraft.extractedPdfText || storedDraft?.extractedPdfText || '');
+  const [pageCount, setPageCount] = useState(inMemoryDraft.pageCount || storedDraft?.pageCount || null);
+  const [title, setTitle] = useState(inMemoryDraft.title || storedDraft?.title || '');
+  const [authors, setAuthors] = useState(inMemoryDraft.authors || storedDraft?.authors || '');
+  const [department, setDepartment] = useState(inMemoryDraft.department || storedDraft?.department || adviserData?.department || adviserData?.program || '');
+  const [category, setCategory] = useState(inMemoryDraft.category || storedDraft?.category || 'General');
+  const [academicYear, setAcademicYear] = useState(inMemoryDraft.academicYear || storedDraft?.academicYear || '2024-2025');
+  const [abstract, setAbstract] = useState(inMemoryDraft.abstract || storedDraft?.abstract || '');
+  const [keywords, setKeywords] = useState(inMemoryDraft.keywords || storedDraft?.keywords || []);
   const [keywordInput, setKeywordInput] = useState('');
 
   // UI & Loading States
@@ -86,6 +162,13 @@ export default function UploadManuscript() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Document Viewer Modal State
+  const [viewerState, setViewerState] = useState({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
+
   // Available Categories from Firestore
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
 
@@ -94,7 +177,26 @@ export default function UploadManuscript() {
   const [loadingUploads, setLoadingUploads] = useState(true);
   const [searchTableQuery, setSearchTableQuery] = useState('');
 
-  // Update default department when adviserData loads
+  // Keep in-memory draft and sessionStorage synchronized whenever fields change
+  useEffect(() => {
+    inMemoryDraft = {
+      file,
+      fileName: file?.name || inMemoryDraft.fileName || '',
+      fileSize: file?.size || inMemoryDraft.fileSize || '',
+      pageCount,
+      extractedPdfText,
+      title,
+      authors,
+      department,
+      category,
+      academicYear,
+      abstract,
+      keywords
+    };
+    saveDraftToStorage(inMemoryDraft);
+  }, [file, pageCount, extractedPdfText, title, authors, department, category, academicYear, abstract, keywords]);
+
+  // Update default department when adviserData loads (if department is empty)
   useEffect(() => {
     if (!department && (adviserData?.department || adviserData?.program)) {
       setDepartment(adviserData?.department || adviserData?.program);
@@ -110,9 +212,6 @@ export default function UploadManuscript() {
       if (dbCats.length > 0) {
         const merged = Array.from(new Set([...dbCats, ...DEFAULT_CATEGORIES]));
         setCategories(merged);
-        if (!category || category === 'General') {
-          setCategory(merged[0]);
-        }
       }
     }, (err) => console.warn('Categories notice:', err));
     return () => unsub();
@@ -135,7 +234,6 @@ export default function UploadManuscript() {
         id: doc.id,
         ...doc.data()
       }));
-      // Sort newest published first
       list.sort((a, b) => {
         const timeA = new Date(a.publishedAt || a.createdAt || 0).getTime();
         const timeB = new Date(b.publishedAt || b.createdAt || 0).getTime();
@@ -251,6 +349,36 @@ export default function UploadManuscript() {
     if (f) processSelectedFile(f);
   };
 
+  // View local selected file
+  const handlePreviewSelectedFile = () => {
+    if (!file) return;
+    const blobUrl = URL.createObjectURL(file);
+    setViewerState({
+      isOpen: true,
+      url: blobUrl,
+      title: `${title.trim() || file.name}.pdf`
+    });
+  };
+
+  // View past uploaded file
+  const handleViewPastManuscript = (item) => {
+    const docUrl = item.documents?.['Final Manuscript']?.url || item.pdfUrl || item.fileUrl || item.manuscriptUrl;
+    if (!docUrl) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Document URL Not Found',
+        text: 'The manuscript URL could not be located.',
+        confirmButtonColor: '#7B1F35'
+      });
+      return;
+    }
+    setViewerState({
+      isOpen: true,
+      url: docUrl,
+      title: `${item.title || item.researchTitle || 'Manuscript'}.pdf`
+    });
+  };
+
   // Regenerate Abstract via AI
   const handleRegenerateAbstract = async () => {
     if (!extractedPdfText && !file) {
@@ -345,6 +473,33 @@ export default function UploadManuscript() {
     setKeywords(keywords.filter(k => k !== kw));
   };
 
+  // Reset form & clear draft
+  const handleResetForm = () => {
+    Swal.fire({
+      title: 'Clear Form?',
+      text: 'This will reset your current manuscript inputs and draft.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Clear',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#7B1F35',
+      cancelButtonColor: '#6B7280'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        clearDraftStorage();
+        setFile(null);
+        setExtractedPdfText('');
+        setPageCount(null);
+        setTitle('');
+        setAuthors('');
+        setAbstract('');
+        setKeywords([]);
+        setKeywordInput('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    });
+  };
+
   // Publish Directly to Public Archive
   const handlePublishToArchive = async () => {
     if (!file) {
@@ -385,6 +540,7 @@ export default function UploadManuscript() {
 
     if (!confirm.isConfirmed) return;
 
+    // Trigger full-screen BookLoader
     setIsPublishing(true);
 
     try {
@@ -463,6 +619,21 @@ export default function UploadManuscript() {
         status: 'Success'
       });
 
+      // Clear draft storage
+      clearDraftStorage();
+      setFile(null);
+      setExtractedPdfText('');
+      setPageCount(null);
+      setTitle('');
+      setAuthors('');
+      setAbstract('');
+      setKeywords([]);
+      setKeywordInput('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      // Stop loader before showing success dialog
+      setIsPublishing(false);
+
       // 4. Success Alert
       Swal.fire({
         icon: 'success',
@@ -475,7 +646,7 @@ export default function UploadManuscript() {
         `,
         showCancelButton: true,
         confirmButtonText: 'View in Public Archive',
-        cancelButtonText: 'Upload Another',
+        cancelButtonText: 'Done',
         confirmButtonColor: '#7B1F35',
         cancelButtonColor: '#6B7280'
       }).then((res) => {
@@ -484,27 +655,15 @@ export default function UploadManuscript() {
         }
       });
 
-      // Reset Form
-      setFile(null);
-      setExtractedPdfText('');
-      setPageCount(null);
-      setTitle('');
-      setAuthors('');
-      setAbstract('');
-      setKeywords([]);
-      setKeywordInput('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-
     } catch (err) {
       console.error('Publish error:', err);
+      setIsPublishing(false);
       Swal.fire({
         icon: 'error',
         title: 'Publish Failed',
         text: err.message || 'An error occurred while uploading. Please try again.',
         confirmButtonColor: '#7B1F35'
       });
-    } finally {
-      setIsPublishing(false);
     }
   };
 
@@ -564,19 +723,54 @@ export default function UploadManuscript() {
     return t.includes(q) || a.includes(q) || d.includes(q) || c.includes(q);
   });
 
+  const hasDraftContent = !!(file || title || authors || abstract || keywords.length > 0);
+
   return (
     <Layout
       title="Upload Manuscript"
       breadcrumb="Home / Upload Manuscript"
       showSearch={false}
     >
+      {/* FULL-SCREEN THEMATIC BOOK LOADER DURING UPLOAD */}
+      {isPublishing && (
+        <BookLoader
+          fullScreen={true}
+          size="lg"
+          text="UPLOADING & PUBLISHING MANUSCRIPT..."
+          subtext="Uploading PDF to cloud storage, indexing metadata, and releasing to the ARCHIVIO Public Archive..."
+        />
+      )}
+
+      {/* FULL-SCREEN DOCUMENT VIEWER MODAL */}
+      <DocumentViewerModal
+        isOpen={viewerState.isOpen}
+        onClose={() => setViewerState({ isOpen: false, url: '', title: '' })}
+        documentUrl={viewerState.url}
+        documentTitle={viewerState.title}
+        role="adviser"
+      />
+
       <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-12">
-        {/* Title Header */}
-        <SectionTitle
-          sub="Upload and publish past, legacy, or faculty research manuscripts directly to the ARCHIVIO Public Archive with automated AI abstract and keyword generation."
-        >
-          Archive Research Manuscript
-        </SectionTitle>
+        {/* Title Header with Draft Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <SectionTitle
+            sub="Upload, inspect, and publish past capstones or departmental research manuscripts directly to the ARCHIVIO Public Archive."
+          >
+            Archive Research Manuscript
+          </SectionTitle>
+
+          {hasDraftContent && (
+            <button
+              type="button"
+              onClick={handleResetForm}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-500 hover:text-rose-600 dark:text-stone-400 dark:hover:text-rose-400 px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 hover:border-rose-300 dark:hover:border-rose-800 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+              title="Reset form fields"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear Form</span>
+            </button>
+          )}
+        </div>
 
         {/* TOP SECTION: TWO COLUMNS (Upload & Metadata) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -586,10 +780,23 @@ export default function UploadManuscript() {
             
             {/* File Dropzone Card */}
             <Card className="p-6">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#7B1F35]" />
-                1. Manuscript Document (PDF)
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#7B1F35]" />
+                  1. Manuscript Document (PDF)
+                </h3>
+                {file && (
+                  <button
+                    type="button"
+                    onClick={handlePreviewSelectedFile}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7B1F35] dark:text-[#f8d070] hover:underline cursor-pointer"
+                    title="View PDF before publishing"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View PDF</span>
+                  </button>
+                )}
+              </div>
 
               <div
                 onDragOver={handleDragOver}
@@ -623,9 +830,22 @@ export default function UploadManuscript() {
                     <p className="text-xs text-stone-500 dark:text-stone-400">
                       {(file.size / (1024 * 1024)).toFixed(2)} MB • {pageCount ? `${pageCount} pages` : 'PDF'}
                     </p>
-                    <span className="text-[11px] font-semibold text-[#7B1F35] dark:text-[#f8d070] mt-1 underline hover:opacity-80">
-                      Click or drop another file to change
-                    </span>
+                    <div className="flex items-center gap-3 mt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreviewSelectedFile();
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 rounded-full hover:bg-emerald-200 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Preview File
+                      </button>
+                      <span className="text-[11px] font-semibold text-[#7B1F35] dark:text-[#f8d070] underline">
+                        Change File
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
@@ -653,7 +873,7 @@ export default function UploadManuscript() {
                     {isReadingPdf
                       ? 'AI is reading the manuscript PDF...'
                       : isGeneratingAbstract
-                      ? 'AI is analyzing text and writing the abstract...'
+                      ? 'AI is analyzing text and generating the abstract...'
                       : 'AI is generating search keywords...'}
                   </p>
                 </div>
@@ -765,7 +985,7 @@ export default function UploadManuscript() {
                   <button
                     type="button"
                     onClick={handleRegenerateAbstract}
-                    disabled={isGeneratingAbstract || !file}
+                    disabled={isGeneratingAbstract || (!extractedPdfText && !file)}
                     className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#7B1F35] dark:text-[#f8d070] hover:underline disabled:opacity-50 cursor-pointer"
                   >
                     <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAbstract ? 'animate-spin' : ''}`} />
@@ -839,24 +1059,28 @@ export default function UploadManuscript() {
                   <span>Will be published live with status: <strong>Published</strong></span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handlePublishToArchive}
-                  disabled={isPublishing || !file || !title.trim()}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer active:scale-95"
-                >
-                  {isPublishing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Publishing to Public Archive...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="w-4 h-4" />
-                      <span>Publish to Public Archive</span>
-                    </>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  {file && (
+                    <button
+                      type="button"
+                      onClick={handlePreviewSelectedFile}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold text-stone-700 dark:text-stone-200 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Preview</span>
+                    </button>
                   )}
-                </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePublishToArchive}
+                    disabled={isPublishing || !file || !title.trim()}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer active:scale-95"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    <span>Publish to Public Archive</span>
+                  </button>
+                </div>
               </div>
 
             </Card>
@@ -873,7 +1097,7 @@ export default function UploadManuscript() {
                 Manuscripts Uploaded & Published by You
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                Legacy and departmental manuscripts you have released to the public archive.
+                Legacy and departmental manuscripts you have released to the public archive. Click the eye icon to view any manuscript.
               </p>
             </div>
 
@@ -941,16 +1165,29 @@ export default function UploadManuscript() {
                         <StatusBadge status="published" />
                       </td>
                       <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* In-app Document Viewer Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleViewPastManuscript(item)}
+                            className="p-1.5 text-stone-600 hover:text-[#7B1F35] hover:bg-[#7B1F35]/10 dark:text-stone-300 dark:hover:text-[#f8d070] dark:hover:bg-[#f8d070]/10 rounded-lg transition-colors cursor-pointer"
+                            title="Read / View Manuscript in Portal"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Public Archive External Link */}
                           <a
                             href={`https://archivio-research-system.web.app/paper/${item.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 text-stone-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
-                            title="View in Public Archive"
+                            title="Open in Public Archive Website"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+
+                          {/* Delete / Remove Action */}
                           <button
                             type="button"
                             onClick={() => handleDeleteUpload(item)}
@@ -973,4 +1210,3 @@ export default function UploadManuscript() {
     </Layout>
   );
 }
-
