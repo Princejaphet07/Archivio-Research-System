@@ -22,6 +22,7 @@ import LoadingScreen from './components/LoadingScreen';
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
 const ReviewSubmissions = lazyWithRetry(() => import('./pages/ReviewSubmissions'));
+const UploadManuscript = lazyWithRetry(() => import('./pages/UploadManuscript'));
 const ResearchCategories = lazyWithRetry(() => import('./pages/ResearchCategories'));
 const GroupRegistrations = lazyWithRetry(() => import('./pages/GroupRegistrations'));
 const SendInvitations = lazyWithRetry(() => import('./pages/SendInvitations'));
@@ -40,6 +41,7 @@ function AdviserThemedRoutes() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="my-groups" element={<MyGroups />} />
             <Route path="review-submissions" element={<ReviewSubmissions />} />
+            <Route path="upload-manuscript" element={<UploadManuscript />} />
             <Route path="research-categories" element={<ResearchCategories />} />
             <Route path="group-registrations" element={<GroupRegistrations />} />
             <Route path="send-invitations" element={<SendInvitations />} />
