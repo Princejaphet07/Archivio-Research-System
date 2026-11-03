@@ -165,15 +165,15 @@ const parseRevisionNote = (rawNote) => {
   };
 };
 
-const DocumentViewerModal = ({ 
-  isOpen, 
-  onClose, 
-  documentUrl, 
-  documentTitle, 
-  role, 
-  initialNote, 
-  onSaveNote, 
-  initialAnnotations = {}, 
+const DocumentViewerModal = ({
+  isOpen,
+  onClose,
+  documentUrl,
+  documentTitle,
+  role,
+  initialNote,
+  onSaveNote,
+  initialAnnotations = {},
   onSaveAnnotations,
   isResubmitted = false,
   previousNote = '',
@@ -265,8 +265,8 @@ const DocumentViewerModal = ({
   };
 
   const hasUnsavedNote = Boolean(
-    role === 'adviser' && 
-    note.trim() && 
+    role === 'adviser' &&
+    note.trim() &&
     note.trim() !== (initialNote || '').trim()
   );
 
@@ -525,8 +525,8 @@ const DocumentViewerModal = ({
 
   if (!isOpen) return null;
 
-  const hasAnnotations = (initialAnnotations && Object.keys(initialAnnotations).length > 0) || 
-                         (previousAnnotations && Object.keys(previousAnnotations).length > 0);
+  const hasAnnotations = (initialAnnotations && Object.keys(initialAnnotations).length > 0) ||
+    (previousAnnotations && Object.keys(previousAnnotations).length > 0);
   const showNotesPanel = role === 'adviser' || (role === 'student' && (initialNote || previousNote || isResubmitted || hasAnnotations));
 
 
@@ -555,18 +555,18 @@ const DocumentViewerModal = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) handleSafeClose(); }}
     >
       {/* Modal Container */}
-      <div 
+      <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-document-title"
         className="bg-white dark:bg-stone-900 w-full max-w-6xl h-[100dvh] sm:h-[92vh] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 relative transform transition-all"
       >
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 shrink-0 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -597,11 +597,11 @@ const DocumentViewerModal = ({
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <a 
-              href={resolvedUrl || documentUrl} 
-              target="_blank" 
+            <a
+              href={resolvedUrl || documentUrl}
+              target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 p-2 sm:px-4 sm:py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors touch-manipulation"
               title="Open in new tab"
@@ -609,9 +609,9 @@ const DocumentViewerModal = ({
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Open in Tab</span>
             </a>
-            
-            <a 
-              href={resolvedUrl || documentUrl} 
+
+            <a
+              href={resolvedUrl || documentUrl}
               download
               className="flex items-center gap-1.5 p-2 sm:px-4 sm:py-2 bg-[#7a2e46] hover:bg-[#5f2135] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-900 rounded-lg text-sm font-bold transition-colors touch-manipulation"
               title="Download Document"
@@ -622,7 +622,7 @@ const DocumentViewerModal = ({
 
             <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-0.5 sm:mx-1"></div>
 
-            <button 
+            <button
               onClick={handleSafeClose}
               className="p-2 text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors touch-manipulation cursor-pointer"
               aria-label="Close document viewer modal"
@@ -636,77 +636,77 @@ const DocumentViewerModal = ({
         <div className="flex-1 flex w-full h-full overflow-hidden relative">
           <div className="flex-1 h-full bg-stone-200 dark:bg-stone-950 relative overflow-hidden">
             {!resolvedUrl ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a2e46] dark:border-[#f8d070] mb-4"></div>
-              <p>Loading document...</p>
-            </div>
-          ) : iframeError ? (
-            /* Fallback UI when iframe is blocked */
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 gap-4 p-8">
-              <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a2e46] dark:border-[#f8d070] mb-4"></div>
+                <p>Loading document...</p>
               </div>
-              <h4 className="text-lg font-semibold text-stone-700 dark:text-stone-300">Preview Unavailable</h4>
-              <p className="text-sm text-center max-w-md">
-                The document preview was blocked by your browser. You can still view it by opening in a new tab or downloading it.
-              </p>
-              <div className="flex gap-3 mt-2">
-                <button
-                  onClick={handleRetry}
-                  className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Retry
-                </button>
-                <a
-                  href={resolvedUrl || documentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open PDF
-                </a>
-              </div>
-            </div>
-          ) : isVideo ? (
-            <div className="w-full h-full flex items-center justify-center bg-black p-4">
-              <video 
-                controls 
-                autoPlay 
-                src={resolvedUrl} 
-                className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
-              >
-                Your browser does not support HTML5 video preview.
-              </video>
-            </div>
-          ) : isPdf ? (
-            <div className="w-full h-full relative">
-              {showPreviousOverlay && (
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500 text-stone-950 font-bold px-4 py-1.5 rounded-full shadow-xl text-xs flex items-center gap-2 border border-amber-300 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-                  <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping"></span>
-                  <span>Viewing Previous Highlights & Notes Overlay (Read-only)</span>
+            ) : iframeError ? (
+              /* Fallback UI when iframe is blocked */
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 gap-4 p-8">
+                <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-amber-500" />
                 </div>
-              )}
-              <AnnotatablePDFViewer 
-                documentUrl={resolvedUrl} 
-                initialAnnotations={showPreviousOverlay ? previousAnnotations : initialAnnotations}
-                onSaveAnnotations={showPreviousOverlay ? undefined : onSaveAnnotations}
-                readOnly={role !== 'adviser' || showPreviousOverlay}
-                onPageChange={handleViewerPageChange}
-                jumpPage={jumpPage}
+                <h4 className="text-lg font-semibold text-stone-700 dark:text-stone-300">Preview Unavailable</h4>
+                <p className="text-sm text-center max-w-md">
+                  The document preview was blocked by your browser. You can still view it by opening in a new tab or downloading it.
+                </p>
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={handleRetry}
+                    className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Retry
+                  </button>
+                  <a
+                    href={resolvedUrl || documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#7a2e46] text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open PDF
+                  </a>
+                </div>
+              </div>
+            ) : isVideo ? (
+              <div className="w-full h-full flex items-center justify-center bg-black p-4">
+                <video
+                  controls
+                  autoPlay
+                  src={resolvedUrl}
+                  className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
+                >
+                  Your browser does not support HTML5 video preview.
+                </video>
+              </div>
+            ) : isPdf ? (
+              <div className="w-full h-full relative">
+                {showPreviousOverlay && (
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500 text-stone-950 font-bold px-4 py-1.5 rounded-full shadow-xl text-xs flex items-center gap-2 border border-amber-300 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                    <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping"></span>
+                    <span>Viewing Previous Highlights & Notes Overlay (Read-only)</span>
+                  </div>
+                )}
+                <AnnotatablePDFViewer
+                  documentUrl={resolvedUrl}
+                  initialAnnotations={showPreviousOverlay ? previousAnnotations : initialAnnotations}
+                  onSaveAnnotations={showPreviousOverlay ? undefined : onSaveAnnotations}
+                  readOnly={role !== 'adviser' || showPreviousOverlay}
+                  onPageChange={handleViewerPageChange}
+                  jumpPage={jumpPage}
+                />
+              </div>
+            ) : (
+              <iframe
+                key={loadAttempt}
+                src={viewerUrl}
+                className="w-full h-full border-0"
+                title="Document Viewer"
+                onError={handleIframeError}
+                allowFullScreen
               />
-            </div>
-          ) : (
-            <iframe 
-              key={loadAttempt}
-              src={viewerUrl}
-              className="w-full h-full border-0"
-              title="Document Viewer"
-              onError={handleIframeError}
-              allowFullScreen
-            />
-          )}
+            )}
           </div>
 
           {/* Revision Notes Panel */}
@@ -729,7 +729,7 @@ const DocumentViewerModal = ({
                   </span>
                 )}
               </div>
-              
+
               <div className="flex-1 p-4 overflow-y-auto space-y-4">
                 {/* ── View Previous Revision Request Card ── */}
                 {isResubmitted && (
@@ -784,11 +784,10 @@ const DocumentViewerModal = ({
                         <button
                           type="button"
                           onClick={() => setShowPreviousOverlay(prev => !prev)}
-                          className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all border ${
-                            showPreviousOverlay
+                          className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all border ${showPreviousOverlay
                               ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-300 dark:ring-amber-800'
                               : 'bg-white dark:bg-stone-900 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100/60 shadow-sm'
-                          }`}
+                            }`}
                         >
                           <span>{showPreviousOverlay ? '🙈' : '👁️'}</span>
                           <span>
@@ -813,8 +812,8 @@ const DocumentViewerModal = ({
                         {isResubmitted ? 'New Evaluation' : 'Revision Directives & Notes'}
                       </h4>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                        {isResubmitted 
-                          ? 'If the student still needs changes, add directives below. Every directive is saved.' 
+                        {isResubmitted
+                          ? 'If the student still needs changes, add directives below. Every directive is saved.'
                           : 'Add specific revision directives. Each comment saves and remains visible to students.'}
                       </p>
                     </div>
@@ -842,7 +841,7 @@ const DocumentViewerModal = ({
                             if (!cleanComment) cleanComment = d.raw || (targetPage ? `Directive on Page ${targetPage}` : `Remark #${idx + 1}`);
 
                             return (
-                              <div 
+                              <div
                                 key={d.id || idx}
                                 onClick={() => {
                                   if (targetPage) scrollToPage(targetPage);
@@ -852,7 +851,7 @@ const DocumentViewerModal = ({
                               >
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   {/* Yellow sequence order badge */}
-                                  <span 
+                                  <span
                                     className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200/90 dark:border-amber-800/60 shadow-2xs group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors"
                                     title={`Remark #${idx + 1}${targetPage ? ` (Page ${targetPage})` : ''}`}
                                   >
@@ -911,8 +910,8 @@ const DocumentViewerModal = ({
                         {isDocument && (
                           <div className="relative flex items-center">
                             <span className="absolute left-2 text-[10px] text-stone-400 pointer-events-none font-bold">Pg</span>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               placeholder="Pg #"
                               value={quickPage}
                               onChange={e => setQuickPage(e.target.value)}
@@ -921,8 +920,8 @@ const DocumentViewerModal = ({
                             />
                           </div>
                         )}
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder={isDocument ? "What needs revision on this page? (e.g. Methodology, Table 2)" : "Type what needs revision..."}
                           value={quickComment}
                           onChange={e => setQuickComment(e.target.value)}
@@ -934,7 +933,7 @@ const DocumentViewerModal = ({
                           }}
                           className="flex-1 p-2 text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-1 focus:ring-[#7a2e46] dark:focus:ring-[#f8d070] outline-none text-stone-800 dark:text-stone-200 placeholder-stone-400"
                         />
-                        <button 
+                        <button
                           type="button"
                           onClick={handleAddQuickNote}
                           className="px-3 py-1 bg-[#7a2e46] dark:bg-[#f8d070] text-white dark:text-stone-900 rounded-lg hover:bg-[#5f2135] dark:hover:bg-[#f3bc3d] font-bold text-xs transition-colors flex items-center justify-center shrink-0 cursor-pointer"
@@ -1012,7 +1011,7 @@ const DocumentViewerModal = ({
                       <label className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                         Overall Directives / Remarks
                       </label>
-                      <textarea 
+                      <textarea
                         value={note}
                         onChange={(e) => handleNoteChange(e.target.value)}
                         placeholder="Type any general feedback or edit directives summary here..."
@@ -1068,19 +1067,18 @@ const DocumentViewerModal = ({
                             if (!cleanComment) cleanComment = d.raw || (targetPage ? `Directive on Page ${targetPage}` : `Remark #${idx + 1}`);
 
                             return (
-                              <div 
+                              <div
                                 key={d.id || idx}
                                 onClick={() => {
                                   if (targetPage && isDocument) scrollToPage(targetPage);
                                 }}
-                                className={`flex items-center justify-between gap-2.5 p-2.5 bg-white dark:bg-stone-900 border border-amber-200/90 dark:border-amber-800/60 rounded-xl shadow-xs transition-all group select-none ${
-                                  isDocument && targetPage ? 'cursor-pointer hover:border-[#7a2e46] dark:hover:border-[#f8d070] hover:bg-amber-50/20 dark:hover:bg-amber-950/20' : ''
-                                }`}
+                                className={`flex items-center justify-between gap-2.5 p-2.5 bg-white dark:bg-stone-900 border border-amber-200/90 dark:border-amber-800/60 rounded-xl shadow-xs transition-all group select-none ${isDocument && targetPage ? 'cursor-pointer hover:border-[#7a2e46] dark:hover:border-[#f8d070] hover:bg-amber-50/20 dark:hover:bg-amber-950/20' : ''
+                                  }`}
                                 title={isDocument && targetPage ? `Click to jump to Page ${targetPage}` : `Remark #${idx + 1}`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   {/* Yellow sequence order badge */}
-                                  <span 
+                                  <span
                                     className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200/90 dark:border-amber-800/60 shadow-2xs group-hover:bg-[#7a2e46] group-hover:text-white dark:group-hover:bg-[#f8d070] dark:group-hover:text-stone-950 transition-colors"
                                     title={`Remark #${idx + 1}${targetPage ? ` (Page ${targetPage})` : ''}`}
                                   >
@@ -1127,7 +1125,7 @@ const DocumentViewerModal = ({
 
                         <div className="flex flex-col gap-1.5">
                           {extractedCurrentNotes.map((noteItem, idx) => (
-                            <div 
+                            <div
                               key={idx}
                               onClick={() => scrollToPage(noteItem.page)}
                               className="flex items-start gap-2 p-2 rounded-lg bg-white dark:bg-stone-900 border border-amber-200/80 dark:border-amber-800/50 hover:border-amber-400 transition-colors cursor-pointer group"
@@ -1161,14 +1159,14 @@ const DocumentViewerModal = ({
 
               {role === 'adviser' && (
                 <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 flex flex-col gap-2.5">
-                  <button 
+                  <button
                     onClick={handleRequestRevision}
                     disabled={isSaving}
                     className="w-full py-2.5 px-4 bg-[#7a2e46] hover:bg-[#5f2135] active:bg-[#4a1224] dark:bg-[#f8d070] dark:hover:bg-[#f3bc3d] text-white dark:text-stone-950 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isSaving ? (
                       <>
-                        <svg className="w-4 h-4 animate-spin text-white dark:text-stone-950" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                        <svg className="w-4 h-4 animate-spin text-white dark:text-stone-950" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
                         Submitting Directives...
                       </>
                     ) : (
@@ -1179,7 +1177,7 @@ const DocumentViewerModal = ({
                     )}
                   </button>
 
-                  <button 
+                  <button
                     onClick={async () => {
                       if (!onSaveNote) return;
                       setIsSaving(true);
@@ -1194,7 +1192,7 @@ const DocumentViewerModal = ({
                   >
                     {isSaving ? (
                       <>
-                        <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                        <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
                         Approving...
                       </>
                     ) : (
