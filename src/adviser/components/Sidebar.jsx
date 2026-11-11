@@ -331,6 +331,16 @@ function Sidebar({ isMobileOpen = false, onCloseMobile = () => {} }) {
             />
 
             <NavButton
+              pathRoute="/adviser/approval-sheet-templates"
+              label="Approval Sheet Templates"
+              icon={
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm0-3a1 1 0 011-1h6a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd"/>
+                </svg>
+              }
+            />
+
+            <NavButton
               pathRoute="/adviser/research-categories"
               label="Research Categories"
               icon={

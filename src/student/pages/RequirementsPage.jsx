@@ -10,7 +10,7 @@ import NotificationBell from '../components/NotificationBell';
 import PortalHeader from '../components/PortalHeader';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import BookLoader from '../../components/BookLoader';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Download, FileCheck, FileText } from 'lucide-react';
 import { Card, CardBody, StatusBadge, PremiumButton } from '../../components/ui/Card';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { extractPdfText, generateAbstractWithAI, extractKeywordsWithAI } from '../../utils/aiManuscriptExtractor';
@@ -47,6 +47,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   const [hasResubmittedAll, setHasResubmittedAll] = useState(false);
   const [reviewStatus, setReviewStatus] = useState('in_progress');
   const [adviserUid, setAdviserUid] = useState(null);
+  const [approvalTemplates, setApprovalTemplates] = useState([]);
   const [viewerState, setViewerState] = useState({ isOpen: false, url: '', title: '', reqId: null });
 
   const fileInputRefs = useRef({});
@@ -92,6 +93,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
   useEffect(() => {
     let unsubReq = null;
     let unsubSub = null;
+    let unsubTpl = null;
 
     const setupListeners = async () => {
       setLoadingData(true);
@@ -132,6 +134,31 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
           });
           setRequirements(activeReqs.length > 0 ? activeReqs : DEFAULT_REQUIREMENTS);
         }, (err) => console.error('Error listening to requirements:', err));
+
+        // Listen for active Approval Sheet Templates from adviser
+        const tplQuery = query(collection(db, 'approval_sheet_templates'));
+        unsubTpl = onSnapshot(tplQuery, (tplSnap) => {
+          const allTpls = tplSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const activeTpls = allTpls.filter(t => t.isActive !== false);
+
+          const rAdv = (resolvedAdviserUid || '').toLowerCase();
+          const matched = activeTpls.filter(t => {
+            const tEmail = (t.adviserEmail || '').toLowerCase();
+            const tUid = t.adviserUid;
+            if (rAdv && (tEmail === rAdv || tUid === resolvedAdviserUid)) return true;
+            if (studentRecord?.department && t.department === studentRecord.department) return true;
+            return false;
+          });
+
+          const finalTpls = matched.length > 0 ? matched : activeTpls;
+          finalTpls.sort((a, b) => {
+            const tA = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+            const tB = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+            return tB - tA;
+          });
+
+          setApprovalTemplates(finalTpls);
+        }, (err) => console.warn('Templates listener notice:', err));
 
         const subQuery = query(collection(db, 'submissions'), where('studentUid', '==', targetUid));
         unsubSub = onSnapshot(subQuery, (subSnap) => {
@@ -222,6 +249,7 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
     return () => {
       if (unsubReq) unsubReq();
       if (unsubSub) unsubSub();
+      if (unsubTpl) unsubTpl();
     };
   }, [targetUid]);
 
@@ -953,6 +981,48 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
               </CardBody>
             </Card>
 
+            {/* ADVISER APPROVAL SHEET TEMPLATE BANNER */}
+            {approvalTemplates.length > 0 && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 via-amber-50/70 to-orange-50/50 dark:from-amber-950/40 dark:via-amber-900/20 dark:to-orange-950/20 border-2 border-amber-300 dark:border-amber-700/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-500/20 dark:bg-amber-400/20 text-amber-800 dark:text-amber-200 flex items-center justify-center shrink-0 shadow-xs">
+                    <FileCheck className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
+                        Official Template
+                      </span>
+                      {approvalTemplates[0].adviserName && (
+                        <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                          From: {approvalTemplates[0].adviserName}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm sm:text-base truncate mt-0.5">
+                      {approvalTemplates[0].title}
+                    </h4>
+                    <p className="text-xs text-stone-600 dark:text-stone-400 line-clamp-1 mt-0.5">
+                      {approvalTemplates[0].instructions || 'Download this template to format and prepare your official Approval Sheet.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+                  <a
+                    href={approvalTemplates[0].fileUrl}
+                    download={approvalTemplates[0].fileName}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-md hover:shadow-lg transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Template ({approvalTemplates[0].fileType?.toUpperCase() || 'FILE'})</span>
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* DOCUMENT GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -960,6 +1030,8 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                 const meta = documentsMeta[item.id] || documentsMeta[item.title];
                 const isUploaded = !!(meta && (meta.url || meta.name));
                 const isUploadingThis = uploadingItem === item.id;
+                const isApprovalSheet = (item.id || '').toLowerCase().includes('approval') || (item.title || '').toLowerCase().includes('approval');
+                const relevantTemplate = isApprovalSheet && approvalTemplates.length > 0 ? approvalTemplates[0] : null;
 
                 if (isUploaded && meta) {
                   // ── SUBMITTED CARD ──
@@ -1023,6 +1095,24 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                             </div>
                           </div>
                         </div>
+
+                        {relevantTemplate && (
+                          <div className="mb-3 flex items-center justify-between text-xs p-2 rounded-lg bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40">
+                            <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 truncate">
+                              Adviser Template: {relevantTemplate.title}
+                            </span>
+                            <a
+                              href={relevantTemplate.fileUrl}
+                              download={relevantTemplate.fileName}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-bold text-[#7B1F35] dark:text-[#f8d070] hover:underline flex items-center gap-1 shrink-0 ml-2"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>Template</span>
+                            </a>
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap items-center justify-between gap-2 mt-auto">
                           {hasRevision ? (
@@ -1104,6 +1194,39 @@ export default function RequirementsPage({ onLogout, studentName, initials, stud
                         </div>
                       </div>
                       <p className="text-stone-500 dark:text-stone-400 text-[13px] mb-4 flex-1">{item.desc}</p>
+
+                      {/* Official Adviser Template Download for Approval Sheet */}
+                      {relevantTemplate && (
+                        <div className="mb-3.5 p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 flex flex-col gap-2">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm">📑</span>
+                              <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200 truncate">
+                                {relevantTemplate.title}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 shrink-0">
+                              {relevantTemplate.fileType?.toUpperCase() || 'DOCX'}
+                            </span>
+                          </div>
+                          {relevantTemplate.instructions && (
+                            <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-snug line-clamp-2 italic">
+                              "{relevantTemplate.instructions}"
+                            </p>
+                          )}
+                          <a
+                            href={relevantTemplate.fileUrl}
+                            download={relevantTemplate.fileName}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-xs transition-all"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Template File</span>
+                          </a>
+                        </div>
+                      )}
 
                       <div
                         className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all mt-auto ${
